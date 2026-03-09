@@ -206,7 +206,7 @@ body {
 
 .sidebar-logo-image {
   display: block;
-  width: min(132px, 100%);
+  width: min(44px, 100%);
   height: auto;
 }
 
@@ -374,7 +374,7 @@ body {
   }
 
   .sidebar-logo-image {
-    width: min(112px, 100%);
+    width: min(40px, 100%);
   }
 }
 
