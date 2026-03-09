@@ -199,15 +199,43 @@ body {
 .sidebar-logo {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  gap: 12px;
   margin-bottom: 24px;
-  padding: 6px 0 2px;
+  padding: 6px 0 4px;
 }
 
 .sidebar-logo-image {
   display: block;
   width: min(44px, 100%);
   height: auto;
+  flex: 0 0 auto;
+}
+
+.sidebar-logo-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sidebar-logo-wordmark {
+  display: block;
+  color: #f8fafc;
+  font-size: 1.2rem;
+  line-height: 0.95;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+}
+
+.sidebar-logo-tagline {
+  display: block;
+  margin-top: 4px;
+  color: rgba(248, 250, 252, 0.88);
+  font-size: 0.62rem;
+  line-height: 1.15;
+  font-weight: 700;
+  text-transform: uppercase;
+  max-width: 118px;
 }
 
 .sidebar-section-title {
@@ -371,10 +399,20 @@ body {
   .sidebar-logo {
     margin-bottom: 16px;
     padding-top: 2px;
+    gap: 10px;
   }
 
   .sidebar-logo-image {
     width: min(40px, 100%);
+  }
+
+  .sidebar-logo-wordmark {
+    font-size: 1.08rem;
+  }
+
+  .sidebar-logo-tagline {
+    font-size: 0.58rem;
+    max-width: 108px;
   }
 }
 

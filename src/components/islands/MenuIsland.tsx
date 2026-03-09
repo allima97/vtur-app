@@ -1381,6 +1381,10 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       <aside id={sidebarId} className={`app-sidebar ${mobileOpen ? "open" : ""}`}>
         <div className="sidebar-logo" aria-label="vtur">
           <img className="sidebar-logo-image" src="/brand/vtur-symbol.svg" alt="vtur" />
+          <div className="sidebar-logo-copy">
+            <span className="sidebar-logo-wordmark">VTUR</span>
+            <span className="sidebar-logo-tagline">Sistema de Gerenciamento de Vendas</span>
+          </div>
         </div>
 
         {renderMenuSections()}
