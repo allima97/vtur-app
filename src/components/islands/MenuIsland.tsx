@@ -1383,7 +1383,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
           <img className="sidebar-logo-image" src="/brand/vtur-symbol.svg" alt="vtur" />
           <div className="sidebar-logo-copy sidebar-logo-copy-inline">
             <span className="sidebar-logo-wordmark">VTUR</span>
-            <span className="sidebar-logo-tagline">- CRM para Franquias CVC</span>
+            <span className="sidebar-logo-tagline">CRM para Franquias CVC</span>
           </div>
         </div>
 
