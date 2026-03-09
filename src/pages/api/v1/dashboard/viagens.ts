@@ -1,0 +1,389 @@
+import { createServerClient } from "../../../../lib/supabaseServer";
+import { kvCache } from "../../../../lib/kvCache";
+import { getSupabaseEnv } from "../../users";
+
+const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv();
+
+const CACHE_TTL_SECONDS = 300;
+const LOCAL_CACHE_TTL_MS = 300_000;
+const cache = new Map<string, { expiresAt: number; payload: unknown }>();
+
+type Permissao = "none" | "view" | "create" | "edit" | "delete" | "admin";
+
+function parseCookies(request: Request): Map<string, string> {
+  const header = request.headers.get("cookie") ?? "";
+  const map = new Map<string, string>();
+  header.split(";").forEach((segment) => {
+    const trimmed = segment.trim();
+    if (!trimmed) return;
+    const [rawName, ...rawValue] = trimmed.split("=");
+    const name = rawName?.trim();
+    if (!name) return;
+    map.set(name, rawValue.join("=").trim());
+  });
+  return map;
+}
+
+function buildAuthClient(request: Request) {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error("PUBLIC_SUPABASE_URL ou PUBLIC_SUPABASE_ANON_KEY nao configurados.");
+  }
+  const cookies = parseCookies(request);
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      get: (name: string) => cookies.get(name) ?? "",
+      set: () => {},
+      remove: () => {},
+    },
+  });
+}
+
+function permLevel(p?: string | null): number {
+  switch (p) {
+    case "admin":
+      return 5;
+    case "delete":
+      return 4;
+    case "edit":
+      return 3;
+    case "create":
+      return 2;
+    case "view":
+      return 1;
+    default:
+      return 0;
+  }
+}
+
+function normalizeModulo(value?: string | null) {
+  const raw = String(value || "").trim().toLowerCase();
+  if (!raw) return "";
+  const normalized = raw
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "_");
+  if (normalized === "consultoria_online") return "consultoria_online";
+  if (normalized === "consultoria") return "consultoria";
+  if (normalized === "operacao") return "operacao";
+  return normalized;
+}
+
+function readCache(key: string) {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.payload;
+}
+
+function writeCache(key: string, payload: unknown) {
+  cache.set(key, { expiresAt: Date.now() + LOCAL_CACHE_TTL_MS, payload });
+}
+
+function isUuid(value?: string | null) {
+  return Boolean(
+    value &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        value
+      )
+  );
+}
+
+async function fetchGestorEquipeIdsComGestor(client: any, gestorId: string) {
+  if (!gestorId) return [gestorId].filter(Boolean);
+  try {
+    const { data, error } = await client.rpc("gestor_equipe_vendedor_ids", { uid: gestorId });
+    if (error) throw error;
+    const ids =
+      (data || [])
+        .map((row: any) => String(row?.vendedor_id || "").trim())
+        .filter(Boolean) || [];
+    return Array.from(new Set([gestorId, ...ids]));
+  } catch {
+    try {
+      const { data, error } = await client
+        .from("gestor_vendedor")
+        .select("vendedor_id, ativo")
+        .eq("gestor_id", gestorId);
+      if (error) throw error;
+      const ids =
+        (data || [])
+          .filter((row: any) => row?.ativo !== false)
+          .map((row: any) => String(row?.vendedor_id || "").trim())
+          .filter(Boolean) || [];
+      return Array.from(new Set([gestorId, ...ids]));
+    } catch {
+      return [gestorId];
+    }
+  }
+}
+
+export async function GET({ request }: { request: Request }) {
+  try {
+    const client = buildAuthClient(request);
+    const { data: authData, error: authErr } = await client.auth.getUser();
+    const user = authData?.user ?? null;
+    if (authErr || !user) return new Response("Sessao invalida.", { status: 401 });
+
+    const url = new URL(request.url);
+    const mode = String(url.searchParams.get("mode") || "geral").trim().toLowerCase();
+    const requestedCompanyId = String(url.searchParams.get("company_id") || "").trim();
+    const requestedVendedorIdsRaw = String(url.searchParams.get("vendedor_ids") || "").trim();
+    const noCache = String(url.searchParams.get("no_cache") || "").trim() === "1";
+
+    const requestedVendedorIds = requestedVendedorIdsRaw
+      ? Array.from(
+          new Set(
+            requestedVendedorIdsRaw
+              .split(",")
+              .map((v) => v.trim())
+              .filter((v) => isUuid(v))
+          )
+        ).slice(0, 300)
+      : [];
+
+    if (mode !== "geral" && mode !== "gestor") {
+      return new Response("mode invalido (use mode=geral ou mode=gestor).", { status: 400 });
+    }
+
+    const { data: usuarioDb, error: usuarioErr } = await client
+      .from("users")
+      .select("id, user_types(name)")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (usuarioErr) throw usuarioErr;
+
+    const tipoName = String((usuarioDb as any)?.user_types?.name || "").toUpperCase();
+    const isAdmin = tipoName.includes("ADMIN");
+    const isGestor = tipoName.includes("GESTOR");
+    const isMaster = tipoName.includes("MASTER");
+
+    let canDashboard = true;
+    let canOperacao = true;
+
+    if (!isAdmin) {
+      const { data: acessos, error: acessosErr } = await client
+        .from("modulo_acesso")
+        .select("modulo, permissao, ativo")
+        .eq("usuario_id", user.id);
+      if (acessosErr) throw acessosErr;
+
+      canDashboard = (acessos || []).some(
+        (row: any) =>
+          row?.ativo &&
+          normalizeModulo(row?.modulo) === "dashboard" &&
+          permLevel(row?.permissao) >= 1
+      );
+      canOperacao = (acessos || []).some(
+        (row: any) =>
+          row?.ativo &&
+          normalizeModulo(row?.modulo) === "operacao" &&
+          permLevel(row?.permissao) >= 1
+      );
+    }
+
+    if (!canDashboard) return new Response("Sem acesso ao Dashboard.", { status: 403 });
+    if (!canOperacao) return new Response("Sem acesso a Operacao.", { status: 403 });
+
+    let vendedorIds: string[] = [user.id];
+    let papel = "VENDEDOR";
+
+    if (isAdmin) {
+      papel = "ADMIN";
+      vendedorIds = requestedVendedorIds;
+    } else if (isGestor) {
+      papel = "GESTOR";
+      vendedorIds = await fetchGestorEquipeIdsComGestor(client, user.id);
+    } else if (isMaster) {
+      if (mode === "gestor") {
+        papel = "MASTER";
+        vendedorIds = requestedVendedorIds;
+      } else {
+        papel = "OUTRO";
+        vendedorIds = [user.id];
+      }
+    }
+
+    const companyId =
+      mode === "gestor" && requestedCompanyId && requestedCompanyId !== "all"
+        ? requestedCompanyId
+        : null;
+
+    const cacheKey = [
+      "v2",
+      "dashboardViagens",
+      mode,
+      user.id,
+      papel,
+      companyId || "all",
+      vendedorIds.length === 0 ? "all" : vendedorIds.join(","),
+    ].join("|");
+
+    if (!noCache) {
+      const kvCached = await kvCache.get<any>(cacheKey);
+      if (kvCached) {
+        return new Response(JSON.stringify(kvCached), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "private, max-age=300",
+            Vary: "Cookie",
+          },
+        });
+      }
+
+      const localCached = readCache(cacheKey);
+      if (localCached) {
+        return new Response(JSON.stringify(localCached), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "private, max-age=300",
+            Vary: "Cookie",
+          },
+        });
+      }
+    }
+
+    const hojeIso = new Date().toISOString().slice(0, 10);
+    const limiteData = new Date();
+    limiteData.setDate(limiteData.getDate() + 14);
+    const limiteIso = limiteData.toISOString().slice(0, 10);
+
+    // Agrupa viagens pelo venda_id: min(data_inicio) = partida real, max(data_fim) = retorno real.
+    // O limit é aplicado APÓS o agrupamento para que "20 próximas viagens" signifique 20 viagens
+    // de clientes distintos, não 20 recibos/serviços de uma mesma viagem.
+    function agruparPorVenda(rawData: any[]): any[] {
+      const grupos = new Map<string, any>();
+      for (const v of rawData) {
+        const key = (v.venda_id as string) || (v.recibo as any)?.venda_id || v.id;
+        const produtoNome: string = v.recibo?.tipo_produtos?.nome || "";
+        const existing = grupos.get(key);
+        if (!existing) {
+          grupos.set(key, {
+            ...v,
+            produtos_tipos: produtoNome ? [produtoNome] : [],
+          });
+          continue;
+        }
+        // Menor data_inicio = embarque real do cliente
+        if (v.data_inicio && (!existing.data_inicio || v.data_inicio < existing.data_inicio)) {
+          existing.data_inicio = v.data_inicio;
+        }
+        // Maior data_fim = retorno real → esse recibo vira o representativo do grupo
+        if (v.data_fim && (!existing.data_fim || v.data_fim > existing.data_fim)) {
+          existing.data_fim = v.data_fim;
+          existing.id = v.id;
+          existing.recibo = v.recibo ?? existing.recibo;
+        }
+        // Acumula todos os tipos de serviço da viagem
+        if (produtoNome && !(existing.produtos_tipos as string[]).includes(produtoNome)) {
+          (existing.produtos_tipos as string[]).push(produtoNome);
+        }
+      }
+      return Array.from(grupos.values())
+        .sort((a, b) => (a.data_inicio || "").localeCompare(b.data_inicio || ""))
+        .slice(0, 20);
+    }
+
+    let data: unknown[] = [];
+
+    if (mode === "gestor") {
+      let viagensQuery = client
+        .from("viagens")
+        .select(
+          `
+            id,
+            venda_id,
+            data_inicio,
+            data_fim,
+            status,
+            destino,
+            responsavel_user_id,
+            clientes:clientes (id, nome),
+            recibo:vendas_recibos (venda_id)
+          `
+        )
+        .gte("data_inicio", hojeIso)
+        .lte("data_inicio", limiteIso)
+        .order("data_inicio", { ascending: true })
+        .limit(500);
+
+      if (companyId) {
+        viagensQuery = viagensQuery.eq("company_id", companyId);
+      }
+
+      if (vendedorIds.length > 0) {
+        viagensQuery = viagensQuery.in("responsavel_user_id", vendedorIds);
+      }
+
+      const { data: viagensData, error } = await viagensQuery;
+      if (error) throw error;
+      data = agruparPorVenda(viagensData || []);
+    } else {
+      let viagensQuery = client
+        .from("viagens")
+        .select(
+          `
+            id,
+            venda_id,
+            data_inicio,
+            data_fim,
+            status,
+            origem,
+            destino,
+            responsavel_user_id,
+            venda:vendas (
+              vendedor_id,
+              cancelada
+            ),
+            clientes:clientes (id, nome),
+            recibo:vendas_recibos (
+              id,
+              venda_id,
+              produto_id,
+              tipo_produtos (id, nome, tipo)
+            )
+          `
+        )
+        .gte("data_inicio", hojeIso)
+        .lte("data_inicio", limiteIso)
+        .order("data_inicio", { ascending: true })
+        .limit(500);
+
+      if (companyId) {
+        viagensQuery = viagensQuery.eq("company_id", companyId);
+      }
+
+      if (vendedorIds.length > 0) {
+        viagensQuery = viagensQuery.in("venda.vendedor_id", vendedorIds);
+      }
+      viagensQuery = viagensQuery.eq("venda.cancelada", false);
+
+      const { data: viagensData, error } = await viagensQuery;
+      if (error) throw error;
+      data = agruparPorVenda(viagensData || []);
+    }
+
+    const payload = { items: data };
+
+    if (!noCache) {
+      writeCache(cacheKey, payload);
+      await kvCache.set(cacheKey, payload, CACHE_TTL_SECONDS);
+    }
+
+    return new Response(JSON.stringify(payload), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": noCache ? "no-store" : "private, max-age=300",
+        Vary: "Cookie",
+      },
+    });
+  } catch (error: any) {
+    console.error("[api/v1/dashboard/viagens] erro:", error);
+    return new Response(`Erro interno: ${error?.message ?? error}`, { status: 500 });
+  }
+}

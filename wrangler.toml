@@ -1,0 +1,95 @@
+name = "vtur"
+main = "dist/_worker.js"
+assets = { directory = "dist", binding = "ASSETS" }
+compatibility_date = "2024-12-20"
+account_id = "eaf689768c1c323ce233771e12a94859"
+workers_dev = true
+
+# Variáveis padrão (usadas também no build via build.command)
+[vars]
+ENVIRONMENT = "production"
+SUPABASE_URL = "https://ggqmvruerbaqxthhnxrm.supabase.co"
+PUBLIC_SUPABASE_URL = "https://ggqmvruerbaqxthhnxrm.supabase.co"
+PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_yO4zM8WFfmRTZKtBG1PaHw_9pLyVXMh"
+
+# Astro build output (injeta PUBLIC_* no processo de build)
+build = { command = "PUBLIC_SUPABASE_URL=$PUBLIC_SUPABASE_URL PUBLIC_SUPABASE_ANON_KEY=$PUBLIC_SUPABASE_ANON_KEY npm run build -- --force", cwd = "." }
+
+# Mini-rate-limiting (optional, comment out if not needed)
+# [rate_limit]
+# simple = { limit = 600, period = 60 }
+
+# =========================
+# Production environment
+# =========================
+[env.production]
+name = "vtur-prod"
+routes = [
+  { pattern = "vtur.app/*", zone_name = "vtur.app" },
+  { pattern = "www.vtur.app/*", zone_name = "vtur.app" }
+]
+
+[env.production.triggers]
+# Cloudflare cron usa UTC. 23:59 (Brasil, UTC-3) ~= 02:59 UTC
+crons = ["59 2 * * *"]
+
+[env.production.vars]
+ENVIRONMENT = "production"
+SUPABASE_URL = "https://ggqmvruerbaqxthhnxrm.supabase.co"
+PUBLIC_SUPABASE_URL = "https://ggqmvruerbaqxthhnxrm.supabase.co"
+PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_yO4zM8WFfmRTZKtBG1PaHw_9pLyVXMh"
+
+# KV para cache (já existia)
+[[env.production.kv_namespaces]]
+binding = "CACHE"
+id = "f89bc788ae7a4c619133ae6c2654d8cb"
+preview_id = "f89bc788ae7a4c619133ae6c2654d8cb"
+
+# KV para sessão (novo, usando o ID que você mencionou)
+[[env.production.kv_namespaces]]
+binding = "SESSION"
+id = "60fa423718914712bec4f489d41c3dd6"
+preview_id = "60fa423718914712bec4f489d41c3dd6"
+
+# =========================
+# Staging environment
+# =========================
+[env.staging]
+name = "vtur-staging"
+
+[env.staging.triggers]
+crons = ["59 2 * * *"]
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
+SUPABASE_URL = "https://ggqmvruerbaqxthhnxrm.supabase.co"
+PUBLIC_SUPABASE_URL = "https://ggqmvruerbaqxthhnxrm.supabase.co"
+PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_yO4zM8WFfmRTZKtBG1PaHw_9pLyVXMh"
+
+[[env.staging.kv_namespaces]]
+binding = "CACHE"
+id = "36b379c0f78d485a95dc23cf4dc22c12"
+preview_id = "36b379c0f78d485a95dc23cf4dc22c12"
+
+# Se quiser sessão em staging, crie um KV próprio e ative isto:
+# [[env.staging.kv_namespaces]]
+# binding = "SESSION"
+# id = "<KV_ID_STAGING>"
+# preview_id = "<KV_ID_STAGING>"
+
+# =========================
+# Development (local)
+# =========================
+[env.development]
+name = "vtur-dev"
+vars = { ENVIRONMENT = "development" }
+
+[[env.development.kv_namespaces]]
+binding = "CACHE"
+id = ""  # Opcional para dev
+
+# Se quiser sessão em dev:
+ [[env.development.kv_namespaces]]
+ binding = "SESSION"
+ id = "<KV_ID_DEV>"
+ preview_id = "<KV_ID_DEV>"

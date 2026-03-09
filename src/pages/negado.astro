@@ -1,0 +1,28 @@
+---
+import BrandHead from "../components/BrandHead.astro";
+import { SYSTEM_NAME } from "../lib/systemName";
+
+const pageTitle = `Acesso Negado - ${SYSTEM_NAME}`;
+---
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <BrandHead title={pageTitle} canonicalPath={Astro.url.pathname} noindex={true} />
+    <title>{pageTitle}</title>
+  </head>
+  <body
+    style="min-height:100vh; margin:0; display:flex; align-items:center; justify-content:center; background-color:#030712;"
+  >
+    <div style="padding:40px; text-align:center; color:#e2e8f0;">
+      <h1 style="font-size:2rem; margin-bottom:10px;">🚫 Acesso Negado</h1>
+      <p>Você não possui permissão para acessar este módulo.</p>
+
+      <a href="/dashboard" style="color:#38bdf8; font-size:1.2rem;">
+        Voltar ao Dashboard
+      </a>
+    </div>
+  </body>
+</html>

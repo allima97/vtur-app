@@ -1,0 +1,10 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import ParametrosNaoComissionaveisIsland from "../../components/islands/ParametrosNaoComissionaveisIsland.tsx";
+---
+
+<DashboardLayout title="Parâmetros de importação" activePage="admin-parametros-importacao">
+  <div class="page-content-wrap">
+    <ParametrosNaoComissionaveisIsland client:visible />
+  </div>
+</DashboardLayout>

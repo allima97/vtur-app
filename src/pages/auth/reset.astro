@@ -1,0 +1,21 @@
+---
+import "../../styles/global.css";
+import "../../styles/auth-extra.css";
+import BrandHead from "../../components/BrandHead.astro";
+import AuthResetIsland from "../../components/islands/AuthResetIsland.tsx";
+import { SYSTEM_NAME } from "../../lib/systemName";
+
+const pageTitle = `Nova senha - ${SYSTEM_NAME}`;
+---
+
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <BrandHead title={pageTitle} canonicalPath={Astro.url.pathname} noindex={true} />
+    <title>{pageTitle}</title>
+  </head>
+  <body class="auth-body">
+    <AuthResetIsland client:visible />
+  </body>
+</html>

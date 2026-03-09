@@ -1,0 +1,14 @@
+---
+import Layout from "../../layouts/DashboardLayout.astro";
+import DocumentationPortalIsland from "../../components/islands/DocumentationPortalIsland.tsx";
+
+const pageTitle = "Documentação do Sistema";
+---
+
+<Layout title={pageTitle} module="Admin" activePage="documentacao">
+  <div class="card-base card-blue mb-3 list-toolbar-sticky">
+    <h1 class="page-title">{pageTitle}</h1>
+    <p class="page-subtitle">Guias e instruções para uso do sistema.</p>
+  </div>
+  <DocumentationPortalIsland client:only="react" />
+</Layout>

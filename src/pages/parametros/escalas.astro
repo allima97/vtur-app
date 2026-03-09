@@ -1,0 +1,18 @@
+---
+import Layout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+import EscalaGestorIsland from "../../components/islands/EscalaGestorIsland.tsx";
+
+const pageTitle = "Escalas";
+---
+
+<Layout title={pageTitle} activePage="parametros-escalas">
+  <HeaderPage
+    title="Escalas"
+    subtitle="Controle mensal de folgas, ferias, plantões e horários da equipe."
+    color="teal"
+  />
+  <div class="page-content-wrap">
+    <EscalaGestorIsland client:load />
+  </div>
+</Layout>

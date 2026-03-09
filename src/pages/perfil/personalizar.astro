@@ -1,0 +1,14 @@
+---
+import "../../styles/global.css";
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import PersonalizarMenuIsland from "../../components/islands/PersonalizarMenuIsland";
+
+const activePage = "perfil-personalizar";
+---
+
+<DashboardLayout title="Personalizar Menu" {activePage} module="Perfil">
+  <h1 class="page-title">Personalizar</h1>
+  <p class="page-subtitle">Oculte ou mova itens do menu.</p>
+
+  <PersonalizarMenuIsland client:visible />
+</DashboardLayout>

@@ -1,0 +1,454 @@
+import React, { useEffect, useState } from "react";
+import { supabase } from "../../lib/supabase";
+import { usePermissoesStore } from "../../lib/permissoesStore";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import { registrarLog } from "../../lib/logs";
+
+type QuotePrintSettings = {
+  id?: string;
+  owner_user_id?: string | null;
+  company_id?: string | null;
+  logo_url?: string | null;
+  logo_path?: string | null;
+  imagem_complementar_url?: string | null;
+  imagem_complementar_path?: string | null;
+  consultor_nome?: string;
+  filial_nome?: string;
+  endereco_linha1?: string;
+  endereco_linha2?: string;
+  endereco_linha3?: string;
+  telefone?: string;
+  whatsapp?: string;
+  whatsapp_codigo_pais?: string;
+  email?: string;
+  rodape_texto?: string;
+};
+
+const DEFAULT_FOOTER =
+  "Precos em real (R$) convertido ao cambio do dia sujeito a alteracao e disponibilidade da tarifa.\n" +
+  "Valor da crianca valido somente quando acompanhada de dois adultos pagantes no mesmo apartamento.\n" +
+  "Este orcamento e apenas uma tomada de preco.\n" +
+  "Os servicos citados nao estao reservados; a compra somente podera ser confirmada apos a confirmacao dos fornecedores.\n" +
+  "Este orcamento foi feito com base na menor tarifa para os servicos solicitados, podendo sofrer alteracao devido a disponibilidade de lugares no ato da compra.\n" +
+  "As regras de cancelamento de cada produto podem ser consultadas por meio do link do QR Code.";
+
+const EMPTY_SETTINGS: QuotePrintSettings = {
+  imagem_complementar_url: null,
+  imagem_complementar_path: null,
+  consultor_nome: "",
+  filial_nome: "",
+  endereco_linha1: "",
+  endereco_linha2: "",
+  endereco_linha3: "",
+  telefone: "",
+  whatsapp: "",
+  whatsapp_codigo_pais: "",
+  email: "",
+  rodape_texto: DEFAULT_FOOTER,
+};
+
+const LOGO_BUCKET = "quotes";
+
+function getFileExtension(file: File) {
+  const name = file?.name || "";
+  const match = name.match(/\.([a-z0-9]+)$/i);
+  if (match?.[1]) return match[1].toLowerCase();
+  if (file.type.startsWith("image/")) return file.type.split("/")[1] || "png";
+  return "png";
+}
+
+function extractStoragePath(value?: string | null) {
+  if (!value) return null;
+  const marker = "/quotes/";
+  const index = value.indexOf(marker);
+  if (index === -1) return null;
+  return value.slice(index + marker.length);
+}
+
+export default function QuotePrintSettingsIsland() {
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("Orcamentos (PDF)") || can("Parametros");
+  const podeEditar = can("Orcamentos (PDF)", "edit") || can("Parametros", "edit");
+  const bloqueado = !podeVer || !podeEditar;
+
+  const [settings, setSettings] = useState<QuotePrintSettings>(EMPTY_SETTINGS);
+  const [loading, setLoading] = useState(true);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [sucesso, setSucesso] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [complementImageFile, setComplementImageFile] = useState<File | null>(null);
+  const [complementImagePreview, setComplementImagePreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    async function carregar() {
+      setLoading(true);
+      setErro(null);
+      setSucesso(null);
+      try {
+        const resp = await fetch("/api/v1/parametros/orcamentos-pdf");
+        if (!resp.ok) throw new Error(await resp.text());
+        const payload = (await resp.json()) as {
+          settings: QuotePrintSettings;
+          logo_preview_url?: string | null;
+          complemento_preview_url?: string | null;
+        };
+
+        if (!active) return;
+        setSettings(payload.settings || EMPTY_SETTINGS);
+        setLogoPreview(payload.logo_preview_url || null);
+        setComplementImagePreview(payload.complemento_preview_url || null);
+      } catch (e) {
+        console.error(e);
+        setErro("Erro ao carregar parametros do orcamento.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    carregar();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!logoFile) return;
+    const url = URL.createObjectURL(logoFile);
+    setLogoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [logoFile]);
+
+  useEffect(() => {
+    if (!complementImageFile) return;
+    const url = URL.createObjectURL(complementImageFile);
+    setComplementImagePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [complementImageFile]);
+
+  async function uploadLogo(userId: string) {
+    if (!logoFile) {
+      return {
+        url: settings.logo_url || null,
+        path: settings.logo_path || extractStoragePath(settings.logo_url) || null,
+      };
+    }
+    const ext = getFileExtension(logoFile);
+    const path = `branding/${userId}/logo.${ext}`;
+    const { error: uploadErr } = await supabase.storage
+      .from(LOGO_BUCKET)
+      .upload(path, logoFile, {
+        upsert: true,
+        contentType: logoFile.type || "image/png",
+        cacheControl: "3600",
+      });
+    if (uploadErr) throw uploadErr;
+    const publicUrl = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path).data.publicUrl;
+    return { url: publicUrl || null, path };
+  }
+
+  async function uploadComplementImage(userId: string) {
+    if (!complementImageFile) {
+      return {
+        url: settings.imagem_complementar_url || null,
+        path:
+          settings.imagem_complementar_path ||
+          extractStoragePath(settings.imagem_complementar_url) ||
+          null,
+      };
+    }
+    const ext = getFileExtension(complementImageFile);
+    const path = `branding/${userId}/imagem-complementar.${ext}`;
+    const { error: uploadErr } = await supabase.storage
+      .from(LOGO_BUCKET)
+      .upload(path, complementImageFile, {
+        upsert: true,
+        contentType: complementImageFile.type || "image/png",
+        cacheControl: "3600",
+      });
+    if (uploadErr) throw uploadErr;
+    const publicUrl = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path).data.publicUrl;
+    return { url: publicUrl || null, path };
+  }
+
+  async function salvar() {
+    if (bloqueado) return;
+    try {
+      setSalvando(true);
+      setErro(null);
+      setSucesso(null);
+
+      const { data: auth } = await supabase.auth.getUser();
+      const userId = auth?.user?.id;
+      if (!userId) throw new Error("Usuario nao autenticado.");
+
+      const { data: userRow, error: userErr } = await supabase
+        .from("users")
+        .select("company_id")
+        .eq("id", userId)
+        .maybeSingle();
+      if (userErr) throw userErr;
+
+      const logoInfo = await uploadLogo(userId);
+      const complementInfo = await uploadComplementImage(userId);
+
+      const payload = {
+        logo_url: logoInfo.url,
+        logo_path: logoInfo.path,
+        imagem_complementar_url: complementInfo.url,
+        imagem_complementar_path: complementInfo.path,
+        consultor_nome: settings.consultor_nome || "",
+        filial_nome: settings.filial_nome || "",
+        endereco_linha1: settings.endereco_linha1 || "",
+        endereco_linha2: settings.endereco_linha2 || "",
+        endereco_linha3: settings.endereco_linha3 || "",
+        telefone: settings.telefone || "",
+        whatsapp: settings.whatsapp || "",
+        whatsapp_codigo_pais: (settings.whatsapp_codigo_pais || "").replace(/\D/g, "") || null,
+        email: settings.email || "",
+        rodape_texto: settings.rodape_texto || "",
+      };
+
+      const resp = await fetch("/api/v1/parametros/orcamentos-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+
+      if (logoInfo.path) {
+        const signed = await supabase.storage
+          .from(LOGO_BUCKET)
+          .createSignedUrl(logoInfo.path, 3600);
+        setLogoPreview(signed.data?.signedUrl || logoInfo.url || null);
+      } else {
+        setLogoPreview(logoInfo.url || null);
+      }
+
+      if (complementInfo.path) {
+        const signed = await supabase.storage
+          .from(LOGO_BUCKET)
+          .createSignedUrl(complementInfo.path, 3600);
+        setComplementImagePreview(signed.data?.signedUrl || complementInfo.url || null);
+      } else {
+        setComplementImagePreview(complementInfo.url || null);
+      }
+
+      setSettings((prev) => ({
+        ...prev,
+        logo_url: logoInfo.url,
+        logo_path: logoInfo.path,
+        imagem_complementar_url: complementInfo.url,
+        imagem_complementar_path: complementInfo.path,
+      }));
+
+      await registrarLog({
+        user_id: userId,
+        acao: "quote_print_settings_salvos",
+        modulo: "Parametros",
+        detalhes: payload,
+      });
+
+      setSucesso("Parametros salvos com sucesso.");
+      setLogoFile(null);
+      setComplementImageFile(null);
+    } catch (e) {
+      console.error(e);
+      setErro("Erro ao salvar parametros do orcamento.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  if (loading || loadingPerm) {
+    return <LoadingUsuarioContext />;
+  }
+
+  if (!podeVer) {
+    return <div>Acesso ao modulo de parametros bloqueado.</div>;
+  }
+
+  return (
+    <div className="card-base">
+      <h2 className="card-title">Parametros do Orcamento (PDF)</h2>
+
+      {erro && <div className="auth-error">{erro}</div>}
+      {sucesso && <div className="auth-success">{sucesso}</div>}
+
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label">Logo</label>
+          <div className="file-input-stack">
+            <input
+              id="logo-file-input"
+              className="sr-only"
+              type="file"
+              accept="image/*"
+              onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+              disabled={bloqueado}
+            />
+            <label
+              htmlFor="logo-file-input"
+              className="btn btn-light w-full sm:w-auto"
+              style={{ opacity: bloqueado ? 0.6 : 1, pointerEvents: bloqueado ? "none" : "auto" }}
+              aria-disabled={bloqueado}
+            >
+              Escolher arquivo
+            </label>
+            <span className="file-input-name">{logoFile?.name || "Nenhum arquivo escolhido"}</span>
+          </div>
+          {logoPreview && (
+            <img
+              src={logoPreview}
+              alt="Logo do orcamento"
+              style={{ marginTop: 8, maxHeight: 80, maxWidth: "100%", objectFit: "contain" }}
+            />
+          )}
+        </div>
+        <div className="form-group">
+          <label className="form-label">Consultor</label>
+          <input
+            className="form-input"
+            value={settings.consultor_nome || ""}
+            onChange={(e) => setSettings((p) => ({ ...p, consultor_nome: e.target.value }))}
+            disabled={bloqueado}
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Filial</label>
+          <input
+            className="form-input"
+            value={settings.filial_nome || ""}
+            onChange={(e) => setSettings((p) => ({ ...p, filial_nome: e.target.value }))}
+            disabled={bloqueado}
+          />
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label">Endereco (linha 1)</label>
+          <input
+            className="form-input"
+            value={settings.endereco_linha1 || ""}
+            onChange={(e) => setSettings((p) => ({ ...p, endereco_linha1: e.target.value }))}
+            disabled={bloqueado}
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Endereco (linha 2)</label>
+          <input
+            className="form-input"
+            value={settings.endereco_linha2 || ""}
+            onChange={(e) => setSettings((p) => ({ ...p, endereco_linha2: e.target.value }))}
+            disabled={bloqueado}
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Endereco (linha 3)</label>
+          <input
+            className="form-input"
+            value={settings.endereco_linha3 || ""}
+            onChange={(e) => setSettings((p) => ({ ...p, endereco_linha3: e.target.value }))}
+            disabled={bloqueado}
+          />
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label">Codigo do pais</label>
+          <input
+            className="form-input"
+            value={settings.whatsapp_codigo_pais || ""}
+            onChange={(e) => setSettings((p) => ({ ...p, whatsapp_codigo_pais: e.target.value }))}
+            placeholder="Ex: 55"
+            disabled={bloqueado}
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Telefone (fixo)</label>
+          <input
+            className="form-input"
+            value={settings.telefone || ""}
+            onChange={(e) => setSettings((p) => ({ ...p, telefone: e.target.value }))}
+            disabled={bloqueado}
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">WhatsApp</label>
+          <input
+            className="form-input"
+            value={settings.whatsapp || ""}
+            onChange={(e) => setSettings((p) => ({ ...p, whatsapp: e.target.value }))}
+            disabled={bloqueado}
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">E-mail</label>
+          <input
+            className="form-input"
+            value={settings.email || ""}
+            onChange={(e) => setSettings((p) => ({ ...p, email: e.target.value }))}
+            disabled={bloqueado}
+          />
+        </div>
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">Rodape (informacoes importantes)</label>
+        <textarea
+          className="form-input"
+          rows={6}
+          value={settings.rodape_texto || ""}
+          onChange={(e) => setSettings((p) => ({ ...p, rodape_texto: e.target.value }))}
+          disabled={bloqueado}
+        />
+        <small style={{ color: "#64748b" }}>
+          Use quebras de linha para cada item.
+        </small>
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">Imagem complementar (apos informacoes importantes)</label>
+        <div className="file-input-stack">
+          <input
+            id="complement-file-input"
+            className="sr-only"
+            type="file"
+            accept="image/*"
+            onChange={(e) => setComplementImageFile(e.target.files?.[0] || null)}
+            disabled={bloqueado}
+          />
+          <label
+            htmlFor="complement-file-input"
+            className="btn btn-light w-full sm:w-auto"
+            style={{ opacity: bloqueado ? 0.6 : 1, pointerEvents: bloqueado ? "none" : "auto" }}
+            aria-disabled={bloqueado}
+          >
+            Escolher arquivo
+          </label>
+          <span className="file-input-name">
+            {complementImageFile?.name || "Nenhum arquivo escolhido"}
+          </span>
+        </div>
+        {complementImagePreview && (
+          <img
+            src={complementImagePreview}
+            alt="Imagem complementar do orcamento"
+            style={{ marginTop: 8, maxHeight: 140, maxWidth: "100%", objectFit: "contain" }}
+          />
+        )}
+      </div>
+
+      <div className="mobile-stack-buttons" style={{ display: "flex", gap: 12, marginTop: 12 }}>
+        <button className="btn btn-primary" type="button" onClick={salvar} disabled={salvando || bloqueado}>
+          {salvando ? "Salvando..." : "Salvar parametros"}
+        </button>
+      </div>
+    </div>
+  );
+}

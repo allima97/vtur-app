@@ -1,0 +1,16 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import DashboardGestorIsland from "../../components/islands/DashboardGestorIsland.tsx";
+---
+
+<!--
+  Dashboard do Gestor
+  Rota protegida:
+  – Somente GESTOR (ou ADMIN) pode acessar
+-->
+
+<DashboardLayout title="Dashboard do Gestor" activePage="dashboard">
+  <div class="page-content-wrap">
+    <DashboardGestorIsland client:visible />
+  </div>
+</DashboardLayout>

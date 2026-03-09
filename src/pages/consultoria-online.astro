@@ -1,0 +1,19 @@
+---
+import DashboardLayout from "../layouts/DashboardLayout.astro";
+import HeaderPage from "../components/ui/HeaderPage.astro";
+import ConsultoriaOnlineIsland from "../components/islands/ConsultoriaOnlineIsland";
+
+const activePage = "consultoria";
+---
+
+<DashboardLayout title="Consultoria" {activePage}>
+  <HeaderPage
+    title="Consultoria"
+    subtitle="Agende consultorias com clientes e não perca nenhuma oportunidade!"
+    color="blue"
+  />
+
+  <div class="page-content-wrap">
+    <ConsultoriaOnlineIsland client:visible />
+  </div>
+</DashboardLayout>

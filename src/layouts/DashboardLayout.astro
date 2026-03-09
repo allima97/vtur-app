@@ -1,0 +1,251 @@
+---
+import "../styles/global.css";
+import "../styles/auth-extra.css";
+import "../styles/sgtur-utilities.css";
+
+import BrandHead from "../components/BrandHead.astro";
+import MenuIsland from "../components/islands/MenuIsland.tsx";
+import PermissoesProvider from "../components/islands/PermissoesProvider.tsx";
+import ConsultoriaLembretesModalIsland from "../components/islands/ConsultoriaLembretesModalIsland.tsx";
+import PushNotificationsIsland from "../components/islands/PushNotificationsIsland.tsx";
+import HelpDrawerIsland from "../components/islands/HelpDrawerIsland.tsx";
+import NetMetricsPanelIsland from "../components/islands/NetMetricsPanelIsland.tsx";
+import { SYSTEM_NAME } from "../lib/systemName";
+import { readEnv } from "../lib/supabaseServer";
+
+const { title = SYSTEM_NAME, activePage = "", module = "" } = Astro.props;
+const normalizedModule = String(module || "").trim().toLowerCase();
+const activePrefix = String(activePage || "").split("-")[0]?.toLowerCase();
+const moduleKey = normalizedModule || activePrefix;
+const moduleClass = moduleKey ? `module-${moduleKey}` : "";
+const isDev = readEnv("NODE_ENV") === "development" || readEnv("ENVIRONMENT") === "development";
+const showNetMetricsPanel = isDev || readEnv("PUBLIC_NET_METRICS_PANEL") === "1";
+let menuCache = null;
+try {
+  const raw =
+    Astro.cookies.get("vtur_menu_cache")?.value ||
+    Astro.cookies.get("sgtur_menu_cache")?.value;
+  if (raw) {
+    const parsed = JSON.parse(decodeURIComponent(raw));
+    const userId = Astro.locals?.userId;
+    if (!userId || parsed?.userId === userId) {
+      menuCache = parsed;
+    }
+  }
+} catch {}
+---
+
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <BrandHead title={title} canonicalPath={Astro.url.pathname} noindex={true} />
+    <title>{title}</title>
+
+    <script is:inline>
+      {String.raw`
+        (function () {
+          try {
+            var sent = 0;
+            var max = 3;
+            function safeStringify(value) {
+              if (value === null || value === undefined) return null;
+              if (typeof value === "string") return value;
+              if (value instanceof Error) return value.message || String(value);
+              try {
+                return JSON.stringify(value);
+              } catch (e) {
+                return String(value);
+              }
+            }
+
+            function post(kind, payload) {
+              try {
+                if (sent >= max) return;
+                sent++;
+                var body = {
+                  kind: kind,
+                  url: (typeof location !== "undefined" && location.href) ? location.href : "",
+                  ua: (typeof navigator !== "undefined" && navigator.userAgent) ? navigator.userAgent : "",
+                  payload: payload || null,
+                };
+
+                var json = JSON.stringify(body);
+                if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+                  try {
+                    navigator.sendBeacon("/api/v1/client-error", new Blob([json], { type: "application/json" }));
+                    return;
+                  } catch (e) {}
+                }
+
+                fetch("/api/v1/client-error", {
+                  method: "POST",
+                  credentials: "same-origin",
+                  headers: { "Content-Type": "application/json" },
+                  body: json,
+                  keepalive: true,
+                }).catch(function () {});
+              } catch (e) {}
+            }
+
+            window.addEventListener("error", function (event) {
+              try {
+                post("window.error", {
+                  message: (event && event.message) ? String(event.message) : "",
+                  filename: event && event.filename ? String(event.filename) : "",
+                  lineno: event && event.lineno ? Number(event.lineno) : null,
+                  colno: event && event.colno ? Number(event.colno) : null,
+                  error: safeStringify(event && event.error),
+                });
+              } catch (e) {}
+            });
+
+            window.addEventListener("unhandledrejection", function (event) {
+              try {
+                var reason = event && event.reason;
+                post("unhandledrejection", {
+                  reason: safeStringify(reason),
+                  message: reason && reason.message ? String(reason.message) : "",
+                  stack: reason && reason.stack ? String(reason.stack) : null,
+                });
+              } catch (e) {}
+            });
+          } catch (e) {}
+        })();
+      `}
+    </script>
+
+    {isDev && (
+      <script is:inline>
+        {String.raw`
+          (function () {
+            try {
+              var lastReloadKey = "__sgtur_vite_reload_last__";
+              var reloadCountKey = "__sgtur_vite_reload_count__";
+              var originalConsoleError = console.error;
+              var originalConsoleWarn = console.warn;
+              var maxReloads = 6;
+
+              function shouldReload(message) {
+                if (!message) return false;
+                return [
+                  "Outdated Optimize Dep",
+                  "Failed to fetch dynamically imported module",
+                  "Importing a module script failed",
+                  "[astro-island] Error hydrating",
+                  "Invalid hook call",
+                  "Cannot read properties of null (reading 'useContext')",
+                ].some(function (pattern) {
+                  return message.includes(pattern);
+                });
+              }
+
+              function scheduleReload(message) {
+                if (!shouldReload(message)) return;
+                var now = Date.now();
+                var count = Number(sessionStorage.getItem(reloadCountKey) || "0");
+                if (count >= maxReloads) return;
+
+                var delay = Math.min(15000, 900 * Math.pow(2, count));
+                var last = Number(sessionStorage.getItem(lastReloadKey) || "0");
+                if (last && now - last < delay) return;
+
+                sessionStorage.setItem(lastReloadKey, String(now));
+                sessionStorage.setItem(reloadCountKey, String(count + 1));
+                originalConsoleWarn(
+                  "[dev] Recarregando para recuperar do Vite/Hydration (tentativa " +
+                    String(count + 1) +
+                    "/" +
+                    String(maxReloads) +
+                    ", aguardando " +
+                    String(Math.round(delay / 100) / 10) +
+                    "s)...",
+                  message
+                );
+                setTimeout(function () {
+                  location.reload();
+                }, delay);
+              }
+
+              function safeStringify(value) {
+                if (value === null || value === undefined) return "";
+                if (typeof value === "string") return value;
+                if (value instanceof Error) return value.message || String(value);
+                try {
+                  return JSON.stringify(value);
+                } catch (e) {
+                  return String(value);
+                }
+              }
+
+              function argsToMessage(args) {
+                try {
+                  return Array.prototype.slice
+                    .call(args || [])
+                    .map(safeStringify)
+                    .filter(Boolean)
+                    .join(" ");
+                } catch (e) {
+                  return "";
+                }
+              }
+
+              window.addEventListener("unhandledrejection", function (event) {
+                var reason = event && event.reason;
+                var message =
+                  (reason && reason.message) ||
+                  (typeof reason === "string" ? reason : "") ||
+                  "";
+                scheduleReload(message);
+              });
+
+              window.addEventListener("error", function (event) {
+                var message = (event && event.message) || "";
+                scheduleReload(message);
+              });
+
+              // Astro captura alguns erros de hydrate e só loga no console; aqui interceptamos e recarregamos.
+              console.error = function () {
+                try {
+                  scheduleReload(argsToMessage(arguments));
+                } catch (e) {}
+                return originalConsoleError.apply(console, arguments);
+              };
+
+              console.warn = function () {
+                try {
+                  scheduleReload(argsToMessage(arguments));
+                } catch (e) {}
+                return originalConsoleWarn.apply(console, arguments);
+              };
+            } catch {}
+          })();
+        `}
+      </script>
+    )}
+    
+    <style>
+      /* Critical desktop layout - só wide screens */
+      @media (min-width: 1025px) {
+        .app-shell { display: grid; grid-template-columns: 260px 1fr; }
+        .app-sidebar { display: flex; flex-direction: column; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <!-- Islands (hidratam só quando necessário) -->
+      <PermissoesProvider client:load />
+      <MenuIsland client:load {activePage} initialCache={menuCache} />
+      <ConsultoriaLembretesModalIsland client:load />
+      <PushNotificationsIsland client:load />
+      <HelpDrawerIsland client:load />
+      {showNetMetricsPanel && <NetMetricsPanelIsland client:load />}
+
+      <!-- Conteúdo principal -->
+      <main class={`app-main ${moduleClass}`.trim()}>
+        <slot />
+      </main>
+    </div>
+  </body>
+</html>

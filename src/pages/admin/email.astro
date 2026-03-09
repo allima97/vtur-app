@@ -1,0 +1,10 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import EmailSettingsAdminIsland from "../../components/islands/EmailSettingsAdminIsland.tsx";
+---
+
+<DashboardLayout title="Configurações de E-mail" activePage="admin-email">
+  <div class="page-content-wrap">
+    <EmailSettingsAdminIsland client:visible />
+  </div>
+</DashboardLayout>

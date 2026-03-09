@@ -1,0 +1,11 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import AgendaCalendar from "../../components/islands/AgendaCalendar";
+const activePage = "operacao_agenda";
+---
+
+<DashboardLayout title="Agenda" activePage={activePage}>
+  <div class="page-content-wrap agenda-page">
+    <AgendaCalendar client:load />
+  </div>
+</DashboardLayout>

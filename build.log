@@ -1,0 +1,169 @@
+
+> build
+> astro build
+
+11:23:11 [@astrojs/cloudflare] Enabling sessions with Cloudflare KV with the "SESSION" KV binding.
+11:23:11 [@astrojs/cloudflare] If you see the error "Invalid binding `SESSION`" in your build output, you need to add the binding to your wrangler config file.
+11:23:11 [vite] Forced re-optimization of dependencies
+11:23:18 [content] Syncing content
+11:23:18 [content] Synced content
+11:23:18 [types] Generated 6.50s
+11:23:18 [build] output: "server"
+11:23:18 [build] mode: "server"
+11:23:18 [build] directory: /Users/allima97/Documents/GitHub/sgtur/dist/
+11:23:18 [build] adapter: @astrojs/cloudflare
+11:23:18 [build] Collecting build info...
+11:23:18 [build] ✓ Completed in 6.71s.
+11:23:18 [build] Building server entrypoints...
+11:23:58 [vite] ✓ built in 39.86s
+11:23:58 [build] ✓ Completed in 39.95s.
+
+ building client (vite) 
+11:23:58 [vite] transforming...
+11:24:25 [vite] ✓ 2923 modules transformed.
+11:24:26 [vite] rendering chunks...
+11:24:29 [vite] computing gzip size...
+11:24:29 [vite] dist/_astro/worker.min.32WLk7pY.js                           111.31 kB
+11:24:29 [vite] dist/_astro/pdf.worker.min.yatZIOMy.mjs                    1,375.84 kB
+11:24:29 [vite] dist/_astro/pdf.worker.ByF8NTMy.mjs                        2,346.45 kB
+11:24:29 [vite] dist/_astro/avisos.TDqYSniP.css                              168.02 kB │ gzip: 107.44 kB
+11:24:29 [vite] dist/_astro/systemName.Cf447brS.js                             0.03 kB │ gzip:   0.05 kB
+11:24:29 [vite] dist/_astro/index.CwfeBFSR.js                                  0.06 kB │ gzip:   0.08 kB
+11:24:29 [vite] dist/_astro/supabase-browser.D6MUwNTs.js                       0.06 kB │ gzip:   0.08 kB
+11:24:29 [vite] dist/_astro/pdf.worker.DLuGQzMT.js                             0.06 kB │ gzip:   0.08 kB
+11:24:29 [vite] dist/_astro/PermissoesProvider.D-dd3u5Y.js                     0.11 kB │ gzip:   0.12 kB
+11:24:29 [vite] dist/_astro/parentescoOptions.Dypwzvq7.js                      0.14 kB │ gzip:   0.13 kB
+11:24:29 [vite] dist/_astro/whatsapp.1y8gy6Ls.js                               0.19 kB │ gzip:   0.15 kB
+11:24:29 [vite] dist/_astro/normalizeText.qu2eR_s4.js                          0.19 kB │ gzip:   0.17 kB
+11:24:29 [vite] dist/_astro/LoadingUsuarioContext.2aZKm9uY.js                  0.26 kB │ gzip:   0.22 kB
+11:24:29 [vite] dist/_astro/titleCase.DQLlfrnh.js                              0.27 kB │ gzip:   0.22 kB
+11:24:29 [vite] dist/_astro/formatDate.C370AhPs.js                             0.28 kB │ gzip:   0.22 kB
+11:24:29 [vite] dist/_astro/AlertMessage.CDYlJAO0.js                           0.33 kB │ gzip:   0.24 kB
+11:24:29 [vite] dist/_astro/consultoriaLembretes.BfFLooiw.js                   0.50 kB │ gzip:   0.25 kB
+11:24:29 [vite] dist/_astro/logs.Cw0IELz3.js                                   0.61 kB │ gzip:   0.40 kB
+11:24:29 [vite] dist/_astro/DataTable.Dq3-uS9q.js                              0.67 kB │ gzip:   0.37 kB
+11:24:29 [vite] dist/_astro/EmptyState.CU-EpMt6.js                             0.91 kB │ gzip:   0.43 kB
+11:24:29 [vite] dist/_astro/queryLite.DHIslDD8.js                              0.93 kB │ gzip:   0.49 kB
+11:24:29 [vite] dist/_astro/jsx-runtime.BZOfadHs.js                            1.00 kB │ gzip:   0.62 kB
+11:24:29 [vite] dist/_astro/ImportarVendasIsland.Zrpw2gtM.js                   1.02 kB │ gzip:   0.63 kB
+11:24:29 [vite] dist/_astro/TableActions.CZ8SrQvP.js                           1.07 kB │ gzip:   0.54 kB
+11:24:29 [vite] dist/_astro/preload-helper.BlTxHScW.js                         1.11 kB │ gzip:   0.65 kB
+11:24:29 [vite] dist/_astro/ConfirmDialog.CBXEvWlt.js                          1.13 kB │ gzip:   0.54 kB
+11:24:29 [vite] dist/_astro/pdf.CcuGk3T8.js                                    1.22 kB │ gzip:   0.75 kB
+11:24:29 [vite] dist/_astro/netMetrics.DRyb6rx6.js                             1.23 kB │ gzip:   0.63 kB
+11:24:29 [vite] dist/_astro/comissaoUtils.BBNWimCM.js                          1.25 kB │ gzip:   0.52 kB
+11:24:29 [vite] dist/_astro/pagamentoUtils.B6yFxIA9.js                         1.32 kB │ gzip:   0.75 kB
+11:24:29 [vite] dist/_astro/PaginationControls.BUInVOPq.js                     1.39 kB │ gzip:   0.61 kB
+11:24:29 [vite] dist/_astro/gestorEquipe.kytEM-ue.js                           1.39 kB │ gzip:   0.56 kB
+11:24:29 [vite] dist/_astro/PushNotificationsIsland.C85jIUBm.js                1.58 kB │ gzip:   0.82 kB
+11:24:29 [vite] dist/_astro/Toast.Bxq0VLiD.js                                  1.69 kB │ gzip:   0.91 kB
+11:24:29 [vite] dist/_astro/pt-br.BqpBBfJa.js                                  1.70 kB │ gzip:   0.88 kB
+11:24:29 [vite] dist/_astro/client.B0gTuNeK.js                                 1.87 kB │ gzip:   0.93 kB
+11:24:29 [vite] dist/_astro/format.DHtK6kjs.js                                 1.94 kB │ gzip:   0.93 kB
+11:24:29 [vite] dist/_astro/reciboReservaValidator.Dj0AKHcf.js                 1.94 kB │ gzip:   0.89 kB
+11:24:29 [vite] dist/_astro/useMasterScope.BMWVTcSc.js                         2.12 kB │ gzip:   1.02 kB
+11:24:29 [vite] dist/_astro/triangle-alert.Dc3Ucs7q.js                         2.24 kB │ gzip:   0.92 kB
+11:24:29 [vite] dist/_astro/permissoesStore.eIkxqfET.js                        2.57 kB │ gzip:   1.15 kB
+11:24:29 [vite] dist/_astro/useCrudResource.MxgU_HeJ.js                        2.59 kB │ gzip:   0.80 kB
+11:24:29 [vite] dist/_astro/AuthRegisterIsland.IZUpZYo1.js                     2.72 kB │ gzip:   1.12 kB
+11:24:29 [vite] dist/_astro/MasterEmpresasIsland.D-jar9l5.js                   3.14 kB │ gzip:   1.50 kB
+11:24:29 [vite] dist/_astro/FlightDetailsModal.CCsn7qkw.js                     3.27 kB │ gzip:   1.08 kB
+11:24:29 [vite] dist/_astro/AuthRecoverIsland.cuo_rvcX.js                      3.48 kB │ gzip:   1.56 kB
+11:24:29 [vite] dist/_astro/NetMetricsPanelIsland.DayfPWxP.js                  3.67 kB │ gzip:   1.66 kB
+11:24:29 [vite] dist/_astro/AuthResetIsland.D0G9QnLN.js                        4.08 kB │ gzip:   1.53 kB
+11:24:29 [vite] dist/_astro/ConsultoriaLembretesModalIsland.R5L8mNW2.js        4.64 kB │ gzip:   2.02 kB
+11:24:29 [vite] dist/_astro/AuthConviteIsland.BdXIDgmN.js                      4.77 kB │ gzip:   1.79 kB
+11:24:29 [vite] dist/_astro/ParametrosNaoComissionaveisIsland.BA3tYQcu.js      5.03 kB │ gzip:   2.04 kB
+11:24:29 [vite] dist/_astro/HelpDrawerIsland.G7e3tlZu.js                       5.19 kB │ gzip:   1.99 kB
+11:24:29 [vite] dist/_astro/CredentialsForm.rG5O_Ymd.js                        5.55 kB │ gzip:   1.95 kB
+11:24:29 [vite] dist/_astro/LogsIsland.CEOkbfFy.js                             5.94 kB │ gzip:   2.05 kB
+11:24:29 [vite] dist/_astro/PaisesIsland.D4crXK9Z.js                           6.63 kB │ gzip:   2.68 kB
+11:24:29 [vite] dist/_astro/PlanosAdminIsland.BwiKnSq4.js                      6.91 kB │ gzip:   2.37 kB
+11:24:29 [vite] dist/_astro/FormasPagamentoIsland.CjdXvXO5.js                  7.05 kB │ gzip:   2.25 kB
+11:24:29 [vite] dist/_astro/AuthLoginIsland.91F5dWvv.js                        7.19 kB │ gzip:   2.84 kB
+11:24:29 [vite] dist/_astro/EstadosIsland.BWY5ti9p.js                          7.56 kB │ gzip:   2.87 kB
+11:24:29 [vite] dist/_astro/DocumentationPortalIsland.MIGNlVKf.js              7.67 kB │ gzip:   3.15 kB
+11:24:29 [vite] dist/_astro/MasterPermissoesIsland.STPMM2Xg.js                 7.72 kB │ gzip:   3.09 kB
+11:24:29 [vite] dist/_astro/ParametrosSistemaIsland.DJEsyr1v.js                7.82 kB │ gzip:   2.41 kB
+11:24:29 [vite] dist/_astro/index.UsxsdJ5J.js                                  7.95 kB │ gzip:   3.14 kB
+11:24:29 [vite] dist/_astro/AdminPermissoesIsland.Rp21pzK_.js                  7.98 kB │ gzip:   3.01 kB
+11:24:29 [vite] dist/_astro/ParametrosCambiosIsland.Byap5BNW.js                8.15 kB │ gzip:   2.93 kB
+11:24:29 [vite] dist/_astro/AvisosAdminIsland.BohSpDnD.js                      8.83 kB │ gzip:   3.08 kB
+11:24:29 [vite] dist/_astro/TipoPacotesIsland.DwMOS9fS.js                      8.92 kB │ gzip:   3.07 kB
+11:24:29 [vite] dist/_astro/MinhaEscalaIsland.CuezPbqW.js                      9.18 kB │ gzip:   3.28 kB
+11:24:29 [vite] dist/_astro/permissoesCache.C6E5RZt6.js                        9.94 kB │ gzip:   3.50 kB
+11:24:29 [vite] dist/_astro/CalculatorModal.Bi-H2DJU.js                       10.55 kB │ gzip:   3.69 kB
+11:24:29 [vite] dist/_astro/EmailSettingsAdminIsland.D352Y2so.js              10.67 kB │ gzip:   3.25 kB
+11:24:29 [vite] dist/_astro/QuotePrintSettingsIsland.DwelLQPH.js              10.71 kB │ gzip:   3.05 kB
+11:24:29 [vite] dist/_astro/FinanceiroAdminIsland.BDD3T0cF.js                 11.11 kB │ gzip:   3.59 kB
+11:24:29 [vite] dist/_astro/CommissionRulesIsland.BjFzIN9M.js                 11.33 kB │ gzip:   3.34 kB
+11:24:29 [vite] dist/_astro/CommissionTemplatesIsland.DMZkhUfR.js             11.45 kB │ gzip:   2.67 kB
+11:24:29 [vite] dist/_astro/ConsultoriaOnlineIsland.CI3tlSea.js               12.00 kB │ gzip:   3.74 kB
+11:24:29 [vite] dist/_astro/CidadesIsland.CnTzwXNR.js                         12.18 kB │ gzip:   4.28 kB
+11:24:29 [vite] dist/_astro/ProdutosLoteIsland.D0mQlwbn.js                    13.46 kB │ gzip:   4.41 kB
+11:24:29 [vite] dist/_astro/QuoteListIsland.BdK8PCLH.js                       13.57 kB │ gzip:   4.03 kB
+11:24:29 [vite] dist/_astro/AdminUserTypesIsland.CwEP07Jf.js                  13.87 kB │ gzip:   4.44 kB
+11:24:29 [vite] dist/_astro/ClientesConsultaIsland.D4HQTl3s.js                14.61 kB │ gzip:   4.55 kB
+11:24:29 [vite] dist/_astro/PieChart.BAeXGvKK.js                              15.22 kB │ gzip:   5.14 kB
+11:24:29 [vite] dist/_astro/EmpresasAdminIsland.BxSFI2Yy.js                   15.27 kB │ gzip:   3.94 kB
+11:24:29 [vite] dist/_astro/RankingVendasIsland.BbKLKYxL.js                   15.82 kB │ gzip:   4.85 kB
+11:24:29 [vite] dist/_astro/FornecedoresIsland.psWAAGTY.js                    15.93 kB │ gzip:   4.78 kB
+11:24:29 [vite] dist/_astro/MasterUsuariosIsland.CY0DKh18.js                  16.33 kB │ gzip:   4.69 kB
+11:24:29 [vite] dist/_astro/RelatorioAgrupadoClienteIsland.DWUts1wt.js        16.40 kB │ gzip:   5.03 kB
+11:24:29 [vite] dist/_astro/CampanhasIsland.CoSIHcRe.js                       17.06 kB │ gzip:   4.96 kB
+11:24:29 [vite] dist/_astro/TipoProdutosIsland.Bu8qi0j4.js                    17.10 kB │ gzip:   5.26 kB
+11:24:29 [vite] dist/_astro/ViagensListaIsland.DcQZWTjK.js                    17.38 kB │ gzip:   5.32 kB
+11:24:29 [vite] dist/_astro/FechamentoComissaoIsland.BbIdK4ki.js              17.87 kB │ gzip:   5.39 kB
+11:24:29 [vite] dist/_astro/exportQuotePdfClient.CtLap829.js                  18.96 kB │ gzip:   7.16 kB
+11:24:29 [vite] dist/_astro/RelatorioAgrupadoDestinoIsland.DIbSu9sw.js        19.48 kB │ gzip:   5.23 kB
+11:24:29 [vite] dist/_astro/DashboardGestorIsland.CH_Z28eS.js                 20.01 kB │ gzip:   5.86 kB
+11:24:29 [vite] dist/_astro/UsuariosAdminIsland.Bx7NDzAF.js                   20.22 kB │ gzip:   5.40 kB
+11:24:29 [vite] dist/_astro/QuoteManualIsland.CU063-dV.js                     20.24 kB │ gzip:   6.51 kB
+11:24:29 [vite] dist/_astro/MuralRecadosIsland.nVkwsgQ4.js                    20.53 kB │ gzip:   6.73 kB
+11:24:29 [vite] dist/_astro/ControleSacIsland.D066sgrs.js                     20.85 kB │ gzip:   5.06 kB
+11:24:29 [vite] dist/_astro/QuoteDetailIsland.DmnzrMCC.js                     20.97 kB │ gzip:   6.29 kB
+11:24:29 [vite] dist/_astro/purify.es.B9ZVCkUG.js                             22.64 kB │ gzip:   8.75 kB
+11:24:29 [vite] dist/_astro/ComissionamentoIsland.BIvpl9Gt.js                 22.67 kB │ gzip:   6.56 kB
+11:24:29 [vite] dist/_astro/PerfilIsland.DeC6heiQ.js                          23.30 kB │ gzip:   6.57 kB
+11:24:29 [vite] dist/_astro/MenuIsland.BMi7zuQg.js                            23.96 kB │ gzip:   6.04 kB
+11:24:29 [vite] dist/_astro/EquipeGestorIsland.BLScLY2F.js                    23.98 kB │ gzip:   5.98 kB
+11:24:29 [vite] dist/_astro/TodoBoard.CVxWEx6d.js                             24.49 kB │ gzip:   6.57 kB
+11:24:29 [vite] dist/_astro/ProdutosIsland.D3HkTrBm.js                        24.76 kB │ gzip:   7.74 kB
+11:24:29 [vite] dist/_astro/RelatorioAgrupadoProdutoIsland.CC5w2o2l.js        26.91 kB │ gzip:   7.35 kB
+11:24:29 [vite] dist/_astro/EscalaGestorIsland.DebR6phS.js                    26.92 kB │ gzip:   7.79 kB
+11:24:29 [vite] dist/_astro/MetasVendedorIsland.CFwmdDAv.js                   27.07 kB │ gzip:   6.90 kB
+11:24:29 [vite] dist/_astro/DashboardAdminIsland.B86oZf9I.js                  30.99 kB │ gzip:   9.31 kB
+11:24:29 [vite] dist/_astro/jspdf.plugin.autotable.KFqWVtFs.js                31.02 kB │ gzip:   9.89 kB
+11:24:29 [vite] dist/_astro/CircuitosIsland.B65YCIsl.js                       31.75 kB │ gzip:   9.42 kB
+11:24:29 [vite] dist/_astro/DossieViagemIsland.CuQmVKWM.js                    34.95 kB │ gzip:   7.80 kB
+11:24:29 [vite] dist/_astro/ClientesIsland.wGwGo4T_.js                        39.08 kB │ gzip:   9.69 kB
+11:24:29 [vite] dist/_astro/RelatorioVendasIsland.BepLa_hx.js                 40.79 kB │ gzip:  10.43 kB
+11:24:29 [vite] dist/_astro/DashboardGeralIsland.CH10-sNq.js                  42.28 kB │ gzip:  10.44 kB
+11:24:29 [vite] dist/_astro/VendasCadastroIsland.C1wb4gtY.js                  43.31 kB │ gzip:  12.24 kB
+11:24:29 [vite] dist/_astro/QuoteImportIsland.DE-ovz5M.js                     44.31 kB │ gzip:  13.81 kB
+11:24:29 [vite] dist/_astro/VendasConsultaIsland.Dsd9Ikg8.js                  47.75 kB │ gzip:  12.89 kB
+11:24:29 [vite] dist/_astro/VendaContratoImportIsland.CH3js7If.js            122.75 kB │ gzip:  35.40 kB
+11:24:29 [vite] dist/_astro/index.sV2yzlWE.js                                134.65 kB │ gzip:  43.22 kB
+11:24:29 [vite] dist/_astro/index.es.CEgLyrR6.js                             159.43 kB │ gzip:  53.45 kB
+11:24:29 [vite] dist/_astro/supabase.sGDfTPMK.js                             200.83 kB │ gzip:  53.74 kB
+11:24:29 [vite] dist/_astro/html2canvas.esm.B0tyYwQk.js                      202.36 kB │ gzip:  48.04 kB
+11:24:29 [vite] dist/_astro/AgendaCalendar.BlnDHtdr.js                       303.26 kB │ gzip:  89.69 kB
+11:24:29 [vite] dist/_astro/pdf.C-olXVQ4.js                                  334.09 kB │ gzip:  98.28 kB
+11:24:29 [vite] dist/_astro/BarChart.DoGxQizC.js                             347.80 kB │ gzip: 104.22 kB
+11:24:29 [vite] dist/_astro/pdf.CIFzrehN.js                                  378.32 kB │ gzip: 113.79 kB
+11:24:29 [vite] dist/_astro/jspdf.es.min.DnH2ncTp.js                         387.81 kB │ gzip: 127.28 kB
+11:24:29 [vite] dist/_astro/xlsx.DGuHH-KN.js                                 429.49 kB │ gzip: 143.07 kB
+11:24:29 [vite] dist/_astro/index.4x3VkhOw.js                                568.92 kB │ gzip: 177.92 kB
+11:24:29 [WARN] [vite] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+11:24:29 [vite] ✓ built in 31.28s
+
+ prerendering static routes 
+11:24:30 ✓ Completed in 235ms.
+
+11:24:30 [build] Rearranging server assets...
+11:24:30 [build] Server built in 78.76s
+11:24:30 [build] Complete!

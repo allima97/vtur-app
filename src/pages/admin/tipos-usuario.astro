@@ -1,0 +1,11 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import AdminUserTypesIsland from "../../components/islands/AdminUserTypesIsland.tsx";
+---
+
+<DashboardLayout title="Tipos de usuário" activePage="admin-tipos-usuario">
+  <div class="page-content-wrap">
+    <AdminUserTypesIsland client:visible />
+  </div>
+</DashboardLayout>
+

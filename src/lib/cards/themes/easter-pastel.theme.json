@@ -1,0 +1,79 @@
+{
+  "canvas": {
+    "width": 1024,
+    "height": 1024
+  },
+  "title": {
+    "x": 512,
+    "y": 176,
+    "maxWidth": 720,
+    "fontSize": 84,
+    "fontWeight": 700,
+    "color": "#173E96",
+    "fontFamily": "Cormorant Garamond, Georgia, serif",
+    "align": "center",
+    "lineHeight": 0.98
+  },
+  "clientName": {
+    "x": 512,
+    "y": 304,
+    "maxWidth": 560,
+    "fontSize": 52,
+    "fontWeight": 600,
+    "color": "#2D8A8A",
+    "fontFamily": "Alegreya Sans, Arial, sans-serif",
+    "align": "center",
+    "lineHeight": 1.02
+  },
+  "body": {
+    "x": 512,
+    "y": 420,
+    "maxWidth": 680,
+    "fontSize": 50,
+    "fontWeight": 500,
+    "color": "#24345A",
+    "fontFamily": "Alegreya Sans, Arial, sans-serif",
+    "align": "center",
+    "lineHeight": 1.18
+  },
+  "footerLead": {
+    "x": 512,
+    "y": 824,
+    "maxWidth": 260,
+    "fontSize": 34,
+    "fontWeight": 500,
+    "color": "#36514A",
+    "fontFamily": "Alegreya Sans, Arial, sans-serif",
+    "align": "center",
+    "lineHeight": 1.1,
+    "italic": false
+  },
+  "consultant": {
+    "x": 512,
+    "y": 880,
+    "maxWidth": 360,
+    "fontSize": 54,
+    "fontWeight": 500,
+    "color": "#203262",
+    "fontFamily": "Cormorant Garamond, Georgia, serif",
+    "align": "center",
+    "lineHeight": 1.04
+  },
+  "consultantRole": {
+    "x": 512,
+    "y": 934,
+    "maxWidth": 360,
+    "fontSize": 30,
+    "fontWeight": 500,
+    "color": "#36514A",
+    "fontFamily": "Alegreya Sans, Arial, sans-serif",
+    "align": "center",
+    "lineHeight": 1.08
+  },
+  "logo": {
+    "x": 856,
+    "y": 860,
+    "width": 136,
+    "height": 136
+  }
+}

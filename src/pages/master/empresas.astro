@@ -1,0 +1,10 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import MasterEmpresasIsland from "../../components/islands/MasterEmpresasIsland.tsx";
+---
+
+<DashboardLayout title="Empresas do Master" activePage="master-empresas">
+  <div class="page-content-wrap">
+    <MasterEmpresasIsland client:visible />
+  </div>
+</DashboardLayout>

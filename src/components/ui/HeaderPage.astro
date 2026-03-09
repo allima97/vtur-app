@@ -1,0 +1,14 @@
+---
+const { title, subtitle = "", subtitleHtml = "", color = "blue", stackActionsOnMobile = false } = Astro.props;
+const headerClass = `page-header ${color}-header${stackActionsOnMobile ? " page-header-stack" : ""}`;
+---
+
+<header class={headerClass}>
+  <div>
+    <h1>{title}</h1>
+    {subtitleHtml ? <p set:html={subtitleHtml} /> : (subtitle && <p>{subtitle}</p>)}
+  </div>
+  <div class="page-header-actions mobile-stack-buttons">
+    <slot />
+  </div>
+</header>

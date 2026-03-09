@@ -1,0 +1,95 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+import ClientesConsultaIsland from "../../components/islands/ClientesConsultaIsland.tsx";
+
+const activePage = "clientes";
+---
+
+<DashboardLayout title="Carteira de Clientes" {activePage}>
+  <style is:global>
+    /* Ajustes temporários para teste de navegabilidade no mobile (clientes/carteira).
+       IMPORTANTE: precisa ser global porque o DOM da lista vem de um React Island
+       (CSS scoped do Astro não alcança os elementos hidratados pelo React). */
+
+    @media (max-width: 640px) {
+      /* Remove scroll interno (evita scroll dentro de scroll) */
+      .clientes-page .table-container {
+        max-height: none !important;
+        overflow: visible !important;
+        overflow-y: visible !important;
+      }
+
+      /* Layout mobile em formato "cards" (label: valor) */
+      .clientes-page .clientes-table.table-mobile-cards thead {
+        display: none;
+      }
+
+      .clientes-page .clientes-table.table-mobile-cards,
+      .clientes-page .clientes-table.table-mobile-cards tbody,
+      .clientes-page .clientes-table.table-mobile-cards tr,
+      .clientes-page .clientes-table.table-mobile-cards td {
+        display: block;
+        width: 100%;
+      }
+
+      .clientes-page .clientes-table.table-mobile-cards tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .clientes-page .clientes-table.table-mobile-cards tr {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      }
+
+      .clientes-page .clientes-table.table-mobile-cards td {
+        display: grid;
+        grid-template-columns: 132px 1fr;
+        gap: 10px;
+        padding: 10px 12px;
+        border-bottom: 1px solid #eef2f7;
+        align-items: center;
+        word-break: break-word;
+      }
+
+      .clientes-page .clientes-table.table-mobile-cards td:last-child {
+        border-bottom: 0;
+      }
+
+      .clientes-page .clientes-table.table-mobile-cards td::before {
+        content: attr(data-label) " :";
+        font-weight: 600;
+        color: #475569;
+      }
+
+      /* Ações: remove o label e alinha os ícones à direita */
+      .clientes-page .clientes-table.table-mobile-cards td.th-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .clientes-page .clientes-table.table-mobile-cards td.th-actions::before {
+        content: "";
+        display: none;
+      }
+
+      .clientes-page .clientes-table.table-mobile-cards td.th-actions .action-buttons {
+        justify-content: flex-end;
+      }
+    }
+  </style>
+
+  <div class="page-content-wrap">
+    <HeaderPage
+      title="Carteira de Clientes"
+      subtitle="Gerencie seus clientes com visão de CRM."
+      color="blue"
+    />
+
+    <ClientesConsultaIsland client:load />
+  </div>
+</DashboardLayout>

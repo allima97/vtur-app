@@ -1,0 +1,10 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import LogsIsland from "../../components/islands/LogsIsland.tsx";
+---
+
+<DashboardLayout title="Logs de Auditoria" activePage="admin-logs">
+  <div class="page-content-wrap">
+    <LogsIsland client:load />
+  </div>
+</DashboardLayout>

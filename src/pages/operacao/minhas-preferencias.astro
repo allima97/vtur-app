@@ -1,0 +1,17 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import MinhasPreferenciasIsland from "../../components/islands/MinhasPreferenciasIsland";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+const activePage = "operacao_preferencias";
+---
+
+<DashboardLayout title="Minhas Preferências" activePage={activePage}>
+  <div class="page-content-wrap">
+    <HeaderPage
+      title="Minhas Preferências"
+      subtitle="Use sua expertise e cadastre hotéis, serviços, dicas de destinos e atenda mais rapidamente seus clientes."
+      color="blue"
+    />
+    <MinhasPreferenciasIsland client:load />
+  </div>
+</DashboardLayout>

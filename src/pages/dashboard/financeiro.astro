@@ -1,0 +1,102 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import { supabaseServer as supabase } from "../../lib/supabaseServer";
+
+/* KPIs VENDAS */
+const { data: sales } = await supabase
+  .from("sale")
+  .select("total, paid_total, balance_due, financial_status");
+
+/* KPIs COMISSÃO */
+const { data: commissions } = await supabase
+  .from("commission_ledger")
+  .select("amount, status");
+
+/* ÚLTIMAS VENDAS */
+const { data: recentSales } = await supabase
+  .from("sale")
+  .select("id, total, paid_total, balance_due, financial_status, created_at")
+  .order("created_at", { ascending: false })
+  .limit(10);
+
+/* Agregações */
+const receitaTotal =
+  sales?.reduce((s, r) => s + Number(r.total), 0) ?? 0;
+
+const recebido =
+  sales?.reduce((s, r) => s + Number(r.paid_total), 0) ?? 0;
+
+const aReceber =
+  sales?.reduce((s, r) => s + Number(r.balance_due), 0) ?? 0;
+
+const vendasAbertas =
+  sales?.filter(s =>
+    s.financial_status === "UNPAID" ||
+    s.financial_status === "PARTIALLY_PAID"
+  ).length ?? 0;
+
+const comissaoPendente =
+  commissions?.filter(c => c.status === "PENDING")
+    .reduce((s, c) => s + Number(c.amount), 0) ?? 0;
+
+const comissaoAprovada =
+  commissions?.filter(c => c.status === "APPROVED")
+    .reduce((s, c) => s + Number(c.amount), 0) ?? 0;
+---
+
+<DashboardLayout title="Dashboard Financeiro">
+  <div class="page-content-wrap">
+    <div class="page-header blue-header">
+      <div>
+        <h1>Dashboard Financeiro</h1>
+        <p>Resumo de vendas e comissões</p>
+      </div>
+    </div>
+
+    <section class="card-base mb-3">
+      <h2 class="page-title">Resumo</h2>
+      <ul>
+        <li><strong>Receita total:</strong> BRL {receitaTotal}</li>
+        <li><strong>Recebido:</strong> BRL {recebido}</li>
+        <li><strong>A receber:</strong> BRL {aReceber}</li>
+        <li><strong>Vendas abertas:</strong> {vendasAbertas}</li>
+      </ul>
+    </section>
+
+    <section class="card-base mb-3">
+      <h2 class="page-title">Comissões</h2>
+      <ul>
+        <li><strong>Pendente:</strong> BRL {comissaoPendente}</li>
+        <li><strong>Aprovada:</strong> BRL {comissaoAprovada}</li>
+      </ul>
+    </section>
+
+    <section class="card-base">
+      <h2 class="page-title">Últimas vendas</h2>
+      <div class="table-container overflow-x-auto">
+        <table class="table-default table-header-blue table-mobile-cards min-w-[520px]">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Total</th>
+              <th>Pago</th>
+              <th>Saldo</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentSales?.map((s) => (
+              <tr>
+                <td data-label="ID">{s.id}</td>
+                <td data-label="Total">BRL {s.total}</td>
+                <td data-label="Pago">BRL {s.paid_total}</td>
+                <td data-label="Saldo">BRL {s.balance_due}</td>
+                <td data-label="Status">{s.financial_status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</DashboardLayout>

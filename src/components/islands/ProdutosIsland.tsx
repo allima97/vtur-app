@@ -1,0 +1,1196 @@
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { usePermissoesStore } from "../../lib/permissoesStore";
+import { titleCaseWithExceptions } from "../../lib/titleCase";
+import { normalizeText } from "../../lib/normalizeText";
+import { useCrudResource } from "../../lib/useCrudResource";
+import { formatDateBR } from "../../lib/format";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import DataTable from "../ui/DataTable";
+import ConfirmDialog from "../ui/ConfirmDialog";
+import TableActions from "../ui/TableActions";
+import AlertMessage from "../ui/AlertMessage";
+import { ToastStack, useToastQueue } from "../ui/Toast";
+import PaginationControls from "../ui/PaginationControls";
+
+function dedupeSugestoes(valores: string[]) {
+  const vistos = new Set<string>();
+  const lista: string[] = [];
+  valores.forEach((valor) => {
+    const nome = (valor || "").trim();
+    if (!nome) return;
+    const chave = normalizeText(nome);
+    if (vistos.has(chave)) return;
+    vistos.add(chave);
+    lista.push(nome);
+  });
+  return lista;
+}
+
+type Pais = { id: string; nome: string };
+type Subdivisao = { id: string; nome: string; pais_id: string };
+type Cidade = { id: string; nome: string; subdivisao_id: string };
+type TipoProduto = { id: string; nome: string | null; tipo: string };
+
+type CidadeBusca = {
+  id: string;
+  nome: string;
+  latitude: number | null;
+  longitude: number | null;
+  populacao: number | null;
+  subdivisao_nome: string | null;
+  pais_nome: string | null;
+  subdivisao_id?: string | null;
+};
+
+async function fetchProdutosBase(params: {
+  page: number;
+  pageSize: number;
+  all?: boolean;
+  noCache?: boolean;
+}) {
+  const qs = new URLSearchParams();
+  qs.set("page", String(params.page));
+  qs.set("pageSize", String(params.pageSize));
+  if (params.all) qs.set("all", "1");
+  if (params.noCache) qs.set("no_cache", "1");
+  const resp = await fetch(`/api/v1/produtos/base?${qs.toString()}`);
+  if (!resp.ok) {
+    throw new Error(await resp.text());
+  }
+  return resp.json() as Promise<{
+    paises: Pais[];
+    subdivisoes: Subdivisao[];
+    tipos: TipoProduto[];
+    produtos: Produto[];
+    total: number;
+    destinosProdutos: { destino?: string | null; atracao_principal?: string | null; melhor_epoca?: string | null }[];
+    cidades: Cidade[];
+    fornecedores: FornecedorOption[];
+  }>;
+}
+
+async function fetchCidadesSugestoes(params: {
+  query: string;
+  limite?: number;
+  signal?: AbortSignal;
+}) {
+  const qs = new URLSearchParams();
+  qs.set("q", params.query);
+  qs.set("limite", String(params.limite ?? 10));
+  const resp = await fetch(`/api/v1/relatorios/cidades-busca?${qs.toString()}`,
+    { signal: params.signal }
+  );
+  if (!resp.ok) {
+    throw new Error(await resp.text());
+  }
+  const payload = await resp.json();
+  return Array.isArray(payload) ? payload : [];
+}
+
+const nivelPrecosOptions = [
+  { value: "Economico", label: "Econômico" },
+  { value: "Intermediario", label: "Intermediário" },
+  { value: "Variavel", label: "Variável" },
+  { value: "Premium", label: "Premium" },
+  { value: "Super Premium", label: "Super Premium" },
+];
+
+const HOSPITALITY_KEYWORDS = new Set(["hotel", "pousada", "resort", "flat"]);
+
+function nivelPrecoLabel(value?: string | null) {
+  if (!value) return "";
+  const normalizedValue = normalizeText(value);
+  const match = nivelPrecosOptions.find(
+    (nivel) =>
+      normalizeText(nivel.value) === normalizedValue ||
+      normalizeText(nivel.label) === normalizedValue
+  );
+  return match ? match.label : value;
+}
+
+function ehTipoHospedagem(tipo?: TipoProduto | null) {
+  if (!tipo) return false;
+  const identificado = normalizeText(tipo.nome || tipo.tipo || "");
+  return HOSPITALITY_KEYWORDS.has(identificado);
+}
+
+function gerarIdTemporario() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
+type Produto = {
+  id: string;
+  nome: string;
+  destino: string | null;
+  cidade_id: string | null;
+  tipo_produto: string | null;
+  informacoes_importantes: string | null;
+  atracao_principal: string | null;
+  melhor_epoca: string | null;
+  duracao_sugerida: string | null;
+  nivel_preco: string | null;
+  imagem_url: string | null;
+  ativo: boolean | null;
+  fornecedor_id?: string | null;
+  created_at: string | null;
+  todas_as_cidades: boolean;
+  valor_neto?: number | null;
+  margem?: number | null;
+  valor_venda?: number | null;
+  moeda?: string | null;
+  cambio?: number | null;
+  valor_em_reais?: number | null;
+};
+
+type FornecedorOption = { id: string; nome_completo: string | null; nome_fantasia: string | null };
+
+function formatFornecedorLabel(fornecedor: FornecedorOption | null | undefined) {
+  if (!fornecedor) return "";
+  return (fornecedor.nome_fantasia?.trim() || fornecedor.nome_completo?.trim() || "").trim();
+}
+
+type FormState = {
+  nome: string;
+  destino: string;
+  cidade_id: string;
+  tipo_produto: string;
+  atracao_principal: string;
+  melhor_epoca: string;
+  duracao_sugerida: string;
+  nivel_preco: string;
+  imagem_url: string;
+  informacoes_importantes: string;
+  ativo: boolean;
+  fornecedor_id: string;
+  fornecedor_label: string;
+  todas_as_cidades: boolean;
+};
+
+
+type TarifaEntry = {
+  id: string;
+  acomodacao: string;
+  qte_pax: number;
+  tipo: string;
+  validade_de: string;
+  validade_ate: string;
+  valor_neto: number;
+  padrao: "Manual" | "Padrao";
+  margem: number | null;
+  valor_venda: number;
+  valor_em_reais: number;
+  moeda: string;
+  cambio: number;
+};
+const initialForm: FormState = {
+  nome: "",
+  destino: "",
+  cidade_id: "",
+  tipo_produto: "",
+  atracao_principal: "",
+  melhor_epoca: "",
+  duracao_sugerida: "",
+  nivel_preco: "",
+  imagem_url: "",
+  informacoes_importantes: "",
+  ativo: true,
+  fornecedor_id: "",
+  fornecedor_label: "",
+  todas_as_cidades: false,
+};
+
+export default function ProdutosIsland() {
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("Produtos");
+  const podeCriar = can("Produtos", "create");
+  const podeEditar = can("Produtos", "edit");
+  const podeExcluir = can("Produtos", "delete");
+  const modoSomenteLeitura = !podeCriar && !podeEditar;
+  const { create: criarProduto, update: atualizarProduto, remove: removerProduto } =
+    useCrudResource<Produto>({
+      table: "produtos",
+    });
+
+  const [paises, setPaises] = useState<Pais[]>([]);
+  const [subdivisoes, setSubdivisoes] = useState<Subdivisao[]>([]);
+  const [cidades, setCidades] = useState<Cidade[]>([]);
+  const [tipos, setTipos] = useState<TipoProduto[]>([]);
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [destinosCadastro, setDestinosCadastro] = useState<string[]>([]);
+  const [atracoesCadastro, setAtracoesCadastro] = useState<string[]>([]);
+  const [melhoresEpocasCadastro, setMelhoresEpocasCadastro] = useState<string[]>([]);
+  const [form, setForm] = useState<FormState>(initialForm);
+  const [busca, setBusca] = useState("");
+  const [cidadeBusca, setCidadeBusca] = useState("");
+  const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
+  const [resultadosCidade, setResultadosCidade] = useState<CidadeBusca[]>([]);
+  const [buscandoCidade, setBuscandoCidade] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [salvando, setSalvando] = useState(false);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [excluindoId, setExcluindoId] = useState<string | null>(null);
+  const [produtoParaExcluir, setProdutoParaExcluir] = useState<Produto | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [erroCidadeBusca, setErroCidadeBusca] = useState<string | null>(null);
+  const [carregouTodos, setCarregouTodos] = useState(false);
+  const [fornecedoresLista, setFornecedoresLista] = useState<FornecedorOption[]>([]);
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [modoGlobal, setModoGlobal] = useState<boolean | null>(null);
+  const [tarifas, setTarifas] = useState<TarifaEntry[]>([]);
+  const [mostrarInfo, setMostrarInfo] = useState(false);
+  const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalProdutosDb, setTotalProdutosDb] = useState(0);
+
+  async function carregarDados(todos = false, pageOverride?: number) {
+    setLoading(true);
+    setErro(null);
+
+    try {
+      const paginaAtual = Math.max(1, pageOverride ?? page);
+      const tamanhoPagina = Math.max(1, pageSize);
+      const payload = await fetchProdutosBase({
+        page: paginaAtual,
+        pageSize: tamanhoPagina,
+        all: todos,
+      });
+
+      setPaises(payload.paises || []);
+      setSubdivisoes(payload.subdivisoes || []);
+      setTipos(payload.tipos || []);
+      setProdutos(payload.produtos || []);
+      setCarregouTodos(todos);
+      setTotalProdutosDb(payload.total || (payload.produtos || []).length);
+      setCidades(payload.cidades || []);
+      setFornecedoresLista(payload.fornecedores || []);
+
+      const destinosNomes: string[] = [];
+      const atracoesNomes: string[] = [];
+      const melhoresEpocasNomes: string[] = [];
+      (payload.destinosProdutos || []).forEach((destino) => {
+        const nome = (destino?.destino || "").trim();
+        if (nome) destinosNomes.push(nome);
+        const atracao = (destino?.atracao_principal || "").trim();
+        if (atracao) atracoesNomes.push(atracao);
+        const melhorEpoca = (destino?.melhor_epoca || "").trim();
+        if (melhorEpoca) melhoresEpocasNomes.push(melhorEpoca);
+      });
+      setDestinosCadastro(destinosNomes);
+      setAtracoesCadastro(atracoesNomes);
+      setMelhoresEpocasCadastro(melhoresEpocasNomes);
+    } catch (e: any) {
+      console.error(e);
+      setErro("Erro ao carregar produtos. Verifique permissões ou RLS.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    const buscaAtiva = busca.trim();
+    if (buscaAtiva) {
+      if (!carregouTodos) {
+        carregarDados(true);
+      }
+      return;
+    }
+    carregarDados(false, page);
+  }, [busca, page, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [busca]);
+
+  const subdivisaoMap = useMemo(() => new Map(subdivisoes.map((s) => [s.id, s])), [subdivisoes]);
+
+  function formatarCidadeNome(cidadeId?: string | null) {
+    if (!cidadeId) return "";
+    const cidade = cidades.find((c) => c.id === cidadeId);
+    if (!cidade) return "";
+    const subdivisao = subdivisaoMap.get(cidade.subdivisao_id);
+    return subdivisao ? `${cidade.nome} (${subdivisao.nome})` : cidade.nome;
+  }
+
+  function tipoLabel(t?: TipoProduto | null) {
+    if (!t) return "";
+    return (t.nome || "").trim() || t.tipo || "";
+  }
+
+  const produtosEnriquecidos = useMemo(() => {
+    const cidadeMap = new Map(cidades.map((c) => [c.id, c]));
+    const paisMap = new Map(paises.map((p) => [p.id, p]));
+    const tipoMap = new Map(tipos.map((t) => [t.id, t]));
+
+    return produtos.map((p) => {
+      const cidade = p.todas_as_cidades ? null : cidadeMap.get(p.cidade_id || "");
+      const subdivisao =
+        cidade ? subdivisaoMap.get(cidade.subdivisao_id) || (cidade as any).subdivisoes : undefined;
+      const pais = subdivisao ? paisMap.get(subdivisao.pais_id) : undefined;
+      const tipo = p.tipo_produto ? tipoMap.get(p.tipo_produto) : undefined;
+
+      return {
+        ...p,
+        cidade_nome: p.todas_as_cidades ? "Todas as cidades" : cidade?.nome || "",
+        subdivisao_nome: subdivisao?.nome || "",
+        pais_nome: pais?.nome || "",
+        tipo_nome: tipoLabel(tipo),
+      };
+    });
+  }, [produtos, cidades, subdivisoes, paises, tipos]);
+
+  const produtosFiltrados = useMemo(() => {
+    if (!busca.trim()) return produtosEnriquecidos;
+    const termo = normalizeText(busca);
+    return produtosEnriquecidos.filter(
+      (p) =>
+        normalizeText(p.nome).includes(termo) ||
+        normalizeText(p.cidade_nome).includes(termo) ||
+        normalizeText(p.subdivisao_nome).includes(termo) ||
+        normalizeText(p.pais_nome).includes(termo) ||
+        normalizeText(p.tipo_nome).includes(termo) ||
+        normalizeText(p.destino || "").includes(termo)
+    );
+  }, [busca, produtosEnriquecidos]);
+
+  const usaPaginacaoServidor = !busca.trim() && !carregouTodos;
+  const totalProdutos = usaPaginacaoServidor ? totalProdutosDb : produtosFiltrados.length;
+  const totalPaginas = Math.max(1, Math.ceil(totalProdutos / Math.max(pageSize, 1)));
+  const paginaAtual = Math.min(page, totalPaginas);
+  const produtosExibidos = useMemo(() => {
+    if (usaPaginacaoServidor) return produtosEnriquecidos;
+    const inicio = (paginaAtual - 1) * pageSize;
+    return produtosFiltrados.slice(inicio, inicio + pageSize);
+  }, [usaPaginacaoServidor, produtosEnriquecidos, produtosFiltrados, paginaAtual, pageSize]);
+
+  useEffect(() => {
+    if (page > totalPaginas) {
+      setPage(totalPaginas);
+    }
+  }, [page, totalPaginas]);
+
+  const destinosSugestoes = useMemo(() => dedupeSugestoes(destinosCadastro), [destinosCadastro]);
+  const atracoesSugestoes = useMemo(() => dedupeSugestoes(atracoesCadastro), [atracoesCadastro]);
+  const melhoresEpocasSugestoes = useMemo(
+    () => dedupeSugestoes(melhoresEpocasCadastro),
+    [melhoresEpocasCadastro]
+  );
+
+  const tipoSelecionado = useMemo(
+    () => (form.tipo_produto ? tipos.find((t) => t.id === form.tipo_produto) || null : null),
+    [form.tipo_produto, tipos]
+  );
+  const isHospedagem = ehTipoHospedagem(tipoSelecionado);
+
+  const estaEditando = Boolean(editandoId);
+  const formLayout = estaEditando
+    ? "full"
+    : modoGlobal === null
+    ? "selection"
+    : modoGlobal
+    ? "global"
+    : "full";
+  const isGlobalMode = formLayout === "global";
+
+  const handleChange = useCallback(
+    <K extends keyof FormState>(campo: K, valor: FormState[K]) => {
+      setForm((prev) => ({ ...prev, [campo]: valor }));
+    },
+    []
+  );
+
+  function handleCidadeBusca(valor: string) {
+    if (form.todas_as_cidades) return;
+    setCidadeBusca(valor);
+    const cidadeAtual = cidades.find((c) => c.id === form.cidade_id);
+    if (!cidadeAtual || !normalizeText(cidadeAtual.nome).includes(normalizeText(valor))) {
+      setForm((prev) => ({ ...prev, cidade_id: "" }));
+    }
+    setMostrarSugestoes(true);
+  }
+
+  function handleToggleTodasAsCidades(valor: boolean) {
+    handleChange("todas_as_cidades", valor);
+    if (valor) {
+      handleChange("cidade_id", "");
+      setCidadeBusca("");
+      setMostrarSugestoes(false);
+      setResultadosCidade([]);
+    }
+  }
+
+  function selecionarAbrangencia(valor: boolean) {
+    setModoGlobal(valor);
+    handleToggleTodasAsCidades(valor);
+    if (valor) {
+      handleChange("destino", titleCaseWithExceptions("Global"));
+    } else {
+      handleChange("destino", "");
+    }
+  }
+
+  function handleFornecedorInput(valor: string) {
+    handleChange("fornecedor_label", valor);
+    const termo = valor.trim().toLowerCase();
+    if (!termo) {
+      handleChange("fornecedor_id", "");
+      return;
+    }
+    const match = fornecedoresLista.find(
+      (f) => formatFornecedorLabel(f).toLowerCase() === termo
+    );
+    handleChange("fornecedor_id", match ? match.id : "");
+  }
+
+  async function carregarTarifasProduto(produtoId: string, moedaPadrao: string, cambioPadrao: number) {
+    if (!produtoId) return;
+    try {
+      const params = new URLSearchParams({ produto_id: produtoId });
+      const resp = await fetch(`/api/v1/produtos/tarifas?${params.toString()}`);
+      if (!resp.ok) {
+        throw new Error(await resp.text());
+      }
+      const json = (await resp.json()) as { items?: any[] };
+      const formatos = (json.items || []).map((tarifa) => ({
+        id: tarifa.id,
+        acomodacao: tarifa.acomodacao,
+        qte_pax: tarifa.qte_pax ?? 0,
+        tipo: tarifa.tipo || "",
+        validade_de: tarifa.validade_de ? String(tarifa.validade_de).slice(0, 10) : "",
+        validade_ate: tarifa.validade_ate ? String(tarifa.validade_ate).slice(0, 10) : "",
+        valor_neto: tarifa.valor_neto ?? 0,
+        padrao: tarifa.padrao === "Manual" ? "Manual" : "Padrao",
+        margem: tarifa.margem ?? null,
+        valor_venda: tarifa.valor_venda ?? 0,
+        valor_em_reais: tarifa.valor_em_reais ?? 0,
+        moeda: tarifa.moeda || moedaPadrao || "USD",
+        cambio: tarifa.cambio ?? cambioPadrao,
+      }));
+      setTarifas(formatos);
+    } catch (error) {
+      console.error("Erro ao carregar tarifas do produto:", error);
+    }
+  }
+
+  async function sincronizarTarifas(produtoId: string) {
+    if (!produtoId) return;
+    try {
+      const payload = {
+        produto_id: produtoId,
+        tarifas: tarifas.map(({ id, ...rest }) => rest),
+      };
+      const resp = await fetch("/api/v1/produtos/tarifas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!resp.ok) {
+        throw new Error(await resp.text());
+      }
+    } catch (error) {
+      console.error("Erro ao sincronizar tarifas:", error);
+      throw error;
+    }
+  }
+
+  function iniciarNovo() {
+    setForm(initialForm);
+    setEditandoId(null);
+    setErro(null);
+    setCidadeBusca("");
+    setMostrarSugestoes(false);
+    setModoGlobal(null);
+    setTarifas([]);
+    setMostrarInfo(false);
+  }
+
+  function iniciarEdicao(produto: Produto & { cidade_nome?: string }) {
+    const cidade = cidades.find((c) => c.id === produto.cidade_id);
+
+    setEditandoId(produto.id);
+    setForm({
+      nome: produto.nome,
+      cidade_id: produto.cidade_id,
+      tipo_produto: produto.tipo_produto || "",
+      atracao_principal: produto.atracao_principal || "",
+      melhor_epoca: produto.melhor_epoca || "",
+      duracao_sugerida: produto.duracao_sugerida || "",
+      nivel_preco: produto.nivel_preco || "",
+      imagem_url: produto.imagem_url || "",
+      informacoes_importantes: produto.informacoes_importantes || "",
+      ativo: produto.ativo ?? true,
+      destino: produto.destino || "",
+      fornecedor_id: produto.fornecedor_id || "",
+      fornecedor_label: formatFornecedorLabel(
+        fornecedoresLista.find((f) => f.id === produto.fornecedor_id)
+      ),
+      todas_as_cidades: produto.todas_as_cidades ?? false,
+    });
+    setTarifas([]);
+    setMostrarInfo(!!produto.informacoes_importantes);
+    setCidadeBusca(
+      produto.todas_as_cidades ? "" : formatarCidadeNome(produto.cidade_id) || cidade?.nome || ""
+    );
+    setMostrarSugestoes(false);
+    setMostrarFormulario(true);
+    carregarTarifasProduto(produto.id, produto.moeda || "USD", produto.cambio ?? 0);
+  }
+
+  function abrirFormularioProduto() {
+    iniciarNovo();
+    setMostrarFormulario(true);
+    setErro(null);
+  }
+
+  function fecharFormularioProduto() {
+    iniciarNovo();
+    setMostrarFormulario(false);
+  }
+
+  useEffect(() => {
+    if (cidadeBusca.trim().length < 2) {
+      setResultadosCidade([]);
+      return;
+    }
+
+    const controller = new AbortController();
+    const t = setTimeout(async () => {
+      setBuscandoCidade(true);
+      setErroCidadeBusca(null);
+      try {
+        const data = await fetchCidadesSugestoes({
+          query: cidadeBusca.trim(),
+          limite: 10,
+          signal: controller.signal,
+        });
+        if (!controller.signal.aborted) {
+          setResultadosCidade((data as CidadeBusca[]) || []);
+          setErroCidadeBusca(null);
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Erro ao buscar cidades:", error);
+          setErroCidadeBusca("Erro ao buscar cidades.");
+        }
+      } finally {
+        if (!controller.signal.aborted) setBuscandoCidade(false);
+      }
+    }, 300);
+
+    return () => {
+      controller.abort();
+      clearTimeout(t);
+    };
+  }, [cidadeBusca]);
+
+  async function salvar(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (modoSomenteLeitura) {
+      setErro("Voce nao tem permissao para salvar produtos.");
+      return;
+    }
+    if (!form.nome.trim()) {
+      setErro("Nome e obrigatorio.");
+      return;
+    }
+    if (!form.destino.trim()) {
+      setErro("Destino e obrigatorio.");
+      return;
+    }
+    if (!form.todas_as_cidades && !form.cidade_id) {
+      setErro("Cidade e obrigatoria quando o produto nao for global.");
+      return;
+    }
+    if (!form.tipo_produto) {
+      setErro("Tipo de produto e obrigatorio.");
+      return;
+    }
+
+    try {
+      setSalvando(true);
+      setErro(null);
+
+      const erroSupabaseMsg = (err: any) => {
+        const msg = err?.message || err?.error?.message || "";
+        const det = err?.details || err?.error?.details || "";
+        const hint = err?.hint || err?.error?.hint || "";
+        return [msg, det, hint].filter(Boolean).join(" | ");
+      };
+
+      const nomeNormalizado = titleCaseWithExceptions(form.nome);
+      const destinoNormalizado = titleCaseWithExceptions(form.destino);
+
+      const payload = {
+        nome: nomeNormalizado,
+        destino: destinoNormalizado,
+        cidade_id: form.todas_as_cidades ? null : form.cidade_id,
+        tipo_produto: form.tipo_produto,
+        atracao_principal: form.atracao_principal.trim() || null,
+        melhor_epoca: form.melhor_epoca.trim() || null,
+        duracao_sugerida: form.duracao_sugerida.trim() || null,
+        nivel_preco: form.nivel_preco.trim() || null,
+        imagem_url: form.imagem_url.trim() || null,
+        informacoes_importantes: form.informacoes_importantes.trim() || null,
+        ativo: form.ativo,
+        fornecedor_id: form.fornecedor_id || null,
+        todas_as_cidades: form.todas_as_cidades,
+      };
+
+      let produtoId = editandoId;
+      const result = produtoId
+        ? await atualizarProduto(produtoId, payload, {
+            errorMessage: "Erro ao salvar produto.",
+          })
+        : await criarProduto(payload, {
+            select: "id",
+            errorMessage: "Erro ao salvar produto.",
+          });
+
+      if (result.error) {
+        const msg = erroSupabaseMsg(result.error);
+        throw new Error(msg || "Erro ao salvar produto.");
+      }
+
+      if (!produtoId) {
+        produtoId = (result.data as { id?: string } | null)?.id || null;
+        if (!produtoId) {
+          throw new Error("Não foi possível identificar o produto salvo.");
+        }
+      }
+      await sincronizarTarifas(produtoId);
+
+      iniciarNovo();
+      setMostrarFormulario(false);
+      await carregarDados(carregouTodos, page);
+    } catch (e: any) {
+      console.error(e);
+      const msg = e?.message || e?.error?.message || "";
+      setErro(`Erro ao salvar produto.${msg ? ` Detalhes: ${msg}` : ""}`);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function excluir(id: string) {
+    if (!podeExcluir) {
+      showToast("Somente administradores podem excluir produtos.", "error");
+      return;
+    }
+
+    try {
+      setExcluindoId(id);
+      setErro(null);
+
+      const result = await removerProduto(id, {
+        errorMessage: "Nao foi possivel excluir o produto.",
+      });
+      if (result.error) throw result.error;
+
+      await carregarDados(carregouTodos, page);
+    } catch (e) {
+      console.error(e);
+      setErro("Nao foi possivel excluir o produto. Verifique vinculos com vendas/orcamentos.");
+    } finally {
+      setExcluindoId(null);
+    }
+  }
+
+  function solicitarExclusao(produto: Produto) {
+    if (!podeExcluir) {
+      showToast("Somente administradores podem excluir produtos.", "error");
+      return;
+    }
+    setProdutoParaExcluir(produto);
+  }
+
+  async function confirmarExclusao() {
+    if (!produtoParaExcluir) return;
+    await excluir(produtoParaExcluir.id);
+    setProdutoParaExcluir(null);
+  }
+
+  if (loadingPerm) return <LoadingUsuarioContext />;
+  if (!podeVer) return <div>Voce nao possui acesso ao modulo de Cadastros.</div>;
+
+  return (
+    <div className="destinos-page produtos-page">
+      {!mostrarFormulario && (
+        <div className="card-base mb-3 list-toolbar-sticky">
+          <div className="mobile-stack-buttons gap-3 items-end">
+            <div className="form-group flex-1 min-w-[220px]">
+              <label className="form-label">Buscar produto</label>
+              <input
+                className="form-input"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Busque por nome, tipo, destino, cidade, estado/província ou país"
+              />
+            </div>
+            {!modoSomenteLeitura && (
+              <div className="form-group" style={{ alignItems: "flex-end" }}>
+                <button
+                  type="button"
+                  className="btn btn-primary w-full sm:w-auto"
+                  onClick={abrirFormularioProduto}
+                  disabled={mostrarFormulario}
+                >
+                  Adicionar produto
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {mostrarFormulario && formLayout === "selection" && (
+        <div className="card-base card-blue mb-3">
+          <div className="form-row mobile-stack">
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">Todas as cidades</label>
+              <div className="mobile-stack-buttons">
+                <button type="button" className="btn btn-light" onClick={() => selecionarAbrangencia(false)}>
+                  Nao
+                </button>
+                <button type="button" className="btn btn-primary" onClick={() => selecionarAbrangencia(true)}>
+                  Sim
+                </button>
+              </div>
+              <small style={{ color: "#64748b" }}>
+                Escolha "Sim" para cadastrar um produto global; "Nao" abre o formulario completo.
+              </small>
+            </div>
+          </div>
+          <div className="mt-2 mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+            <button type="button" className="btn btn-light" onClick={fecharFormularioProduto}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {mostrarFormulario && formLayout !== "selection" && (
+
+        <div className="card-base card-blue mb-3">
+
+          <form onSubmit={salvar}>
+
+            <div className="flex flex-col md:flex-row md:flex-wrap gap-3" style={{ marginTop: 12 }}>
+              <div className="form-group" style={{ flex: "0 1 220px", minWidth: 180 }}>
+                <label className="form-label">Tipo *</label>
+                <select
+                  className="form-select"
+                  value={form.tipo_produto}
+                  onChange={(e) => handleChange("tipo_produto", e.target.value)}
+                  disabled={modoSomenteLeitura}
+                >
+                  <option value="">Selecione o tipo</option>
+                  {tipos.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {tipoLabel(t) || "(sem nome)"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {!isGlobalMode && (
+                <div className="form-group" style={{ flex: "1 1 260px", minWidth: 220 }}>
+                  <label className="form-label">Cidade *</label>
+                  <input
+                    className="form-input"
+                    placeholder="Digite o nome da cidade"
+                    value={cidadeBusca}
+                    onChange={(e) => handleCidadeBusca(e.target.value)}
+                    onFocus={() => setMostrarSugestoes(true)}
+                    onBlur={() => setTimeout(() => setMostrarSugestoes(false), 150)}
+                    disabled={modoSomenteLeitura || form.todas_as_cidades}
+                    style={{ marginBottom: 6 }}
+                    title="Cidade selecionada pode ajudar a preencher o destino automaticamente."
+                  />
+                  {buscandoCidade && <div style={{ fontSize: 12, color: "#6b7280" }}>Buscando...</div>}
+                  {erroCidadeBusca && !buscandoCidade && (
+                    <div style={{ fontSize: 12, color: "#dc2626" }}>{erroCidadeBusca}</div>
+                  )}
+                  {mostrarSugestoes && (
+                    <div
+                      className="card-base"
+                      style={{
+                        marginTop: 4,
+                        maxHeight: 180,
+                        overflowY: "auto",
+                        padding: 6,
+                        border: "1px solid #e5e7eb",
+                      }}
+                    >
+                      {resultadosCidade.length === 0 && !buscandoCidade && (
+                        <div style={{ padding: "4px 6px", color: "#6b7280" }}>Nenhuma cidade encontrada.</div>
+                      )}
+                      {resultadosCidade.map((c) => {
+                        const label = c.subdivisao_nome ? `${c.nome} (${c.subdivisao_nome})` : c.nome;
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            className="btn btn-light"
+                            style={{
+                              width: "100%",
+                              justifyContent: "flex-start",
+                              marginBottom: 4,
+                              background: form.cidade_id === c.id ? "#e0f2fe" : "#fff",
+                              borderColor: form.cidade_id === c.id ? "#38bdf8" : "#e5e7eb",
+                            }}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleChange("cidade_id", c.id);
+                              setCidadeBusca(label);
+                              setMostrarSugestoes(false);
+                              setResultadosCidade([]);
+                            }}
+                          >
+                            {label}
+                            {c.pais_nome ? <span style={{ color: "#6b7280", marginLeft: 6 }}>- {c.pais_nome}</span> : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+              </div>
+              )}
+              <div className="form-group" style={{ flex: "1 1 320px", minWidth: 260 }}>
+                <label className="form-label">Nome do produto *</label>
+                <input
+                  className="form-input"
+                  value={form.nome}
+                  onChange={(e) => handleChange("nome", e.target.value)}
+                  onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
+                  placeholder="Ex: Passeio em Gramado, Pacote Paris..."
+                  disabled={modoSomenteLeitura}
+                />
+              </div>
+              <div className="form-group" style={{ flex: "1 1 240px", minWidth: 220 }}>
+                <label className="form-label">Fornecedor (opcional)</label>
+                <input
+                  className="form-input"
+                  list="fornecedores-list"
+                  placeholder="Escolha um fornecedor"
+                  value={form.fornecedor_label}
+                  onChange={(e) => handleFornecedorInput(e.target.value)}
+                  disabled={modoSomenteLeitura}
+                />
+                <datalist id="fornecedores-list">
+                  {fornecedoresLista.map((fornecedor) => (
+                    <option key={fornecedor.id} value={formatFornecedorLabel(fornecedor)} />
+                  ))}
+                </datalist>
+              </div>
+              <div className="form-group" style={{ flex: "1 1 320px", minWidth: 260 }}>
+                <label className="form-label">Destino *</label>
+                <input
+                  className="form-input"
+                  list="destinos-list"
+                  value={form.destino}
+                  onChange={(e) => handleChange("destino", e.target.value)}
+                  onBlur={(e) => handleChange("destino", titleCaseWithExceptions(e.target.value))}
+                  placeholder={isGlobalMode ? "Global" : "Ex: Disney, Porto de Galinhas"}
+                  disabled={modoSomenteLeitura || isGlobalMode}
+                  title="Cidade escolhida será aplicada quando o destino estiver vazio."
+                />
+                <datalist id="destinos-list">
+                  {destinosSugestoes.map((nome) => (
+                    <option key={nome} value={nome} />
+                  ))}
+                </datalist>
+              </div>
+            </div>
+            {!isGlobalMode && form.todas_as_cidades && (
+              <div className="flex flex-col md:flex-row md:flex-wrap gap-3" style={{ marginTop: 12 }}>
+                <div className="form-group" style={{ width: 220 }}>
+                  <label className="form-label">Todas as cidades</label>
+                  <select
+                    className="form-select"
+                    value={form.todas_as_cidades ? "true" : "false"}
+                    onChange={(e) => handleToggleTodasAsCidades(e.target.value === "true")}
+                    disabled={modoSomenteLeitura}
+                  >
+                    <option value="false">Nao</option>
+                    <option value="true">Sim</option>
+                  </select>
+                  <small style={{ color: "#64748b" }}>
+                    Produtos globais ficam disponiveis para qualquer cidade e nao salvam cidade especifica.
+                  </small>
+                </div>
+              </div>
+            )}
+            {isHospedagem && (
+              <div className="flex flex-col md:flex-row md:flex-wrap gap-3" style={{ marginTop: 12 }}>
+                <div className="form-group">
+                  <label className="form-label">Atracao principal</label>
+                  <input
+
+                    className="form-input"
+
+                    list="atracoes-list"
+                    value={form.atracao_principal}
+
+                    onChange={(e) => handleChange("atracao_principal", e.target.value)}
+
+                    placeholder="Ex: Disney, Torre Eiffel..."
+
+                    disabled={modoSomenteLeitura}
+
+                  />
+                  <datalist id="atracoes-list">
+                    {atracoesSugestoes.map((nome) => (
+                      <option key={nome} value={nome} />
+                    ))}
+                  </datalist>
+
+                </div>
+
+                <div className="form-group">
+
+                  <label className="form-label">Melhor epoca</label>
+
+                  <input
+
+                    className="form-input"
+
+                    list="melhor-epoca-list"
+                    value={form.melhor_epoca}
+
+                    onChange={(e) => handleChange("melhor_epoca", e.target.value)}
+
+                    placeholder="Ex: Dezembro a Marco"
+
+                    disabled={modoSomenteLeitura}
+
+                  />
+                  <datalist id="melhor-epoca-list">
+                    {melhoresEpocasSugestoes.map((nome) => (
+                      <option key={nome} value={nome} />
+                    ))}
+                  </datalist>
+
+                </div>
+
+              </div>
+
+            )}
+
+            {isHospedagem && (
+              <div className="flex flex-col md:flex-row md:flex-wrap gap-3" style={{ marginTop: 12 }}>
+                <div className="form-group">
+                  <label className="form-label">Duracao sugerida</label>
+                  <select
+                    className="form-select"
+                    value={form.duracao_sugerida}
+                    onChange={(e) => handleChange("duracao_sugerida", e.target.value)}
+                    disabled={modoSomenteLeitura}
+                  >
+                    <option value="">Selecione</option>
+                    <option value="De 1 a 3 dias">De 1 a 3 dias</option>
+                    <option value="De 3 a 5 dias">De 3 a 5 dias</option>
+                    <option value="De 5 a 7 dias">De 5 a 7 dias</option>
+                    <option value="De 7 a 10 dias">De 7 a 10 dias</option>
+                    <option value="10 dias ou mais">10 dias ou mais</option>
+                  </select>
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label className="form-label">Nivel de preco</label>
+                  <select
+                    className="form-select"
+                    value={form.nivel_preco}
+                    onChange={(e) => handleChange("nivel_preco", e.target.value)}
+                    disabled={modoSomenteLeitura}
+                  >
+                    <option value="">Selecione</option>
+                    {nivelPrecosOptions.map((nivel) => (
+                      <option key={nivel.value} value={nivel.value}>
+                        {nivel.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Imagem (URL)</label>
+                  <input
+                    className="form-input"
+                    value={form.imagem_url}
+                    onChange={(e) => handleChange("imagem_url", e.target.value)}
+                    placeholder="URL de uma imagem do destino"
+                    disabled={modoSomenteLeitura}
+                  />
+                </div>
+              </div>
+            )}
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <div className="flex items-center justify-between">
+                <label className="form-label" style={{ marginBottom: 0 }}>
+                  Informacoes importantes
+                </label>
+                <button
+                  type="button"
+                  className="btn btn-light"
+                  onClick={() => setMostrarInfo((prev) => !prev)}
+                >
+                  {mostrarInfo ? "-" : "+"}
+                </button>
+              </div>
+              {mostrarInfo && (
+                <textarea
+                  className="form-input"
+                  rows={3}
+                  value={form.informacoes_importantes}
+                  onChange={(e) => handleChange("informacoes_importantes", e.target.value)}
+                  placeholder="Observacoes gerais, dicas, documentacao necessaria, etc."
+                  disabled={modoSomenteLeitura}
+                />
+              )}
+            </div>
+
+            <div className="form-group" style={{ marginTop: 12 }}>
+
+              <label className="form-label">Ativo</label>
+
+              <select
+
+                className="form-select"
+
+                value={form.ativo ? "true" : "false"}
+
+                onChange={(e) => handleChange("ativo", e.target.value === "true")}
+
+                disabled={modoSomenteLeitura}
+
+              >
+
+                <option value="true">Sim</option>
+
+                <option value="false">Nao</option>
+
+              </select>
+
+            </div>
+
+            <div className="mt-2 mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+              <button type="submit" className="btn btn-primary" disabled={salvando}>
+                {salvando ? "Salvando..." : editandoId ? "Salvar alteracoes" : "Salvar produto"}
+              </button>
+              <button type="button" className="btn btn-light" onClick={fecharFormularioProduto} disabled={salvando}>
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+
+      )}
+
+      {!mostrarFormulario && (
+        <>
+          {erro && (
+            <div className="mb-3">
+              <AlertMessage variant="error">{erro}</AlertMessage>
+            </div>
+          )}
+          {!carregouTodos && !erro && (
+            <div className="card-base card-config mb-3">
+              Use a paginação para navegar. Digite na busca para filtrar todos que estão no sistema.
+            </div>
+          )}
+
+          <PaginationControls
+            page={paginaAtual}
+            pageSize={pageSize}
+            totalItems={totalProdutos}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(1);
+            }}
+          />
+
+          {/* Tabela */}
+          <DataTable
+            className="table-default table-header-blue table-mobile-cards min-w-[1080px]"
+            containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+            headers={
+              <tr>
+                <th>Tipo</th>
+                <th>Produto</th>
+                <th>Destino</th>
+                <th>Cidade</th>
+                <th>Nivel de preco</th>
+                <th>Ativo</th>
+                <th>Criado em</th>
+                <th className="th-actions">Acoes</th>
+              </tr>
+            }
+            loading={loading}
+            loadingMessage="Carregando produtos..."
+            empty={!loading && produtosFiltrados.length === 0}
+            emptyMessage="Nenhum produto encontrado."
+            colSpan={8}
+          >
+            {produtosExibidos.map((p) => (
+              <tr key={p.id}>
+                <td data-label="Tipo">{p.tipo_nome || "-"}</td>
+                <td data-label="Produto">{p.nome}</td>
+                <td data-label="Destino">{p.destino || "-"}</td>
+                <td data-label="Cidade">{(p as any).cidade_nome || "-"}</td>
+                <td data-label="Nivel de preco">{nivelPrecoLabel(p.nivel_preco) || "-"}</td>
+                <td data-label="Ativo">{p.ativo ? "Sim" : "Nao"}</td>
+                <td data-label="Criado em">
+                  {p.created_at ? formatDateBR(p.created_at) : "-"}
+                </td>
+                <td className="th-actions" data-label="Acoes">
+                  <TableActions
+                    show={!modoSomenteLeitura}
+                    actions={[
+                      ...(!modoSomenteLeitura
+                        ? [
+                            {
+                              key: "edit",
+                              label: "Editar",
+                              onClick: () => iniciarEdicao(p),
+                              icon: "✏️",
+                            },
+                          ]
+                        : []),
+                      ...(podeExcluir
+                        ? [
+                            {
+                              key: "delete",
+                              label: "Excluir",
+                              onClick: () => solicitarExclusao(p),
+                              icon: excluindoId === p.id ? "..." : "🗑️",
+                              variant: "danger" as const,
+                              disabled: excluindoId === p.id,
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
+                </td>
+              </tr>
+            ))}
+          </DataTable>
+        </>
+      )}
+
+      <ConfirmDialog
+        open={Boolean(produtoParaExcluir)}
+        title="Excluir produto"
+        message={`Tem certeza que deseja excluir ${produtoParaExcluir?.nome || "este produto"}?`}
+        confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
+        confirmVariant="danger"
+        confirmDisabled={Boolean(excluindoId)}
+        onCancel={() => setProdutoParaExcluir(null)}
+        onConfirm={confirmarExclusao}
+      />
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
+    </div>
+  );
+}

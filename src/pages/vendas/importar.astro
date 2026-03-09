@@ -1,0 +1,23 @@
+---
+import "../../styles/global.css";
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+import VendaContratoImportIsland from "../../components/islands/VendaContratoImportIsland";
+
+const activePage = "vendas-importar";
+---
+
+<DashboardLayout title="Importar Contratos" {activePage}>
+  <HeaderPage
+    title="Importar Contratos (CVC)"
+    subtitle="Importe contratos via PDF ou texto colado."
+    color="green"
+  />
+
+  <div class="page-content-wrap" style="paddingTop: 0; paddingBottom: 12px;">
+    <a class="btn btn-light" href="/vendas/consulta" style="textDecoration: none;">
+      Cancelar
+    </a>
+  </div>
+  <VendaContratoImportIsland client:only="react" />
+</DashboardLayout>

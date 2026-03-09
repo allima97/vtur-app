@@ -1,0 +1,17 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import DocumentosViagensIsland from "../../components/islands/DocumentosViagensIsland";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+const activePage = "operacao_documentos_viagens";
+---
+
+<DashboardLayout title="Documentos Viagens" activePage={activePage}>
+  <div class="page-content-wrap">
+    <HeaderPage
+      title="Documentos Viagens"
+      subtitle="Acesse rapidamente documentos necessários para viagens."
+      color="blue"
+    />
+    <DocumentosViagensIsland client:only="react" />
+  </div>
+</DashboardLayout>

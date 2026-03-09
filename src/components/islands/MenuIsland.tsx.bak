@@ -1,0 +1,1146 @@
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { logoutUsuario } from "../../lib/logout";
+import { SYSTEM_NAME } from "../../lib/systemName";
+import { usePermissoesStore } from "../../lib/permissoesStore";
+import { MAPA_MODULOS, listarModulosComHeranca } from "../../config/modulos";
+import { supabase } from "../../lib/supabase";
+import {
+  getPermissaoFromCache,
+  readPermissoesCache,
+  subscribePermissoes,
+  type Permissao,
+  type PermissoesCache,
+} from "../../lib/permissoesCache";
+import { setCurrentScreen } from "../../lib/netMetrics";
+
+
+const FornecedoresIcon = () => {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 32 32"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <circle cx="14" cy="8" r="4.2" />
+      <path d="M9 18c0-1.5 1.7-3 5-3s5 1.5 5 3" />
+      <path d="M8 25c1.5-3 6-4 8-4s6 1 7 4" />
+      <rect x="11.5" y="19" width="6" height="4" rx="1" />
+      <path d="M21.5 8v16" />
+      <path d="M21.5 8l6 3-6 3" />
+    </svg>
+  );
+};
+
+const [showWarning, setShowWarning] = useState(false);
+const [consultoriaBadge, setConsultoriaBadge] = useState(0);
+const [recadosBadge, setRecadosBadge] = useState(0);
+const [currentCompanyId, setCurrentCompanyId] = useState<string | null>(null);
+const [updatingPerms, setUpdatingPerms] = useState(false);
+const [permSyncMsg, setPermSyncMsg] = useState<string | null>(null);
+const logoutTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+const warningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+const AUTO_LOGOUT_MS = DEFAULT_LOGOUT_MINUTES * 60 * 1000;
+const WARNING_LEAD_TIME_MS = 60 * 1000;
+const SESSION_EXTENSION_MS = 15 * 60 * 1000;
+
+const cacheUserId = cachedPerms?.userId ?? null;
+const cacheUserType = cachedPerms?.userType ?? "";
+const menuUserType = ready ? userType : cacheUserType;
+const menuIsMaster = /MASTER/i.test(menuUserType || "");
+const menuIsVendedor = /VENDEDOR/i.test(menuUserType || "");
+const menuIsGestor = /GESTOR/i.test(menuUserType || "");
+
+const permLevel = (p?: Permissao | null): number => {
+  switch (p) {
+    case "admin":
+      return 5;
+    case "delete":
+      return 4;
+      case "create":
+        return 2;
+      case "view":
+        return 1;
+      default:
+        return 0;
+    }
+  };
+
+  const canFromCache = (modulo: string, min: Permissao = "view") => {
+    if (!cacheUserId) return false;
+    const labels = listarModulosComHeranca(modulo);
+    return labels.some((label) => {
+      const modDb = MAPA_MODULOS[label] || label;
+      const perm =
+        getPermissaoFromCache(modDb, cacheUserId, cachedPerms)?.permissao ?? "none";
+      if (permLevel(perm) >= permLevel(min)) return true;
+      if (String(modDb).toLowerCase() !== String(label).toLowerCase()) {
+        const permLabel =
+          getPermissaoFromCache(label, cacheUserId, cachedPerms)?.permissao ?? "none";
+        return permLevel(permLabel) >= permLevel(min);
+      }
+      return false;
+    });
+  };
+
+  const canFromCacheExact = (modulo: string, min: Permissao = "view") => {
+    if (!cacheUserId) return false;
+    const modDb = MAPA_MODULOS[modulo] || modulo;
+    const perm = getPermissaoFromCache(modDb, cacheUserId, cachedPerms)?.permissao ?? "none";
+    if (permLevel(perm) >= permLevel(min)) return true;
+    if (String(modDb).toLowerCase() !== String(modulo).toLowerCase()) {
+      const permLabel =
+        getPermissaoFromCache(modulo, cacheUserId, cachedPerms)?.permissao ?? "none";
+      return permLevel(permLabel) >= permLevel(min);
+    }
+    return false;
+  };
+
+  const canMenu = ready ? can : canFromCache;
+  const canMenuExact = ready
+    ? (modulo: string, min: Permissao = "view") => {
+        if (menuIsSystemAdmin) return true;
+        const modDb = MAPA_MODULOS[modulo] || modulo;
+        if (canDb(modDb, min)) return true;
+        if (String(modDb).toLowerCase() !== String(modulo).toLowerCase()) {
+          return canDb(modulo, min);
+        }
+        return false;
+      }
+    : canFromCacheExact;
+  const menuUserId = ready ? userId : cacheUserId;
+  const menuIsSystemAdmin = ready
+    ? isSystemAdmin
+    : Boolean(cachedPerms?.isSystemAdmin);
+  const canParametrosTipoProdutos = canMenuExact("TipoProdutos");
+  const canParametrosTipoPacotes = canMenuExact("TipoPacotes");
+  const canParametrosMetas = canMenuExact("Metas");
+  const canParametrosEquipe = canMenuExact("Equipe");
+  const canParametrosEscalas = canMenuExact("Escalas");
+  const canParametrosSistema = canMenuExact("Parametros");
+  const canParametrosCambios = canMenuExact("Cambios");
+  const canParametrosOrcamentosPdf = canMenuExact("Orcamentos (PDF)");
+  const canParametrosFormasPagamento = canMenuExact("Formas de Pagamento");
+  const canParametrosRegrasComissao = canMenuExact("RegrasComissao");
+  const canParametrosSection =
+    canParametrosTipoProdutos ||
+    canParametrosTipoPacotes ||
+    canParametrosMetas ||
+    canParametrosEquipe ||
+    canParametrosEscalas ||
+    canParametrosSistema ||
+    canParametrosCambios ||
+    canParametrosOrcamentosPdf ||
+    canParametrosFormasPagamento ||
+    canParametrosRegrasComissao;
+
+  const canRelatoriosVendas = canMenuExact("RelatorioVendas") || canMenuExact("Relatorios");
+  const canRelatoriosDestinos = canMenuExact("RelatorioDestinos") || canMenuExact("Relatorios");
+  const canRelatoriosProdutos = canMenuExact("RelatorioProdutos") || canMenuExact("Relatorios");
+  const canRelatoriosClientes = canMenuExact("RelatorioClientes") || canMenuExact("Relatorios");
+  const canRelatoriosRanking = canMenuExact("Ranking de vendas");
+  const canRelatoriosSection =
+    canRelatoriosVendas ||
+    canRelatoriosDestinos ||
+    canRelatoriosProdutos ||
+    canRelatoriosClientes ||
+    canRelatoriosRanking;
+
+  useEffect(() => {
+    const label = activePage || (typeof window !== "undefined" ? window.location.pathname : "") || "unknown";
+    setCurrentScreen(label);
+  }, [activePage]);
+
+  useEffect(() => {
+    if (!initialCache) {
+      const localCache = readPermissoesCache();
+      if (localCache) {
+        setCachedPerms(localCache);
+      }
+    }
+  }, [initialCache]);
+
+  useEffect(() => {
+    return subscribePermissoes((cache) => {
+      setCachedPerms(cache);
+    });
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1024px)");
+    const onChange = (event: MediaQueryListEvent) => {
+      if (!event.matches) setMobileOpen(false);
+    };
+
+    if (mq.addEventListener) mq.addEventListener("change", onChange);
+    else mq.addListener(onChange);
+
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener("change", onChange);
+      else mq.removeListener(onChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [mobileOpen]);
+
+  const toggleMobile = () => setMobileOpen((prev) => !prev);
+  const closeMobile = useCallback(() => setMobileOpen(false), []);
+
+  const executarLogout = useCallback(
+    async (mostrarFeedback = true) => {
+      if (mostrarFeedback) setSaindo(true);
+      setShowWarning(false);
+      closeMobile();
+      try {
+        await logoutUsuario();
+      } finally {
+        if (mostrarFeedback) setSaindo(false);
+      }
+    },
+    [closeMobile, setSaindo]
+  );
+
+  const handleNavClick = () => {
+    if (typeof window !== "undefined" && window.innerWidth <= 1024) closeMobile();
+  };
+
+  type TodoNavTab = "novo" | "agendado" | "em_andamento" | "categorias";
+
+  type MobileNavItem = {
+    key: string;
+    label: string;
+    href?: string;
+    onPress?: () => void;
+    icon: React.ReactNode;
+    active?: string;
+    todoTab?: TodoNavTab;
+    tone?: "blue" | "orange" | "green" | "violet" | "slate";
+  };
+
+  const TODO_MOBILE_TAB_STORAGE_KEY = "sgtur_todo_tab";
+  const isTodoMobileNav = activePage === "operacao_todo" && !menuIsSystemAdmin;
+  const [todoNavTab, setTodoNavTab] = useState<TodoNavTab>("novo");
+
+  const setTodoTab = useCallback((tab: TodoNavTab) => {
+    setTodoNavTab(tab);
+    try {
+      window.localStorage.setItem(TODO_MOBILE_TAB_STORAGE_KEY, tab);
+    } catch {}
+    window.dispatchEvent(new CustomEvent("sgtur:todo:setTab", { detail: { tab } }));
+  }, []);
+
+  useEffect(() => {
+    if (!isTodoMobileNav) return;
+    try {
+      const stored = window.localStorage.getItem(TODO_MOBILE_TAB_STORAGE_KEY);
+      if (stored === "novo" || stored === "agendado" || stored === "em_andamento" || stored === "categorias") {
+        setTodoNavTab(stored as TodoNavTab);
+      }
+    } catch {}
+
+    const onTabChanged = (event: Event) => {
+      const tab = (event as CustomEvent).detail?.tab;
+      if (tab === "novo" || tab === "agendado" || tab === "em_andamento" || tab === "categorias") {
+        setTodoNavTab(tab as TodoNavTab);
+      }
+    };
+    window.addEventListener("sgtur:todo:tabChanged", onTabChanged as EventListener);
+    return () => window.removeEventListener("sgtur:todo:tabChanged", onTabChanged as EventListener);
+  }, [isTodoMobileNav]);
+
+  const clearTimers = useCallback(() => {
+    if (logoutTimeoutRef.current) {
+      window.clearTimeout(logoutTimeoutRef.current);
+      logoutTimeoutRef.current = null;
+    }
+    if (warningTimeoutRef.current) {
+      window.clearTimeout(warningTimeoutRef.current);
+      warningTimeoutRef.current = null;
+    }
+  }, []);
+
+  const scheduleTimers = useCallback(
+    (durationMs = AUTO_LOGOUT_MS) => {
+      setShowWarning(false);
+      clearTimers();
+      logoutTimeoutRef.current = window.setTimeout(() => executarLogout(false), durationMs);
+      const warningDelay = Math.max(durationMs - WARNING_LEAD_TIME_MS, 0);
+      warningTimeoutRef.current = window.setTimeout(() => setShowWarning(true), warningDelay);
+    },
+    [AUTO_LOGOUT_MS, WARNING_LEAD_TIME_MS, clearTimers, executarLogout]
+  );
+
+  const handleExtendSession = () => {
+    scheduleTimers(SESSION_EXTENSION_MS);
+  };
+
+  const handleActivity = useCallback(() => {
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+      return;
+    }
+    scheduleTimers();
+  }, [scheduleTimers]);
+
+  useEffect(() => {
+    scheduleTimers();
+    const eventosAtividade = ["mousedown", "keydown", "scroll", "touchstart"];
+    eventosAtividade.forEach((eventName) => window.addEventListener(eventName, handleActivity));
+
+    return () => {
+      eventosAtividade.forEach((eventName) => window.removeEventListener(eventName, handleActivity));
+      clearTimers();
+      setShowWarning(false);
+    };
+  }, [handleActivity, scheduleTimers, clearTimers]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = window.localStorage.getItem("consultoria_lembretes_badge");
+    const initial = Number(raw || 0);
+    if (Number.isFinite(initial)) setConsultoriaBadge(initial);
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail || {};
+      const count = Number(detail.count || 0);
+      if (Number.isFinite(count)) setConsultoriaBadge(count);
+    };
+    window.addEventListener("consultoria-lembretes-badge", handler as EventListener);
+    return () => window.removeEventListener("consultoria-lembretes-badge", handler as EventListener);
+  }, []);
+
+  const formatBadge = (count: number) => (count > 99 ? "99+" : String(count));
+
+  const refreshRecadosBadge = useCallback(async () => {
+    if (!menuUserId) {
+      setCurrentCompanyId(null);
+      setRecadosBadge(0);
+      return;
+    }
+    try {
+      const resp = await fetch("/api/v1/session/bootstrap");
+      if (!resp.ok) {
+        throw new Error(await resp.text());
+      }
+      const payload = await resp.json();
+      const companyId = payload?.companyId ? String(payload.companyId) : null;
+      const count = Number(payload?.recadosUnread ?? 0);
+      setCurrentCompanyId(companyId);
+      setRecadosBadge(Number.isFinite(count) ? count : 0);
+    } catch (error) {
+      console.error("Erro ao atualizar badge de recados:", error);
+      setRecadosBadge(0);
+    }
+  }, [menuUserId, setCurrentCompanyId, setRecadosBadge]);
+
+  useEffect(() => {
+    if (!menuUserId) return;
+    refreshRecadosBadge();
+  }, [menuUserId, refreshRecadosBadge]);
+
+  useEffect(() => {
+    if (!menuUserId) return;
+
+    const channel = supabase.channel(`menu-recados-${menuUserId}-${currentCompanyId || "no-company"}`);
+
+    // Privado: novas mensagens direcionadas ao usuário (independente de company).
+    channel.on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "mural_recados",
+        filter: `receiver_id=eq.${menuUserId}`,
+      },
+      refreshRecadosBadge
+    );
+    channel.on(
+      "postgres_changes",
+      {
+        event: "DELETE",
+        schema: "public",
+        table: "mural_recados",
+        filter: `receiver_id=eq.${menuUserId}`,
+      },
+      refreshRecadosBadge
+    );
+
+    // Empresa: mudanças no mural da empresa atual (quando houver company no contexto).
+    if (currentCompanyId) {
+      channel.on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "mural_recados",
+          filter: `company_id=eq.${currentCompanyId}`,
+        },
+        refreshRecadosBadge
+      );
+      channel.on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "mural_recados",
+          filter: `company_id=eq.${currentCompanyId}`,
+        },
+        refreshRecadosBadge
+      );
+    }
+
+    // Leituras: quando o usuário marca como lido.
+    channel.on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "mural_recados_leituras",
+        filter: `user_id=eq.${menuUserId}`,
+      },
+      refreshRecadosBadge
+    );
+    channel.on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "mural_recados_leituras",
+        filter: `user_id=eq.${menuUserId}`,
+      },
+      refreshRecadosBadge
+    );
+
+    channel.subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentCompanyId, menuUserId, refreshRecadosBadge]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!menuUserId) return;
+
+    const onFocus = () => refreshRecadosBadge();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") refreshRecadosBadge();
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    const intervalId = window.setInterval(() => refreshRecadosBadge(), 30000);
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.clearInterval(intervalId);
+    };
+  }, [menuUserId, refreshRecadosBadge]);
+
+  async function handleLogout() {
+    await executarLogout(true);
+  }
+
+  async function handleRefreshPermissionsNow() {
+    try {
+      setUpdatingPerms(true);
+      setPermSyncMsg(null);
+      await refresh();
+      setPermSyncMsg("Permissoes atualizadas.");
+      setTimeout(() => setPermSyncMsg(null), 2500);
+    } catch (err) {
+      console.error("Erro ao atualizar permissoes no menu:", err);
+      setPermSyncMsg("Falha ao atualizar permissoes.");
+      setTimeout(() => setPermSyncMsg(null), 3500);
+    } finally {
+      setUpdatingPerms(false);
+    }
+  }
+
+  const cadastrosMenu = [
+    { name: "Produtos", href: "/cadastros/produtos", active: "produtos", icon: "🎫", label: "Produtos" },
+    { name: "Circuitos", href: "/cadastros/circuitos", active: "circuitos", icon: "🧭", label: "Circuitos" },
+    { name: "Paises", href: "/cadastros/paises", active: "paises", icon: "🌍", label: "Países" },
+    {
+      name: "Subdivisoes",
+      href: "/cadastros/estados",
+      active: "subdivisoes",
+      icon: "🗺️",
+      label: "Estado/Província",
+    },
+    { name: "Cidades", href: "/cadastros/cidades", active: "cidades", icon: "🏙️", label: "Cidades" },
+    { name: "ProdutosLote", href: "/cadastros/lote", active: "lote", icon: "📦", label: "Lote" },
+    {
+      name: "Fornecedores",
+      href: "/cadastros/fornecedores",
+      active: "fornecedores",
+      icon: <FornecedoresIcon />,
+      label: "Fornecedores",
+    },
+  ];
+  const hasCadastrosSection = cadastrosMenu.some((item) => canMenuExact(item.name));
+
+  const sidebarId = "app-sidebar";
+
+  const mobileNavItems: MobileNavItem[] = [];
+  if (isTodoMobileNav) {
+    mobileNavItems.push(
+      {
+        key: "todo-novo",
+        label: "A Fazer",
+        icon: "📋",
+        todoTab: "novo",
+        tone: "blue",
+        onPress: () => setTodoTab("novo"),
+      },
+      {
+        key: "todo-agendado",
+        label: "Fazendo",
+        icon: "⏳",
+        todoTab: "agendado",
+        tone: "orange",
+        onPress: () => setTodoTab("agendado"),
+      },
+      {
+        key: "todo-em-andamento",
+        label: "Feito",
+        icon: "✅",
+        todoTab: "em_andamento",
+        tone: "green",
+        onPress: () => setTodoTab("em_andamento"),
+      },
+      {
+        key: "todo-categorias",
+        label: "Categorias",
+        icon: "🏷️",
+        todoTab: "categorias",
+        tone: "violet",
+        onPress: () => setTodoTab("categorias"),
+      }
+    );
+  } else if (menuIsSystemAdmin) {
+    mobileNavItems.push({
+      key: "admin-dashboard",
+      label: "Dashboard",
+      href: "/dashboard/admin",
+      icon: "🧭",
+      active: "admin-dashboard",
+    });
+  } else {
+    if (canMenuExact("Dashboard")) {
+      const dashboardHref = menuIsMaster
+        ? "/dashboard/master"
+        : menuIsGestor
+        ? "/dashboard/gestor"
+        : "/";
+      mobileNavItems.push({
+        key: "dashboard",
+        label: "Dashboard",
+        href: dashboardHref,
+        icon: "📊",
+        active: "dashboard",
+      });
+    }
+    if (canMenuExact("Agenda")) {
+      mobileNavItems.push({
+        key: "agenda",
+        label: "Agenda",
+        href: "/operacao/agenda",
+        icon: "📅",
+        active: "operacao_agenda",
+      });
+    }
+    if (canMenuExact("Tarefas")) {
+      mobileNavItems.push({
+        key: "tarefas",
+        label: "Tarefas",
+        href: "/operacao/todo",
+        icon: "✅",
+        active: "operacao_todo",
+      });
+    }
+    if (canMenuExact("Vendas")) {
+      mobileNavItems.push({
+        key: "vendas",
+        label: "Vendas",
+        href: "/vendas/consulta",
+        icon: "🧾",
+        active: "vendas",
+      });
+    }
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        className="sidebar-mobile-trigger"
+        aria-expanded={mobileOpen}
+        aria-controls={sidebarId}
+        onClick={toggleMobile}
+      >
+        <span className="sidebar-mobile-icon">{mobileOpen ? "✕" : "☰"}</span>
+        <span>{mobileOpen ? "Fechar" : "Menu"}</span>
+      </button>
+      <div className={`sidebar-overlay ${mobileOpen ? "visible" : ""}`} onClick={closeMobile} />
+
+      <nav className={`mobile-bottom-nav${isTodoMobileNav ? " todo-nav" : ""}`} aria-label="Atalhos principais">
+        {mobileNavItems.map((item) => {
+          const isActive = isTodoMobileNav ? item.todoTab === todoNavTab : activePage === item.active;
+          const className = `mobile-bottom-nav-item ${isActive ? "active" : ""}`;
+
+          if (item.href) {
+            return (
+              <a
+                key={item.key}
+                className={className}
+                href={item.href}
+                onClick={handleNavClick}
+                data-tone={item.tone || undefined}
+              >
+                <span className="mobile-bottom-nav-icon">
+                  {item.icon}
+                  {item.key === "consultoria" && consultoriaBadge > 0 && (
+                    <span className="mobile-badge">{formatBadge(consultoriaBadge)}</span>
+                  )}
+                </span>
+                <span className="mobile-bottom-nav-label">{item.label}</span>
+              </a>
+            );
+          }
+
+          return (
+            <button
+              key={item.key}
+              type="button"
+              className={className}
+              data-tone={item.tone || undefined}
+              onClick={() => {
+                item.onPress?.();
+                closeMobile();
+              }}
+            >
+              <span className="mobile-bottom-nav-icon">{item.icon}</span>
+              <span className="mobile-bottom-nav-label">{item.label}</span>
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          className="mobile-bottom-nav-item"
+          onClick={() => {
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("sgtur:open-help"));
+            }
+          }}
+        >
+          <span className="mobile-bottom-nav-icon">❓</span>
+          <span className="mobile-bottom-nav-label">Ajuda</span>
+        </button>
+        <button
+          type="button"
+          className="mobile-bottom-nav-item"
+          aria-expanded={mobileOpen}
+          aria-controls={sidebarId}
+          onClick={toggleMobile}
+        >
+          <span className="mobile-bottom-nav-icon">☰</span>
+          <span className="mobile-bottom-nav-label">Mais</span>
+        </button>
+      </nav>
+
+      <aside id={sidebarId} className={`app-sidebar ${mobileOpen ? "open" : ""}`}>
+            <div className="sidebar-logo">{SYSTEM_NAME}</div>
+
+        {!menuIsSystemAdmin && (
+          <>
+            <div>
+              <div className="sidebar-section-title">Operação</div>
+              <ul className="sidebar-nav">
+                {canMenuExact("Dashboard") && (
+                  <li>
+                    <a
+                      className={`sidebar-link ${activePage === "dashboard" ? "active" : ""}`}
+                      href={
+                        menuIsMaster
+                          ? "/dashboard/master"
+                          : menuIsGestor
+                          ? "/dashboard/gestor"
+                          : "/"
+                      }
+                      onClick={handleNavClick}
+                    >
+                      <span>🧭</span>Dashboard
+                    </a>
+                  </li>
+                )}
+                {menuIsVendedor && (
+                  <li>
+                    <a
+                      className={`sidebar-link ${activePage === "perfil-escala" ? "active" : ""}`}
+                      href="/perfil/escala"
+                      onClick={handleNavClick}
+                    >
+                      <span>🕒</span>Minha Escala
+                    </a>
+                  </li>
+                )}
+                {canMenuExact("Mural de Recados") && (
+                  <li>
+                    <a
+                      className={`sidebar-link ${activePage === "operacao_recados" ? "active" : ""}`}
+                      href="/operacao/recados"
+                      onClick={handleNavClick}
+                    >
+                      <span>🧾</span>
+                      <span className="sidebar-link-label">
+                        Mural de Recados
+                        {recadosBadge > 0 && (
+                          <span className="menu-badge">{formatBadge(recadosBadge)}</span>
+                        )}
+                      </span>
+                    </a>
+                  </li>
+                )}
+                {/* ...demais itens do menu de operação, cadastros, relatórios, parâmetros... */}
+              </ul>
+            </div>
+            {/* CADASTROS, GESTÃO MASTER, RELATÓRIOS, PARÂMETROS, LOGOUT, etc. conforme já estava antes */}
+          </>
+        )}
+        {menuIsSystemAdmin && (
+          <div>
+            <div className="sidebar-section-title">Administração</div>
+            <ul className="sidebar-nav">
+              <li>
+                <a className={`sidebar-link ${activePage === "admin-dashboard" ? "active" : ""}`} href="/dashboard/admin" onClick={handleNavClick}>
+                  <span>🧭</span>Dashboard
+                </a>
+              </li>
+              <li>
+                <a className={`sidebar-link ${activePage === "master-empresas" ? "active" : ""}`} href="/master/empresas" onClick={handleNavClick}>
+                  <span>🏢</span>Empresas
+                </a>
+              </li>
+              <li>
+                <a className={`sidebar-link ${activePage === "master-usuarios" ? "active" : ""}`} href="/master/usuarios" onClick={handleNavClick}>
+                  <span>👥</span>Usuários
+                </a>
+              </li>
+              <li>
+                <a className={`sidebar-link ${activePage === "master-planos" ? "active" : ""}`} href="/master/planos" onClick={handleNavClick}>
+                  <span>📦</span>Planos
+                </a>
+              </li>
+              <li>
+                <a className={`sidebar-link ${activePage === "master-permissoes" ? "active" : ""}`} href="/master/permissoes" onClick={handleNavClick}>
+                  <span>🔐</span>Permissões
+                </a>
+              </li>
+            </ul>
+          </div>
+                  className={`sidebar-link ${activePage === "vendas-importar" ? "active" : ""}`}
+                  href="/vendas/importar"
+                  onClick={handleNavClick}
+                >
+                  <span>📥</span>Importar contratos
+                </a>
+              </li>
+            )}
+
+            {canMenuExact("Orcamentos") && (
+              <li>
+                <a
+                  className={`sidebar-link ${activePage === "orcamentos" ? "active" : ""}`}
+                  href="/orcamentos/consulta"
+                  onClick={handleNavClick}
+                >
+                  <span>💼</span>Orçamentos
+                </a>
+              </li>
+            )}
+
+            {canMenuExact("Consultoria Online") && (
+              <li>
+                <a
+                  className={`sidebar-link ${activePage === "consultoria" ? "active" : ""}`}
+                  href="/consultoria-online"
+                  onClick={handleNavClick}
+                >
+                  <span>💬</span>
+                  <span className="sidebar-link-label">
+                    Consultoria
+                    {consultoriaBadge > 0 && (
+                      <span className="menu-badge">{formatBadge(consultoriaBadge)}</span>
+                    )}
+                  </span>
+                </a>
+              </li>
+            )}
+
+
+            {canMenuExact("Comissionamento") && (
+              <li>
+                <a
+                  className={`sidebar-link ${activePage === "comissionamento" ? "active" : ""}`}
+                  href="/operacao/comissionamento"
+                  onClick={handleNavClick}
+                >
+                  <span>💰</span>Comissionamento
+                </a>
+              </li>
+            )}
+
+            {canMenuExact("Viagens") && (
+              <li>
+                <a
+                  className={`sidebar-link ${activePage === "operacao_viagens" ? "active" : ""}`}
+                  href="/operacao/viagens"
+                  onClick={handleNavClick}
+                >
+                  <span>✈️</span>Viagens
+                </a>
+              </li>
+            )}
+            {canMenuExact("Campanhas") && (
+              <li>
+                <a
+                  className={`sidebar-link ${activePage === "operacao_campanhas" ? "active" : ""}`}
+                  href="/operacao/campanhas"
+                  onClick={handleNavClick}
+                >
+                  <span>📣</span>Campanhas
+                </a>
+              </li>
+            )}
+            {canMenuExact("Controle de SAC") && (
+              <li>
+                <a
+                  className={`sidebar-link ${activePage === "operacao_sac" ? "active" : ""}`}
+                  href="/operacao/controle-sac"
+                  onClick={handleNavClick}
+                >
+                  <span>🎧</span>Controle de SAC
+                </a>
+              </li>
+            )}
+            </ul>
+          </div>
+        )}
+
+        {/* CADASTROS */}
+        {!menuIsSystemAdmin && hasCadastrosSection && (
+          <div>
+            <div className="sidebar-section-title">Cadastros</div>
+            <ul className="sidebar-nav">
+              {cadastrosMenu
+                .filter((item) => canMenuExact(item.name))
+                .map((item) => (
+                  <li key={item.name}>
+                    <a
+                      className={`sidebar-link ${activePage === item.active ? "active" : ""}`}
+                      href={item.href}
+                      onClick={handleNavClick}
+                    >
+                      <span>{item.icon}</span>
+                      {item.label}
+                    </a>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        )}
+
+        {/* GESTÃO MASTER */}
+        {(canMenuExact("MasterPermissoes") || menuIsMaster) && (
+          <div>
+            <div className="sidebar-section-title">Gestão</div>
+            <ul className="sidebar-nav">
+              {menuIsMaster && canMenuExact("MasterEmpresas") && (
+                <li>
+                  <a
+                    className={`sidebar-link ${activePage === "master-empresas" ? "active" : ""}`}
+                    href="/master/empresas"
+                    onClick={handleNavClick}
+                  >
+                    <span>🏢</span>Empresas
+                  </a>
+                </li>
+              )}
+              {menuIsMaster && canMenuExact("MasterUsuarios") && (
+                <li>
+                  <a
+                    className={`sidebar-link ${activePage === "master-usuarios" ? "active" : ""}`}
+                    href="/master/usuarios"
+                    onClick={handleNavClick}
+                  >
+                    <span>👥</span>Usuários
+                  </a>
+                </li>
+              )}
+              {canMenuExact("MasterPermissoes") && (
+                <li>
+                  <a
+                    className={`sidebar-link ${activePage === "master-permissoes" ? "active" : ""}`}
+                    href="/master/permissoes"
+                    onClick={handleNavClick}
+                  >
+                    <span>🔐</span>Permissões
+                  </a>
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
+
+        {/* RELATORIOS */}
+        {!menuIsSystemAdmin && canRelatoriosSection && (
+          <div>
+            <div className="sidebar-section-title">Relatórios</div>
+            <ul className="sidebar-nav">
+              {canRelatoriosRanking && (
+                <li>
+                  <a
+                    className={`sidebar-link ${activePage === "relatorios-ranking-vendas" ? "active" : ""}`}
+                    href="/relatorios/ranking-vendas"
+                    onClick={handleNavClick}
+                  >
+                    <span>🏆</span>Ranking de vendas
+                  </a>
+                </li>
+              )}
+              {canRelatoriosVendas && (
+                <li>
+                  <a
+                    className={`sidebar-link ${activePage === "relatorios-vendas" ? "active" : ""}`}
+                    href="/relatorios/vendas"
+                    onClick={handleNavClick}
+                  >
+                    <span>📈</span>Vendas (detalhado)
+                  </a>
+                </li>
+              )}
+              {canRelatoriosDestinos && (
+                <li>
+                  <a
+                    className={`sidebar-link ${activePage === "relatorios-vendas-destino" ? "active" : ""}`}
+                    href="/relatorios/vendas-por-destino"
+                    onClick={handleNavClick}
+                  >
+                    <span>📌</span>Vendas por destino
+                  </a>
+                </li>
+              )}
+              {canRelatoriosProdutos && (
+                <li>
+                  <a
+                    className={`sidebar-link ${activePage === "relatorios-vendas-produto" ? "active" : ""}`}
+                    href="/relatorios/vendas-por-produto"
+                    onClick={handleNavClick}
+                  >
+                    <span>🎫</span>Vendas por produto
+                  </a>
+                </li>
+              )}
+              {canRelatoriosClientes && (
+                <li>
+                  <a
+                    className={`sidebar-link ${activePage === "relatorios-vendas-cliente" ? "active" : ""}`}
+                    href="/relatorios/vendas-por-cliente"
+                    onClick={handleNavClick}
+                  >
+                    <span>👤</span>Vendas por cliente
+                  </a>
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
+
+        {/* PARAMETROS */}
+        {/* PARAMETROS */}
+        {!menuIsSystemAdmin && canParametrosSection && (
+          <div>
+            <div className="sidebar-section-title">Parâmetros</div>
+            <ul className="sidebar-nav">
+              {canParametrosTipoProdutos && (
+                <li>
+                  <a
+                    className={`sidebar-link ${activePage === "parametros-tipo-produtos" ? "active" : ""}`}
+                    href="/parametros/tipo-produtos"
+                    onClick={handleNavClick}
+                  >
+                    <span>🏷️</span>Tipo de Produtos
+                  </a>
+                </li>
+              )}
+
+              {canParametrosTipoPacotes && (
+                <li>
+                  <a
+                    className={`sidebar-link ${activePage === "parametros-tipo-pacotes" ? "active" : ""}`}
+                    href="/parametros/tipo-pacotes"
+                    onClick={handleNavClick}
+                  >
+                    <span>📦</span>Tipo de Pacotes
+                  </a>
+                </li>
+              )}
+
+              {canParametrosMetas && (
+                <li>
+                  <a
+                    className={`sidebar-link ${activePage === "parametros-metas" ? "active" : ""}`}
+                    href="/parametros/metas"
+                    onClick={handleNavClick}
+                  >
+                    <span>🎯</span>Metas
+                  </a>
+                </li>
+              )}
+
+              {canParametrosEquipe && (
+                <li>
+                  <a
+                    className={`sidebar-link ${activePage === "parametros-equipe" ? "active" : ""}`}
+                    href="/parametros/equipe"
+                    onClick={handleNavClick}
+                  >
+                    <span>👥</span>Equipe
+                  </a>
+                </li>
+              )}
+
+              {canParametrosEscalas && (
+                <li>
+                  <a
+                    className={`sidebar-link ${activePage === "parametros-escalas" ? "active" : ""}`}
+                    href="/parametros/escalas"
+                    onClick={handleNavClick}
+                  >
+                    <span>📅</span>Escalas
+                  </a>
+                </li>
+              )}
+
+              {canParametrosSistema && (
+                <li>
+                  <a
+                    className={`sidebar-link ${activePage === "parametros" ? "active" : ""}`}
+                    href="/parametros"
+                    onClick={handleNavClick}
+                  >
+                    <span>⚙️</span>Parâmetros do Sistema
+                  </a>
+                </li>
+              )}
+
+              {canParametrosCambios && (
+                <li>
+                  <a
+                    className={`sidebar-link ${activePage === "parametros-cambios" ? "active" : ""}`}
+                    href="/parametros/cambios"
+                    onClick={handleNavClick}
+                  >
+                    <span>💱</span>Câmbios
+                  </a>
+                </li>
+              )}
+
+              {canParametrosOrcamentosPdf && (
+                <li>
+                  <a
+                    className={`sidebar-link ${activePage === "parametros-orcamentos" ? "active" : ""}`}
+                    href="/parametros/orcamentos"
+                    onClick={handleNavClick}
+                  >
+                    <span>🧾</span>Orçamentos (PDF)
+                  </a>
+                </li>
+              )}
+
+              {canParametrosFormasPagamento && (
+                <li>
+                  <a
+                    className={`sidebar-link ${activePage === "parametros-formas-pagamento" ? "active" : ""}`}
+                    href="/parametros/formas-pagamento"
+                    onClick={handleNavClick}
+                  >
+                    <span>💳</span>Formas de Pagamento
+                  </a>
+                </li>
+              )}
+
+              {canParametrosFormasPagamento && (
+                <li>
+                  <a
+                    className={`sidebar-link ${activePage === "aniversariantes" ? "active" : ""}`}
+                    href="/aniversariantes"
+                    onClick={handleNavClick}
+                  >
+                    Aniversariantes
+                  </a>
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
+
+
+        {/* LOGOUT */}
+        <div style={{ marginTop: 20 }}>
+          <ul className="sidebar-nav">
+            <li>
+              <button
+                type="button"
+                className="sidebar-link"
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  width: "100%",
+                  textAlign: "left",
+                }}
+                onClick={handleLogout}
+                disabled={saindo}
+              >
+                <span>🚪</span>
+                {saindo ? "Saindo..." : "Sair"}
+              </button>
+            </li>
+          </ul>
+        </div>
+
+      </aside>
+      {showWarning && (
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            /* outros estilos necessários */
+          }}
+        >
+          <button
+            type="button"
+            className="btn btn-light"
+            onClick={() => executarLogout(true)}
+          >
+            Sair agora
+          </button>
+        </div>
+      )}
+    </>
+  );
+}

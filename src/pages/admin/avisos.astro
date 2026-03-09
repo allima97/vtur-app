@@ -1,0 +1,10 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import AvisosAdminIsland from "../../components/islands/AvisosAdminIsland.tsx";
+---
+
+<DashboardLayout title="Avisos" activePage="admin-avisos">
+  <div class="page-content-wrap">
+    <AvisosAdminIsland client:only="react" />
+  </div>
+</DashboardLayout>

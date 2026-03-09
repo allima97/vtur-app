@@ -1,0 +1,18 @@
+---
+import "../../styles/global.css";
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+import MinhaEscalaIsland from "../../components/islands/MinhaEscalaIsland.tsx";
+
+const activePage = "perfil-escala";
+---
+
+<DashboardLayout title="Minha Escala" {activePage} module="Perfil">
+  <HeaderPage
+    title="Minha Escala"
+    subtitle="Visualize sua escala mensal e horarios cadastrados."
+    color="green"
+  />
+
+  <MinhaEscalaIsland client:load />
+</DashboardLayout>

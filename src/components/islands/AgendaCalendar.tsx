@@ -1,0 +1,1086 @@
+import React, { useEffect, useState } from "react";
+import FullCalendar from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import interactionPlugin from "@fullcalendar/interaction";
+import listPlugin from "@fullcalendar/list";
+import timeGridPlugin from "@fullcalendar/timegrid";
+import scrollGridPlugin from "@fullcalendar/scrollgrid";
+import { supabaseBrowser } from "../../lib/supabase-browser";
+import { usePermissoesStore } from "../../lib/permissoesStore";
+import { boundDateEndISO, selectAllInputOnFocus } from "../../lib/inputNormalization";
+
+type EventItem = {
+  id: string;
+  title: string;
+  start: string;
+  end?: string | null;
+  descricao?: string | null;
+  allDay?: boolean;
+  display?: "auto" | "background" | "block" | "list-item";
+  backgroundColor?: string;
+  textColor?: string;
+  className?: string;
+};
+
+const today = new Date().toISOString().split("T")[0];
+
+type EventEditForm = {
+  title: string;
+  startDate: string;
+  endDate: string;
+  allDay: boolean;
+  startTime: string;
+  endTime: string;
+  descricao: string;
+};
+
+export default function AgendaCalendar() {
+  const supabase = supabaseBrowser;
+  const { userId } = usePermissoesStore();
+  const [isMobile, setIsMobile] = useState(false);
+  const [viewportReady, setViewportReady] = useState(false);
+  const [currentViewType, setCurrentViewType] = useState("listWeek");
+  const [currentMonthKey, setCurrentMonthKey] = useState(() => today.slice(0, 7));
+  const [currentMonthTitle, setCurrentMonthTitle] = useState(() => formatMonthTitle(new Date()));
+  const [visibleRange, setVisibleRange] = useState<{ inicio: string; fim: string } | null>(null);
+  const visibleRangeRef = React.useRef<{ inicio: string; fim: string } | null>(null);
+  const rangeCacheRef = React.useRef<Map<string, { expiresAt: number; items: EventItem[] }>>(new Map());
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [newEvent, setNewEvent] = useState({ title: "", start: today, end: today, allDay: true });
+  const [newEventNota, setNewEventNota] = useState("");
+  const [newEventStartTime, setNewEventStartTime] = useState("09:00");
+  const [newEventEndTime, setNewEventEndTime] = useState("10:00");
+  const [modalEvent, setModalEvent] = useState<EventItem | null>(null);
+  const [editForm, setEditForm] = useState<EventEditForm | null>(null);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [holidayEvents, setHolidayEvents] = useState<EventItem[]>([]);
+  const calendarWrapRef = React.useRef<HTMLDivElement | null>(null);
+  const fetchedYearsRef = React.useRef<Set<number>>(new Set());
+  const weekdayShortFormatter = React.useMemo(
+    () => new Intl.DateTimeFormat("pt-BR", { weekday: "short" }),
+    []
+  );
+  const dayMonthFormatter = React.useMemo(
+    () => new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }),
+    []
+  );
+
+  function formatWeekdayShort(date: Date) {
+    const raw = weekdayShortFormatter.format(date);
+    const cleaned = raw.replace(".", "").trim();
+    if (!cleaned) return "";
+    return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  }
+
+  function formatDayMonth(date: Date) {
+    return dayMonthFormatter.format(date);
+  }
+
+  function formatMonthTitle(date: Date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+    const raw = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(date);
+    return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : "";
+  }
+
+  function splitDateTime(value: string | null | undefined) {
+    if (!value) return { date: "", time: "" };
+    const [date, timePart] = value.split("T");
+    return { date, time: timePart ? timePart.slice(0, 5) : "" };
+  }
+
+  function formatDate(date: Date) {
+    const d = String(date.getDate()).padStart(2, "0");
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const y = date.getFullYear();
+    return `${d}-${m}-${y}`;
+  }
+
+  function formatDateTime(date: Date) {
+    const hh = String(date.getHours()).padStart(2, "0");
+    const mm = String(date.getMinutes()).padStart(2, "0");
+    return `${formatDate(date)} ${hh}:${mm}`;
+  }
+
+  function parseISODateLocal(value: string) {
+    const [y, m, d] = value.split("-").map((n) => Number(n));
+    if (!y || !m || !d) return new Date(value);
+    return new Date(y, m - 1, d);
+  }
+
+  function toISODateLocal(date: Date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  function parseEventDate(value: string) {
+    if (!value) return new Date();
+    return value.includes("T") ? new Date(value) : parseISODateLocal(value);
+  }
+
+  function formatEventRange(ev: EventItem) {
+    const hasTime = ev.start.includes("T") || ev.end?.includes("T");
+    const start = parseEventDate(ev.start);
+    const end = ev.end ? parseEventDate(ev.end) : start;
+    const startLabel = hasTime ? formatDateTime(start) : formatDate(start);
+    const endLabel = hasTime ? formatDateTime(end) : formatDate(end);
+    if (endLabel === startLabel) return startLabel;
+    return `${startLabel} → ${endLabel}`;
+  }
+
+  function tooltipText(ev: EventItem) {
+    const primary = ev.title || ev.descricao || "Evento";
+    const parts = [primary];
+    parts.push(formatEventRange(ev));
+    if (ev.descricao && ev.descricao !== primary) parts.push(ev.descricao);
+    return parts.join("\n");
+  }
+
+  function openDetailsModal(ev: EventItem) {
+    setModalEvent(ev);
+    setEditForm(null);
+  }
+
+  function applyMobileCalendarTooltips() {
+    if (!isMobile) return;
+    const container = calendarWrapRef.current;
+    if (!container) return;
+
+    const tooltips: Array<{ selector: string; title: string }> = [
+      { selector: ".fc-listWeek-button", title: "Lista" },
+      { selector: ".fc-timeGridDay-button", title: "Dia" },
+      { selector: ".fc-timeGridWeek-button", title: "Semana" },
+      { selector: ".fc-dayGridMonth-button", title: "Mês" },
+      { selector: ".fc-today-button", title: "Hoje" },
+      { selector: ".fc-prev-button", title: "Anterior" },
+      { selector: ".fc-next-button", title: "Próximo" },
+    ];
+
+    tooltips.forEach(({ selector, title }) => {
+      const el = container.querySelector(selector);
+      if (el instanceof HTMLElement) {
+        el.setAttribute("title", title);
+      }
+    });
+  }
+
+  function startEditing(ev: EventItem) {
+    const { date: startDate, time: startTime } = splitDateTime(ev.start);
+    const { date: endDate, time: endTime } = splitDateTime(ev.end || ev.start);
+    const allDay = ev.allDay ?? !startTime;
+    setEditForm({
+      title: ev.title,
+      startDate: startDate || today,
+      endDate: endDate || startDate || today,
+      allDay,
+      startTime: startTime || "09:00",
+      endTime: endTime || startTime || "10:00",
+      descricao: ev.descricao || "",
+    });
+  }
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mediaQuery = window.matchMedia ? window.matchMedia("(max-width: 768px)") : null;
+    const updateViewport = () => setIsMobile(mediaQuery ? mediaQuery.matches : window.innerWidth <= 768);
+    updateViewport();
+    setViewportReady(true);
+
+    if (!mediaQuery) return;
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", updateViewport);
+      return () => mediaQuery.removeEventListener("change", updateViewport);
+    }
+    mediaQuery.addListener(updateViewport);
+    return () => mediaQuery.removeListener(updateViewport);
+  }, []);
+
+  useEffect(() => {
+    visibleRangeRef.current = visibleRange;
+  }, [visibleRange]);
+
+  function intersectsRange(ev: EventItem, range: { inicio: string; fim: string }) {
+    const startDate = (ev.start || "").split("T")[0];
+    const endDate = (ev.end || ev.start || "").split("T")[0];
+    if (!startDate) return false;
+    const endValue = endDate || startDate;
+    return startDate <= range.fim && endValue >= range.inicio;
+  }
+
+  const lastFetchedRangeRef = React.useRef<{ inicio: string; fim: string } | null>(null);
+
+  function syncRangeCache(nextEvents: EventItem[]) {
+    const range = visibleRangeRef.current;
+    if (!range) return;
+    const cacheKey = `${range.inicio}|${range.fim}`;
+    rangeCacheRef.current.set(cacheKey, { expiresAt: Date.now() + 15_000, items: nextEvents });
+    if (rangeCacheRef.current.size > 24) {
+      const firstKey = rangeCacheRef.current.keys().next().value;
+      if (firstKey) rangeCacheRef.current.delete(firstKey);
+    }
+  }
+
+  useEffect(() => {
+    if (!visibleRange?.inicio || !visibleRange?.fim) return;
+
+    const prev = lastFetchedRangeRef.current;
+    if (prev && prev.inicio === visibleRange.inicio && prev.fim === visibleRange.fim) {
+      return;
+    }
+
+    lastFetchedRangeRef.current = { inicio: visibleRange.inicio, fim: visibleRange.fim };
+    const controller = new AbortController();
+    let active = true;
+
+    async function loadRange() {
+      const cacheKey = `${visibleRange.inicio}|${visibleRange.fim}`;
+      const cached = rangeCacheRef.current.get(cacheKey);
+      const hasFreshCache = Boolean(cached && cached.expiresAt > Date.now());
+      if (hasFreshCache) {
+        setError(null);
+        setLoading(false);
+        setEvents(cached!.items);
+      } else {
+        setLoading(true);
+        setError(null);
+        setEvents([]);
+      }
+      try {
+        const params = new URLSearchParams({ inicio: visibleRange.inicio, fim: visibleRange.fim });
+        const resp = await fetch(`/api/v1/agenda/range?${params.toString()}`, {
+          signal: controller.signal,
+        });
+        if (!resp.ok) throw new Error("range");
+        const json = (await resp.json()) as { items?: EventItem[] };
+        if (!active) return;
+        const evs =
+          (json.items || []).map((row: any) => ({
+            id: row.id,
+            title: row.title,
+            start: row.start,
+            end: row.end ?? null,
+            descricao: row.descricao ?? null,
+            allDay: row.allDay ?? (!String(row.start || "").includes("T")),
+          })) || [];
+        rangeCacheRef.current.set(cacheKey, { expiresAt: Date.now() + 15_000, items: evs });
+        if (rangeCacheRef.current.size > 24) {
+          const firstKey = rangeCacheRef.current.keys().next().value;
+          if (firstKey) rangeCacheRef.current.delete(firstKey);
+        }
+        setEvents(evs);
+        setLoading(false);
+      } catch (err: any) {
+        if (!active) return;
+        if (err?.name === "AbortError") return;
+        if (!hasFreshCache) {
+          setError("Erro ao carregar agenda.");
+          setLoading(false);
+        }
+      }
+    }
+
+    loadRange();
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [visibleRange?.inicio, visibleRange?.fim]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel(`agenda-itens-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "agenda_itens", filter: `user_id=eq.${userId}` },
+        (payload: any) => {
+          const range = visibleRangeRef.current;
+          const eventType = String(payload?.eventType || "").toUpperCase();
+          const row = payload?.new || payload?.old || null;
+          if (!row) return;
+          if (row.tipo && String(row.tipo) !== "evento") return;
+
+          const mapped: EventItem = {
+            id: row.id,
+            title: row.titulo,
+            start: row.start_at || row.start_date || today,
+            end: row.end_at || row.end_date || row.start_at || row.start_date || null,
+            descricao: row.descricao || null,
+            allDay: row.all_day ?? !row.start_at,
+          };
+
+          setEvents((prev) => {
+            const existsIdx = prev.findIndex((e) => e.id === mapped.id);
+            if (eventType === "DELETE") {
+              if (existsIdx === -1) return prev;
+              const next = prev.filter((e) => e.id !== mapped.id);
+              syncRangeCache(next);
+              return next;
+            }
+
+            if (range && !intersectsRange(mapped, range)) {
+              if (existsIdx === -1) return prev;
+              const next = prev.filter((e) => e.id !== mapped.id);
+              syncRangeCache(next);
+              return next;
+            }
+
+            if (existsIdx === -1) {
+              const next = [...prev, mapped].sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
+              syncRangeCache(next);
+              return next;
+            }
+            const next = prev.slice();
+            next[existsIdx] = { ...next[existsIdx], ...mapped };
+            const sorted = next.sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
+            syncRangeCache(sorted);
+            return sorted;
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, userId]);
+
+  function handleAddEvent(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newEvent.title.trim() || !newEvent.start) return;
+    const start = newEvent.start;
+    const end = newEvent.end || newEvent.start;
+    const hasTime = !newEvent.allDay;
+    const startAt = hasTime ? `${start}T${newEventStartTime}:00` : null;
+    const endAt = hasTime ? `${end}T${newEventEndTime || newEventStartTime}:00` : null;
+    const range = visibleRangeRef.current;
+    fetch("/api/v1/agenda/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        titulo: newEvent.title.trim(),
+        start_date: start,
+        end_date: end,
+        all_day: newEvent.allDay,
+        descricao: newEventNota.trim() || null,
+        start_at: startAt,
+        end_at: endAt,
+        range_inicio: range?.inicio || "",
+        range_fim: range?.fim || "",
+      }),
+    })
+      .then(async (resp) => {
+        if (!resp.ok) throw new Error(await resp.text());
+        const json = (await resp.json()) as { item?: any };
+        if (!json.item) throw new Error("Sem retorno");
+        const data = json.item;
+        setEvents((prev) => {
+          const next = [
+            ...prev,
+            {
+              id: data.id,
+              title: data.titulo,
+              start: data.start_at || data.start_date || start,
+              end: data.end_at || data.end_date || end,
+              descricao: data.descricao || null,
+              allDay: data.all_day ?? !hasTime,
+            },
+          ];
+          syncRangeCache(next);
+          return next;
+        });
+        setNewEvent({ title: "", start: today, end: today, allDay: true });
+        setNewEventNota("");
+        setNewEventStartTime("09:00");
+        setNewEventEndTime("10:00");
+        setCreateModalOpen(false);
+      })
+      .catch(() => setError("Erro ao salvar evento."));
+  }
+
+  async function removeEvent(id: string) {
+    setEvents((prev) => {
+      const next = prev.filter((ev) => ev.id !== id);
+      syncRangeCache(next);
+      return next;
+    });
+    const range = visibleRangeRef.current;
+    const params = new URLSearchParams({ id });
+    if (range?.inicio && range?.fim) {
+      params.set("range_inicio", range.inicio);
+      params.set("range_fim", range.fim);
+    }
+    try {
+      const resp = await fetch(`/api/v1/agenda/delete?${params.toString()}`, {
+        method: "DELETE",
+      });
+      if (!resp.ok) {
+        throw new Error(await resp.text());
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Erro ao excluir evento.");
+    }
+  }
+
+  async function updateEventLocalAndRemote(id: string, changes: Partial<EventItem>) {
+    setEvents((prev) => {
+      const next = prev.map((ev) => (ev.id === id ? { ...ev, ...changes } : ev));
+      syncRangeCache(next);
+      return next;
+    });
+
+    const payload: any = { id };
+    if (changes.title !== undefined) payload.title = changes.title;
+    if (changes.descricao !== undefined) payload.descricao = changes.descricao;
+    if (changes.allDay !== undefined) payload.allDay = changes.allDay;
+    if (changes.start !== undefined) payload.start = changes.start;
+    if (changes.end !== undefined) payload.end = changes.end;
+
+    const range = visibleRangeRef.current;
+    if (range?.inicio && range?.fim) {
+      payload.range_inicio = range.inicio;
+      payload.range_fim = range.fim;
+    }
+
+    if (Object.keys(payload).length <= 1) return;
+
+    try {
+      const resp = await fetch("/api/v1/agenda/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!resp.ok) {
+        throw new Error(await resp.text());
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Erro ao atualizar evento.");
+    }
+  }
+
+  function handleEventClick(info: any) {
+    const id = info?.event?.id;
+    if (!id) return;
+    const ev = events.find((e) => e.id === id);
+    if (!ev) return;
+    openDetailsModal(ev);
+  }
+
+  function handleEditFromModal(ev: EventItem) {
+    if (!editForm) startEditing(ev);
+  }
+
+  function handleSaveEdit(ev: EventItem) {
+    if (!editForm) return;
+    const hasTime = !editForm.allDay;
+    const startISO = hasTime ? `${editForm.startDate}T${editForm.startTime}:00` : editForm.startDate;
+    const endISO = hasTime ? `${editForm.endDate || editForm.startDate}T${editForm.endTime || editForm.startTime}:00` : (editForm.endDate || editForm.startDate);
+    void updateEventLocalAndRemote(ev.id, {
+      title: editForm.title.trim() || ev.title,
+      descricao: editForm.descricao.trim() || null,
+      allDay: editForm.allDay,
+      start: startISO,
+      end: endISO,
+    });
+    const updated = {
+      ...ev,
+      title: editForm.title.trim() || ev.title,
+      descricao: editForm.descricao.trim() || null,
+      allDay: editForm.allDay,
+      start: startISO,
+      end: endISO,
+    };
+    setModalEvent(updated);
+    setEditForm(null);
+  }
+
+  function handleDeleteFromModal(ev: EventItem) {
+    if (!window.confirm("Remover este evento?")) return;
+    void removeEvent(ev.id);
+    setModalEvent(null);
+  }
+
+  async function fetchHolidays(year: number) {
+    if (!year || fetchedYearsRef.current.has(year)) return;
+    fetchedYearsRef.current.add(year);
+    try {
+      const resp = await fetch(`https://brasilapi.com.br/api/feriados/v1/${year}`);
+      if (!resp.ok) throw new Error("falha feriados");
+      const data: { date: string; name: string }[] = await resp.json();
+      const mapped: EventItem[] = (data || []).map((f) => ({
+        id: `feriado-${f.date}`,
+        title: "",
+        start: f.date,
+        end: null,
+        allDay: true,
+        display: "background",
+        backgroundColor: "#fff2cc",
+        descricao: f.name,
+        className: "agenda-feriado-bg",
+      }));
+      setHolidayEvents((prev) => {
+        const existingIds = new Set(prev.map((h) => h.id));
+        const merged = [...prev];
+        mapped.forEach((h) => {
+          if (!existingIds.has(h.id)) merged.push(h);
+        });
+        return merged;
+      });
+    } catch (e) {
+      console.error("Erro ao carregar feriados", e);
+    }
+  }
+
+  const calendarEvents = React.useMemo(() => {
+    const isListView = currentViewType.startsWith("list");
+    return isListView ? events : [...events, ...holidayEvents];
+  }, [events, holidayEvents, currentViewType]);
+  const feriadosDoMes = React.useMemo(() => {
+    const monthPrefix = `${currentMonthKey}-`;
+    return holidayEvents
+      .filter((h) => h.id.startsWith("feriado-") && h.start.startsWith(monthPrefix))
+      .sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
+  }, [holidayEvents, currentMonthKey]);
+
+  function formatHolidayLine(dateISO: string, name: string) {
+    const [, month, day] = dateISO.split("-");
+    if (!month || !day) return `${dateISO} - ${name}`;
+    return `${day}/${month} - ${name}`;
+  }
+
+  function openCreateModal() {
+    setNewEvent({ title: "", start: today, end: today, allDay: true });
+    setNewEventNota("");
+    setNewEventStartTime("09:00");
+    setNewEventEndTime("10:00");
+    setModalEvent(null);
+    setEditForm(null);
+    setCreateModalOpen(true);
+  }
+
+  function openCreateModalAt(date: Date, allDay: boolean) {
+    const dateISO = toISODateLocal(date);
+    if (!dateISO) {
+      openCreateModal();
+      return;
+    }
+
+    if (allDay) {
+      setNewEvent({ title: "", start: dateISO, end: dateISO, allDay: true });
+      setNewEventStartTime("09:00");
+      setNewEventEndTime("10:00");
+    } else {
+      const hh = String(date.getHours()).padStart(2, "0");
+      const mm = String(date.getMinutes()).padStart(2, "0");
+      const startTime = `${hh}:${mm}`;
+
+      const endCandidate = new Date(date.getTime() + 60 * 60 * 1000);
+      const endSameDay = toISODateLocal(endCandidate) === dateISO;
+      const endHH = String(endCandidate.getHours()).padStart(2, "0");
+      const endMM = String(endCandidate.getMinutes()).padStart(2, "0");
+      const endTime = endSameDay ? `${endHH}:${endMM}` : "23:59";
+
+      setNewEvent({ title: "", start: dateISO, end: dateISO, allDay: false });
+      setNewEventStartTime(startTime);
+      setNewEventEndTime(endTime);
+    }
+
+    setNewEventNota("");
+    setModalEvent(null);
+    setEditForm(null);
+    setCreateModalOpen(true);
+  }
+
+  return (
+    <div className="agenda-page" style={{ display: "grid", gap: 16 }}>
+      {viewportReady && isMobile && (
+        <div className="card-base agenda-month-card">
+          <div className="agenda-month-title">{currentMonthTitle}</div>
+        </div>
+      )}
+
+      <div className="card-base" style={{ padding: 16 }}>
+        {viewportReady && !isMobile && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 10,
+              flexWrap: "wrap",
+              marginBottom: 12,
+            }}
+          >
+            <h3 style={{ margin: 0 }}>Agenda (Eventos)</h3>
+            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                className="btn btn-primary agenda-add-btn w-full sm:w-auto"
+                onClick={openCreateModal}
+              >
+                Adicionar evento
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div
+          ref={calendarWrapRef}
+          className={isMobile ? "agenda-calendar-mobile" : "agenda-calendar-desktop"}
+        >
+          {viewportReady ? (
+            <FullCalendar
+              plugins={[dayGridPlugin, interactionPlugin, listPlugin, timeGridPlugin, scrollGridPlugin]}
+              initialView={isMobile ? "listWeek" : "dayGridMonth"}
+          height="auto"
+          events={calendarEvents}
+          dayMinWidth={0}
+          headerToolbar={
+            isMobile
+              ? { left: "prev,next today", center: "", right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek" }
+              : { left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek,timeGridDay,listMonth" }
+              }
+              views={
+                isMobile
+                  ? {
+                      timeGridWeek: {
+                        dayHeaderContent: (args: any) => (
+                          <>
+                            <span className="agenda-week-header-weekday">{formatWeekdayShort(args.date)}</span>
+                            <span className="agenda-week-header-date">{formatDayMonth(args.date)}</span>
+                          </>
+                        ),
+                      },
+                      timeGridDay: { dayHeaderFormat: { weekday: "short", day: "2-digit" } },
+                      dayGridMonth: { dayHeaderFormat: { weekday: "narrow" } },
+                    }
+                  : undefined
+              }
+              buttonText={{
+                today: "Hoje",
+                month: "Mês",
+                week: "Semana",
+                day: "Dia",
+                list: "Lista",
+              }}
+              editable
+              eventDurationEditable
+              eventResizableFromStart
+              dateClick={(arg) => {
+                if (!arg?.date) return;
+                openCreateModalAt(arg.date, Boolean((arg as any).allDay));
+              }}
+              navLinks={!isMobile}
+              slotDuration="00:30:00"
+              slotLabelFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
+              allDayText={isMobile ? "Dia" : undefined}
+              locale="pt-br"
+              datesSet={(arg) => {
+                const ref = (arg as any)?.view?.currentStart || arg.start;
+                const viewType = (arg as any)?.view?.type;
+                if (typeof viewType === "string") {
+                  setCurrentViewType(viewType);
+                }
+                if (ref) {
+                  setCurrentMonthTitle(formatMonthTitle(ref));
+                  setCurrentMonthKey(`${ref.getFullYear()}-${String(ref.getMonth() + 1).padStart(2, "0")}`);
+                }
+                if (arg.start && arg.end) {
+                  const endInclusive = new Date(arg.end);
+                  endInclusive.setDate(endInclusive.getDate() - 1);
+                  const inicio = toISODateLocal(arg.start);
+                  const fim = toISODateLocal(endInclusive);
+                  if (inicio && fim) {
+                    const prev = visibleRangeRef.current;
+                    if (!prev || prev.inicio !== inicio || prev.fim !== fim) {
+                      setVisibleRange({ inicio, fim });
+                    }
+                  }
+                }
+                const startYear = arg.start?.getFullYear?.();
+                const endYear = arg.end?.getFullYear?.();
+                if (startYear) fetchHolidays(startYear);
+                if (endYear && endYear !== startYear) fetchHolidays(endYear);
+                requestAnimationFrame(applyMobileCalendarTooltips);
+              }}
+              eventDidMount={(info) => {
+                const ev = calendarEvents.find((e) => e.id === info.event.id);
+                if (ev) info.el.setAttribute("title", tooltipText(ev));
+              }}
+              eventDrop={(info) => {
+                const id = info.event.id;
+                const startISO = info.event.startStr;
+                const endISO = info.event.endStr || startISO;
+                const startTime = startISO.includes("T") ? startISO.split("T")[1] : null;
+                if (!id) return;
+                setEvents((prev) =>
+                  prev.map((ev) => (ev.id === id ? { ...ev, start: startISO, end: endISO, allDay: !startTime } : ev))
+                );
+                const range = visibleRangeRef.current;
+                fetch("/api/v1/agenda/update", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    id,
+                    start: startISO,
+                    end: endISO,
+                    allDay: !startTime,
+                    range_inicio: range?.inicio || "",
+                    range_fim: range?.fim || "",
+                  }),
+                }).catch(() => setError("Erro ao atualizar evento."));
+              }}
+              eventResize={(info) => {
+                const id = info.event.id;
+                const startISO = info.event.startStr;
+                const endISO = info.event.endStr || startISO;
+                const startTime = startISO.includes("T") ? startISO.split("T")[1] : null;
+                if (!id) return;
+                setEvents((prev) =>
+                  prev.map((ev) => (ev.id === id ? { ...ev, start: startISO, end: endISO, allDay: !startTime } : ev))
+                );
+                const range = visibleRangeRef.current;
+                fetch("/api/v1/agenda/update", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    id,
+                    start: startISO,
+                    end: endISO,
+                    allDay: !startTime,
+                    range_inicio: range?.inicio || "",
+                    range_fim: range?.fim || "",
+                  }),
+                }).catch(() => setError("Erro ao atualizar evento."));
+              }}
+              eventClick={handleEventClick}
+            />
+          ) : (
+            <div style={{ padding: 12, color: "#64748b", fontWeight: 700 }}>Carregando agenda…</div>
+          )}
+        </div>
+        {error && (
+          <div style={{ marginTop: 12 }}>
+            <span style={{ color: "#b91c1c", fontWeight: 700 }}>{error}</span>
+          </div>
+        )}
+        {feriadosDoMes.length > 0 && (
+          <div className="escala-feriados-resumo" style={{ marginTop: 12 }}>
+            <strong className="escala-feriados-title">Feriados do Mês</strong>
+            <ul>
+              {feriadosDoMes.map((h) => (
+                <li key={h.id}>{formatHolidayLine(h.start, h.descricao || h.title)}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {!isMobile && <div style={{ marginTop: 12, display: "grid", gap: 6 }}>
+          {events.length === 0 && !loading && <div style={{ color: "#94a3b8" }}>Nenhum evento.</div>}
+          {events.map((ev) => (
+            <div
+              key={ev.id}
+              className="card-base"
+              style={{ border: "1px solid #e2e8f0", padding: 10, display: "grid", gap: 4 }}
+            >
+              <div style={{ fontWeight: 700 }}>{ev.title}</div>
+              <div style={{ color: "#475569", fontSize: 13 }}>
+                {ev.start} {ev.end && ev.end !== ev.start ? `→ ${ev.end}` : ""}
+              </div>
+              {ev.descricao ? <div style={{ color: "#0f172a", whiteSpace: "pre-wrap" }}>{ev.descricao}</div> : null}
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <button type="button" className="btn btn-light" onClick={() => removeEvent(ev.id)}>
+                  Remover
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>}
+      </div>
+
+      {viewportReady && isMobile && !createModalOpen && !modalEvent && (
+        <button
+          type="button"
+          className="agenda-fab"
+          onClick={openCreateModal}
+          aria-label="Adicionar evento"
+          title="Adicionar evento"
+        >
+          +
+        </button>
+      )}
+
+      {createModalOpen && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" onClick={() => setCreateModalOpen(false)}>
+          <div
+            className="modal-panel"
+            style={{ maxWidth: 520, width: "95vw", background: "#f8fafc" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <div className="modal-title" style={{ fontWeight: 800 }}>Novo evento</div>
+              <button className="modal-close" onClick={() => setCreateModalOpen(false)} aria-label="Fechar">
+                ×
+              </button>
+            </div>
+            <form onSubmit={handleAddEvent}>
+              <div className="modal-body" style={{ display: "grid", gap: 8 }}>
+                <div className="form-group">
+                  <label className="form-label">Título do evento</label>
+                  <input
+                    className="form-input"
+                    value={newEvent.title}
+                    onChange={(e) => setNewEvent((prev) => ({ ...prev, title: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="form-row mobile-stack" style={{ gap: 8 }}>
+                  <div className="form-group" style={{ minWidth: 150 }}>
+                    <label className="form-label">Início</label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={newEvent.start}
+                      onFocus={selectAllInputOnFocus}
+                      onChange={(e) => {
+                        const nextStart = e.target.value;
+                        setNewEvent((prev) => ({
+                          ...prev,
+                          start: nextStart,
+                          end: boundDateEndISO(nextStart, prev.end || ""),
+                        }));
+                      }}
+                      required
+                    />
+                  </div>
+                  <div className="form-group" style={{ minWidth: 150 }}>
+                    <label className="form-label">Fim</label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={newEvent.end}
+                      min={newEvent.start || undefined}
+                      onFocus={selectAllInputOnFocus}
+                      onChange={(e) => {
+                        const nextEnd = e.target.value;
+                        setNewEvent((prev) => ({
+                          ...prev,
+                          end: boundDateEndISO(prev.start, nextEnd),
+                        }));
+                      }}
+                    />
+                  </div>
+                </div>
+                {!newEvent.allDay && (
+                  <div className="form-row mobile-stack" style={{ gap: 8 }}>
+                    <div className="form-group" style={{ minWidth: 140 }}>
+                      <label className="form-label">Hora início</label>
+                      <input
+                        type="time"
+                        className="form-input"
+                        value={newEventStartTime}
+                        onChange={(e) => setNewEventStartTime(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group" style={{ minWidth: 140 }}>
+                      <label className="form-label">Hora fim</label>
+                      <input
+                        type="time"
+                        className="form-input"
+                        value={newEventEndTime}
+                        onChange={(e) => setNewEventEndTime(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+                <label className="flex items-center gap-2" style={{ cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={newEvent.allDay}
+                    onChange={(e) => setNewEvent((prev) => ({ ...prev, allDay: e.target.checked }))}
+                  />
+                  Dia inteiro
+                </label>
+                <div className="form-group">
+                  <label className="form-label">Notas (opcional)</label>
+                  <textarea
+                    className="form-input"
+                    rows={3}
+                    value={newEventNota}
+                    onChange={(e) => setNewEventNota(e.target.value)}
+                  />
+                </div>
+                {error && <span style={{ color: "#b91c1c" }}>{error}</span>}
+              </div>
+              <div className="modal-footer mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+                <button type="submit" className="btn btn-primary">
+                  Salvar
+                </button>
+                <button type="button" className="btn btn-light" onClick={() => setCreateModalOpen(false)}>
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {modalEvent && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" onClick={() => setModalEvent(null)}>
+          <div
+            className="modal-panel"
+            style={{ maxWidth: 520, width: "95vw", background: "#f8fafc" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <div className="modal-title" style={{ fontWeight: 800 }}>Detalhes do evento</div>
+              <button className="modal-close" onClick={() => setModalEvent(null)} aria-label="Fechar">
+                ×
+              </button>
+            </div>
+            <div className="modal-body" style={{ display: "grid", gap: 8 }}>
+              {!editForm && (
+                <>
+                  <div style={{ fontSize: 15, fontWeight: 700 }}>{modalEvent.title}</div>
+                  <div style={{ color: "#475569" }}>{formatEventRange(modalEvent)}</div>
+                  {modalEvent.descricao ? (
+                    <div style={{ whiteSpace: "pre-wrap", color: "#0f172a" }}>{modalEvent.descricao}</div>
+                  ) : (
+                    <div style={{ color: "#94a3b8" }}>Sem notas.</div>
+                  )}
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", color: "#475569" }}>
+                    <input type="checkbox" checked={modalEvent.allDay ?? false} readOnly /> Dia inteiro
+                  </div>
+                </>
+              )}
+              {editForm && (
+                <>
+                  <div className="form-group">
+                    <label className="form-label">Título</label>
+                    <input
+                      className="form-input"
+                      value={editForm.title}
+                      onChange={(e) => setEditForm((prev) => prev && ({ ...prev, title: e.target.value }))}
+                    />
+                  </div>
+                  <div className="form-row mobile-stack" style={{ gap: 8 }}>
+                    <div className="form-group" style={{ minWidth: 150 }}>
+                      <label className="form-label">Início</label>
+                      <input
+                        type="date"
+                        className="form-input"
+                        value={editForm.startDate}
+                        onFocus={selectAllInputOnFocus}
+                        onChange={(e) => {
+                          const nextStart = e.target.value;
+                          setEditForm((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  startDate: nextStart,
+                                  endDate: boundDateEndISO(nextStart, prev.endDate),
+                                }
+                              : prev
+                          );
+                        }}
+                      />
+                    </div>
+                    <div className="form-group" style={{ minWidth: 150 }}>
+                      <label className="form-label">Fim</label>
+                      <input
+                        type="date"
+                        className="form-input"
+                        value={editForm.endDate}
+                        min={editForm.startDate || undefined}
+                        onFocus={selectAllInputOnFocus}
+                        onChange={(e) => {
+                          const nextEnd = e.target.value;
+                          setEditForm((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  endDate: boundDateEndISO(prev.startDate, nextEnd),
+                                }
+                              : prev
+                          );
+                        }}
+                      />
+                    </div>
+                  </div>
+                  {!editForm.allDay && (
+                    <div className="form-row mobile-stack" style={{ gap: 8 }}>
+                      <div className="form-group" style={{ minWidth: 140 }}>
+                        <label className="form-label">Hora início</label>
+                        <input
+                          type="time"
+                          className="form-input"
+                          value={editForm.startTime}
+                          onChange={(e) => setEditForm((prev) => prev && ({ ...prev, startTime: e.target.value }))}
+                        />
+                      </div>
+                      <div className="form-group" style={{ minWidth: 140 }}>
+                        <label className="form-label">Hora fim</label>
+                        <input
+                          type="time"
+                          className="form-input"
+                          value={editForm.endTime}
+                          onChange={(e) => setEditForm((prev) => prev && ({ ...prev, endTime: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <label className="flex items-center gap-2" style={{ cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={editForm.allDay}
+                      onChange={(e) => setEditForm((prev) => prev && ({ ...prev, allDay: e.target.checked }))}
+                    />
+                    Dia inteiro
+                  </label>
+                  <div className="form-group">
+                    <label className="form-label">Notas</label>
+                    <textarea
+                      className="form-input"
+                      rows={3}
+                      value={editForm.descricao}
+                      onChange={(e) => setEditForm((prev) => prev && ({ ...prev, descricao: e.target.value }))}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="modal-footer mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+              {!editForm ? (
+                <>
+                  <button className="btn btn-danger" onClick={() => handleDeleteFromModal(modalEvent)}>
+                    Excluir
+                  </button>
+                  <button className="btn btn-primary" onClick={() => handleEditFromModal(modalEvent)}>
+                    Editar
+                  </button>
+                  <button className="btn btn-light" onClick={() => setModalEvent(null)}>
+                    Fechar
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button className="btn btn-primary" onClick={() => handleSaveEdit(modalEvent)}>
+                    Salvar
+                  </button>
+                  <button className="btn btn-light" onClick={() => setEditForm(null)}>
+                    Cancelar
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

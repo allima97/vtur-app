@@ -1,0 +1,17 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+import ConciliacaoIsland from "../../components/islands/ConciliacaoIsland";
+const activePage = "operacao_conciliacao";
+---
+
+<DashboardLayout title="Conciliação" activePage={activePage}>
+  <div class="page-content-wrap">
+    <HeaderPage
+      title="Conciliação"
+      subtitle="Importe a movimentação diária (TXT/XLS) e concilie recibos pelo número."
+      color="blue"
+    />
+    <ConciliacaoIsland client:only="react" />
+  </div>
+</DashboardLayout>

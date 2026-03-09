@@ -1,0 +1,105 @@
+---
+import "../../../styles/global.css";
+import DashboardLayout from "../../../layouts/DashboardLayout.astro";
+import RoteiroEditIsland from "../../../components/islands/RoteiroEditIsland";
+import HeaderPage from "../../../components/ui/HeaderPage.astro";
+import { createServerClient } from "@supabase/ssr";
+import { readEnv } from "../../../lib/supabaseServer";
+
+const supabaseUrl = readEnv("PUBLIC_SUPABASE_URL");
+const supabaseAnonKey = readEnv("PUBLIC_SUPABASE_ANON_KEY");
+const isProd = readEnv("ENVIRONMENT") === "production" || readEnv("NODE_ENV") === "production";
+const { cookies } = Astro;
+
+const supabaseAuth = createServerClient(supabaseUrl, supabaseAnonKey, {
+  cookies: {
+    get: (name) => cookies.get(name)?.value ?? "",
+    set: (name, value, options) =>
+      cookies.set(name, value, {
+        ...options,
+        httpOnly: true,
+        secure: isProd,
+        sameSite: "Lax",
+        path: "/",
+      }),
+    remove: (name, options) =>
+      cookies.delete(name, {
+        ...options,
+        path: "/",
+      }),
+  },
+});
+
+const {
+  data: { user },
+} = await supabaseAuth.auth.getUser();
+
+if (!user) {
+  return Astro.redirect("/auth/login");
+}
+
+const { id } = Astro.params;
+const isNew = id === "novo";
+let roteiro: any = null;
+
+function isMissingPercursoColumn(error: any) {
+  const code = String(error?.code || "");
+  const msg = String(error?.message || "");
+  return (
+    code === "42703" ||
+    (/percurso/i.test(msg) && /does not exist|nao existe|não existe|unknown column|column/i.test(msg))
+  );
+}
+
+if (!isNew && id) {
+  const selectWithPercurso = `id, nome, duracao, inicio_cidade, fim_cidade, inclui_texto, nao_inclui_texto, informacoes_importantes,
+       roteiro_hotel (id, cidade, hotel, data_inicio, data_fim, noites, apto, categoria, regime, ordem),
+       roteiro_passeio (id, cidade, passeio, data_inicio, data_fim, tipo, ingressos, ordem),
+       roteiro_transporte (id, tipo, fornecedor, descricao, data_inicio, data_fim, categoria, observacao, ordem),
+       roteiro_dia (id, percurso, cidade, data, descricao, ordem),
+       roteiro_investimento (id, tipo, valor_por_pessoa, qtd_apto, valor_por_apto, ordem),
+       roteiro_pagamento (id, servico, valor_total_com_taxas, taxas, forma_pagamento, ordem)`;
+
+  const selectWithoutPercurso = `id, nome, duracao, inicio_cidade, fim_cidade, inclui_texto, nao_inclui_texto, informacoes_importantes,
+       roteiro_hotel (id, cidade, hotel, data_inicio, data_fim, noites, apto, categoria, regime, ordem),
+       roteiro_passeio (id, cidade, passeio, data_inicio, data_fim, tipo, ingressos, ordem),
+       roteiro_transporte (id, tipo, fornecedor, descricao, data_inicio, data_fim, categoria, observacao, ordem),
+       roteiro_dia (id, cidade, data, descricao, ordem),
+       roteiro_investimento (id, tipo, valor_por_pessoa, qtd_apto, valor_por_apto, ordem),
+       roteiro_pagamento (id, servico, valor_total_com_taxas, taxas, forma_pagamento, ordem)`;
+
+  let res = await supabaseAuth.from("roteiro_personalizado").select(selectWithPercurso).eq("id", id).maybeSingle();
+  if (res.error && isMissingPercursoColumn(res.error)) {
+    res = await supabaseAuth.from("roteiro_personalizado").select(selectWithoutPercurso).eq("id", id).maybeSingle();
+  }
+
+  if (!res.error && res.data) {
+    roteiro = res.data;
+  }
+}
+
+const activePage = "orcamentos";
+const pageTitle = isNew ? "Novo Roteiro" : (roteiro?.nome || "Editar Roteiro");
+
+const headerTitle = "Informações do Roteiro";
+const headerName = roteiro?.nome || (isNew ? "Novo Roteiro" : "Roteiro");
+
+function escapeHtml(text: any) {
+  return String(text ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+const backHref = "/orcamentos/personalizados";
+const headerSubtitleHtml = `<a class="page-subtitle-link" href="${backHref}">← Roteiros</a> - ${escapeHtml(headerName)}`;
+---
+
+<DashboardLayout title={pageTitle} {activePage}>
+  <div class="page-content-wrap">
+    <HeaderPage title={headerTitle} subtitleHtml={headerSubtitleHtml} color="blue" />
+    <RoteiroEditIsland client:only="react" roteiroId={id || "novo"} roteiro={roteiro} />
+  </div>
+</DashboardLayout>

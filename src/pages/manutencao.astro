@@ -1,0 +1,326 @@
+---
+import BrandHead from "../components/BrandHead.astro";
+import MaintenanceAccessIsland from "../components/islands/MaintenanceAccessIsland.tsx";
+import { SYSTEM_NAME } from "../lib/systemName";
+---
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <BrandHead title={`${SYSTEM_NAME} | Manutencao`} canonicalPath={Astro.url.pathname} noindex={true} />
+    <title>{SYSTEM_NAME} | Manutencao</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #0f172a;
+        --ink-soft: #334155;
+        --sky: #0ea5e9;
+        --sky-deep: #0284c7;
+        --mint: #99f6e4;
+        --card: #ffffff;
+        --shadow: 0 30px 80px rgba(15, 23, 42, 0.18);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Manrope", system-ui, -apple-system, sans-serif;
+        color: var(--ink);
+        background: radial-gradient(circle at top left, #e0f2fe 0%, #f8fafc 52%, #e2e8f0 100%);
+        min-height: 100vh;
+      }
+
+      .maintenance-bg {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .maintenance-bg::before,
+      .maintenance-bg::after {
+        content: "";
+        position: absolute;
+        border-radius: 999px;
+        filter: blur(0px);
+        opacity: 0.7;
+      }
+
+      .maintenance-bg::before {
+        width: 320px;
+        height: 320px;
+        background: rgba(14, 165, 233, 0.18);
+        top: -80px;
+        right: -40px;
+      }
+
+      .maintenance-bg::after {
+        width: 220px;
+        height: 220px;
+        background: rgba(153, 246, 228, 0.45);
+        bottom: -60px;
+        left: -40px;
+      }
+
+      .maintenance-card {
+        background: var(--card);
+        border-radius: 28px;
+        box-shadow: var(--shadow);
+        padding: 32px;
+        max-width: 980px;
+        width: 100%;
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+        gap: 28px;
+        position: relative;
+        z-index: 1;
+      }
+
+      .maintenance-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(14, 165, 233, 0.12);
+        color: var(--sky-deep);
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+
+      .maintenance-title {
+        font-size: clamp(2rem, 3vw, 2.6rem);
+        margin: 16px 0 12px;
+        line-height: 1.1;
+        font-weight: 800;
+      }
+
+      .maintenance-text {
+        font-size: 1.05rem;
+        color: var(--ink-soft);
+        line-height: 1.6;
+        margin: 0 0 18px;
+      }
+
+      .maintenance-signature {
+        font-weight: 700;
+        color: var(--ink);
+      }
+
+      .maintenance-visual {
+        background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(153, 246, 228, 0.5));
+        border-radius: 22px;
+        padding: 24px;
+        display: grid;
+        place-items: center;
+      }
+
+      .maintenance-visual svg {
+        width: min(320px, 100%);
+        height: auto;
+      }
+
+      .maintenance-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 18px;
+        border-radius: 999px;
+        border: none;
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: #ffffff;
+        background: linear-gradient(120deg, var(--sky), var(--sky-deep));
+        box-shadow: 0 12px 24px rgba(2, 132, 199, 0.28);
+        text-decoration: none;
+        margin-top: 8px;
+      }
+
+      .maintenance-cta span {
+        font-size: 1.1rem;
+      }
+
+      .maintenance-admin-wrap {
+        margin-top: 24px;
+      }
+
+      .maintenance-admin {
+        background: rgba(15, 23, 42, 0.04);
+        border-radius: 18px;
+        padding: 18px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .maintenance-admin h2 {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+
+      .maintenance-admin p {
+        margin: 0;
+        color: var(--ink-soft);
+      }
+
+      .maintenance-form {
+        display: grid;
+        gap: 12px;
+        margin-top: 8px;
+      }
+
+      .maintenance-form label {
+        display: grid;
+        gap: 6px;
+        font-size: 0.9rem;
+        color: var(--ink-soft);
+      }
+
+      .maintenance-form input {
+        border: 1px solid rgba(148, 163, 184, 0.6);
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 0.95rem;
+      }
+
+      .maintenance-admin-header {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+
+      .maintenance-toggle {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .maintenance-toggle label {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        font-weight: 600;
+      }
+
+      .maintenance-btn {
+        background: var(--ink);
+        color: #fff;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 12px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .maintenance-btn.ghost {
+        background: transparent;
+        color: var(--ink);
+        border: 1px solid rgba(15, 23, 42, 0.2);
+      }
+
+      .maintenance-alert {
+        background: rgba(14, 165, 233, 0.12);
+        color: var(--sky-deep);
+        padding: 10px 12px;
+        border-radius: 12px;
+        font-weight: 600;
+      }
+
+      .maintenance-meta {
+        font-size: 0.85rem;
+        color: var(--ink-soft);
+      }
+
+      .maintenance-link {
+        color: var(--sky-deep);
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      @media (max-width: 860px) {
+        .maintenance-card {
+          grid-template-columns: 1fr;
+          padding: 24px;
+        }
+
+        .maintenance-visual {
+          order: -1;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .maintenance-card {
+          padding: 20px;
+        }
+
+        .maintenance-title {
+          font-size: 1.8rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="maintenance-bg">
+      <main class="maintenance-card" aria-labelledby="maintenance-title">
+        <section>
+          <span class="maintenance-badge">Manutenção programada</span>
+          <h1 id="maintenance-title" class="maintenance-title">Oops! Estamos em Manutenção!</h1>
+          <p class="maintenance-text">
+            Desculpe, estamos em uma manutenção programada. Em breve retornamos. Obrigado pela sua
+            compreensão!
+          </p>
+          <div class="maintenance-signature">Equipe {SYSTEM_NAME}.</div>
+          <a class="maintenance-cta" href="/">
+            <span>↩</span>
+            Voltar para a página inicial
+          </a>
+          <div class="maintenance-admin-wrap">
+            <MaintenanceAccessIsland client:visible />
+          </div>
+        </section>
+        <aside class="maintenance-visual" aria-hidden="true">
+          <svg viewBox="0 0 360 300" role="img" aria-label="Ilustração de manutenção">
+            <defs>
+              <linearGradient id="crane" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#0ea5e9" />
+                <stop offset="1" stop-color="#0284c7" />
+              </linearGradient>
+            </defs>
+            <rect x="30" y="180" width="190" height="90" rx="16" fill="#e2e8f0" />
+            <rect x="52" y="200" width="130" height="12" rx="6" fill="#cbd5f5" />
+            <circle cx="210" cy="228" r="28" fill="#cbd5e1" />
+            <circle cx="210" cy="228" r="14" fill="#94a3b8" />
+            <path d="M40 150 H220" stroke="#94a3b8" stroke-width="6" stroke-linecap="round" />
+            <path d="M70 150 L110 90 L280 90" stroke="url(#crane)" stroke-width="10" stroke-linecap="round" />
+            <rect x="270" y="90" width="50" height="12" rx="6" fill="url(#crane)" />
+            <path d="M290 102 V170" stroke="#0ea5e9" stroke-width="6" stroke-linecap="round" />
+            <rect x="275" y="170" width="30" height="24" rx="6" fill="#0ea5e9" />
+            <circle cx="290" cy="194" r="10" fill="#0f172a" />
+            <rect x="112" y="110" width="36" height="56" rx="12" fill="#0ea5e9" />
+            <rect x="120" y="124" width="20" height="12" rx="6" fill="#e0f2fe" />
+            <rect x="120" y="144" width="20" height="8" rx="4" fill="#e0f2fe" />
+            <path d="M160 240 L175 210 L190 240" fill="#f59e0b" />
+            <circle cx="175" cy="208" r="12" fill="#0f172a" />
+          </svg>
+        </aside>
+      </main>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,15 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import DashboardGeralIsland from "../../components/islands/DashboardGeralIsland.tsx";
+---
+
+<!-- 
+  Página do Dashboard Geral 
+  Esta rota é protegida pelo middleware (autenticação + permissões)
+-->
+
+<DashboardLayout title="Dashboard Geral">
+  <div class="page-content-wrap">
+    <DashboardGeralIsland client:visible />
+  </div>
+</DashboardLayout>

@@ -1,0 +1,59 @@
+/* SGTUR-UTILITIES.CSS - Otimizado para Astro + Tailwind */
+/* Sem @layer - funciona 100% com seu setup atual */
+
+.sgtur-gradient-primary { 
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+}
+
+.sgtur-gradient-success { 
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+}
+
+.sgtur-hover-glow {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sgtur-hover-glow:hover {
+  box-shadow: 0 0 20px rgba(102, 126, 234, 0.4);
+  transform: translateY(-2px);
+}
+
+.sgtur-card {
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.sgtur-btn {
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile fixes (corrige screenshots) */
+@media (max-width: 640px) {
+  .table-container { 
+    overflow-x: auto !important; 
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .sgtur-card { 
+    padding: 1rem !important; 
+    margin-bottom: 1rem;
+  }
+  
+  .sgtur-btn { 
+    padding: 0.75rem 1rem !important; 
+    font-size: 0.875rem;
+  }
+}
+
+/* Shadows variáveis (substitui repetições do global.css) */
+.sgtur-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+.sgtur-shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+
+

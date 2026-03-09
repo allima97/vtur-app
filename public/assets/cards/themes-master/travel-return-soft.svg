@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+  <defs>
+    <radialGradient id="washA" cx="16%" cy="86%" r="42%">
+      <stop offset="0" stop-color="#EBF2FB" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#EBF2FB" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="washB" cx="92%" cy="8%" r="36%">
+      <stop offset="0" stop-color="#EAF3F5" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#EAF3F5" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="washC" cx="68%" cy="62%" r="48%">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.62"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="softBlur">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+  <rect width="1080" height="1080" fill="#F7FBFC" />
+  <rect width="1080" height="1080" fill="url(#washA)" />
+  <rect width="1080" height="1080" fill="url(#washB)" />
+  <rect width="1080" height="1080" fill="url(#washC)" />
+  <g opacity="0.18" filter="url(#softBlur)">
+    <circle cx="206" cy="886" r="126" fill="#86C7C1" opacity="1" />
+    <circle cx="920" cy="128" r="108" fill="#8EB7C8" opacity="1" />
+    <ellipse cx="834" cy="864" rx="164" ry="86" fill="#EAF3F5" opacity="0.7" transform="rotate(-18 834 864)" />
+  </g>
+  <g fill="none" stroke="#D4E3EA" stroke-width="3" opacity="0.56">
+    <circle cx="906" cy="116" r="128"/>
+    <circle cx="906" cy="116" r="168"/>
+    <circle cx="116" cy="944" r="156"/>
+    <circle cx="116" cy="944" r="204"/>
+  </g>
+  <g fill="none" stroke="#D4E3EA" stroke-width="3" opacity="0.45">
+    <circle cx="910" cy="118" r="138"/>
+    <circle cx="910" cy="118" r="176"/>
+    <circle cx="128" cy="958" r="164"/>
+    <circle cx="128" cy="958" r="210"/>
+  </g>
+<g opacity="0.82" transform="translate(760 54) rotate(-16)">
+    <path d="M0 22 L92 0 L104 9 L74 26 L104 36 L96 45 L58 36 L44 54 L34 51 L42 33 L10 29 Z" fill="none" stroke="#86C7C1" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M-52 58 C-8 28 22 24 58 34" fill="none" stroke="#86C7C1" stroke-width="3" stroke-linecap="round" opacity="0.65"/>
+  </g>
+<path d="M 176 165.6 L 181.4 186.6 L 202.4 192 L 181.4 197.4 L 176 218.4 L 170.6 197.4 L 149.6 192 L 170.6 186.6 Z" fill="#FFFFFF" opacity="0.9" /><circle cx="142.4" cy="220.8" r="4.199999999999999" fill="#FFFFFF" opacity="0.63" /><circle cx="207.2" cy="160.8" r="3.3600000000000003" fill="#FFFFFF" opacity="0.63" />
+<path d="M 862 208.2 L 866.05 223.95 L 881.8 228 L 866.05 232.05 L 862 247.8 L 857.95 232.05 L 842.2 228 L 857.95 223.95 Z" fill="#FFFFFF" opacity="0.88" /><circle cx="836.8" cy="249.6" r="3.15" fill="#FFFFFF" opacity="0.616" /><circle cx="885.4" cy="204.6" r="2.5200000000000005" fill="#FFFFFF" opacity="0.616" />
+<path d="M 178 889.8 L 182.95 909.05 L 202.2 914 L 182.95 918.95 L 178 938.2 L 173.05 918.95 L 153.8 914 L 173.05 909.05 Z" fill="#FFFFFF" opacity="0.88" /><circle cx="147.2" cy="940.4" r="3.8499999999999996" fill="#FFFFFF" opacity="0.616" /><circle cx="206.6" cy="885.4" r="3.08" fill="#FFFFFF" opacity="0.616" />
+<path d="M 902 881.8 L 906.95 901.05 L 926.2 906 L 906.95 910.95 L 902 930.2 L 897.05 910.95 L 877.8 906 L 897.05 901.05 Z" fill="#FFFFFF" opacity="0.88" /><circle cx="871.2" cy="932.4" r="3.8499999999999996" fill="#FFFFFF" opacity="0.616" /><circle cx="930.6" cy="877.4" r="3.08" fill="#FFFFFF" opacity="0.616" />
+<path d="M 760 788.4 L 763.6 802.4 L 777.6 806 L 763.6 809.6 L 760 823.6 L 756.4 809.6 L 742.4 806 L 756.4 802.4 Z" fill="#8EB7C8" opacity="0.58" /><circle cx="737.6" cy="825.2" r="2.8" fill="#8EB7C8" opacity="0.40599999999999997" /><circle cx="780.8" cy="785.2" r="2.24" fill="#8EB7C8" opacity="0.40599999999999997" />
+</svg>

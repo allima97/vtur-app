@@ -1,0 +1,11 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import TodoBoard from "../../components/islands/TodoBoard";
+const activePage = "operacao_todo";
+---
+
+<DashboardLayout title="Tarefas" activePage={activePage}>
+  <div class="page-content-wrap todo-page">
+    <TodoBoard client:load />
+  </div>
+</DashboardLayout>

@@ -1,0 +1,51 @@
+---
+import {
+  APPLE_TOUCH_ICON_PATH,
+  APP_URL,
+  BRAND_ICON_PATH,
+  BRAND_OG_IMAGE_PATH,
+  MANIFEST_PATH,
+  SYSTEM_DESCRIPTION,
+  SYSTEM_NAME,
+  SYSTEM_TITLE,
+} from "../lib/systemName";
+
+type Props = {
+  title?: string;
+  description?: string;
+  canonicalPath?: string;
+  noindex?: boolean;
+};
+
+const {
+  title = SYSTEM_TITLE,
+  description = SYSTEM_DESCRIPTION,
+  canonicalPath = "/",
+  noindex = false,
+} = Astro.props as Props;
+
+const canonicalUrl = new URL(canonicalPath, APP_URL).toString();
+const ogImageUrl = new URL(BRAND_OG_IMAGE_PATH, APP_URL).toString();
+---
+
+<meta name="theme-color" content="#0b0f2a" />
+<meta name="application-name" content={SYSTEM_NAME} />
+<meta name="apple-mobile-web-app-title" content={SYSTEM_NAME} />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="description" content={description} />
+<meta property="og:site_name" content={SYSTEM_NAME} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:type" content="website" />
+<meta property="og:url" content={canonicalUrl} />
+<meta property="og:image" content={ogImageUrl} />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImageUrl} />
+<link rel="canonical" href={canonicalUrl} />
+<link rel="manifest" href={MANIFEST_PATH} />
+<link rel="icon" href="/favicon.png" type="image/png" sizes="64x64" />
+<link rel="icon" type="image/png" sizes="192x192" href={BRAND_ICON_PATH} />
+<link rel="apple-touch-icon" href={APPLE_TOUCH_ICON_PATH} />
+{noindex && <meta name="robots" content="noindex, nofollow" />}

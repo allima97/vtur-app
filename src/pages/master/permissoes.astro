@@ -1,0 +1,10 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import MasterPermissoesIsland from "../../components/islands/MasterPermissoesIsland.tsx";
+---
+
+<DashboardLayout title="Permissões Master" activePage="master-permissoes">
+  <div class="page-content-wrap">
+    <MasterPermissoesIsland client:visible />
+  </div>
+</DashboardLayout>

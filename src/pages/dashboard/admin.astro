@@ -1,0 +1,12 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import DashboardAdminIsland from "../../components/islands/DashboardAdminIsland.tsx";
+---
+
+<!-- Apenas ADMIN deve acessar — middleware + island verificam isso -->
+
+<DashboardLayout title="Dashboard Administrativo" activePage="admin-dashboard">
+  <div class="page-content-wrap">
+    <DashboardAdminIsland client:only="react" />
+  </div>
+</DashboardLayout>
