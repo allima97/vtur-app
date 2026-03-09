@@ -1379,11 +1379,11 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       </nav>
 
       <aside id={sidebarId} className={`app-sidebar ${mobileOpen ? "open" : ""}`}>
-        <div className="sidebar-logo" aria-label="vtur">
+        <div className="sidebar-logo" aria-label="VTUR - CRM para Franquias CVC">
           <img className="sidebar-logo-image" src="/brand/vtur-symbol.svg" alt="vtur" />
-          <div className="sidebar-logo-copy">
+          <div className="sidebar-logo-copy sidebar-logo-copy-inline">
             <span className="sidebar-logo-wordmark">VTUR</span>
-            <span className="sidebar-logo-tagline">Sistema de Gerenciamento de Vendas</span>
+            <span className="sidebar-logo-tagline">- CRM para Franquias CVC</span>
           </div>
         </div>
 

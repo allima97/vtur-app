@@ -218,6 +218,13 @@ body {
   min-width: 0;
 }
 
+.sidebar-logo-copy-inline {
+  flex-direction: row;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
 .sidebar-logo-wordmark {
   display: block;
   color: #f8fafc;
@@ -229,13 +236,13 @@ body {
 
 .sidebar-logo-tagline {
   display: block;
-  margin-top: 4px;
+  margin-top: 0;
   color: rgba(248, 250, 252, 0.88);
-  font-size: 0.62rem;
-  line-height: 1.15;
+  font-size: 0.7rem;
+  line-height: 1.2;
   font-weight: 700;
-  text-transform: uppercase;
-  max-width: 118px;
+  text-transform: none;
+  max-width: 138px;
 }
 
 .sidebar-section-title {
@@ -411,8 +418,8 @@ body {
   }
 
   .sidebar-logo-tagline {
-    font-size: 0.58rem;
-    max-width: 108px;
+    font-size: 0.64rem;
+    max-width: 118px;
   }
 }
 
