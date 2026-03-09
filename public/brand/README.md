@@ -2,9 +2,10 @@
 
 Arquivos desta pasta servem como base operacional para o `vtur.app`.
 
-- `vtur-symbol.png`: simbolo raster usado em PWA, favicon e atalhos.
-- `vtur-logo-horizontal.svg`: lockup horizontal temporario para cabecalho e site.
-- `vtur-logo-stacked.svg`: lockup vertical temporario para materiais institucionais.
+- `vtur-symbol.svg`: simbolo vetorial mestre do vtur.
+- `vtur-symbol.png`: raster limpo derivado do simbolo vetorial.
+- `vtur-logo-horizontal.svg`: alias publico temporario apontando para o simbolo oficial.
+- `vtur-logo-stacked.svg`: alias publico temporario apontando para o simbolo oficial.
+- `vtur-app-icon-512.png`: derivado com fundo escuro usado como referencia para PWA e atalhos.
 
-Os SVGs desta pasta ainda sao temporarios e montados a partir do simbolo raster disponivel no projeto.
-Quando os arquivos vetoriais oficiais forem adicionados, substitua estes arquivos preservando os mesmos nomes publicos sempre que possivel.
+No `vtur.app`, os derivados de favicon e PWA usam fundo escuro.

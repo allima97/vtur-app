@@ -8,7 +8,7 @@
   "display": "standalone",
   "lang": "pt-BR",
   "background_color": "#0b0f2a",
-  "theme_color": "#6a5cff",
+  "theme_color": "#0b0f2a",
   "icons": [
     {
       "src": "/icons/icon-192.png",
