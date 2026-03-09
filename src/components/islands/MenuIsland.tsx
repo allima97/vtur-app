@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { logoutUsuario } from "../../lib/logout";
-import { SYSTEM_NAME } from "../../lib/systemName";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { MAPA_MODULOS, listarModulosComHeranca } from "../../config/modulos";
 import { supabase } from "../../lib/supabase";
@@ -1380,7 +1379,9 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       </nav>
 
       <aside id={sidebarId} className={`app-sidebar ${mobileOpen ? "open" : ""}`}>
-            <div className="sidebar-logo">{SYSTEM_NAME}</div>
+        <div className="sidebar-logo" aria-label="vtur">
+          <img className="sidebar-logo-image" src="/brand/vtur-symbol.svg" alt="vtur" />
+        </div>
 
         {renderMenuSections()}
 

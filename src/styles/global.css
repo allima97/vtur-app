@@ -197,9 +197,17 @@ body {
 }
 
 .sidebar-logo {
-  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 24px;
-  font-size: 1.25rem;
+  padding: 6px 0 2px;
+}
+
+.sidebar-logo-image {
+  display: block;
+  width: min(132px, 100%);
+  height: auto;
 }
 
 .sidebar-section-title {
@@ -362,6 +370,11 @@ body {
 
   .sidebar-logo {
     margin-bottom: 16px;
+    padding-top: 2px;
+  }
+
+  .sidebar-logo-image {
+    width: min(112px, 100%);
   }
 }
 
