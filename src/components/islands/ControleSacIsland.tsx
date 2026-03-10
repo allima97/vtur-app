@@ -9,6 +9,13 @@ import { formatarDataParaExibicao } from "../../lib/formatDate";
 import TableActions from "../ui/TableActions";
 import { exportTableToPDF } from "../../lib/pdf";
 import { boundDateEndISO, selectAllInputOnFocus } from "../../lib/inputNormalization";
+import AlertMessage from "../ui/AlertMessage";
+import DataTable from "../ui/DataTable";
+import EmptyState from "../ui/EmptyState";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type SacRegistro = {
   id: string;
@@ -528,390 +535,369 @@ export default function ControleSacIsland() {
   }
 
   if (loadingPerm) return <LoadingUsuarioContext />;
-  if (!podeVer) return <div>Você não possui acesso ao módulo de Operação.</div>;
+  if (!podeVer) {
+    return (
+      <AppCard tone="config">
+        Você não possui acesso ao módulo de Operação.
+      </AppCard>
+    );
+  }
 
   const precisaFiltroMaster = isMaster && !companyId;
 
   return (
     <div className="sac-page">
-      {isMaster && (
-        <div className="card-base card-purple mb-3 list-toolbar-sticky">
+      <AppToolbar
+        tone="config"
+        sticky
+        className="list-toolbar-sticky"
+        title="Controle de SAC"
+        subtitle={companyNome ? `Filial: ${companyNome}` : "Gestao de atendimentos e ocorrencias."}
+      >
+        {isMaster && (
           <div className="form-row mobile-stack" style={{ gap: 12 }}>
-            <div className="form-group">
-              <label className="form-label">Filial</label>
-              <select
-                className="form-select"
-                value={masterScope.empresaSelecionada}
-                onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
-              >
-                <option value="all">Selecione</option>
-                {masterScope.empresasAprovadas.map((empresa) => (
-                  <option key={empresa.id} value={empresa.id}>
-                    {empresa.nome_fantasia}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <AppField
+              as="select"
+              wrapperClassName="form-group"
+              label="Filial"
+              value={masterScope.empresaSelecionada}
+              onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
+              options={[
+                { value: "all", label: "Selecione" },
+                ...masterScope.empresasAprovadas.map((empresa) => ({
+                  value: empresa.id,
+                  label: empresa.nome_fantasia,
+                })),
+              ]}
+            />
           </div>
-        </div>
-      )}
+        )}
+      </AppToolbar>
 
       {precisaFiltroMaster && (
-        <div className="card-base card-config mb-3">
-          Selecione uma filial para visualizar o controle de SAC.
-        </div>
+        <AppCard tone="config" className="mb-3">
+          <EmptyState
+            title="Selecione uma filial"
+            description="Escolha uma empresa para visualizar o controle de SAC."
+          />
+        </AppCard>
       )}
 
-      {erro && (
-        <div className="card-base card-config mb-3">
-          <strong>{erro}</strong>
-        </div>
-      )}
+      {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
 
       {!precisaFiltroMaster && showForm && (
-        <div className="card-base card-blue mb-3">
-          <div className="card-title">
-            {editing ? "Editar SAC" : "Adicionar SAC"}
-          </div>
+        <AppCard tone="info" className="mb-3" title={editing ? "Editar SAC" : "Adicionar SAC"}>
           <div className="form-row mobile-stack">
-            <div className="form-group">
-              <label className="form-label">Recibo</label>
-              <input
-                className="form-input"
-                value={form.recibo}
-                onChange={(e) => setForm((prev) => ({ ...prev, recibo: e.target.value }))}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Tour</label>
-              <input
-                className="form-input"
-                value={form.tour}
-                onChange={(e) => setForm((prev) => ({ ...prev, tour: e.target.value }))}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Data da solicitação</label>
-              <input
-                type="date"
-                className="form-input"
-                value={form.data_solicitacao}
-                onFocus={selectAllInputOnFocus}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, data_solicitacao: e.target.value }))
-                }
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Status</label>
-              <select
-                className="form-select"
-                value={form.status}
-                onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value }))}
-              >
-                {STATUS_OPCOES.map((op) => (
-                  <option key={op.value} value={op.value}>
-                    {op.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Contratante / PAX</label>
-              <input
-                className="form-input"
-                value={form.contratante_pax}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, contratante_pax: e.target.value }))
-                }
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Responsável</label>
-              <input
-                className="form-input"
-                value={form.responsavel}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, responsavel: e.target.value }))
-                }
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Prazo</label>
-              <input
-                type="date"
-                className="form-input"
-                value={form.prazo}
-                onFocus={selectAllInputOnFocus}
-                onChange={(e) => setForm((prev) => ({ ...prev, prazo: e.target.value }))}
-              />
-            </div>
-          </div>
-          <div className="form-group" style={{ marginTop: 12 }}>
-            <label className="form-label">Motivo</label>
-            <textarea
-              className="form-input"
-              rows={3}
-              value={form.motivo}
-              onChange={(e) => setForm((prev) => ({ ...prev, motivo: e.target.value }))}
+            <AppField
+              wrapperClassName="form-group"
+              label="Recibo"
+              value={form.recibo}
+              onChange={(e) => setForm((prev) => ({ ...prev, recibo: e.target.value }))}
+            />
+            <AppField
+              wrapperClassName="form-group"
+              label="Tour"
+              value={form.tour}
+              onChange={(e) => setForm((prev) => ({ ...prev, tour: e.target.value }))}
+            />
+            <AppField
+              as="input"
+              type="date"
+              wrapperClassName="form-group"
+              label="Data da solicitacao"
+              value={form.data_solicitacao}
+              onFocus={selectAllInputOnFocus}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, data_solicitacao: e.target.value }))
+              }
+            />
+            <AppField
+              as="select"
+              wrapperClassName="form-group"
+              label="Status"
+              value={form.status}
+              onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value }))}
+              options={STATUS_OPCOES.map((op) => ({ value: op.value, label: op.label }))}
+            />
+            <AppField
+              wrapperClassName="form-group"
+              label="Contratante / PAX"
+              value={form.contratante_pax}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, contratante_pax: e.target.value }))
+              }
+            />
+            <AppField
+              wrapperClassName="form-group"
+              label="Responsavel"
+              value={form.responsavel}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, responsavel: e.target.value }))
+              }
+            />
+            <AppField
+              as="input"
+              type="date"
+              wrapperClassName="form-group"
+              label="Prazo"
+              value={form.prazo}
+              onFocus={selectAllInputOnFocus}
+              onChange={(e) => setForm((prev) => ({ ...prev, prazo: e.target.value }))}
             />
           </div>
-          <div className="form-group" style={{ marginTop: 12 }}>
-            <label className="form-label">Ok? Quando?</label>
-            <input
-              className="form-input"
-              value={form.ok_quando}
-              onChange={(e) => setForm((prev) => ({ ...prev, ok_quando: e.target.value }))}
-            />
-          </div>
+          <AppField
+            as="textarea"
+            rows={3}
+            wrapperClassName="form-group"
+            label="Motivo"
+            value={form.motivo}
+            onChange={(e) => setForm((prev) => ({ ...prev, motivo: e.target.value }))}
+          />
+          <AppField
+            wrapperClassName="form-group"
+            label="Ok? Quando?"
+            value={form.ok_quando}
+            onChange={(e) => setForm((prev) => ({ ...prev, ok_quando: e.target.value }))}
+          />
           <div className="mobile-stack-buttons" style={{ marginTop: 12 }}>
-            <button
-              className="btn btn-primary w-full sm:w-auto"
+            <AppButton
               type="button"
+              variant="primary"
               onClick={salvarSac}
               disabled={saving}
             >
               {saving ? "Salvando..." : "Salvar"}
-            </button>
-            <button
-              className="btn btn-light w-full sm:w-auto"
+            </AppButton>
+            <AppButton
               type="button"
+              variant="secondary"
               onClick={fecharFormulario}
               disabled={saving}
             >
               Cancelar
-            </button>
+            </AppButton>
           </div>
-          {formError && <div style={{ color: "#b91c1c", marginTop: 8 }}>{formError}</div>}
-        </div>
+          {formError && <AlertMessage variant="error">{formError}</AlertMessage>}
+        </AppCard>
       )}
 
       {!precisaFiltroMaster && !showForm && (
-        <div className="card-base card-blue mb-3 list-toolbar-sticky">
+        <AppToolbar tone="info" sticky className="list-toolbar-sticky" title="Filtros">
           <div className="sac-toolbar-grid">
-            <div className="form-group sac-toolbar-search">
-              <label className="form-label">Buscar</label>
-              <input
-                className="form-input"
-                placeholder="Recibo, tour, contratante, motivo..."
-                value={buscaInput}
-                onChange={(e) => setBuscaInput(e.target.value)}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Status</label>
-              <select
-                className="form-select"
-                value={statusFiltro}
-                onChange={(e) => setStatusFiltro(e.target.value)}
-              >
-                <option value="all">Todos</option>
-                {STATUS_OPCOES.map((op) => (
-                  <option key={op.value} value={op.value}>
-                    {op.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">De</label>
-              <input
-                type="date"
-                className="form-input"
-                value={dataInicio}
-                onFocus={selectAllInputOnFocus}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  setDataInicio(next);
-                  setDataFim((prev) => boundDateEndISO(next, prev));
-                }}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Até</label>
-              <input
-                type="date"
-                className="form-input"
-                value={dataFim}
-                min={dataInicio || undefined}
-                onFocus={selectAllInputOnFocus}
-                onChange={(e) => setDataFim(boundDateEndISO(dataInicio, e.target.value))}
-              />
-            </div>
+            <AppField
+              wrapperClassName="form-group sac-toolbar-search"
+              label="Buscar"
+              placeholder="Recibo, tour, contratante, motivo..."
+              value={buscaInput}
+              onChange={(e) => setBuscaInput(e.target.value)}
+            />
+            <AppField
+              as="select"
+              wrapperClassName="form-group"
+              label="Status"
+              value={statusFiltro}
+              onChange={(e) => setStatusFiltro(e.target.value)}
+              options={[
+                { value: "all", label: "Todos" },
+                ...STATUS_OPCOES.map((op) => ({ value: op.value, label: op.label })),
+              ]}
+            />
+            <AppField
+              as="input"
+              type="date"
+              wrapperClassName="form-group"
+              label="De"
+              value={dataInicio}
+              onFocus={selectAllInputOnFocus}
+              onChange={(e) => {
+                const next = e.target.value;
+                setDataInicio(next);
+                setDataFim((prev) => boundDateEndISO(next, prev));
+              }}
+            />
+            <AppField
+              as="input"
+              type="date"
+              wrapperClassName="form-group"
+              label="Ate"
+              value={dataFim}
+              min={dataInicio || undefined}
+              onFocus={selectAllInputOnFocus}
+              onChange={(e) => setDataFim(boundDateEndISO(dataInicio, e.target.value))}
+            />
             <div className="form-group">
               <label className="form-label" style={{ visibility: "hidden" }}>
-                Ações
+                Acoes
               </label>
               <div className="sac-toolbar-actions mobile-stack-buttons">
-                <button className="btn btn-strong" type="button" onClick={aplicarBusca}>
+                <AppButton type="button" variant="secondary" onClick={aplicarBusca}>
                   Buscar
-                </button>
+                </AppButton>
                 {podeCriar && (
-                  <button className="btn btn-primary" type="button" onClick={abrirFormularioNovo}>
+                  <AppButton type="button" variant="primary" onClick={abrirFormularioNovo}>
                     Adicionar SAC
-                  </button>
+                  </AppButton>
                 )}
-                <button className="btn btn-light" type="button" onClick={exportarExcel}>
+                <AppButton type="button" variant="secondary" onClick={exportarExcel}>
                   Exportar Excel
-                </button>
-                <button className="btn btn-light" type="button" onClick={exportarPDF}>
+                </AppButton>
+                <AppButton type="button" variant="secondary" onClick={exportarPDF}>
                   Exportar PDF
-                </button>
+                </AppButton>
               </div>
             </div>
           </div>
-        </div>
+        </AppToolbar>
       )}
 
       {!precisaFiltroMaster && loading && (
-        <div className="card-base card-config mb-3">Carregando SAC...</div>
+        <AppCard tone="config" className="mb-3">
+          Carregando SAC...
+        </AppCard>
       )}
 
       {!precisaFiltroMaster && !loading && registrosFiltrados.length === 0 && (
-        <div className="card-base card-config mb-3">Nenhum registro encontrado.</div>
+        <AppCard tone="config" className="mb-3">
+          <EmptyState title="Nenhum registro encontrado" />
+        </AppCard>
       )}
 
       {!precisaFiltroMaster && !loading && registrosFiltrados.length > 0 && (
-        <div className="card-base sac-card">
-          <div className="sac-title">
-            Controle de SAC {companyNome ? `- ${companyNome}` : ""}
-          </div>
-          {exportErro && (
-            <div style={{ color: "#b91c1c", marginBottom: 8 }}>{exportErro}</div>
-          )}
-          <div className="table-container">
-            <table className="table-default table-header-blue table-mobile-cards min-w-[1180px]">
-              <thead>
-                <tr>
-                  <th className="min-w-[120px]">Recibo</th>
-                  <th className="min-w-[140px]">Tour</th>
-                  <th className="min-w-[150px]">Data da solicitação</th>
-                  <th className="min-w-[220px]">Motivo</th>
-                  <th className="min-w-[200px]">Contratante / PAX</th>
-                  <th className="min-w-[140px]">Ok? Quando?</th>
-                  <th className="min-w-[120px]">Status</th>
-                  <th className="min-w-[140px]">Responsável</th>
-                  <th className="min-w-[120px]">Prazo</th>
-                  <th className="th-actions">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {registrosFiltrados.map((row) => (
-                  <tr key={row.id}>
-                    <td data-label="Recibo">{row.recibo || "-"}</td>
-                    <td data-label="Tour">{row.tour || "-"}</td>
-                    <td data-label="Data da solicitação">
-                      {row.data_solicitacao
-                        ? formatarDataParaExibicao(row.data_solicitacao)
-                        : "-"}
-                    </td>
-                    <td data-label="Motivo">{row.motivo || "-"}</td>
-                    <td data-label="Contratante / PAX">{row.contratante_pax || "-"}</td>
-                    <td data-label="Ok? Quando?">{row.ok_quando || "-"}</td>
-                    <td data-label="Status">
-                      {STATUS_LABEL[row.status || "aberto"] || row.status || "Aberto"}
-                    </td>
-                    <td data-label="Responsável">{row.responsavel || "-"}</td>
-                    <td data-label="Prazo">
-                      {row.prazo ? formatarDataParaExibicao(row.prazo) : "-"}
-                    </td>
-                    <td className="th-actions" data-label="Ações">
-                      <TableActions
-                        className="sac-action-buttons"
-                        actions={[
-                          {
-                            key: "view",
-                            label: "Ver",
-                            onClick: () => abrirVisualizacao(row),
-                            icon: "👁️",
-                          },
-                          {
-                            key: "history",
-                            label: "Histórico",
-                            onClick: () => abrirHistorico(row),
-                            icon: "🗂️",
-                          },
-                          {
-                            key: "interacao",
-                            label: "Registrar interação",
-                            onClick: () => abrirInteracao(row),
-                            icon: "📝",
-                          },
-                          ...(podeEditar
-                            ? [
-                                {
-                                  key: "edit",
-                                  label: "Editar",
-                                  onClick: () => abrirEditar(row),
-                                  icon: "✏️",
-                                },
-                              ]
-                            : []),
-                          ...(podeExcluir
-                            ? [
-                                {
-                                  key: "delete",
-                                  label: "Excluir",
-                                  onClick: () => excluirSac(row),
-                                  icon: "🗑️",
-                                  variant: "danger",
-                                  disabled: excluindoId === row.id,
-                                },
-                              ]
-                            : []),
-                        ]}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <AppCard
+          tone="info"
+          className="sac-card"
+          title={`Controle de SAC${companyNome ? ` - ${companyNome}` : ""}`}
+        >
+          {exportErro && <AlertMessage variant="error">{exportErro}</AlertMessage>}
+          <DataTable
+            className="table-header-blue table-mobile-cards min-w-[1180px]"
+            headers={
+              <tr>
+                <th className="min-w-[120px]">Recibo</th>
+                <th className="min-w-[140px]">Tour</th>
+                <th className="min-w-[150px]">Data da solicitacao</th>
+                <th className="min-w-[220px]">Motivo</th>
+                <th className="min-w-[200px]">Contratante / PAX</th>
+                <th className="min-w-[140px]">Ok? Quando?</th>
+                <th className="min-w-[120px]">Status</th>
+                <th className="min-w-[140px]">Responsavel</th>
+                <th className="min-w-[120px]">Prazo</th>
+                <th className="th-actions">Acoes</th>
+              </tr>
+            }
+            colSpan={10}
+          >
+            {registrosFiltrados.map((row) => (
+              <tr key={row.id}>
+                <td data-label="Recibo">{row.recibo || "-"}</td>
+                <td data-label="Tour">{row.tour || "-"}</td>
+                <td data-label="Data da solicitacao">
+                  {row.data_solicitacao
+                    ? formatarDataParaExibicao(row.data_solicitacao)
+                    : "-"}
+                </td>
+                <td data-label="Motivo">{row.motivo || "-"}</td>
+                <td data-label="Contratante / PAX">{row.contratante_pax || "-"}</td>
+                <td data-label="Ok? Quando?">{row.ok_quando || "-"}</td>
+                <td data-label="Status">
+                  {STATUS_LABEL[row.status || "aberto"] || row.status || "Aberto"}
+                </td>
+                <td data-label="Responsavel">{row.responsavel || "-"}</td>
+                <td data-label="Prazo">
+                  {row.prazo ? formatarDataParaExibicao(row.prazo) : "-"}
+                </td>
+                <td className="th-actions" data-label="Acoes">
+                  <TableActions
+                    className="sac-action-buttons"
+                    actions={[
+                      {
+                        key: "view",
+                        label: "Ver",
+                        onClick: () => abrirVisualizacao(row),
+                        icon: "👁️",
+                      },
+                      {
+                        key: "history",
+                        label: "Historico",
+                        onClick: () => abrirHistorico(row),
+                        icon: "🗂️",
+                      },
+                      {
+                        key: "interacao",
+                        label: "Registrar interacao",
+                        onClick: () => abrirInteracao(row),
+                        icon: "📝",
+                      },
+                      ...(podeEditar
+                        ? [
+                            {
+                              key: "edit",
+                              label: "Editar",
+                              onClick: () => abrirEditar(row),
+                              icon: "✏️",
+                            },
+                          ]
+                        : []),
+                      ...(podeExcluir
+                        ? [
+                            {
+                              key: "delete",
+                              label: "Excluir",
+                              onClick: () => excluirSac(row),
+                              icon: "🗑️",
+                              variant: "danger",
+                              disabled: excluindoId === row.id,
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
+                </td>
+              </tr>
+            ))}
+          </DataTable>
+        </AppCard>
       )}
 
       {historicoSac && (
         <div className="modal-backdrop">
           <div className="modal-panel" style={{ maxWidth: 720, width: "92vw" }}>
             <div className="modal-header">
-              <div className="modal-title">Histórico SAC</div>
-              <button className="btn-ghost" onClick={fecharHistorico}>
+              <div className="modal-title">Historico SAC</div>
+              <AppButton type="button" variant="secondary" onClick={fecharHistorico}>
                 Fechar
-              </button>
+              </AppButton>
             </div>
             <div className="modal-body">
               <div style={{ marginBottom: 8, fontWeight: 700 }}>
                 {historicoSac.contratante_pax || "Registro"} •{" "}
                 {historicoSac.recibo || "Sem recibo"}
               </div>
-              {loadingHistorico && <div>Carregando histórico...</div>}
-              {!loadingHistorico && historicoItens.length === 0 && (
-                <div>Nenhuma interação registrada.</div>
-              )}
-              {!loadingHistorico && historicoItens.length > 0 && (
-                <div className="table-container">
-                  <table className="table-default table-mobile-cards">
-                    <thead>
-                      <tr>
-                        <th>Data</th>
-                        <th>Descrição</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {historicoItens.map((item) => (
-                        <tr key={item.id}>
-                          <td data-label="Data">
-                            {item.data_interacao
-                              ? formatarDataParaExibicao(item.data_interacao)
-                              : "-"}
-                          </td>
-                          <td data-label="Descrição">{item.descricao || "-"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <DataTable
+                className="table-mobile-cards"
+                headers={
+                  <tr>
+                    <th>Data</th>
+                    <th>Descricao</th>
+                  </tr>
+                }
+                loading={loadingHistorico}
+                loadingMessage="Carregando historico..."
+                empty={!loadingHistorico && historicoItens.length === 0}
+                emptyMessage="Nenhuma interacao registrada."
+                colSpan={2}
+              >
+                {historicoItens.map((item) => (
+                  <tr key={item.id}>
+                    <td data-label="Data">
+                      {item.data_interacao
+                        ? formatarDataParaExibicao(item.data_interacao)
+                        : "-"}
+                    </td>
+                    <td data-label="Descricao">{item.descricao || "-"}</td>
+                  </tr>
+                ))}
+              </DataTable>
             </div>
           </div>
         </div>
@@ -921,51 +907,47 @@ export default function ControleSacIsland() {
         <div className="modal-backdrop">
           <div className="modal-panel interacao-modal" style={{ maxWidth: 640, width: "92vw" }}>
             <div className="modal-header">
-              <div className="modal-title">Registrar interação</div>
-              <button className="btn-ghost" onClick={fecharInteracao}>
+              <div className="modal-title">Registrar interacao</div>
+              <AppButton type="button" variant="secondary" onClick={fecharInteracao}>
                 Fechar
-              </button>
+              </AppButton>
             </div>
             <div className="modal-body">
               <div style={{ marginBottom: 8, fontWeight: 700 }}>
                 {interacaoSac.contratante_pax || "Registro"} •{" "}
                 {interacaoSac.recibo || "Sem recibo"}
               </div>
-              <div className="form-group">
-                <label className="form-label">Data</label>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={interacaoData}
-                  onFocus={selectAllInputOnFocus}
-                  onChange={(e) => setInteracaoData(e.target.value)}
-                />
-              </div>
-              <div className="form-group" style={{ marginTop: 12 }}>
-                <label className="form-label">Descrição</label>
-                <textarea
-                  className="form-input"
-                  rows={4}
-                  value={interacaoTexto}
-                  onChange={(e) => setInteracaoTexto(e.target.value)}
-                />
-              </div>
-              {interacaoErro && (
-                <div style={{ color: "#b91c1c", marginTop: 8 }}>{interacaoErro}</div>
-              )}
+              <AppField
+                as="input"
+                type="date"
+                wrapperClassName="form-group"
+                label="Data"
+                value={interacaoData}
+                onFocus={selectAllInputOnFocus}
+                onChange={(e) => setInteracaoData(e.target.value)}
+              />
+              <AppField
+                as="textarea"
+                rows={4}
+                wrapperClassName="form-group"
+                label="Descricao"
+                value={interacaoTexto}
+                onChange={(e) => setInteracaoTexto(e.target.value)}
+              />
+              {interacaoErro && <AlertMessage variant="error">{interacaoErro}</AlertMessage>}
             </div>
             <div className="modal-footer">
-              <button className="btn btn-light" type="button" onClick={fecharInteracao}>
+              <AppButton type="button" variant="secondary" onClick={fecharInteracao}>
                 Cancelar
-              </button>
-              <button
-                className="btn btn-primary"
+              </AppButton>
+              <AppButton
                 type="button"
+                variant="primary"
                 onClick={salvarInteracao}
                 disabled={savingInteracao}
               >
                 {savingInteracao ? "Salvando..." : "Salvar"}
-              </button>
+              </AppButton>
             </div>
           </div>
         </div>
@@ -976,9 +958,9 @@ export default function ControleSacIsland() {
           <div className="modal-panel" style={{ maxWidth: 660, width: "92vw" }}>
             <div className="modal-header">
               <div className="modal-title">Detalhes do SAC</div>
-              <button className="btn-ghost" onClick={fecharVisualizacao}>
+              <AppButton type="button" variant="secondary" onClick={fecharVisualizacao}>
                 Fechar
-              </button>
+              </AppButton>
             </div>
             <div className="modal-body">
               <div style={{ marginBottom: 8, fontWeight: 700 }}>
@@ -998,7 +980,7 @@ export default function ControleSacIsland() {
                   <div>{visualizacaoSac.tour || "-"}</div>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Data da solicitação</label>
+                  <label className="form-label">Data da solicitacao</label>
                   <div>
                     {visualizacaoSac.data_solicitacao
                       ? formatarDataParaExibicao(visualizacaoSac.data_solicitacao)
@@ -1014,7 +996,7 @@ export default function ControleSacIsland() {
                   </div>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Responsável</label>
+                  <label className="form-label">Responsavel</label>
                   <div>{visualizacaoSac.responsavel || "-"}</div>
                 </div>
                 <div className="form-group">

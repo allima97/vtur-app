@@ -6,7 +6,15 @@ import { formatCurrencyBRL } from "../../lib/format";
 import { construirLinkWhatsApp } from "../../lib/whatsapp";
 import { normalizeText } from "../../lib/normalizeText";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
+import AlertMessage from "../ui/AlertMessage";
 import ConfirmDialog from "../ui/ConfirmDialog";
+import DataTable from "../ui/DataTable";
+import EmptyState from "../ui/EmptyState";
+import TableActions from "../ui/TableActions";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type Viagem = {
   id: string;
@@ -496,286 +504,197 @@ export default function ViagensListaIsland() {
   }
 
   if (!podeVer) {
-    return <div>Você não possui acesso ao módulo de Operação/Viagens.</div>;
+    return (
+      <AppCard tone="config">
+        Você não possui acesso ao módulo de Operação/Viagens.
+      </AppCard>
+    );
   }
 
   return (
-      <div
-        className={`page-content-wrap viagens-page${podeCriar && !showForm ? " has-mobile-actionbar" : ""}`}
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {showForm && (
-            <div className="card-base card-blue form-card viagens-form" style={{ padding: 16 }}>
-              <datalist id="cidades-list">
-                {cidades.map((cidade) => (
-                  <option
-                    key={`${cidade.nome}-${cidade.subdivisao_nome || ""}-${cidade.pais_nome || ""}`}
-                    value={cidade.nome}
-                    label={formatCidadeLabel(cidade)}
-                  />
-                ))}
-              </datalist>
-              {buscandoCidades && <small style={{ color: "#6366f1" }}>Buscando cidades...</small>}
-              {erroCidades && <small style={{ color: "red" }}>{erroCidades}</small>}
-              <div className="form-group">
-                <label className="form-label">Cliente</label>
-                <select
-                  className="form-select"
-                  value={cadastroForm.cliente_id}
-                  onChange={(e) =>
-                    setCadastroForm((prev) => ({ ...prev, cliente_id: e.target.value }))
-                  }
-                >
-                  <option value="">Selecione um cliente</option>
-                  {clientes.map((cliente) => (
-                    <option key={cliente.id} value={cliente.id}>
-                      {cliente.nome}
-                      {cliente.cpf ? ` (${cliente.cpf})` : ""}
-                    </option>
-                  ))}
-                </select>
-                {clientesErro && (
-                  <small style={{ color: "red" }}>{clientesErro}</small>
-                )}
-              </div>
-              <div className="form-row mobile-stack">
-                <div className="form-group">
-                  <label className="form-label">Origem</label>
-                  <input
-                    className="form-input"
-                    list="cidades-list"
-                    value={cadastroForm.origem}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setCadastroForm((prev) => ({ ...prev, origem: value }));
-                      agendarBuscaCidades(value);
-                    }}
-                    placeholder="Cidade de origem"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Destino</label>
-                  <input
-                    className="form-input"
-                    list="cidades-list"
-                    value={cadastroForm.destino}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setCadastroForm((prev) => ({ ...prev, destino: value }));
-                      agendarBuscaCidades(value);
-                    }}
-                    placeholder="Cidade de destino"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Data início</label>
-                  <input
-                    type="date"
-                    className="form-input w-full"
-                    value={cadastroForm.data_inicio}
-                    onFocus={selectAllInputOnFocus}
-                    onChange={(e) =>
-                      setCadastroForm((prev) => {
-                        const nextInicio = e.target.value;
-                        const nextFim =
-                          prev.data_fim && nextInicio && prev.data_fim < nextInicio
-                            ? nextInicio
-                            : prev.data_fim;
-                        return { ...prev, data_inicio: nextInicio, data_fim: nextFim };
-                      })
-                    }
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Data fim</label>
-                  <input
-                    type="date"
-                    className="form-input w-full"
-                    value={cadastroForm.data_fim}
-                    min={cadastroForm.data_inicio || undefined}
-                    onFocus={selectAllInputOnFocus}
-                    onChange={(e) =>
-                      setCadastroForm((prev) => {
-                        const nextFim = e.target.value;
-                        const boundedFim =
-                          prev.data_inicio && nextFim && nextFim < prev.data_inicio
-                            ? prev.data_inicio
-                            : nextFim;
-                        return { ...prev, data_fim: boundedFim };
-                      })
-                    }
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Status</label>
-                  <select
-                    className="form-select"
-                    value={cadastroForm.status}
-                    onChange={(e) => setCadastroForm((prev) => ({ ...prev, status: e.target.value }))}
-                  >
-                    <option value="planejada">Planejada</option>
-                    <option value="confirmada">Confirmada</option>
-                    <option value="em_viagem">Em viagem</option>
-                    <option value="concluida">Concluída</option>
-                    <option value="cancelada">Cancelada</option>
-                  </select>
-                </div>
-              </div>
-              <div className="mobile-stack-buttons" style={{ marginTop: 12 }}>
-                <button
-                  className="btn btn-primary w-full sm:w-auto"
-                  type="button"
-                  onClick={criarViagem}
-                  disabled={savingViagem}
-                >
-                  {savingViagem ? "Salvando..." : "Salvar viagem"}
-                </button>
-                <button
-                  className="btn btn-light w-full sm:w-auto"
-                  type="button"
-                  onClick={fecharFormularioViagem}
-                  disabled={savingViagem}
-                >
-                  Cancelar
-                </button>
-              </div>
-              {formError && <div style={{ color: "red" }}>{formError}</div>}
-            </div>
-          )}
+    <div
+      className={`page-content-wrap viagens-page${podeCriar && !showForm ? " has-mobile-actionbar" : ""}`}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <AppToolbar
+          tone="config"
+          title="Operacao de viagens"
+          subtitle="Cadastre, acompanhe e filtre viagens por cliente, periodo e status."
+        />
 
-          {!showForm && (
-            <div className="card-base card-blue mb-3 list-toolbar-sticky">
-              <div className="flex flex-col gap-2 sm:hidden">
-                <div className="form-group">
-                  <label className="form-label">Buscar cliente</label>
-                  <input
-                    className="form-input"
+        {showForm && (
+          <AppCard tone="info" className="form-card viagens-form" title="Nova viagem">
+            <datalist id="cidades-list">
+              {cidades.map((cidade) => (
+                <option
+                  key={`${cidade.nome}-${cidade.subdivisao_nome || ""}-${cidade.pais_nome || ""}`}
+                  value={cidade.nome}
+                  label={formatCidadeLabel(cidade)}
+                />
+              ))}
+            </datalist>
+            {buscandoCidades && <AlertMessage variant="info">Buscando cidades...</AlertMessage>}
+            {erroCidades && <AlertMessage variant="error">{erroCidades}</AlertMessage>}
+            <AppField
+              as="select"
+              wrapperClassName="form-group"
+              label="Cliente"
+              value={cadastroForm.cliente_id}
+              onChange={(e) =>
+                setCadastroForm((prev) => ({ ...prev, cliente_id: e.target.value }))
+              }
+              options={[
+                { value: "", label: "Selecione um cliente" },
+                ...clientes.map((cliente) => ({
+                  value: cliente.id,
+                  label: `${cliente.nome}${cliente.cpf ? ` (${cliente.cpf})` : ""}`,
+                })),
+              ]}
+            />
+            {clientesErro && <AlertMessage variant="error">{clientesErro}</AlertMessage>}
+            <div className="form-row mobile-stack">
+              <AppField
+                wrapperClassName="form-group"
+                label="Origem"
+                list="cidades-list"
+                value={cadastroForm.origem}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setCadastroForm((prev) => ({ ...prev, origem: value }));
+                  agendarBuscaCidades(value);
+                }}
+                placeholder="Cidade de origem"
+              />
+              <AppField
+                wrapperClassName="form-group"
+                label="Destino"
+                list="cidades-list"
+                value={cadastroForm.destino}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setCadastroForm((prev) => ({ ...prev, destino: value }));
+                  agendarBuscaCidades(value);
+                }}
+                placeholder="Cidade de destino"
+              />
+              <AppField
+                as="input"
+                type="date"
+                wrapperClassName="form-group"
+                label="Data inicio"
+                value={cadastroForm.data_inicio}
+                onFocus={selectAllInputOnFocus}
+                onChange={(e) =>
+                  setCadastroForm((prev) => {
+                    const nextInicio = e.target.value;
+                    const nextFim =
+                      prev.data_fim && nextInicio && prev.data_fim < nextInicio
+                        ? nextInicio
+                        : prev.data_fim;
+                    return { ...prev, data_inicio: nextInicio, data_fim: nextFim };
+                  })
+                }
+              />
+              <AppField
+                as="input"
+                type="date"
+                wrapperClassName="form-group"
+                label="Data fim"
+                value={cadastroForm.data_fim}
+                min={cadastroForm.data_inicio || undefined}
+                onFocus={selectAllInputOnFocus}
+                onChange={(e) =>
+                  setCadastroForm((prev) => {
+                    const nextFim = e.target.value;
+                    const boundedFim =
+                      prev.data_inicio && nextFim && nextFim < prev.data_inicio
+                        ? prev.data_inicio
+                        : nextFim;
+                    return { ...prev, data_fim: boundedFim };
+                  })
+                }
+              />
+              <AppField
+                as="select"
+                wrapperClassName="form-group"
+                label="Status"
+                value={cadastroForm.status}
+                onChange={(e) => setCadastroForm((prev) => ({ ...prev, status: e.target.value }))}
+                options={[
+                  { value: "planejada", label: "Planejada" },
+                  { value: "confirmada", label: "Confirmada" },
+                  { value: "em_viagem", label: "Em viagem" },
+                  { value: "concluida", label: "Concluida" },
+                  { value: "cancelada", label: "Cancelada" },
+                ]}
+              />
+            </div>
+            <div className="mobile-stack-buttons" style={{ marginTop: 12 }}>
+              <AppButton
+                type="button"
+                variant="primary"
+                onClick={criarViagem}
+                disabled={savingViagem}
+              >
+                {savingViagem ? "Salvando..." : "Salvar viagem"}
+              </AppButton>
+              <AppButton
+                type="button"
+                variant="secondary"
+                onClick={fecharFormularioViagem}
+                disabled={savingViagem}
+              >
+                Cancelar
+              </AppButton>
+            </div>
+            {formError && <AlertMessage variant="error">{formError}</AlertMessage>}
+          </AppCard>
+        )}
+
+        {!showForm && (
+          <AppToolbar tone="info" sticky className="list-toolbar-sticky" title="Filtros">
+            <div className="flex flex-col gap-2 sm:hidden">
+              <AppField
+                wrapperClassName="form-group"
+                label="Buscar cliente"
+                placeholder="Cliente ou produto..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+              />
+              <AppButton type="button" variant="secondary" onClick={() => setShowFilters(true)}>
+                Filtros
+              </AppButton>
+            </div>
+            <div className="hidden sm:block">
+              <div
+                className="form-row mobile-stack"
+                style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}
+              >
+                <div style={{ flex: "1 1 220px", minWidth: 200 }}>
+                  <AppField
+                    wrapperClassName="form-group"
+                    label="Buscar cliente"
                     placeholder="Cliente ou produto..."
                     value={busca}
                     onChange={(e) => setBusca(e.target.value)}
                   />
                 </div>
-                <button type="button" className="btn btn-light" onClick={() => setShowFilters(true)}>
-                  Filtros
-                </button>
-              </div>
-              <div className="hidden sm:block">
-                <div
-                  className="form-row mobile-stack"
-                  style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}
-                >
-                  <div className="form-group" style={{ flex: "1 1 220px", minWidth: 200 }}>
-                    <label className="form-label">Buscar cliente</label>
-                    <input
-                      className="form-input"
-                      placeholder="Cliente ou produto..."
-                      value={busca}
-                      onChange={(e) => setBusca(e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group" style={{ flex: "1 1 180px" }}>
-                    <label className="form-label">Status</label>
-                    <select
-                      className="form-select"
-                      value={statusFiltro}
-                      onChange={(e) => setStatusFiltro(e.target.value)}
-                    >
-                      {STATUS_OPCOES.map((op) => (
-                        <option key={op.value} value={op.value}>
-                          {op.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group" style={compactDateFieldStyle}>
-                    <label className="form-label">Inicio</label>
-                    <input
-                      type="date"
-                      className="form-input w-full"
-                      value={inicio}
-                      onFocus={selectAllInputOnFocus}
-                      onChange={(e) => {
-                        const nextInicio = e.target.value;
-                        setInicio(nextInicio);
-                        if (fim && nextInicio && fim < nextInicio) {
-                          setFim(nextInicio);
-                        }
-                      }}
-                    />
-                  </div>
-                  <div className="form-group" style={compactDateFieldStyle}>
-                    <label className="form-label">Final</label>
-                    <input
-                      type="date"
-                      className="form-input w-full"
-                      value={fim}
-                      min={inicio || undefined}
-                      onFocus={selectAllInputOnFocus}
-                      onChange={(e) => {
-                        const nextFim = e.target.value;
-                        const boundedFim = inicio && nextFim && nextFim < inicio ? inicio : nextFim;
-                        setFim(boundedFim);
-                      }}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label" style={{ visibility: "hidden" }}>
-                      Ações
-                    </label>
-                    <div className="viagens-actions mobile-stack-buttons">
-                      <button className="btn btn-strong" type="button" onClick={buscar} disabled={loading}>
-                        {loading ? "Atualizando..." : "Atualizar"}
-                      </button>
-                      {podeCriar && (
-                        <button
-                          className="btn btn-primary"
-                          type="button"
-                          onClick={abrirFormularioViagem}
-                          disabled={showForm}
-                        >
-                          Nova viagem
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {!showForm && showFilters && (
-            <div className="mobile-drawer-backdrop" onClick={() => setShowFilters(false)}>
-              <div
-                className="mobile-drawer-panel"
-                role="dialog"
-                aria-modal="true"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <strong>Filtros</strong>
-                  <button type="button" className="btn-ghost" onClick={() => setShowFilters(false)}>
-                    ✕
-                  </button>
-                </div>
-                <div className="form-group" style={{ marginTop: 12 }}>
-                  <label className="form-label">Status</label>
-                  <select
-                    className="form-select"
+                <div style={{ flex: "1 1 180px" }}>
+                  <AppField
+                    as="select"
+                    wrapperClassName="form-group"
+                    label="Status"
                     value={statusFiltro}
                     onChange={(e) => setStatusFiltro(e.target.value)}
-                  >
-                    {STATUS_OPCOES.map((op) => (
-                      <option key={op.value} value={op.value}>
-                        {op.label}
-                      </option>
-                    ))}
-                  </select>
+                    options={STATUS_OPCOES.map((op) => ({ value: op.value, label: op.label }))}
+                  />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Inicio</label>
-                  <input
+                <div style={compactDateFieldStyle}>
+                  <AppField
+                    as="input"
                     type="date"
-                    className="form-input w-full"
+                    wrapperClassName="form-group"
+                    label="Inicio"
                     value={inicio}
                     onFocus={selectAllInputOnFocus}
                     onChange={(e) => {
@@ -787,11 +706,12 @@ export default function ViagensListaIsland() {
                     }}
                   />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Final</label>
-                  <input
+                <div style={compactDateFieldStyle}>
+                  <AppField
+                    as="input"
                     type="date"
-                    className="form-input w-full"
+                    wrapperClassName="form-group"
+                    label="Final"
                     value={fim}
                     min={inicio || undefined}
                     onFocus={selectAllInputOnFocus}
@@ -802,131 +722,210 @@ export default function ViagensListaIsland() {
                     }}
                   />
                 </div>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  style={{ marginTop: 12, width: "100%" }}
-                  onClick={() => {
-                    buscar();
-                    setShowFilters(false);
-                  }}
-                >
-                  Aplicar filtros
-                </button>
+                <div className="form-group">
+                  <label className="form-label" style={{ visibility: "hidden" }}>
+                    Acoes
+                  </label>
+                  <div className="viagens-actions mobile-stack-buttons">
+                    <AppButton type="button" variant="secondary" onClick={buscar} disabled={loading}>
+                      {loading ? "Atualizando..." : "Atualizar"}
+                    </AppButton>
+                    {podeCriar && (
+                      <AppButton
+                        type="button"
+                        variant="primary"
+                        onClick={abrirFormularioViagem}
+                        disabled={showForm}
+                      >
+                        Nova viagem
+                      </AppButton>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
-          )}
+          </AppToolbar>
+        )}
 
-        {!showForm && erro && <div style={{ color: "red" }}>{erro}</div>}
-        {!showForm && sucesso && (
-          <div className="auth-success" style={{ color: "#0f172a", fontWeight: 700 }}>
-            {sucesso}
+        {!showForm && showFilters && (
+          <div className="mobile-drawer-backdrop" onClick={() => setShowFilters(false)}>
+            <div
+              className="mobile-drawer-panel"
+              role="dialog"
+              aria-modal="true"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <strong>Filtros</strong>
+                <AppButton type="button" variant="ghost" onClick={() => setShowFilters(false)}>
+                  ✕
+                </AppButton>
+              </div>
+              <AppField
+                as="select"
+                wrapperClassName="form-group"
+                label="Status"
+                value={statusFiltro}
+                onChange={(e) => setStatusFiltro(e.target.value)}
+                options={STATUS_OPCOES.map((op) => ({ value: op.value, label: op.label }))}
+              />
+              <AppField
+                as="input"
+                type="date"
+                wrapperClassName="form-group"
+                label="Inicio"
+                value={inicio}
+                onFocus={selectAllInputOnFocus}
+                onChange={(e) => {
+                  const nextInicio = e.target.value;
+                  setInicio(nextInicio);
+                  if (fim && nextInicio && fim < nextInicio) {
+                    setFim(nextInicio);
+                  }
+                }}
+              />
+              <AppField
+                as="input"
+                type="date"
+                wrapperClassName="form-group"
+                label="Final"
+                value={fim}
+                min={inicio || undefined}
+                onFocus={selectAllInputOnFocus}
+                onChange={(e) => {
+                  const nextFim = e.target.value;
+                  const boundedFim = inicio && nextFim && nextFim < inicio ? inicio : nextFim;
+                  setFim(boundedFim);
+                }}
+              />
+              <AppButton
+                type="button"
+                variant="primary"
+                block
+                onClick={() => {
+                  buscar();
+                  setShowFilters(false);
+                }}
+              >
+                Aplicar filtros
+              </AppButton>
+            </div>
           </div>
         )}
 
+        {!showForm && erro && <AlertMessage variant="error">{erro}</AlertMessage>}
+        {!showForm && sucesso && <AlertMessage variant="success">{sucesso}</AlertMessage>}
+
         {!showForm && (
-          <div
-            className="table-container overflow-x-auto"
-            style={{ maxHeight: "65vh", overflowY: "auto" }}
-          >
-            <table className="table-default table-header-teal table-mobile-cards min-w-[760px]">
-              <thead>
+          <AppCard tone="info" title="Lista de viagens">
+            <DataTable
+              className="table-header-teal table-mobile-cards min-w-[760px]"
+              containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+              headers={
                 <tr>
                   <th>Cliente</th>
-                  <th>Início</th>
+                  <th>Inicio</th>
                   <th>Fim</th>
                   <th>Status</th>
                   <th>Produto</th>
                   <th>Valor</th>
-                  <th className="th-actions">Ações</th>
+                  <th className="th-actions">Acoes</th>
                 </tr>
-              </thead>
-              <tbody>
-                {loading && (
-                  <tr>
-                    <td colSpan={totalColunasTabela}>Carregando viagens...</td>
+              }
+              loading={loading}
+              loadingMessage="Carregando viagens..."
+              empty={!loading && viagensExibidas.length === 0}
+              emptyMessage={
+                <EmptyState
+                  title="Nenhuma viagem encontrada"
+                  description="Ajuste os filtros ou cadastre uma nova viagem."
+                />
+              }
+              colSpan={totalColunasTabela}
+            >
+              {viagensExibidas.map((v) => {
+                const statusLabel = obterStatusExibicao(v);
+                const recibos = v.recibos || [];
+                const produtoLabel =
+                  recibos.length > 1
+                    ? `Multiplos (${recibos.length})`
+                    : recibos[0]?.tipo_produtos?.nome ||
+                      recibos[0]?.tipo_produtos?.tipo ||
+                      recibos[0]?.produto_id ||
+                      "-";
+                const valorTotal = recibos.reduce((total, r) => total + (r.valor_total || 0), 0);
+                const valorLabel = recibos.length > 0 ? formatarMoeda(valorTotal) : "-";
+                const whatsappLink = construirLinkWhatsApp(v.clientes?.whatsapp || null);
+
+                return (
+                  <tr key={v.id}>
+                    <td data-label="Cliente">{v.clientes?.nome || "-"}</td>
+                    <td data-label="Inicio">{formatarDataParaExibicao(v.data_inicio)}</td>
+                    <td data-label="Fim">{formatarDataParaExibicao(v.data_fim)}</td>
+                    <td data-label="Status">{statusLabel}</td>
+                    <td data-label="Produto">{produtoLabel}</td>
+                    <td data-label="Valor">{valorLabel}</td>
+                    <td className="th-actions" data-label="Acoes">
+                      <TableActions
+                        className="viagens-action-buttons"
+                        actions={[
+                          {
+                            key: "view",
+                            label: "Ver viagem",
+                            icon: "👁️",
+                            onClick: () => {
+                              window.location.href = `/operacao/viagens/${v.id}`;
+                            },
+                          },
+                          ...(whatsappLink
+                            ? [
+                                {
+                                  key: "whatsapp",
+                                  label: "Enviar WhatsApp",
+                                  icon: "💬",
+                                  onClick: () => window.open(whatsappLink, "_blank", "noreferrer"),
+                                },
+                              ]
+                            : []),
+                          ...(podeEditar
+                            ? [
+                                {
+                                  key: "edit",
+                                  label: "Editar viagem",
+                                  icon: "✏️",
+                                  onClick: () => {
+                                    window.location.href = `/operacao/viagens/${v.id}?modo=editar`;
+                                  },
+                                },
+                              ]
+                            : []),
+                          ...(podeExcluir
+                            ? [
+                                {
+                                  key: "delete",
+                                  label: "Excluir viagem",
+                                  icon: deletandoViagemId === v.id ? "..." : "🗑️",
+                                  variant: "danger",
+                                  disabled: deletandoViagemId === v.id,
+                                  onClick: () => solicitarExclusaoViagem(v),
+                                },
+                              ]
+                            : []),
+                        ]}
+                      />
+                    </td>
                   </tr>
-                )}
-                {!loading && viagensExibidas.length === 0 && (
-                  <tr>
-                    <td colSpan={totalColunasTabela}>Nenhuma viagem encontrada.</td>
-                  </tr>
-                )}
-                {viagensExibidas.map((v) => {
-                  const statusLabel = obterStatusExibicao(v);
-                  const recibos = v.recibos || [];
-                  const produtoLabel =
-                    recibos.length > 1
-                      ? `Múltiplos (${recibos.length})`
-                      : recibos[0]?.tipo_produtos?.nome ||
-                        recibos[0]?.tipo_produtos?.tipo ||
-                        recibos[0]?.produto_id ||
-                        "-";
-                  const valorTotal = recibos.reduce((total, r) => total + (r.valor_total || 0), 0);
-                  const valorLabel = recibos.length > 0 ? formatarMoeda(valorTotal) : "-";
-                  const whatsappLink = construirLinkWhatsApp(v.clientes?.whatsapp || null);
-                  return (
-                    <tr key={v.id}>
-                      <td data-label="Cliente">{v.clientes?.nome || "-"}</td>
-                      <td data-label="Início">{formatarDataParaExibicao(v.data_inicio)}</td>
-                      <td data-label="Fim">{formatarDataParaExibicao(v.data_fim)}</td>
-                      <td data-label="Status">{statusLabel}</td>
-                      <td data-label="Produto">{produtoLabel}</td>
-                      <td data-label="Valor">{valorLabel}</td>
-                      <td className="th-actions" data-label="Ações">
-                        <div className="action-buttons viagens-action-buttons">
-                          <a
-                            className="btn-icon"
-                            href={`/operacao/viagens/${v.id}`}
-                            title="Ver viagem"
-                          >
-                            👁️
-                          </a>
-                          {whatsappLink && (
-                            <a
-                              className="btn-icon"
-                              href={whatsappLink}
-                              title="Enviar WhatsApp"
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              💬
-                            </a>
-                          )}
-                          {podeEditar && (
-                            <a
-                              className="btn-icon"
-                              href={`/operacao/viagens/${v.id}?modo=editar`}
-                              title="Editar viagem"
-                            >
-                              ✏️
-                            </a>
-                          )}
-                          {podeExcluir && (
-                            <button
-                              className="btn-icon btn-danger"
-                              title="Excluir viagem"
-                              onClick={() => solicitarExclusaoViagem(v)}
-                              disabled={deletandoViagemId === v.id}
-                            >
-                              {deletandoViagemId === v.id ? "..." : "🗑️"}
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                );
+              })}
+            </DataTable>
+          </AppCard>
         )}
 
         {!showForm && podeCriar && (
           <div className="mobile-actionbar sm:hidden">
-            <button type="button" className="btn btn-primary" onClick={abrirFormularioViagem}>
+            <AppButton type="button" variant="primary" onClick={abrirFormularioViagem}>
               Nova viagem
-            </button>
+            </AppButton>
           </div>
         )}
         <ConfirmDialog

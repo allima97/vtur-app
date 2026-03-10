@@ -1,10 +1,17 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Select, Textarea, TextInput } from "@primer/react";
 import { supabase } from "../../lib/supabase";
 import { normalizeText } from "../../lib/normalizeText";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { useCrudResource } from "../../lib/useCrudResource";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
+import AlertMessage from "../ui/AlertMessage";
+import DataTable from "../ui/DataTable";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type TipoProduto = { id: string; nome: string | null; tipo: string };
 type FornecedorOption = { id: string; nome_completo: string | null; nome_fantasia: string | null };
@@ -457,45 +464,47 @@ export default function ProdutosLoteIsland() {
   if (loadingPerm) {
     return <LoadingUsuarioContext />;
   }
-  if (!podeVer) return <div>Voce nao possui acesso ao modulo de Cadastros.</div>;
+  if (!podeVer) {
+    return (
+      <AppCard tone="config">
+        Voce nao possui acesso ao modulo de Cadastros.
+      </AppCard>
+    );
+  }
 
   return (
     <div className="produtos-lote-page">
-      {erro && (
-        <div className="card-base card-config mb-3">
-          <strong>{erro}</strong>
-        </div>
-      )}
-      {sucesso && (
-        <div className="card-base card-green mb-3">
-          <strong>{sucesso}</strong>
-        </div>
-      )}
+      <AppToolbar
+        tone="config"
+        title="Produtos em lote"
+        subtitle="Cadastre varios produtos de uma vez com atributos compartilhados."
+      />
+      {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
+      {sucesso && <AlertMessage variant="success">{sucesso}</AlertMessage>}
 
-      <div className="card-base card-blue form-card mb-3">
+      <AppCard tone="info" className="form-card mb-3" title="Cadastro em lote de produtos">
         <form onSubmit={salvarProdutos}>
           <div className="form-row mobile-stack">
-            <div className="form-group">
-              <label className="form-label">Cidade *</label>
-              <input
-                className="form-input"
+            <div className="form-group" style={{ flex: 1 }}>
+              <AppField
+                wrapperClassName="form-group"
+                label="Cidade *"
                 placeholder="Digite o nome da cidade"
                 value={cidadeBusca}
                 onChange={(e) => handleCidadeBusca(e.target.value)}
                 onFocus={() => setMostrarSugestoes(true)}
                 onBlur={() => setTimeout(() => setMostrarSugestoes(false), 150)}
                 disabled={modoSomenteLeitura}
-                style={{ marginBottom: 6 }}
               />
               {buscandoCidade && <div style={{ fontSize: 12, color: "#6b7280" }}>Buscando...</div>}
               {erroCidadeBusca && !buscandoCidade && (
                 <div style={{ fontSize: 12, color: "#dc2626" }}>{erroCidadeBusca}</div>
               )}
               {mostrarSugestoes && (
-                <div
-                  className="card-base"
+                <AppCard
+                  tone="default"
+                  className="mt-1"
                   style={{
-                    marginTop: 4,
                     maxHeight: 180,
                     overflowY: "auto",
                     padding: 6,
@@ -508,10 +517,10 @@ export default function ProdutosLoteIsland() {
                   {resultadosCidade.map((cidade) => {
                     const label = formatCidadeLabel(cidade);
                     return (
-                      <button
+                      <AppButton
                         key={cidade.id}
                         type="button"
-                        className="btn btn-light"
+                        variant="secondary"
                         style={{
                           width: "100%",
                           justifyContent: "flex-start",
@@ -532,96 +541,86 @@ export default function ProdutosLoteIsland() {
                         {cidade.pais_nome ? (
                           <span style={{ color: "#6b7280", marginLeft: 6 }}>- {cidade.pais_nome}</span>
                         ) : null}
-                      </button>
+                      </AppButton>
                     );
                   })}
-                </div>
+                </AppCard>
               )}
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Fornecedor (opcional)</label>
-              <input
-                className="form-input"
-                list="fornecedores-lote-list"
-                placeholder="Escolha um fornecedor"
-                value={common.fornecedor_label}
-                onChange={(e) => handleFornecedorInput(e.target.value)}
-                disabled={modoSomenteLeitura}
-              />
-              <datalist id="fornecedores-lote-list">
-                {fornecedoresLista.map((fornecedor) => (
-                  <option key={fornecedor.id} value={formatFornecedorLabel(fornecedor)} />
-                ))}
-              </datalist>
-            </div>
+            <AppField
+              wrapperClassName="form-group"
+              label="Fornecedor (opcional)"
+              list="fornecedores-lote-list"
+              placeholder="Escolha um fornecedor"
+              value={common.fornecedor_label}
+              onChange={(e) => handleFornecedorInput(e.target.value)}
+              disabled={modoSomenteLeitura}
+            />
+            <datalist id="fornecedores-lote-list">
+              {fornecedoresLista.map((fornecedor) => (
+                <option key={fornecedor.id} value={formatFornecedorLabel(fornecedor)} />
+              ))}
+            </datalist>
 
           </div>
 
           <div className="form-row mobile-stack">
-            <div className="form-group">
-              <label className="form-label">Atracao principal</label>
-              <input
-                className="form-input"
-                list="atracoes-lote-list"
-                value={common.atracao_principal}
-                onChange={(e) => handleCommonChange("atracao_principal", e.target.value)}
-                placeholder="Ex: Centro historico, parques, praias"
-                disabled={modoSomenteLeitura}
-              />
-              <datalist id="atracoes-lote-list">
-                {atracoesSugestoes.map((nome) => (
-                  <option key={nome} value={nome} />
-                ))}
-              </datalist>
-            </div>
+            <AppField
+              wrapperClassName="form-group"
+              label="Atracao principal"
+              list="atracoes-lote-list"
+              value={common.atracao_principal}
+              onChange={(e) => handleCommonChange("atracao_principal", e.target.value)}
+              placeholder="Ex: Centro historico, parques, praias"
+              disabled={modoSomenteLeitura}
+            />
+            <datalist id="atracoes-lote-list">
+              {atracoesSugestoes.map((nome) => (
+                <option key={nome} value={nome} />
+              ))}
+            </datalist>
 
-            <div className="form-group">
-              <label className="form-label">Melhor epoca</label>
-              <input
-                className="form-input"
-                list="melhores-epocas-lote-list"
-                value={common.melhor_epoca}
-                onChange={(e) => handleCommonChange("melhor_epoca", e.target.value)}
-                placeholder="Ex: Verão, baixa temporada"
-                disabled={modoSomenteLeitura}
-              />
-              <datalist id="melhores-epocas-lote-list">
-                {melhoresEpocasSugestoes.map((nome) => (
-                  <option key={nome} value={nome} />
-                ))}
-              </datalist>
-            </div>
+            <AppField
+              wrapperClassName="form-group"
+              label="Melhor epoca"
+              list="melhores-epocas-lote-list"
+              value={common.melhor_epoca}
+              onChange={(e) => handleCommonChange("melhor_epoca", e.target.value)}
+              placeholder="Ex: Verao, baixa temporada"
+              disabled={modoSomenteLeitura}
+            />
+            <datalist id="melhores-epocas-lote-list">
+              {melhoresEpocasSugestoes.map((nome) => (
+                <option key={nome} value={nome} />
+              ))}
+            </datalist>
 
-            <div className="form-group">
-              <label className="form-label">Duracao sugerida</label>
-              <select
-                className="form-select"
-                value={common.duracao_sugerida}
-                onChange={(e) => handleCommonChange("duracao_sugerida", e.target.value)}
-                disabled={modoSomenteLeitura}
-              >
-                <option value="">Selecione</option>
-                {duracaoOptions.map((duracao) => (
-                  <option key={duracao} value={duracao}>
-                    {duracao}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <AppField
+              as="select"
+              wrapperClassName="form-group"
+              label="Duracao sugerida"
+              value={common.duracao_sugerida}
+              onChange={(e) => handleCommonChange("duracao_sugerida", e.target.value)}
+              disabled={modoSomenteLeitura}
+              options={[
+                { value: "", label: "Selecione" },
+                ...duracaoOptions.map((duracao) => ({ value: duracao, label: duracao })),
+              ]}
+            />
 
-            <div className="form-group" style={{ maxWidth: 160 }}>
-              <label className="form-label">Ativo</label>
-              <select
-                className="form-select"
-                value={common.ativo ? "true" : "false"}
-                onChange={(e) => handleCommonChange("ativo", e.target.value === "true")}
-                disabled={modoSomenteLeitura}
-              >
-                <option value="true">Sim</option>
-                <option value="false">Nao</option>
-              </select>
-            </div>
+            <AppField
+              as="select"
+              wrapperClassName="form-group"
+              label="Ativo"
+              value={common.ativo ? "true" : "false"}
+              onChange={(e) => handleCommonChange("ativo", e.target.value === "true")}
+              disabled={modoSomenteLeitura}
+              options={[
+                { value: "true", label: "Sim" },
+                { value: "false", label: "Nao" },
+              ]}
+            />
           </div>
 
           <div className="mt-2 flex flex-wrap gap-2" style={{ justifyContent: "space-between" }}>
@@ -634,9 +633,10 @@ export default function ProdutosLoteIsland() {
             ))}
           </datalist>
 
-          <div className="table-container overflow-x-auto" style={{ marginTop: 12 }}>
-            <table className="table-default table-header-blue table-mobile-cards table-mobile-plain stack-labels min-w-[1400px]">
-              <thead>
+          <div style={{ marginTop: 12 }}>
+            <DataTable
+              className="table-header-blue table-mobile-cards table-mobile-plain stack-labels min-w-[1400px]"
+              headers={
                 <tr>
                   <th>Tipo *</th>
                   <th>Nome do produto *</th>
@@ -644,151 +644,158 @@ export default function ProdutosLoteIsland() {
                   <th>Nivel de preco</th>
                   <th>Imagem (URL)</th>
                   <th>Info</th>
-                  <th className="th-actions">Ações</th>
+                  <th className="th-actions">Acoes</th>
                 </tr>
-              </thead>
-              <tbody>
-                {produtos.map((produto, index) => (
-                  <React.Fragment key={produto.id}>
-                    <tr>
-                      <td data-label="Tipo">
-                        <select
-                          className="form-select"
-                          value={produto.tipo_produto}
-                          onChange={(e) => handleProdutoChange(produto.id, "tipo_produto", e.target.value)}
-                          disabled={modoSomenteLeitura || carregando}
-                        >
-                          <option value="">{carregando ? "Carregando..." : "Selecione o tipo"}</option>
-                          {tipos.map((t) => (
-                            <option key={t.id} value={t.id}>
-                              {tipoLabel(t) || "(sem nome)"}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td data-label="Nome do produto">
-                        <input
-                          className="form-input"
-                          value={produto.nome}
-                          onChange={(e) => handleProdutoChange(produto.id, "nome", e.target.value)}
-                          onBlur={(e) =>
-                            handleProdutoChange(produto.id, "nome", titleCaseWithExceptions(e.target.value))
-                          }
-                          placeholder={`Produto ${index + 1}`}
-                          style={{ minWidth: 320 }}
-                          disabled={modoSomenteLeitura}
-                        />
-                      </td>
-                      <td data-label="Destino">
-                        <input
-                          className="form-input"
-                          list="destinos-lote-list"
-                          value={produto.destino}
-                          onChange={(e) => handleProdutoChange(produto.id, "destino", e.target.value)}
-                          onBlur={(e) =>
-                            handleProdutoChange(produto.id, "destino", titleCaseWithExceptions(e.target.value))
-                          }
-                          placeholder="Ex: Disney, Porto de Galinhas"
-                          style={{ minWidth: 320 }}
-                          disabled={modoSomenteLeitura}
-                        />
-                      </td>
-                      <td data-label="Nivel de preco">
-                        <select
-                          className="form-select"
-                          value={produto.nivel_preco}
-                          onChange={(e) => handleProdutoChange(produto.id, "nivel_preco", e.target.value)}
-                          disabled={modoSomenteLeitura}
-                        >
-                          <option value="">Selecione</option>
-                          {nivelPrecosOptions.map((nivel) => (
-                            <option key={nivel.value} value={nivel.value}>
-                              {nivel.label}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td data-label="Imagem (URL)">
-                        <input
-                          className="form-input"
-                          value={produto.imagem_url}
-                          onChange={(e) => handleProdutoChange(produto.id, "imagem_url", e.target.value)}
-                          placeholder="URL da imagem"
-                          disabled={modoSomenteLeitura}
-                        />
-                      </td>
-                      <td data-label="Info">
-                        <button
+              }
+              colSpan={7}
+            >
+              {produtos.map((produto, index) => (
+                <React.Fragment key={produto.id}>
+                  <tr>
+                    <td data-label="Tipo">
+                      <Select
+                        block
+                        value={produto.tipo_produto}
+                        onChange={(e) => handleProdutoChange(produto.id, "tipo_produto", e.target.value)}
+                        disabled={modoSomenteLeitura || carregando}
+                      >
+                        <Select.Option value="">
+                          {carregando ? "Carregando..." : "Selecione o tipo"}
+                        </Select.Option>
+                        {tipos.map((t) => (
+                          <Select.Option key={t.id} value={t.id}>
+                            {tipoLabel(t) || "(sem nome)"}
+                          </Select.Option>
+                        ))}
+                      </Select>
+                    </td>
+                    <td data-label="Nome do produto">
+                      <TextInput
+                        block
+                        value={produto.nome}
+                        onChange={(e) => handleProdutoChange(produto.id, "nome", e.target.value)}
+                        onBlur={(e) =>
+                          handleProdutoChange(produto.id, "nome", titleCaseWithExceptions(e.target.value))
+                        }
+                        placeholder={`Produto ${index + 1}`}
+                        style={{ minWidth: 320 }}
+                        disabled={modoSomenteLeitura}
+                      />
+                    </td>
+                    <td data-label="Destino">
+                      <TextInput
+                        block
+                        list="destinos-lote-list"
+                        value={produto.destino}
+                        onChange={(e) => handleProdutoChange(produto.id, "destino", e.target.value)}
+                        onBlur={(e) =>
+                          handleProdutoChange(produto.id, "destino", titleCaseWithExceptions(e.target.value))
+                        }
+                        placeholder="Ex: Disney, Porto de Galinhas"
+                        style={{ minWidth: 320 }}
+                        disabled={modoSomenteLeitura}
+                      />
+                    </td>
+                    <td data-label="Nivel de preco">
+                      <Select
+                        block
+                        value={produto.nivel_preco}
+                        onChange={(e) => handleProdutoChange(produto.id, "nivel_preco", e.target.value)}
+                        disabled={modoSomenteLeitura}
+                      >
+                        <Select.Option value="">Selecione</Select.Option>
+                        {nivelPrecosOptions.map((nivel) => (
+                          <Select.Option key={nivel.value} value={nivel.value}>
+                            {nivel.label}
+                          </Select.Option>
+                        ))}
+                      </Select>
+                    </td>
+                    <td data-label="Imagem (URL)">
+                      <TextInput
+                        block
+                        value={produto.imagem_url}
+                        onChange={(e) => handleProdutoChange(produto.id, "imagem_url", e.target.value)}
+                        placeholder="URL da imagem"
+                        disabled={modoSomenteLeitura}
+                      />
+                    </td>
+                    <td data-label="Info">
+                      <AppButton
+                        type="button"
+                        variant="secondary"
+                        onClick={() => toggleInfo(produto.id)}
+                      >
+                        {infosAbertos[produto.id] ? "-" : "+"}
+                      </AppButton>
+                    </td>
+                    <td className="th-actions" data-label="Acoes">
+                      <div className="action-buttons">
+                        <AppButton
                           type="button"
-                          className="btn btn-light"
-                          onClick={() => toggleInfo(produto.id)}
+                          variant="danger"
+                          onClick={() => removerProduto(produto.id)}
+                          disabled={modoSomenteLeitura || produtos.length === 1}
+                          title="Remover produto"
+                          aria-label="Remover produto"
                         >
-                          {infosAbertos[produto.id] ? "-" : "+"}
-                        </button>
-                      </td>
-                      <td className="th-actions" data-label="Ações">
-                        <div className="action-buttons">
-                          <button
-                            type="button"
-                            className="btn-icon btn-danger"
-                            onClick={() => removerProduto(produto.id)}
-                            disabled={modoSomenteLeitura || produtos.length === 1}
-                            title="Remover produto"
-                            aria-label="Remover produto"
-                          >
-                            🗑️
-                          </button>
-                        </div>
+                          🗑️
+                        </AppButton>
+                      </div>
+                    </td>
+                  </tr>
+                  {infosAbertos[produto.id] && (
+                    <tr>
+                      <td colSpan={7}>
+                        <Textarea
+                          block
+                          rows={2}
+                          value={produto.informacoes_importantes}
+                          onChange={(e) =>
+                            handleProdutoChange(produto.id, "informacoes_importantes", e.target.value)
+                          }
+                          placeholder="Observacoes, regras, detalhes relevantes..."
+                          disabled={modoSomenteLeitura}
+                        />
                       </td>
                     </tr>
-                    {infosAbertos[produto.id] && (
-                      <tr>
-                        <td colSpan={7}>
-                          <textarea
-                            className="form-input"
-                            rows={2}
-                            value={produto.informacoes_importantes}
-                            onChange={(e) =>
-                              handleProdutoChange(produto.id, "informacoes_importantes", e.target.value)
-                            }
-                            placeholder="Observacoes, regras, detalhes relevantes..."
-                            disabled={modoSomenteLeitura}
-                          />
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
+                  )}
+                </React.Fragment>
+              ))}
+            </DataTable>
           </div>
 
           <div className="mt-2 mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-            <button
+            <AppButton
               type="button"
-              className="btn btn-light"
+              variant="secondary"
               onClick={adicionarProduto}
               disabled={modoSomenteLeitura}
             >
               Adicionar produto
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={salvando || modoSomenteLeitura}>
+            </AppButton>
+            <AppButton type="submit" variant="primary" disabled={salvando || modoSomenteLeitura}>
               {salvando ? "Salvando..." : "Salvar Produtos"}
-            </button>
-            <button
+            </AppButton>
+            <AppButton
               type="button"
-              className="btn btn-light"
+              variant="secondary"
               onClick={handleCancel}
               disabled={salvando || modoSomenteLeitura}
             >
               Cancelar
-            </button>
-            <button type="button" className="btn btn-light" onClick={limparProdutos} disabled={salvando || modoSomenteLeitura}>
+            </AppButton>
+            <AppButton
+              type="button"
+              variant="secondary"
+              onClick={limparProdutos}
+              disabled={salvando || modoSomenteLeitura}
+            >
               Limpar itens
-            </button>
+            </AppButton>
           </div>
         </form>
-      </div>
+      </AppCard>
     </div>
   );
 }

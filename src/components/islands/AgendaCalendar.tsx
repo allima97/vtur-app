@@ -8,6 +8,12 @@ import scrollGridPlugin from "@fullcalendar/scrollgrid";
 import { supabaseBrowser } from "../../lib/supabase-browser";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { boundDateEndISO, selectAllInputOnFocus } from "../../lib/inputNormalization";
+import AlertMessage from "../ui/AlertMessage";
+import EmptyState from "../ui/EmptyState";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type EventItem = {
   id: string;
@@ -600,34 +606,29 @@ export default function AgendaCalendar() {
   return (
     <div className="agenda-page" style={{ display: "grid", gap: 16 }}>
       {viewportReady && isMobile && (
-        <div className="card-base agenda-month-card">
+        <AppCard tone="info" className="agenda-month-card">
           <div className="agenda-month-title">{currentMonthTitle}</div>
-        </div>
+        </AppCard>
       )}
 
-      <div className="card-base" style={{ padding: 16 }}>
+      <AppCard tone="info" className="agenda-calendar-shell">
         {viewportReady && !isMobile && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 10,
-              flexWrap: "wrap",
-              marginBottom: 12,
-            }}
-          >
-            <h3 style={{ margin: 0 }}>Agenda (Eventos)</h3>
-            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-              <button
-                type="button"
-                className="btn btn-primary agenda-add-btn w-full sm:w-auto"
-                onClick={openCreateModal}
-              >
-                Adicionar evento
-              </button>
-            </div>
-          </div>
+          <AppToolbar
+            tone="info"
+            title="Agenda (Eventos)"
+            actions={
+              <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+                <AppButton
+                  type="button"
+                  variant="primary"
+                  className="agenda-add-btn"
+                  onClick={openCreateModal}
+                >
+                  Adicionar evento
+                </AppButton>
+              </div>
+            }
+          />
         )}
 
         <div
@@ -762,14 +763,10 @@ export default function AgendaCalendar() {
               eventClick={handleEventClick}
             />
           ) : (
-            <div style={{ padding: 12, color: "#64748b", fontWeight: 700 }}>Carregando agenda…</div>
+            <AppCard tone="config">Carregando agenda...</AppCard>
           )}
         </div>
-        {error && (
-          <div style={{ marginTop: 12 }}>
-            <span style={{ color: "#b91c1c", fontWeight: 700 }}>{error}</span>
-          </div>
-        )}
+        {error && <AlertMessage variant="error">{error}</AlertMessage>}
         {feriadosDoMes.length > 0 && (
           <div className="escala-feriados-resumo" style={{ marginTop: 12 }}>
             <strong className="escala-feriados-title">Feriados do Mês</strong>
@@ -780,39 +777,42 @@ export default function AgendaCalendar() {
             </ul>
           </div>
         )}
-        {!isMobile && <div style={{ marginTop: 12, display: "grid", gap: 6 }}>
-          {events.length === 0 && !loading && <div style={{ color: "#94a3b8" }}>Nenhum evento.</div>}
-          {events.map((ev) => (
-            <div
-              key={ev.id}
-              className="card-base"
-              style={{ border: "1px solid #e2e8f0", padding: 10, display: "grid", gap: 4 }}
-            >
-              <div style={{ fontWeight: 700 }}>{ev.title}</div>
-              <div style={{ color: "#475569", fontSize: 13 }}>
-                {ev.start} {ev.end && ev.end !== ev.start ? `→ ${ev.end}` : ""}
-              </div>
-              {ev.descricao ? <div style={{ color: "#0f172a", whiteSpace: "pre-wrap" }}>{ev.descricao}</div> : null}
-              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                <button type="button" className="btn btn-light" onClick={() => removeEvent(ev.id)}>
-                  Remover
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>}
-      </div>
+        {!isMobile && (
+          <div style={{ marginTop: 12, display: "grid", gap: 6 }}>
+            {events.length === 0 && !loading && <EmptyState title="Nenhum evento" />}
+            {events.map((ev) => (
+              <AppCard
+                key={ev.id}
+                tone="default"
+                className="agenda-event-item"
+                title={ev.title}
+                subtitle={`${ev.start}${ev.end && ev.end !== ev.start ? ` → ${ev.end}` : ""}`}
+                actions={
+                  <AppButton type="button" variant="secondary" onClick={() => removeEvent(ev.id)}>
+                    Remover
+                  </AppButton>
+                }
+              >
+                {ev.descricao ? (
+                  <div style={{ color: "#0f172a", whiteSpace: "pre-wrap" }}>{ev.descricao}</div>
+                ) : null}
+              </AppCard>
+            ))}
+          </div>
+        )}
+      </AppCard>
 
       {viewportReady && isMobile && !createModalOpen && !modalEvent && (
-        <button
+        <AppButton
           type="button"
+          variant="primary"
           className="agenda-fab"
           onClick={openCreateModal}
           aria-label="Adicionar evento"
           title="Adicionar evento"
         >
           +
-        </button>
+        </AppButton>
       )}
 
       {createModalOpen && (
@@ -824,27 +824,26 @@ export default function AgendaCalendar() {
           >
             <div className="modal-header">
               <div className="modal-title" style={{ fontWeight: 800 }}>Novo evento</div>
-              <button className="modal-close" onClick={() => setCreateModalOpen(false)} aria-label="Fechar">
+              <AppButton type="button" variant="ghost" onClick={() => setCreateModalOpen(false)} aria-label="Fechar">
                 ×
-              </button>
+              </AppButton>
             </div>
             <form onSubmit={handleAddEvent}>
               <div className="modal-body" style={{ display: "grid", gap: 8 }}>
-                <div className="form-group">
-                  <label className="form-label">Título do evento</label>
-                  <input
-                    className="form-input"
-                    value={newEvent.title}
-                    onChange={(e) => setNewEvent((prev) => ({ ...prev, title: e.target.value }))}
-                    required
-                  />
-                </div>
+                <AppField
+                  wrapperClassName="form-group"
+                  label="Titulo do evento"
+                  value={newEvent.title}
+                  onChange={(e) => setNewEvent((prev) => ({ ...prev, title: e.target.value }))}
+                  required
+                />
                 <div className="form-row mobile-stack" style={{ gap: 8 }}>
-                  <div className="form-group" style={{ minWidth: 150 }}>
-                    <label className="form-label">Início</label>
-                    <input
+                  <div style={{ minWidth: 150 }}>
+                    <AppField
+                      as="input"
                       type="date"
-                      className="form-input"
+                      wrapperClassName="form-group"
+                      label="Inicio"
                       value={newEvent.start}
                       onFocus={selectAllInputOnFocus}
                       onChange={(e) => {
@@ -858,11 +857,12 @@ export default function AgendaCalendar() {
                       required
                     />
                   </div>
-                  <div className="form-group" style={{ minWidth: 150 }}>
-                    <label className="form-label">Fim</label>
-                    <input
+                  <div style={{ minWidth: 150 }}>
+                    <AppField
+                      as="input"
                       type="date"
-                      className="form-input"
+                      wrapperClassName="form-group"
+                      label="Fim"
                       value={newEvent.end}
                       min={newEvent.start || undefined}
                       onFocus={selectAllInputOnFocus}
@@ -878,20 +878,22 @@ export default function AgendaCalendar() {
                 </div>
                 {!newEvent.allDay && (
                   <div className="form-row mobile-stack" style={{ gap: 8 }}>
-                    <div className="form-group" style={{ minWidth: 140 }}>
-                      <label className="form-label">Hora início</label>
-                      <input
+                    <div style={{ minWidth: 140 }}>
+                      <AppField
+                        as="input"
                         type="time"
-                        className="form-input"
+                        wrapperClassName="form-group"
+                        label="Hora inicio"
                         value={newEventStartTime}
                         onChange={(e) => setNewEventStartTime(e.target.value)}
                       />
                     </div>
-                    <div className="form-group" style={{ minWidth: 140 }}>
-                      <label className="form-label">Hora fim</label>
-                      <input
+                    <div style={{ minWidth: 140 }}>
+                      <AppField
+                        as="input"
                         type="time"
-                        className="form-input"
+                        wrapperClassName="form-group"
+                        label="Hora fim"
                         value={newEventEndTime}
                         onChange={(e) => setNewEventEndTime(e.target.value)}
                       />
@@ -906,24 +908,23 @@ export default function AgendaCalendar() {
                   />
                   Dia inteiro
                 </label>
-                <div className="form-group">
-                  <label className="form-label">Notas (opcional)</label>
-                  <textarea
-                    className="form-input"
-                    rows={3}
-                    value={newEventNota}
-                    onChange={(e) => setNewEventNota(e.target.value)}
-                  />
-                </div>
-                {error && <span style={{ color: "#b91c1c" }}>{error}</span>}
+                <AppField
+                  as="textarea"
+                  rows={3}
+                  wrapperClassName="form-group"
+                  label="Notas (opcional)"
+                  value={newEventNota}
+                  onChange={(e) => setNewEventNota(e.target.value)}
+                />
+                {error && <AlertMessage variant="error">{error}</AlertMessage>}
               </div>
               <div className="modal-footer mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-                <button type="submit" className="btn btn-primary">
+                <AppButton type="submit" variant="primary">
                   Salvar
-                </button>
-                <button type="button" className="btn btn-light" onClick={() => setCreateModalOpen(false)}>
+                </AppButton>
+                <AppButton type="button" variant="secondary" onClick={() => setCreateModalOpen(false)}>
                   Cancelar
-                </button>
+                </AppButton>
               </div>
             </form>
           </div>
@@ -939,9 +940,9 @@ export default function AgendaCalendar() {
           >
             <div className="modal-header">
               <div className="modal-title" style={{ fontWeight: 800 }}>Detalhes do evento</div>
-              <button className="modal-close" onClick={() => setModalEvent(null)} aria-label="Fechar">
+              <AppButton type="button" variant="ghost" onClick={() => setModalEvent(null)} aria-label="Fechar">
                 ×
-              </button>
+              </AppButton>
             </div>
             <div className="modal-body" style={{ display: "grid", gap: 8 }}>
               {!editForm && (
@@ -960,20 +961,19 @@ export default function AgendaCalendar() {
               )}
               {editForm && (
                 <>
-                  <div className="form-group">
-                    <label className="form-label">Título</label>
-                    <input
-                      className="form-input"
-                      value={editForm.title}
-                      onChange={(e) => setEditForm((prev) => prev && ({ ...prev, title: e.target.value }))}
-                    />
-                  </div>
+                  <AppField
+                    wrapperClassName="form-group"
+                    label="Titulo"
+                    value={editForm.title}
+                    onChange={(e) => setEditForm((prev) => prev && ({ ...prev, title: e.target.value }))}
+                  />
                   <div className="form-row mobile-stack" style={{ gap: 8 }}>
-                    <div className="form-group" style={{ minWidth: 150 }}>
-                      <label className="form-label">Início</label>
-                      <input
+                    <div style={{ minWidth: 150 }}>
+                      <AppField
+                        as="input"
                         type="date"
-                        className="form-input"
+                        wrapperClassName="form-group"
+                        label="Inicio"
                         value={editForm.startDate}
                         onFocus={selectAllInputOnFocus}
                         onChange={(e) => {
@@ -990,11 +990,12 @@ export default function AgendaCalendar() {
                         }}
                       />
                     </div>
-                    <div className="form-group" style={{ minWidth: 150 }}>
-                      <label className="form-label">Fim</label>
-                      <input
+                    <div style={{ minWidth: 150 }}>
+                      <AppField
+                        as="input"
                         type="date"
-                        className="form-input"
+                        wrapperClassName="form-group"
+                        label="Fim"
                         value={editForm.endDate}
                         min={editForm.startDate || undefined}
                         onFocus={selectAllInputOnFocus}
@@ -1014,20 +1015,22 @@ export default function AgendaCalendar() {
                   </div>
                   {!editForm.allDay && (
                     <div className="form-row mobile-stack" style={{ gap: 8 }}>
-                      <div className="form-group" style={{ minWidth: 140 }}>
-                        <label className="form-label">Hora início</label>
-                        <input
+                      <div style={{ minWidth: 140 }}>
+                        <AppField
+                          as="input"
                           type="time"
-                          className="form-input"
+                          wrapperClassName="form-group"
+                          label="Hora inicio"
                           value={editForm.startTime}
                           onChange={(e) => setEditForm((prev) => prev && ({ ...prev, startTime: e.target.value }))}
                         />
                       </div>
-                      <div className="form-group" style={{ minWidth: 140 }}>
-                        <label className="form-label">Hora fim</label>
-                        <input
+                      <div style={{ minWidth: 140 }}>
+                        <AppField
+                          as="input"
                           type="time"
-                          className="form-input"
+                          wrapperClassName="form-group"
+                          label="Hora fim"
                           value={editForm.endTime}
                           onChange={(e) => setEditForm((prev) => prev && ({ ...prev, endTime: e.target.value }))}
                         />
@@ -1042,39 +1045,46 @@ export default function AgendaCalendar() {
                     />
                     Dia inteiro
                   </label>
-                  <div className="form-group">
-                    <label className="form-label">Notas</label>
-                    <textarea
-                      className="form-input"
-                      rows={3}
-                      value={editForm.descricao}
-                      onChange={(e) => setEditForm((prev) => prev && ({ ...prev, descricao: e.target.value }))}
-                    />
-                  </div>
+                  <AppField
+                    as="textarea"
+                    rows={3}
+                    wrapperClassName="form-group"
+                    label="Notas"
+                    value={editForm.descricao}
+                    onChange={(e) => setEditForm((prev) => prev && ({ ...prev, descricao: e.target.value }))}
+                  />
                 </>
               )}
             </div>
             <div className="modal-footer mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
               {!editForm ? (
                 <>
-                  <button className="btn btn-danger" onClick={() => handleDeleteFromModal(modalEvent)}>
+                  <AppButton
+                    type="button"
+                    variant="danger"
+                    onClick={() => handleDeleteFromModal(modalEvent)}
+                  >
                     Excluir
-                  </button>
-                  <button className="btn btn-primary" onClick={() => handleEditFromModal(modalEvent)}>
+                  </AppButton>
+                  <AppButton
+                    type="button"
+                    variant="primary"
+                    onClick={() => handleEditFromModal(modalEvent)}
+                  >
                     Editar
-                  </button>
-                  <button className="btn btn-light" onClick={() => setModalEvent(null)}>
+                  </AppButton>
+                  <AppButton type="button" variant="secondary" onClick={() => setModalEvent(null)}>
                     Fechar
-                  </button>
+                  </AppButton>
                 </>
               ) : (
                 <>
-                  <button className="btn btn-primary" onClick={() => handleSaveEdit(modalEvent)}>
+                  <AppButton type="button" variant="primary" onClick={() => handleSaveEdit(modalEvent)}>
                     Salvar
-                  </button>
-                  <button className="btn btn-light" onClick={() => setEditForm(null)}>
+                  </AppButton>
+                  <AppButton type="button" variant="secondary" onClick={() => setEditForm(null)}>
                     Cancelar
-                  </button>
+                  </AppButton>
                 </>
               )}
             </div>

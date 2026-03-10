@@ -59,15 +59,15 @@ Objetivo: aplicar `@primer/react` em toda a experiencia do `vtur`, usando wrappe
 - [x] `DashboardAdminIsland`
 - [x] `AdminPermissoesIsland`
 - [x] `PermissoesAdminIsland`
-- [ ] `UsuariosAdminIsland`
+- [x] `UsuariosAdminIsland`
 - [x] `EmailSettingsAdminIsland`
-- [ ] `EmpresasAdminIsland`
+- [x] `EmpresasAdminIsland`
 - [x] `PlanosAdminIsland`
 - [x] `CommissionTemplatesIsland`
 - [x] `CommissionRulesIsland`
 - [x] `AdminUserTypesIsland`
 - [x] `AvisosAdminIsland`
-- [ ] `FinanceiroAdminIsland`
+- [x] `FinanceiroAdminIsland`
 - [x] `LogsIsland`
 - [x] `PerformanceDashboardIsland`
 - [x] `DocumentationIsland`
@@ -81,7 +81,7 @@ Objetivo: aplicar `@primer/react` em toda a experiencia do `vtur`, usando wrappe
 - [x] `DestinosIsland`
 - [x] `ProdutosIsland`
 - [x] `CircuitosIsland`
-- [ ] `ProdutosLoteIsland`
+- [x] `ProdutosLoteIsland`
 - [x] `FornecedoresIsland`
 
 ## Parametros
@@ -91,7 +91,7 @@ Objetivo: aplicar `@primer/react` em toda a experiencia do `vtur`, usando wrappe
 - [x] `TipoPacotesIsland`
 - [x] `CommissionRulesIsland`
 - [x] `CommissionTemplatesIsland`
-- [ ] `ParametrosCambiosIsland`
+- [x] `ParametrosCambiosIsland`
 - [ ] `ParametrosAvisosIsland`
 - [x] `ParametrosNaoComissionaveisIsland`
 - [x] `ParametrosSistemaIsland`
@@ -109,15 +109,15 @@ Objetivo: aplicar `@primer/react` em toda a experiencia do `vtur`, usando wrappe
 ## Operacao e CRM
 
 - [x] `ConsultoriaOnlineIsland`
-- [ ] `AgendaCalendar`
+- [x] `AgendaCalendar`
 - [x] `TodoBoard`
 - [ ] `MuralRecadosIsland`
-- [ ] `ControleSacIsland`
+- [x] `ControleSacIsland`
 - [x] `CampanhasIsland`
 - [x] `ConciliacaoIsland`
-- [ ] `DocumentosViagensIsland`
+- [x] `DocumentosViagensIsland`
 - [ ] `DossieViagemIsland`
-- [ ] `ViagensListaIsland`
+- [x] `ViagensListaIsland`
 - [x] `AniversariantesColaboradoresIsland`
 - [x] `PushNotificationsIsland`
 - [x] `ConsultoriaLembretesModalIsland`
@@ -130,7 +130,7 @@ Objetivo: aplicar `@primer/react` em toda a experiencia do `vtur`, usando wrappe
 - [x] `LogoutButtonIsland`
 - [x] `MaintenanceAccessIsland`
 - [x] `DashboardRouterIsland`
-- [ ] `PermissoesProvider`
+- [x] `PermissoesProvider` (sem UI renderizavel)
 - [x] `PersonalizarMenuIsland`
 
 ## Criterios de conclusao por modulo

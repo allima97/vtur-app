@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import AlertMessage from "../ui/AlertMessage";
+import DataTable from "../ui/DataTable";
+import EmptyState from "../ui/EmptyState";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppToolbar from "../ui/primer/AppToolbar";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { formatDateBR } from "../../lib/format";
 
@@ -348,22 +354,17 @@ const EmpresasAdminIsland: React.FC = () => {
 
   return (
     <div className="mt-6 admin-page admin-empresas-page">
-      <div className="card-base card-blue mb-3 list-toolbar-sticky">
-        <div
-          className="form-row mobile-stack"
-          style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
-        >
-          <div className="form-group">
-            <h3 className="page-title">🏢 Empresas cadastradas</h3>
-            <p className="page-subtitle">Gestão de contas e status de cobrança.</p>
-          </div>
-          <div className="form-group" style={{ alignItems: "flex-end" }}>
-            <button className="btn btn-primary w-full sm:w-auto" onClick={abrirModalNovaEmpresa}>
-              Nova empresa
-            </button>
-          </div>
-        </div>
-      </div>
+      <AppToolbar
+        tone="info"
+        className="list-toolbar-sticky"
+        title="Empresas cadastradas"
+        subtitle="Gestao de contas e status de cobranca."
+        actions={
+          <AppButton type="button" variant="primary" onClick={abrirModalNovaEmpresa}>
+            Nova empresa
+          </AppButton>
+        }
+      />
 
       {erro && (
         <div className="mb-3">
@@ -372,25 +373,29 @@ const EmpresasAdminIsland: React.FC = () => {
       )}
 
       {loading ? (
-        <p>Carregando empresas...</p>
+        <AppCard tone="info">Carregando empresas...</AppCard>
       ) : (
-        <div className="table-container overflow-x-auto">
-          <table className="table-default table-header-blue table-mobile-cards min-w-[960px]">
-            <thead>
-              <tr>
-                <th>Nome Fantasia</th>
-                <th>CNPJ</th>
-                <th>Cidade/Estado</th>
-                <th>Plano</th>
-                <th>Status</th>
-                <th>Ult. Pagamento</th>
-                <th>Próx. Vencimento</th>
-                <th>Valor</th>
-                <th className="th-actions">Ações</th>
-              </tr>
-            </thead>
-
-            <tbody>
+        <AppCard tone="info">
+          {empresas.length === 0 ? (
+            <EmptyState title="Nenhuma empresa cadastrada" />
+          ) : (
+            <DataTable
+              className="table-mobile-cards min-w-[960px]"
+              headers={
+                <tr>
+                  <th>Nome Fantasia</th>
+                  <th>CNPJ</th>
+                  <th>Cidade/Estado</th>
+                  <th>Plano</th>
+                  <th>Status</th>
+                  <th>Ult. Pagamento</th>
+                  <th>Prox. Vencimento</th>
+                  <th>Valor</th>
+                  <th className="th-actions">Acoes</th>
+                </tr>
+              }
+              colSpan={9}
+            >
               {empresas.map((e) => (
                 <tr key={e.id}>
                   <td data-label="Nome Fantasia">{e.nome_fantasia}</td>
@@ -410,7 +415,7 @@ const EmpresasAdminIsland: React.FC = () => {
                       ? formatDateBR(e.billing.ultimo_pagamento)
                       : "—"}
                   </td>
-                  <td data-label="Próx. Vencimento">
+                  <td data-label="Prox. Vencimento">
                     {e.billing?.proximo_vencimento
                       ? formatDateBR(e.billing.proximo_vencimento)
                       : "—"}
@@ -420,66 +425,35 @@ const EmpresasAdminIsland: React.FC = () => {
                       ? `R$ ${e.billing.valor_mensal.toFixed(2)}`
                       : "—"}
                   </td>
-                  <td className="th-actions" data-label="Ações">
+                  <td className="th-actions" data-label="Acoes">
                     <div className="action-buttons">
-                      <button
-                        type="button"
-                        className="btn-icon icon-action-btn"
-                        onClick={() => atualizarStatus(e.id, "active")}
-                        title="Ativar"
-                        aria-label="Ativar"
-                      >
-                        <span aria-hidden="true">&#10003;</span>
-                        <span className="sr-only">Ativar</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-icon icon-action-btn"
-                        onClick={() => atualizarStatus(e.id, "past_due")}
-                        title="Atraso"
-                        aria-label="Atraso"
-                      >
-                        <span aria-hidden="true">&#9203;</span>
-                        <span className="sr-only">Atraso</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-icon icon-action-btn"
-                        onClick={() => atualizarStatus(e.id, "suspended")}
-                        title="Suspender"
-                        aria-label="Suspender"
-                      >
-                        <span aria-hidden="true">&#9208;</span>
-                        <span className="sr-only">Suspender</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-icon icon-action-btn danger"
-                        onClick={() => atualizarStatus(e.id, "canceled")}
-                        title="Cancelar"
-                        aria-label="Cancelar"
-                      >
-                        <span aria-hidden="true">&#10007;</span>
-                        <span className="sr-only">Cancelar</span>
-                      </button>
+                      <AppButton type="button" variant="secondary" onClick={() => atualizarStatus(e.id, "active")}>
+                        Ativar
+                      </AppButton>
+                      <AppButton type="button" variant="secondary" onClick={() => atualizarStatus(e.id, "past_due")}>
+                        Atraso
+                      </AppButton>
+                      <AppButton type="button" variant="secondary" onClick={() => atualizarStatus(e.id, "suspended")}>
+                        Suspender
+                      </AppButton>
+                      <AppButton type="button" variant="danger" onClick={() => atualizarStatus(e.id, "canceled")}>
+                        Cancelar
+                      </AppButton>
                     </div>
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </DataTable>
+          )}
+        </AppCard>
       )}
 
-      <div className="card-base card-config mt-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h4 className="mb-1">Vínculos Master</h4>
-            <p style={{ opacity: 0.7 }}>
-              Aprovação de portfólio e atribuições de empresas ao Master.
-            </p>
-          </div>
-        </div>
+      <AppCard
+        tone="config"
+        className="mt-6"
+        title="Vinculos Master"
+        subtitle="Aprovacao de portfolio e atribuicoes de empresas ao Master."
+      >
 
         {erroVinculos && (
           <div className="mt-3">
@@ -488,76 +462,74 @@ const EmpresasAdminIsland: React.FC = () => {
         )}
 
         <div className="form-row mobile-stack mt-3">
-          <div className="form-group">
-            <label className="form-label">Master</label>
-            <select
-              className="form-select"
-              value={novoVinculoMasterId}
-              onChange={(e) => setNovoVinculoMasterId(e.target.value)}
-            >
-              <option value="">Selecione</option>
-              {masters.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.nome_completo} {m.email ? `(${m.email})` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Empresa</label>
-            <select
-              className="form-select"
-              value={novoVinculoEmpresaId}
-              onChange={(e) => setNovoVinculoEmpresaId(e.target.value)}
-            >
-              <option value="">Selecione</option>
-              {empresas.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.nome_fantasia}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Status</label>
-            <select
-              className="form-select"
-              value={novoVinculoStatus}
-              onChange={(e) => setNovoVinculoStatus(e.target.value)}
-            >
-              <option value="approved">Aprovado</option>
-              <option value="pending">Pendente</option>
-              <option value="rejected">Rejeitado</option>
-            </select>
-          </div>
+          <AppField
+            as="select"
+            wrapperClassName="form-group"
+            label="Master"
+            value={novoVinculoMasterId}
+            onChange={(e) => setNovoVinculoMasterId(e.target.value)}
+            options={[
+              { value: "", label: "Selecione" },
+              ...masters.map((m) => ({
+                value: m.id,
+                label: `${m.nome_completo}${m.email ? ` (${m.email})` : ""}`,
+              })),
+            ]}
+          />
+          <AppField
+            as="select"
+            wrapperClassName="form-group"
+            label="Empresa"
+            value={novoVinculoEmpresaId}
+            onChange={(e) => setNovoVinculoEmpresaId(e.target.value)}
+            options={[
+              { value: "", label: "Selecione" },
+              ...empresas.map((e) => ({
+                value: e.id,
+                label: e.nome_fantasia,
+              })),
+            ]}
+          />
+          <AppField
+            as="select"
+            wrapperClassName="form-group"
+            label="Status"
+            value={novoVinculoStatus}
+            onChange={(e) => setNovoVinculoStatus(e.target.value)}
+            options={[
+              { value: "approved", label: "Aprovado" },
+              { value: "pending", label: "Pendente" },
+              { value: "rejected", label: "Rejeitado" },
+            ]}
+          />
           <div className="form-group" style={{ alignItems: "flex-end" }}>
-            <button className="btn btn-primary w-full sm:w-auto" onClick={criarVinculoMaster}>
-              Adicionar vínculo
-            </button>
+            <AppButton type="button" variant="primary" onClick={criarVinculoMaster}>
+              Adicionar vinculo
+            </AppButton>
           </div>
         </div>
 
         {loadingVinculos ? (
-          <p className="mt-3">Carregando vínculos...</p>
+          <p className="mt-3">Carregando vinculos...</p>
         ) : (
-          <div className="table-container overflow-x-auto mt-4">
-            <table className="table-default table-header-blue table-mobile-cards min-w-[980px]">
-              <thead>
-                <tr>
-                  <th>Empresa</th>
-                  <th>Master</th>
-                  <th>Status</th>
-                  <th>Solicitado</th>
-                  <th>Aprovado</th>
-                  <th className="th-actions">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vinculosMaster.length === 0 && (
+          <>
+            {vinculosMaster.length === 0 ? (
+              <EmptyState title="Nenhum vinculo cadastrado" />
+            ) : (
+              <DataTable
+                className="table-mobile-cards min-w-[980px]"
+                headers={
                   <tr>
-                    <td colSpan={6}>Nenhum vínculo cadastrado.</td>
+                    <th>Empresa</th>
+                    <th>Master</th>
+                    <th>Status</th>
+                    <th>Solicitado</th>
+                    <th>Aprovado</th>
+                    <th className="th-actions">Acoes</th>
                   </tr>
-                )}
+                }
+                colSpan={6}
+              >
                 {vinculosMaster.map((v) => (
                   <tr key={v.id}>
                     <td data-label="Empresa">{v.empresa?.nome_fantasia || v.company_id}</td>
@@ -572,71 +544,50 @@ const EmpresasAdminIsland: React.FC = () => {
                     <td data-label="Aprovado">
                       {v.approved_at ? formatDateBR(v.approved_at) : "—"}
                     </td>
-                    <td className="th-actions" data-label="Ações">
+                    <td className="th-actions" data-label="Acoes">
                       <div className="action-buttons">
-                        <button
-                          type="button"
-                          className="btn-icon icon-action-btn"
-                          onClick={() => atualizarVinculo(v.id, "approved")}
-                          title="Aprovar"
-                          aria-label="Aprovar"
-                        >
-                          <span aria-hidden="true">&#10003;</span>
-                          <span className="sr-only">Aprovar</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-icon icon-action-btn"
-                          onClick={() => atualizarVinculo(v.id, "rejected")}
-                          title="Rejeitar"
-                          aria-label="Rejeitar"
-                        >
-                          <span aria-hidden="true">&#10007;</span>
-                          <span className="sr-only">Rejeitar</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-icon icon-action-btn danger"
-                          onClick={() => removerVinculoMaster(v.id)}
-                          title="Remover"
-                          aria-label="Remover"
-                        >
-                          <span aria-hidden="true">&#128465;</span>
-                          <span className="sr-only">Remover</span>
-                        </button>
+                        <AppButton type="button" variant="secondary" onClick={() => atualizarVinculo(v.id, "approved")}>
+                          Aprovar
+                        </AppButton>
+                        <AppButton type="button" variant="secondary" onClick={() => atualizarVinculo(v.id, "rejected")}>
+                          Rejeitar
+                        </AppButton>
+                        <AppButton type="button" variant="danger" onClick={() => removerVinculoMaster(v.id)}>
+                          Remover
+                        </AppButton>
                       </div>
                     </td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </DataTable>
+            )}
+          </>
         )}
-      </div>
+      </AppCard>
 
       {createModalOpen && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <form
-            className="modal-panel"
-            style={{ maxWidth: 720, width: "95vw", background: "#f8fafc" }}
+            className="w-[95vw] max-w-[720px]"
             onSubmit={(e) => {
               e.preventDefault();
               salvarEmpresa();
             }}
           >
-            <div className="modal-header">
-              <div className="modal-title" style={{ color: "#1d4ed8", fontWeight: 800 }}>
-                Cadastro de empresa
-              </div>
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={() => setCreateModalOpen(false)}
-                disabled={salvandoEmpresa}
-              >
-                ✕
-              </button>
-            </div>
+            <AppCard
+              tone="config"
+              title="Cadastro de empresa"
+              actions={
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setCreateModalOpen(false)}
+                  disabled={salvandoEmpresa}
+                >
+                  Fechar
+                </AppButton>
+              }
+            >
 
             <div className="modal-body">
               {erroCadastro && (
@@ -750,18 +701,19 @@ const EmpresasAdminIsland: React.FC = () => {
             </div>
 
             <div className="modal-footer mobile-stack-buttons">
-              <button type="submit" className="btn btn-primary" disabled={salvandoEmpresa}>
+              <AppButton type="submit" variant="primary" disabled={salvandoEmpresa}>
                 {salvandoEmpresa ? "Salvando..." : "Salvar empresa"}
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
-                className="btn btn-light"
+                variant="secondary"
                 onClick={() => setCreateModalOpen(false)}
                 disabled={salvandoEmpresa}
               >
                 Cancelar
-              </button>
+              </AppButton>
             </div>
+            </AppCard>
           </form>
         </div>
       )}
@@ -772,4 +724,3 @@ const EmpresasAdminIsland: React.FC = () => {
 };
 
 export default EmpresasAdminIsland;
-

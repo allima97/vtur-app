@@ -5,6 +5,12 @@ import { useRegisterForm } from "../../lib/useRegisterForm";
 import CredentialsForm from "../forms/CredentialsForm";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import AlertMessage from "../ui/AlertMessage";
+import DataTable from "../ui/DataTable";
+import EmptyState from "../ui/EmptyState";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppToolbar from "../ui/primer/AppToolbar";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { DEFAULT_FROM_EMAILS } from "../../lib/systemName";
@@ -523,30 +529,25 @@ const UsuariosAdminIsland: React.FC = () => {
 
   if (!podeVer) {
     return (
-      <div style={{ padding: 20 }}>
-        <h3>Apenas administradores podem acessar este módulo.</h3>
-      </div>
+      <AppCard tone="config" className="admin-page admin-usuarios-page">
+        Apenas administradores podem acessar este modulo.
+      </AppCard>
     );
   }
 
   return (
     <div className="mt-6 admin-page admin-usuarios-page">
-      <div className="card-base card-red mb-3 list-toolbar-sticky">
-        <div
-          className="form-row mobile-stack"
-          style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
-        >
-          <div className="form-group">
-            <h3 className="page-title">👥 Usuários do sistema</h3>
-            <p className="page-subtitle">Gerencie cargos, empresas e status de acesso.</p>
-          </div>
-          <div className="form-group" style={{ alignItems: "flex-end" }}>
-            <button className="btn btn-primary w-full sm:w-auto" onClick={openCreateUserModal}>
-              Novo usuário
-            </button>
-          </div>
-        </div>
-      </div>
+      <AppToolbar
+        tone="config"
+        className="list-toolbar-sticky"
+        title="Usuarios do sistema"
+        subtitle="Gerencie cargos, empresas e status de acesso."
+        actions={
+          <AppButton type="button" variant="primary" onClick={openCreateUserModal}>
+            Novo usuario
+          </AppButton>
+        }
+      />
 
       {erro && (
         <div className="mb-3">
@@ -555,24 +556,28 @@ const UsuariosAdminIsland: React.FC = () => {
       )}
 
       {loading ? (
-        <p className="mt-3">Carregando usuários...</p>
+        <AppCard tone="config">Carregando usuarios...</AppCard>
       ) : (
-        <div className="table-container overflow-x-auto mt-4">
-          <table className="table-default table-header-red table-mobile-cards min-w-[980px]">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>E-mail</th>
-                <th>Cargo</th>
-                <th>Empresa</th>
-                <th>Uso</th>
-                <th>Status</th>
-                <th className="th-actions">Aviso</th>
-                <th className="th-actions">Ações</th>
-              </tr>
-            </thead>
-
-            <tbody>
+        <AppCard tone="config">
+          {usuarios.length === 0 ? (
+            <EmptyState title="Nenhum usuario encontrado" />
+          ) : (
+            <DataTable
+              className="table-mobile-cards min-w-[980px]"
+              headers={
+                <tr>
+                  <th>Nome</th>
+                  <th>E-mail</th>
+                  <th>Cargo</th>
+                  <th>Empresa</th>
+                  <th>Uso</th>
+                  <th>Status</th>
+                  <th className="th-actions">Aviso</th>
+                  <th className="th-actions">Acoes</th>
+                </tr>
+              }
+              colSpan={8}
+            >
               {usuarios.map((u) => (
                 <tr key={u.id}>
                   <td data-label="Nome">{u.nome_completo}</td>
@@ -630,74 +635,77 @@ const UsuariosAdminIsland: React.FC = () => {
 
                   <td className="th-actions" data-label="Aviso">
                     <div className="action-buttons">
-                      <button
-                        className="btn-icon icon-action-btn"
+                      <AppButton
+                        type="button"
+                        variant="secondary"
                         onClick={() => openAvisoModal(u)}
                         disabled={!u.email || avisosTemplates.length === 0}
                         title={
                           !u.email
-                            ? "Usuário sem e-mail cadastrado"
+                            ? "Usuario sem e-mail cadastrado"
                             : avisosTemplates.length === 0
-                              ? "Nenhum template de aviso disponível"
+                              ? "Nenhum template de aviso disponivel"
                               : "Enviar aviso"
                         }
                         aria-label="Enviar aviso"
                       >
-                        <span aria-hidden="true">📧</span>
-                        <span className="sr-only">Enviar aviso</span>
-                      </button>
+                        Aviso
+                      </AppButton>
                     </div>
                   </td>
 
-                  <td className="th-actions" data-label="Ações">
+                  <td className="th-actions" data-label="Acoes">
                     <div className="action-buttons">
-                      <button
-                        className="btn-icon icon-action-btn"
+                      <AppButton
+                        type="button"
+                        variant="secondary"
                         onClick={() => openSenhaModal(u)}
                         title="Redefinir senha"
                         aria-label="Redefinir senha"
                       >
-                        <span aria-hidden="true">PW</span>
-                        <span className="sr-only">Redefinir senha</span>
-                      </button>
-                      <button
-                        className="btn-icon icon-action-btn"
+                        Senha
+                      </AppButton>
+                      <AppButton
+                        type="button"
+                        variant={u.active ? "danger" : "primary"}
                         onClick={() => toggleAtivo(u, !u.active)}
                         title={u.active ? "Desativar" : "Ativar"}
                         aria-label={u.active ? "Desativar" : "Ativar"}
                       >
-                        <span aria-hidden="true">{u.active ? "⏸️" : "✅"}</span>
-                        <span className="sr-only">{u.active ? "Desativar" : "Ativar"}</span>
-                      </button>
+                        {u.active ? "Desativar" : "Ativar"}
+                      </AppButton>
                     </div>
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </DataTable>
+          )}
+        </AppCard>
       )}
 
       {avisoModalOpen && avisoUsuario && (
         <div className="fixed inset-0 z-40 bg-black/50 flex justify-center items-center p-4">
           <form
-            className="card-base card-config w-full max-w-lg"
+            className="w-full max-w-lg"
             onSubmit={(e) => {
               e.preventDefault();
               enviarAviso();
             }}
           >
-            <div className="flex justify-between items-center mb-3">
-              <h4 className="text-lg font-semibold">Enviar aviso</h4>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => setAvisoModalOpen(false)}
-                disabled={enviandoAviso}
-              >
-                Fechar
-              </button>
-            </div>
+            <AppCard
+              tone="config"
+              title="Enviar aviso"
+              actions={
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setAvisoModalOpen(false)}
+                  disabled={enviandoAviso}
+                >
+                  Fechar
+                </AppButton>
+              }
+            >
 
             {avisoErro && (
               <div className="mb-3">
@@ -714,19 +722,19 @@ const UsuariosAdminIsland: React.FC = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Template de aviso</label>
-              <select
-                className="form-select"
+              <AppField
+                as="select"
+                label="Template de aviso"
                 value={avisoTemplateId}
                 onChange={(e) => setAvisoTemplateId(e.target.value)}
-              >
-                <option value="">Selecione</option>
-                {avisosTemplates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {`${t.nome} — ${getRemetenteLabel(t.sender_key)}`}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: "", label: "Selecione" },
+                  ...avisosTemplates.map((t) => ({
+                    value: t.id,
+                    label: `${t.nome} — ${getRemetenteLabel(t.sender_key)}`,
+                  })),
+                ]}
+              />
               {avisosTemplates.length === 0 && (
                 <small style={{ color: "#94a3b8" }}>Nenhum template ativo cadastrado.</small>
               )}
@@ -741,41 +749,45 @@ const UsuariosAdminIsland: React.FC = () => {
             </div>
 
             <div className="flex gap-2 flex-wrap mt-3 mobile-stack-buttons">
-              <button type="submit" className="btn btn-primary" disabled={enviandoAviso}>
+              <AppButton type="submit" variant="primary" disabled={enviandoAviso}>
                 {enviandoAviso ? "Enviando..." : "Enviar aviso"}
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
-                className="btn btn-light"
+                variant="secondary"
                 onClick={() => setAvisoModalOpen(false)}
                 disabled={enviandoAviso}
               >
                 Cancelar
-              </button>
+              </AppButton>
             </div>
+            </AppCard>
           </form>
         </div>
       )}
       {senhaModalOpen && senhaUsuario && (
         <div className="fixed inset-0 z-40 bg-black/50 flex justify-center items-center p-4">
           <form
-            className="card-base card-config w-full max-w-lg"
+            className="w-full max-w-lg"
             onSubmit={(e) => {
               e.preventDefault();
               redefinirSenha();
             }}
           >
-            <div className="flex justify-between items-center mb-3">
-              <h4 className="text-lg font-semibold">Redefinir senha</h4>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => setSenhaModalOpen(false)}
-                disabled={salvandoSenha}
-              >
-                Fechar
-              </button>
-            </div>
+            <AppCard
+              tone="config"
+              title="Redefinir senha"
+              actions={
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setSenhaModalOpen(false)}
+                  disabled={salvandoSenha}
+                >
+                  Fechar
+                </AppButton>
+              }
+            >
 
             {senhaErro && (
               <div className="mb-3">
@@ -792,9 +804,9 @@ const UsuariosAdminIsland: React.FC = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Nova senha</label>
-              <input
-                className="form-input"
+              <AppField
+                as="input"
+                label="Nova senha"
                 type="password"
                 value={senhaNova}
                 onChange={(e) => setSenhaNova(e.target.value)}
@@ -806,9 +818,9 @@ const UsuariosAdminIsland: React.FC = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Confirmar nova senha</label>
-              <input
-                className="form-input"
+              <AppField
+                as="input"
+                label="Confirmar nova senha"
                 type="password"
                 value={senhaConfirmacao}
                 onChange={(e) => setSenhaConfirmacao(e.target.value)}
@@ -830,25 +842,26 @@ const UsuariosAdminIsland: React.FC = () => {
             </label>
 
             <div className="flex gap-2 flex-wrap mt-3 mobile-stack-buttons">
-              <button type="submit" className="btn btn-primary" disabled={salvandoSenha}>
+              <AppButton type="submit" variant="primary" disabled={salvandoSenha}>
                 {salvandoSenha ? "Salvando..." : "Salvar nova senha"}
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
-                className="btn btn-light"
+                variant="secondary"
                 onClick={() => setSenhaModalOpen(false)}
                 disabled={salvandoSenha}
               >
                 Cancelar
-              </button>
+              </AppButton>
             </div>
+            </AppCard>
           </form>
         </div>
       )}
       {createModalOpen && (
         <div className="fixed inset-0 z-40 bg-black/50 flex justify-center items-center p-4">
           <form
-            className="card-base card-config w-full max-w-xl"
+            className="w-full max-w-xl"
             onSubmit={(e) => {
               if (isMasterSelecionado && !novaEmpresaId) {
                 e.preventDefault();
@@ -860,26 +873,31 @@ const UsuariosAdminIsland: React.FC = () => {
               registerForm.handleSubmit(e);
             }}
           >
-            <div className="flex justify-between items-center mb-3">
-              <h4 className="text-lg font-semibold">Cadastro administrativo de usuário</h4>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => setCreateModalOpen(false)}
-                disabled={registerForm.loading}
-              >
-                Fechar
-              </button>
-            </div>
+            <AppCard
+              tone="config"
+              title="Cadastro administrativo de usuario"
+              actions={
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setCreateModalOpen(false)}
+                  disabled={registerForm.loading}
+                >
+                  Fechar
+                </AppButton>
+              }
+            >
 
             {registerForm.message && (
-              <div className="card-base card-config mb-3">{registerForm.message}</div>
+              <AlertMessage variant="error" className="mb-3">
+                {registerForm.message}
+              </AlertMessage>
             )}
 
             <div className="form-group">
-              <label className="form-label">Nome completo</label>
-              <input
-                className="form-input"
+              <AppField
+                as="input"
+                label="Nome completo"
                 value={novoNomeCompleto}
                 onChange={(e) => setNovoNomeCompleto(e.target.value)}
                 onBlur={(e) => setNovoNomeCompleto(titleCaseWithExceptions(e.target.value))}
@@ -899,60 +917,58 @@ const UsuariosAdminIsland: React.FC = () => {
             />
 
             <div className="form-row mt-2">
-              <div className="form-group flex-1">
-                <label className="form-label">Cargo</label>
-                <select
-                  className="form-select"
-                  value={novoTipoUsuarioId}
-                  onChange={(e) => setNovoTipoUsuarioId(e.target.value)}
-                >
-                  <option value="">Selecione</option>
-                  {userTypes.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group flex-1">
-                <label className="form-label">Empresa</label>
-                <select
-                  className="form-select"
-                  value={novaEmpresaId}
-                  onChange={(e) => setNovaEmpresaId(e.target.value)}
-                  required={isMasterSelecionado}
-                >
-                  <option value="">Sem empresa</option>
-                  {empresas.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nome_fantasia}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group flex-1">
-                <label className="form-label">Ativo?</label>
-                <select
-                  className="form-select"
-                  value={novoAtivo ? "true" : "false"}
-                  onChange={(e) => setNovoAtivo(e.target.value === "true")}
-                >
-                  <option value="true">Sim</option>
-                  <option value="false">Não</option>
-                </select>
-              </div>
-              <div className="form-group flex-1">
-                <label className="form-label">Uso do sistema</label>
-                <select
-                  className="form-select"
-                  value={novoUsoIndividual ? "true" : "false"}
-                  onChange={(e) => setNovoUsoIndividual(e.target.value === "true")}
-                  disabled={isMasterSelecionado}
-                >
-                  <option value="false">Corporativo</option>
-                  <option value="true">Individual</option>
-                </select>
-              </div>
+              <AppField
+                as="select"
+                wrapperClassName="form-group flex-1"
+                label="Cargo"
+                value={novoTipoUsuarioId}
+                onChange={(e) => setNovoTipoUsuarioId(e.target.value)}
+                options={[
+                  { value: "", label: "Selecione" },
+                  ...userTypes.map((t) => ({
+                    value: t.id,
+                    label: t.name,
+                  })),
+                ]}
+              />
+              <AppField
+                as="select"
+                wrapperClassName="form-group flex-1"
+                label="Empresa"
+                value={novaEmpresaId}
+                onChange={(e) => setNovaEmpresaId(e.target.value)}
+                required={isMasterSelecionado}
+                options={[
+                  { value: "", label: "Sem empresa" },
+                  ...empresas.map((c) => ({
+                    value: c.id,
+                    label: c.nome_fantasia,
+                  })),
+                ]}
+              />
+              <AppField
+                as="select"
+                wrapperClassName="form-group flex-1"
+                label="Ativo?"
+                value={novoAtivo ? "true" : "false"}
+                onChange={(e) => setNovoAtivo(e.target.value === "true")}
+                options={[
+                  { value: "true", label: "Sim" },
+                  { value: "false", label: "Nao" },
+                ]}
+              />
+              <AppField
+                as="select"
+                wrapperClassName="form-group flex-1"
+                label="Uso do sistema"
+                value={novoUsoIndividual ? "true" : "false"}
+                onChange={(e) => setNovoUsoIndividual(e.target.value === "true")}
+                disabled={isMasterSelecionado}
+                options={[
+                  { value: "false", label: "Corporativo" },
+                  { value: "true", label: "Individual" },
+                ]}
+              />
             </div>
 
             {isMasterSelecionado && (
@@ -1018,22 +1034,23 @@ const UsuariosAdminIsland: React.FC = () => {
             )}
 
             <div className="flex gap-2 flex-wrap mt-3 mobile-stack-buttons">
-              <button
+              <AppButton
                 type="submit"
-                className="btn btn-primary"
+                variant="primary"
                 disabled={registerForm.loading || enviandoDocs}
               >
-                {enviandoDocs ? "Enviando docs..." : "Criar usuário"}
-              </button>
-              <button
+                {enviandoDocs ? "Enviando docs..." : "Criar usuario"}
+              </AppButton>
+              <AppButton
                 type="button"
-                className="btn btn-light"
+                variant="secondary"
                 onClick={() => setCreateModalOpen(false)}
                 disabled={registerForm.loading || enviandoDocs}
               >
                 Cancelar
-              </button>
+              </AppButton>
             </div>
+            </AppCard>
           </form>
         </div>
       )}

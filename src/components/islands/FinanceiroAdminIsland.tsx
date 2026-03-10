@@ -3,6 +3,12 @@ import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import AlertMessage from "../ui/AlertMessage";
+import DataTable from "../ui/DataTable";
+import EmptyState from "../ui/EmptyState";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppToolbar from "../ui/primer/AppToolbar";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { formatDateBR } from "../../lib/format";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
@@ -336,224 +342,204 @@ const FinanceiroAdminIsland: React.FC = () => {
 
   if (!podeVer) {
     return (
-      <div style={{ padding: 20 }}>
-        <h3>Apenas administradores podem acessar o financeiro.</h3>
-      </div>
+      <AppCard tone="config" className="admin-page admin-financeiro-page">
+        Apenas administradores podem acessar o financeiro.
+      </AppCard>
     );
   }
 
   return (
     <div className="mt-6 admin-page admin-financeiro-page">
-      <div className="card-base card-red mb-3 list-toolbar-sticky">
-        <div className="form-row mobile-stack" style={{ gap: 12 }}>
-          <div className="form-group">
-            <h3 className="page-title">💳 Controle financeiro</h3>
-            <p className="page-subtitle">Status, planos e cobranças das empresas.</p>
-          </div>
-        </div>
-      </div>
+      <AppToolbar
+        tone="config"
+        className="list-toolbar-sticky"
+        title="Controle financeiro"
+        subtitle="Status, planos e cobrancas das empresas."
+      />
 
-      {erro && (
-        <div className="mb-3">
-          <AlertMessage variant="error">{erro}</AlertMessage>
-        </div>
-      )}
+      {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
 
       {loading ? (
-        <p>Carregando financeiro...</p>
+        <AppCard tone="config">Carregando financeiro...</AppCard>
       ) : (
-        <div className="table-container overflow-x-auto">
-          <table className="table-default table-header-red table-mobile-cards min-w-[860px]">
-            <thead>
-              <tr>
-                <th>Empresa</th>
-                <th>CNPJ</th>
-                <th>Plano</th>
-                <th>Status</th>
-                <th>Últ. pagamento</th>
-                <th>Próx. vencimento</th>
-                <th>Valor</th>
-                <th className="th-actions">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {registros.length === 0 ? (
+        <AppCard tone="config">
+          {registros.length === 0 ? (
+            <EmptyState title="Nenhuma cobranca encontrada" />
+          ) : (
+            <DataTable
+              className="table-mobile-cards min-w-[860px]"
+              headers={
                 <tr>
-                  <td colSpan={8}>Nenhuma cobrança encontrada.</td>
+                  <th>Empresa</th>
+                  <th>CNPJ</th>
+                  <th>Plano</th>
+                  <th>Status</th>
+                  <th>Ult. pagamento</th>
+                  <th>Prox. vencimento</th>
+                  <th>Valor</th>
+                  <th className="th-actions">Acoes</th>
                 </tr>
-              ) : (
-                registros.map((r) => (
-                  <tr key={r.id}>
-                    <td data-label="Empresa">{r.companies?.nome_fantasia || "—"}</td>
-                    <td data-label="CNPJ">{r.companies?.cnpj || "—"}</td>
-                    <td data-label="Plano">{r.plan?.nome || "—"}</td>
-                    <td data-label="Status">
-                      <span className="font-bold capitalize" style={{ color: statusColors[r.status] }}>
-                        {statusLabels[r.status] || r.status}
-                      </span>
-                    </td>
-                    <td data-label="Últ. pagamento">{formatarData(r.ultimo_pagamento)}</td>
-                    <td data-label="Próx. vencimento">{formatarData(r.proximo_vencimento)}</td>
-                    <td data-label="Valor">{formatarValor(r.valor_mensal)}</td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        <button
-                          className="btn-icon icon-action-btn"
-                          onClick={() => openModal(r)}
-                          title="Editar cobrança"
-                          aria-label="Editar cobrança"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          className="btn-icon icon-action-btn"
-                          onClick={() => atualizarStatus(r, "active")}
-                          title="Ativar cobrança"
-                          aria-label="Ativar cobrança"
-                          disabled={r.status === "active"}
-                          style={{ borderColor: statusColors.active, color: statusColors.active }}
-                        >
-                          ✅
-                        </button>
-                        <button
-                          className="btn-icon icon-action-btn"
-                          onClick={() => atualizarStatus(r, "past_due")}
-                          title="Marcar como atrasada"
-                          aria-label="Marcar como atrasada"
-                          disabled={r.status === "past_due"}
-                          style={{ borderColor: statusColors.past_due, color: statusColors.past_due }}
-                        >
-                          ⏰
-                        </button>
-                        <button
-                          className="btn-icon icon-action-btn"
-                          onClick={() => atualizarStatus(r, "suspended")}
-                          title="Suspender cobrança"
-                          aria-label="Suspender cobrança"
-                          disabled={r.status === "suspended"}
-                          style={{ borderColor: statusColors.suspended, color: statusColors.suspended }}
-                        >
-                          ⏸️
-                        </button>
-                        <button
-                          className="btn-icon icon-action-btn danger"
-                          onClick={() => atualizarStatus(r, "canceled")}
-                          title="Cancelar cobrança"
-                          aria-label="Cancelar cobrança"
-                          disabled={r.status === "canceled"}
-                        >
-                          🛑
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+              }
+              colSpan={8}
+            >
+              {registros.map((r) => (
+                <tr key={r.id}>
+                  <td data-label="Empresa">{r.companies?.nome_fantasia || "—"}</td>
+                  <td data-label="CNPJ">{r.companies?.cnpj || "—"}</td>
+                  <td data-label="Plano">{r.plan?.nome || "—"}</td>
+                  <td data-label="Status">
+                    <span className="font-bold capitalize" style={{ color: statusColors[r.status] }}>
+                      {statusLabels[r.status] || r.status}
+                    </span>
+                  </td>
+                  <td data-label="Ult. pagamento">{formatarData(r.ultimo_pagamento)}</td>
+                  <td data-label="Prox. vencimento">{formatarData(r.proximo_vencimento)}</td>
+                  <td data-label="Valor">{formatarValor(r.valor_mensal)}</td>
+                  <td className="th-actions" data-label="Acoes">
+                    <div className="action-buttons">
+                      <AppButton
+                        type="button"
+                        variant="ghost"
+                        onClick={() => openModal(r)}
+                        title="Editar cobranca"
+                        aria-label="Editar cobranca"
+                      >
+                        Editar
+                      </AppButton>
+                      <AppButton
+                        type="button"
+                        variant="secondary"
+                        onClick={() => atualizarStatus(r, "active")}
+                        disabled={r.status === "active"}
+                        style={{ color: statusColors.active }}
+                      >
+                        Ativar
+                      </AppButton>
+                      <AppButton
+                        type="button"
+                        variant="secondary"
+                        onClick={() => atualizarStatus(r, "past_due")}
+                        disabled={r.status === "past_due"}
+                        style={{ color: statusColors.past_due }}
+                      >
+                        Atrasar
+                      </AppButton>
+                      <AppButton
+                        type="button"
+                        variant="secondary"
+                        onClick={() => atualizarStatus(r, "suspended")}
+                        disabled={r.status === "suspended"}
+                        style={{ color: statusColors.suspended }}
+                      >
+                        Suspender
+                      </AppButton>
+                      <AppButton
+                        type="button"
+                        variant="danger"
+                        onClick={() => atualizarStatus(r, "canceled")}
+                        disabled={r.status === "canceled"}
+                      >
+                        Cancelar
+                      </AppButton>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </DataTable>
+          )}
+        </AppCard>
       )}
 
       {modalOpen && selecionado && (
         <div className="fixed inset-0 z-40 bg-black/50 flex justify-center items-center p-4">
-          <form
-            className="card-base card-config w-full max-w-2xl"
-            onSubmit={salvarCobranca}
-          >
-            <div className="flex justify-between items-center mb-3">
-              <h4 className="text-lg font-semibold">
-                Cobrança: {selecionado.companies?.nome_fantasia || "Empresa"}
-              </h4>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => setModalOpen(false)}
-                disabled={salvando}
-              >
-                Fechar
-              </button>
+          <form className="w-full max-w-2xl" onSubmit={salvarCobranca}>
+            <AppCard
+              tone="config"
+              title={`Cobranca: ${selecionado.companies?.nome_fantasia || "Empresa"}`}
+              actions={
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setModalOpen(false)}
+                  disabled={salvando}
+                >
+                  Fechar
+                </AppButton>
+              }
+            >
+
+            <div className="form-row">
+              <AppField
+                as="select"
+                wrapperClassName="form-group flex-1"
+                label="Plano"
+                value={form.plan_id}
+                onChange={(e) => {
+                  const nextPlanId = e.target.value;
+                  const planValue = planosAtivos.find((p) => p.id === nextPlanId)?.valor_mensal;
+                  setForm((prev) => ({
+                    ...prev,
+                    plan_id: nextPlanId,
+                    valor_mensal:
+                      prev.valor_mensal || planValue == null ? prev.valor_mensal : planValue.toString(),
+                  }));
+                }}
+                options={[
+                  { value: "", label: "Sem plano" },
+                  ...planosAtivos.map((p) => ({
+                    value: p.id,
+                    label: `${p.nome} (${p.moeda} ${p.valor_mensal.toFixed(2)})`,
+                  })),
+                ]}
+              />
+              <AppField
+                as="select"
+                wrapperClassName="form-group flex-1"
+                label="Status"
+                value={form.status}
+                onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value }))}
+                options={Object.keys(statusLabels).map((key) => ({
+                  value: key,
+                  label: statusLabels[key],
+                }))}
+              />
+              <AppField
+                as="input"
+                type="number"
+                min="0"
+                step="0.01"
+                wrapperClassName="form-group flex-1"
+                label="Valor mensal"
+                value={form.valor_mensal}
+                onChange={(e) => setForm((prev) => ({ ...prev, valor_mensal: e.target.value }))}
+              />
             </div>
 
             <div className="form-row">
-              <div className="form-group flex-1">
-                <label className="form-label">Plano</label>
-                <select
-                  className="form-select"
-                  value={form.plan_id}
-                  onChange={(e) => {
-                    const nextPlanId = e.target.value;
-                    const planValue = planosAtivos.find((p) => p.id === nextPlanId)?.valor_mensal;
-                    setForm((prev) => ({
-                      ...prev,
-                      plan_id: nextPlanId,
-                      valor_mensal:
-                        prev.valor_mensal || planValue == null ? prev.valor_mensal : planValue.toString(),
-                    }));
-                  }}
-                >
-                  <option value="">Sem plano</option>
-                  {planosAtivos.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nome} ({p.moeda} {p.valor_mensal.toFixed(2)})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group flex-1">
-                <label className="form-label">Status</label>
-                <select
-                  className="form-select"
-                  value={form.status}
-                  onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value }))}
-                >
-                  {Object.keys(statusLabels).map((key) => (
-                    <option key={key} value={key}>
-                      {statusLabels[key]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group flex-1">
-                <label className="form-label">Valor mensal</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  className="form-input"
-                  value={form.valor_mensal}
-                  onChange={(e) => setForm((prev) => ({ ...prev, valor_mensal: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group flex-1">
-                <label className="form-label">Último pagamento</label>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={form.ultimo_pagamento}
-                  onFocus={selectAllInputOnFocus}
-                  onChange={(e) => setForm((prev) => ({ ...prev, ultimo_pagamento: e.target.value }))}
-                />
-              </div>
-              <div className="form-group flex-1">
-                <label className="form-label">Próximo vencimento</label>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={form.proximo_vencimento}
-                  onFocus={selectAllInputOnFocus}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, proximo_vencimento: e.target.value }))
-                  }
-                />
-              </div>
+              <AppField
+                as="input"
+                type="date"
+                wrapperClassName="form-group flex-1"
+                label="Ultimo pagamento"
+                value={form.ultimo_pagamento}
+                onFocus={selectAllInputOnFocus}
+                onChange={(e) => setForm((prev) => ({ ...prev, ultimo_pagamento: e.target.value }))}
+              />
+              <AppField
+                as="input"
+                type="date"
+                wrapperClassName="form-group flex-1"
+                label="Proximo vencimento"
+                value={form.proximo_vencimento}
+                onFocus={selectAllInputOnFocus}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, proximo_vencimento: e.target.value }))
+                }
+              />
             </div>
 
             {eventos.length > 0 && (
-              <div className="card-base card-red mt-3">
-                <h4 className="font-semibold mb-2">Histórico recente</h4>
+              <AppCard tone="info" className="mt-3" title="Historico recente">
                 <div className="max-h-48 overflow-y-auto">
                   {eventos.map((ev) => (
                     <div key={ev.id} className="text-sm py-1 border-b border-slate-800">
@@ -565,30 +551,31 @@ const FinanceiroAdminIsland: React.FC = () => {
                     </div>
                   ))}
                 </div>
-              </div>
+              </AppCard>
             )}
 
             <div className="flex gap-2 flex-wrap mt-3 mobile-stack-buttons">
-              <button type="submit" className="btn btn-primary" disabled={salvando}>
+              <AppButton type="submit" variant="primary" disabled={salvando}>
                 {salvando ? "Salvando..." : "Salvar"}
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
-                className="btn btn-light"
+                variant="secondary"
                 onClick={registrarPagamentoHoje}
                 disabled={salvando}
               >
                 Registrar pagamento hoje
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
-                className="btn btn-light"
+                variant="secondary"
                 onClick={() => setModalOpen(false)}
                 disabled={salvando}
               >
                 Cancelar
-              </button>
+              </AppButton>
             </div>
+            </AppCard>
           </form>
         </div>
       )}

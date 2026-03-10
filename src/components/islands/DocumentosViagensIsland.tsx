@@ -1,10 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { usePermissoesStore } from "../../lib/permissoesStore";
+import AlertMessage from "../ui/AlertMessage";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import DataTable from "../ui/DataTable";
 import SearchInput from "../ui/SearchInput";
 import TableActions from "../ui/TableActions";
 import ConfirmDialog from "../ui/ConfirmDialog";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppToolbar from "../ui/primer/AppToolbar";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { supabase } from "../../lib/supabase";
 import {
@@ -374,9 +378,9 @@ export default function DocumentosViagensIsland() {
 
   if (!podeVer) {
     return (
-      <div className="card-base card-config">
-        <strong>Acesso negado ao módulo de Documentos Viagens.</strong>
-      </div>
+      <AppCard tone="config">
+        <strong>Acesso negado ao modulo de Documentos Viagens.</strong>
+      </AppCard>
     );
   }
 
@@ -393,9 +397,15 @@ export default function DocumentosViagensIsland() {
   return (
     <div className="page-content-wrap documentos-viagens-page">
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
+      <AppToolbar
+        tone="info"
+        className="list-toolbar-sticky"
+        title="Documentos de viagens"
+        subtitle="Upload, gestao de modelos e impressao de documentos."
+      />
 
       {!mostrarUpload && (
-        <div className="card-base card-blue mb-3 list-toolbar-sticky">
+        <AppCard tone="info" className="mb-3">
           <div
             className="form-row mobile-stack"
             style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
@@ -410,26 +420,26 @@ export default function DocumentosViagensIsland() {
               />
             </div>
             <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-              <button
+              <AppButton
                 type="button"
-                className="btn btn-primary w-full sm:w-auto"
+                variant="primary"
                 onClick={abrirUpload}
                 disabled={!podeCriar}
               >
                 Enviar documento
-              </button>
+              </AppButton>
             </div>
           </div>
-        </div>
+        </AppCard>
       )}
 
       {mostrarUpload && (
-        <div className="card-base card-blue form-card mb-3">
+        <AppCard tone="info" className="form-card mb-3" title="Enviar documento">
           <div className="flex items-center justify-between gap-3" style={{ flexWrap: "wrap" }}>
-            <h3 style={{ marginTop: 0, marginBottom: 0 }}>Enviar documento</h3>
-            <button type="button" className="btn btn-light" onClick={fecharUpload} disabled={uploading}>
+            <div />
+            <AppButton type="button" variant="secondary" onClick={fecharUpload} disabled={uploading}>
               Cancelar
-            </button>
+            </AppButton>
           </div>
 
           <div className="form-row" style={{ alignItems: "flex-end" }}>
@@ -444,29 +454,29 @@ export default function DocumentosViagensIsland() {
               />
             </div>
             <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-              <button
+              <AppButton
                 type="button"
-                className="btn btn-primary"
+                variant="primary"
                 disabled={uploading || !podeCriar || !selectedFile}
                 onClick={enviarArquivo}
               >
                 {uploading ? "Enviando..." : "Enviar"}
-              </button>
+              </AppButton>
             </div>
           </div>
 
-          {erro && <div className="auth-error">{erro}</div>}
-        </div>
+          {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
+        </AppCard>
       )}
 
       {!mostrarUpload && (
-        <div className="card-base">
+        <AppCard tone="info" title="Documentos">
           <div className="flex items-center gap-3" style={{ flexWrap: "wrap" }}>
-            <h3 style={{ marginTop: 0, marginBottom: 0, flex: 1 }}>Documentos</h3>
+            <div style={{ flex: 1 }} />
           </div>
 
           <DataTable
-            className="table-default table-header-blue table-mobile-cards"
+            className="table-mobile-cards"
             headers={
               <tr>
                 <th>Nome</th>
@@ -518,39 +528,43 @@ export default function DocumentosViagensIsland() {
                   />
                 </td>
               </tr>
-            ))}
-          </DataTable>
-        </div>
+              ))}
+            </DataTable>
+        </AppCard>
       )}
 
       {editingDoc && (
-        <div className="card-base mt-3">
+        <AppCard
+          tone="config"
+          className="mt-3"
+          title={`Modelo: ${editingDoc.display_name || editingDoc.file_name}`}
+        >
           <div className="flex items-center justify-between gap-3" style={{ flexWrap: "wrap" }}>
-            <h3 style={{ marginTop: 0, marginBottom: 0 }}>Modelo: {editingDoc.display_name || editingDoc.file_name}</h3>
+            <div />
             <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-              <button
+              <AppButton
                 type="button"
-                className="btn btn-secondary"
+                variant="secondary"
                 onClick={() => setEditingId(null)}
               >
                 Fechar
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
-                className="btn btn-secondary"
+                variant="secondary"
                 onClick={imprimir}
                 disabled={!modelText.trim()}
               >
                 Imprimir / PDF
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
-                className="btn btn-primary"
+                variant="primary"
                 onClick={salvarModelo}
                 disabled={!podeEditar || savingModel || !modelText.trim() || !modelTitle.trim()}
               >
                 {savingModel ? "Salvando..." : "Salvar modelo"}
-              </button>
+              </AppButton>
             </div>
           </div>
 
@@ -565,14 +579,14 @@ export default function DocumentosViagensIsland() {
               />
             </div>
             <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-              <button
+              <AppButton
                 type="button"
-                className="btn btn-secondary"
+                variant="secondary"
                 onClick={adicionarAssinatura}
                 disabled={!podeEditar}
               >
                 + Assinatura
-              </button>
+              </AppButton>
             </div>
           </div>
 
@@ -592,7 +606,7 @@ export default function DocumentosViagensIsland() {
           <div className="form-group">
             <label className="form-label">Campos</label>
             <DataTable
-              className="table-default table-header-blue table-mobile-cards"
+              className="table-mobile-cards"
               headers={
                 <tr>
                   <th>Campo</th>
@@ -662,16 +676,16 @@ export default function DocumentosViagensIsland() {
 
           <div className="form-group">
             <label className="form-label">Visualização (HTML)</label>
-            <div className="card-base">
+            <AppCard tone="info">
               <div
                 className="doc-print-area"
                 dangerouslySetInnerHTML={{ __html: `<h2 style=\"margin:0 0 12px 0\">${escapeHtml(
                   modelTitle || ""
                 )}</h2>${previewHtml}` }}
               />
-            </div>
+            </AppCard>
           </div>
-        </div>
+        </AppCard>
       )}
 
       <ConfirmDialog

@@ -2,11 +2,18 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { useCrudResource } from "../../lib/useCrudResource";
+import AlertMessage from "../ui/AlertMessage";
+import DataTable from "../ui/DataTable";
+import EmptyState from "../ui/EmptyState";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import { registrarLog } from "../../lib/logs";
 import { formatDateTimeBR, formatNumberBR } from "../../lib/format";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 const MOEDA_SUGESTOES = ["R$", "USD", "EUR"];
 
@@ -272,78 +279,78 @@ export default function ParametrosCambiosIsland() {
   }
 
   if (!podeVer) {
-    return <div>Acesso ao módulo de Parâmetros bloqueado.</div>;
+    return <AppCard tone="config">Acesso ao modulo de Parametros bloqueado.</AppCard>;
   }
 
   const cambiosExibidos = cambios.slice(0, 5);
 
   return (
-    <div className="card-base cambios-page">
-      <h2 className="card-title">Câmbios</h2>
-      <p className="card-subtitle">Cadastre o valor de câmbio aplicado em cada dia.</p>
+    <section className="cambios-page">
+      <AppToolbar
+        tone="config"
+        title="Cambios"
+        subtitle="Cadastre o valor de cambio aplicado em cada dia."
+      />
 
       {!mostrarFormulario && (
-        <>
-          {erro && <div className="auth-error">{erro}</div>}
-          {sucesso && <div className="auth-success">{sucesso}</div>}
+        <AppCard tone="config">
+          {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
+          {sucesso && <AlertMessage variant="success">{sucesso}</AlertMessage>}
 
           {podeEscrever && (
             <div className="mb-3">
-              <button
+              <AppButton
                 type="button"
-                className="btn btn-primary w-full sm:w-auto"
+                variant="primary"
                 onClick={abrirFormulario}
                 disabled={!companyId}
               >
-                Adicionar câmbio
-              </button>
+                Adicionar cambio
+              </AppButton>
             </div>
           )}
 
           {!companyId && (
-            <div className="auth-error">
-              Você precisa estar vinculado a uma empresa para cadastrar câmbios.
-            </div>
+            <AlertMessage variant="error">
+              Voce precisa estar vinculado a uma empresa para cadastrar cambios.
+            </AlertMessage>
           )}
           {!podeEscrever && (
             <div style={{ marginTop: 8, color: "#f97316", fontSize: "0.9rem" }}>
-              Você não tem permissão para cadastrar ou remover câmbios. Solicite acesso ao
+              Voce nao tem permissao para cadastrar ou remover cambios. Solicite acesso ao
               administrador.
             </div>
           )}
 
-          <div
-            className="table-container overflow-x-auto mt-6"
-            style={{ maxHeight: "65vh", overflowY: "auto" }}
-          >
+          <div className="mt-6" style={{ maxHeight: "65vh", overflowY: "auto" }}>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2">
               <strong>{tituloTabela}</strong>
-              <button
+              <AppButton
                 type="button"
-                className="btn btn-light w-full sm:w-auto"
+                variant="secondary"
                 onClick={carregar}
                 disabled={loading}
               >
                 Recarregar
-              </button>
+              </AppButton>
             </div>
-            <table className="table-default table-header-blue table-mobile-cards min-w-[600px]">
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Moeda</th>
-                  <th>Valor (R$)</th>
-                  <th>Cadastrado por</th>
-                  <th>Criado em</th>
-                  {podeExcluir && <th className="th-actions">Ações</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {cambiosExibidos.length === 0 && (
+            {cambiosExibidos.length === 0 ? (
+              <EmptyState title="Nenhum cambio cadastrado ainda" />
+            ) : (
+              <DataTable
+                className="table-mobile-cards min-w-[600px]"
+                headers={
                   <tr>
-                    <td colSpan={podeExcluir ? 6 : 5}>Nenhum câmbio cadastrado ainda.</td>
+                    <th>Data</th>
+                    <th>Moeda</th>
+                    <th>Valor (R$)</th>
+                    <th>Cadastrado por</th>
+                    <th>Criado em</th>
+                    {podeExcluir && <th className="th-actions">Acoes</th>}
                   </tr>
-                )}
+                }
+                colSpan={podeExcluir ? 6 : 5}
+              >
                 {cambiosExibidos.map((cambio) => (
                   <tr key={cambio.id}>
                     <td data-label="Data">{cambio.data}</td>
@@ -357,46 +364,47 @@ export default function ParametrosCambiosIsland() {
                         ? formatDateTimeBR(cambio.created_at)
                         : "—"}
                     </td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        {podeEscrever && (
-                          <button
+                    {podeExcluir && (
+                      <td className="th-actions" data-label="Acoes">
+                        <div className="action-buttons">
+                          {podeEscrever && (
+                            <AppButton
+                              type="button"
+                              variant="ghost"
+                              title="Editar cambio"
+                              onClick={() => handleEdit(cambio)}
+                            >
+                              Editar
+                            </AppButton>
+                          )}
+                          <AppButton
                             type="button"
-                            className="btn-icon"
-                            title="Editar câmbio"
-                            onClick={() => handleEdit(cambio)}
-                          >
-                            ✏️
-                          </button>
-                        )}
-                        {podeExcluir && (
-                          <button
-                            type="button"
-                            className="btn-icon btn-danger"
-                            title="Excluir câmbio"
+                            variant="danger"
+                            title="Excluir cambio"
                             onClick={() => solicitarExclusao(cambio)}
                           >
-                            🗑️
-                          </button>
-                        )}
-                      </div>
-                    </td>
+                            Excluir
+                          </AppButton>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
-              </tbody>
-            </table>
+              </DataTable>
+            )}
           </div>
-        </>
+        </AppCard>
       )}
 
       {mostrarFormulario && (
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Moeda</label>
-              <input
+        <AppCard tone="config">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="form-row">
+              <AppField
+                as="input"
                 type="text"
-                className="form-input"
+                wrapperClassName="form-group"
+                label="Moeda"
                 list="moeda-sugestoes"
                 value={form.moeda}
                 onChange={(event) => handleFormChange("moeda", event.target.value)}
@@ -407,25 +415,23 @@ export default function ParametrosCambiosIsland() {
                   <option key={moeda} value={moeda} />
                 ))}
               </datalist>
-            </div>
 
-            <div className="form-group">
-              <label className="form-label">Data</label>
-              <input
+              <AppField
+                as="input"
                 type="date"
-                className="form-input w-full"
+                wrapperClassName="form-group"
+                label="Data"
                 value={form.data}
                 onFocus={selectAllInputOnFocus}
                 onChange={(event) => handleFormChange("data", event.target.value)}
                 disabled={!podeEscrever}
               />
-            </div>
 
-            <div className="form-group">
-              <label className="form-label">Valor (R$)</label>
-              <input
+              <AppField
+                as="input"
                 type="text"
-                className="form-input"
+                wrapperClassName="form-group"
+                label="Valor (R$)"
                 inputMode="decimal"
                 placeholder="Ex: 6,50"
                 value={form.valor}
@@ -433,51 +439,51 @@ export default function ParametrosCambiosIsland() {
                 disabled={!podeEscrever}
               />
             </div>
-          </div>
 
-          <div className="mobile-stack-buttons" style={{ marginTop: 8 }}>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={!podeEscrever || salvando || !companyId}
-            >
-              {salvando ? "Salvando..." : "Salvar câmbio"}
-            </button>
-            <button
-              type="button"
-              className="btn btn-light"
-              onClick={fecharFormulario}
-              disabled={salvando}
-            >
-              Cancelar
-            </button>
-          </div>
-
-          {erro && <div className="auth-error">{erro}</div>}
-          {sucesso && <div className="auth-success">{sucesso}</div>}
-
-          {!companyId && (
-            <div className="auth-error">
-              Você precisa estar vinculado a uma empresa para cadastrar câmbios.
+            <div className="mobile-stack-buttons" style={{ marginTop: 8 }}>
+              <AppButton
+                type="submit"
+                variant="primary"
+                disabled={!podeEscrever || salvando || !companyId}
+              >
+                {salvando ? "Salvando..." : "Salvar cambio"}
+              </AppButton>
+              <AppButton
+                type="button"
+                variant="secondary"
+                onClick={fecharFormulario}
+                disabled={salvando}
+              >
+                Cancelar
+              </AppButton>
             </div>
-          )}
-          {!podeEscrever && (
-            <div style={{ marginTop: 8, color: "#f97316", fontSize: "0.9rem" }}>
-              Você não tem permissão para cadastrar ou remover câmbios. Solicite acesso ao
-              administrador.
-            </div>
-          )}
-        </form>
+
+            {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
+            {sucesso && <AlertMessage variant="success">{sucesso}</AlertMessage>}
+
+            {!companyId && (
+              <AlertMessage variant="error">
+                Voce precisa estar vinculado a uma empresa para cadastrar cambios.
+              </AlertMessage>
+            )}
+            {!podeEscrever && (
+              <div style={{ marginTop: 8, color: "#f97316", fontSize: "0.9rem" }}>
+                Voce nao tem permissao para cadastrar ou remover cambios. Solicite acesso ao
+                administrador.
+              </div>
+            )}
+          </form>
+        </AppCard>
       )}
       <ConfirmDialog
         open={Boolean(cambioParaExcluir)}
-        title="Excluir câmbio"
-        message="Deseja excluir este câmbio?"
+        title="Excluir cambio"
+        message="Deseja excluir este cambio?"
         confirmLabel="Excluir"
         confirmVariant="danger"
         onCancel={() => setCambioParaExcluir(null)}
         onConfirm={confirmarExclusao}
       />
-    </div>
+    </section>
   );
 }
