@@ -269,15 +269,16 @@ const EmailSettingsAdminIsland: React.FC = () => {
                       onChange={(e) => setForm((prev) => ({ ...prev, resend_api_key: e.target.value }))}
                       placeholder="re_..."
                     />
-                    <button
+                    <AppButton
                       type="button"
+                      variant="ghost"
                       className="password-toggle"
                       onClick={() => setMostrarResend((prev) => !prev)}
                       aria-label={mostrarResend ? "Ocultar chave" : "Mostrar chave"}
                       aria-pressed={mostrarResend}
                     >
                       {mostrarResend ? "🙈" : "👁️"}
-                    </button>
+                    </AppButton>
                   </div>
                   <div className="vtur-inline-note">
                     Esta chave e usada para enviar via API HTTP, evitando limitacoes de SMTP no ambiente Cloudflare.
@@ -393,8 +394,9 @@ const EmailSettingsAdminIsland: React.FC = () => {
                           onChange={(e) => setForm((prev) => ({ ...prev, smtp_pass: e.target.value }))}
                           disabled={!usarSmtp}
                         />
-                        <button
+                        <AppButton
                           type="button"
+                          variant="ghost"
                           className="password-toggle"
                           onClick={() => setMostrarSenha((prev) => !prev)}
                           aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
@@ -402,7 +404,7 @@ const EmailSettingsAdminIsland: React.FC = () => {
                           disabled={!usarSmtp}
                         >
                           {mostrarSenha ? "🙈" : "👁️"}
-                        </button>
+                        </AppButton>
                       </div>
                     </div>
                   </div>

@@ -146,8 +146,9 @@ export default function AuthResetIsland() {
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
               />
-              <button
+              <AppButton
                 type="button"
+                variant="ghost"
                 className="password-toggle"
                 onClick={() => setMostrarSenha((prev) => !prev)}
                 aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
@@ -155,7 +156,7 @@ export default function AuthResetIsland() {
                 tabIndex={loading ? -1 : 0}
               >
                 <i className={`fa-solid ${mostrarSenha ? "fa-eye-slash" : "fa-eye"}`} />
-              </button>
+              </AppButton>
             </div>
           </div>
           <div className="form-group">
@@ -173,8 +174,9 @@ export default function AuthResetIsland() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={loading}
               />
-              <button
+              <AppButton
                 type="button"
+                variant="ghost"
                 className="password-toggle"
                 onClick={() => setMostrarConfirmacao((prev) => !prev)}
                 aria-label={mostrarConfirmacao ? "Ocultar senha" : "Mostrar senha"}
@@ -182,7 +184,7 @@ export default function AuthResetIsland() {
                 tabIndex={loading ? -1 : 0}
               >
                 <i className={`fa-solid ${mostrarConfirmacao ? "fa-eye-slash" : "fa-eye"}`} />
-              </button>
+              </AppButton>
             </div>
           </div>
           <div className="auth-actions">

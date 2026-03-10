@@ -6,6 +6,7 @@
     "dev:clean": "node scripts/dev-clean.mjs && astro dev",
     "safari:check": "node scripts/safari-check.mjs",
     "check:modulos": "node scripts/check-modulos-map.mjs",
+    "check:primer-migration": "node scripts/check-primer-migration.mjs",
     "build": "astro build && node scripts/post-build-assetsignore.mjs",
     "preview": "astro preview",
     "clean:delivery": "node scripts/clean-delivery.mjs",

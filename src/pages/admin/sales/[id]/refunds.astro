@@ -1,5 +1,6 @@
 ---
 import { supabaseServer as supabase } from "../../../../lib/supabaseServer";
+import Button from "../../../../components/ui/Button.astro";
 
 const saleId = Astro.params.id;
 
@@ -90,7 +91,7 @@ async function cancelar(formData: FormData) {
         name="reason"
         placeholder="Motivo do estorno"
       />
-      <button type="submit">Registrar estorno</button>
+      <Button type="submit">Registrar estorno</Button>
     </form>
 
     <hr />
@@ -109,9 +110,9 @@ async function cancelar(formData: FormData) {
         name="penalty"
         placeholder="Multa (se houver)"
       />
-      <button type="submit">
+      <Button type="submit">
         Cancelar venda
-      </button>
+      </Button>
     </form>
 
     <hr />

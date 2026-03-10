@@ -1,14 +1,14 @@
 import React from "react";
+import AppCard from "./primer/AppCard";
 
 type LoadingUsuarioContextProps = {
   className?: string;
 };
 
 export default function LoadingUsuarioContext({ className = "" }: LoadingUsuarioContextProps) {
-  const classes = ["card-base", "card-config", className].filter(Boolean).join(" ");
   return (
-    <div className={classes}>
+    <AppCard tone="config" className={className}>
       <strong>Carregando contexto do usuário...</strong>
-    </div>
+    </AppCard>
   );
 }

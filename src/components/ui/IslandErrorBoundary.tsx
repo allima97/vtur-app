@@ -1,4 +1,6 @@
 import React from "react";
+import AppButton from "./primer/AppButton";
+import AppCard from "./primer/AppCard";
 
 type Props = {
   name?: string;
@@ -57,19 +59,19 @@ export default class IslandErrorBoundary extends React.Component<Props, State> {
     if (!this.state.hasError) return this.props.children;
 
     return (
-      <div className="card-base card-config" style={{ marginBottom: 12 }}>
+      <AppCard className="card-config" style={{ marginBottom: 12 }}>
         <div style={{ fontWeight: 800, marginBottom: 6 }}>Erro ao carregar esta tela</div>
         <div style={{ fontSize: "0.9rem", marginBottom: 10 }}>
           {this.props.name ? `${this.props.name}: ` : ""}
           {this.state.message || "Erro inesperado"}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>
+          <AppButton type="button" variant="primary" onClick={() => window.location.reload()}>
             Recarregar
-          </button>
-          <button
+          </AppButton>
+          <AppButton
             type="button"
-            className="btn btn-light"
+            variant="secondary"
             onClick={() => {
               try {
                 window.localStorage.removeItem("dashboard_widgets");
@@ -82,9 +84,9 @@ export default class IslandErrorBoundary extends React.Component<Props, State> {
             }}
           >
             Limpar preferências do dashboard
-          </button>
+          </AppButton>
         </div>
-      </div>
+      </AppCard>
     );
   }
 }

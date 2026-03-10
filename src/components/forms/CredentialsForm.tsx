@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import AppField from "../ui/primer/AppField";
+import AppButton from "../ui/primer/AppButton";
 
 type CredentialsFormProps = {
   email: string;
@@ -53,8 +54,9 @@ export default function CredentialsForm({
             onChange={(e) => onPasswordChange(e.target.value)}
             disabled={disabled}
           />
-          <button
+          <AppButton
             type="button"
+            variant="ghost"
             className="password-toggle"
             onClick={() => setShowPassword((prev) => !prev)}
             aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
@@ -62,7 +64,7 @@ export default function CredentialsForm({
             tabIndex={disabled ? -1 : 0}
           >
             <i className={`fa-solid ${showPassword ? "fa-eye-slash" : "fa-eye"}`} />
-          </button>
+          </AppButton>
         </div>
       </div>
       <p className="auth-hint">
@@ -83,8 +85,9 @@ export default function CredentialsForm({
             onChange={(e) => onConfirmPasswordChange(e.target.value)}
             disabled={disabled}
           />
-          <button
+          <AppButton
             type="button"
+            variant="ghost"
             className="password-toggle"
             onClick={() => setShowConfirmPassword((prev) => !prev)}
             aria-label={showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
@@ -92,7 +95,7 @@ export default function CredentialsForm({
             tabIndex={disabled ? -1 : 0}
           >
             <i className={`fa-solid ${showConfirmPassword ? "fa-eye-slash" : "fa-eye"}`} />
-          </button>
+          </AppButton>
         </div>
       </div>
     </>

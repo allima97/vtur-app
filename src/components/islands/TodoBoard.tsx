@@ -674,8 +674,9 @@ export default function TodoBoard() {
 
             <div className="todo-card-actions" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
               {hasDetails && (
-                <button
+                <AppButton
                   type="button"
+                  variant="ghost"
                   style={{
                     background: card.catColor,
                     color: textColorFor(card.catColor),
@@ -695,7 +696,7 @@ export default function TodoBoard() {
                   aria-label={isExpanded ? "Ocultar detalhes" : "Exibir detalhes"}
                 >
                   {isExpanded ? "−" : "+"}
-                </button>
+                </AppButton>
               )}
 
               <AppButton
@@ -804,8 +805,9 @@ export default function TodoBoard() {
           <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
             {/* Botão expandir */}
             {hasDetails && (
-              <button
+              <AppButton
                 type="button"
+                variant="ghost"
                 style={{
                   background: card.catColor,
                   color: textColorFor(card.catColor),
@@ -825,7 +827,7 @@ export default function TodoBoard() {
                 aria-label={isExpanded ? "Ocultar detalhes" : "Exibir detalhes"}
               >
                 {isExpanded ? "−" : "+"}
-              </button>
+              </AppButton>
             )}
 
             {/* Botões de movimentação */}
@@ -1049,8 +1051,9 @@ export default function TodoBoard() {
               </div>
               {archivedCards.length > 0 && (
                 <div style={{ margin: "8px 0 0 0", borderRadius: 8, overflow: "hidden" }}>
-                  <button
+                  <AppButton
                     type="button"
+                    variant="secondary"
                     onClick={() => setArchivedOpen((o) => !o)}
                     style={{
                       width: "100%", display: "flex", alignItems: "center", gap: 10,
@@ -1063,7 +1066,7 @@ export default function TodoBoard() {
                     <span style={{ background: "#e2e8f0", borderRadius: 999, padding: "2px 8px", fontSize: 12, fontWeight: 800, color: "#64748b" }}>
                       {archivedCards.length}
                     </span>
-                  </button>
+                  </AppButton>
                   {archivedOpen && (
                     <div style={{ display: "grid", gap: 8, padding: 12, background: "#f8fafc" }}>
                       {archivedCards.map((card: any) => (
@@ -1285,8 +1288,9 @@ export default function TodoBoard() {
       </AppCard>
       {archivedCards.length > 0 && (
         <AppCard style={{ marginTop: 12, padding: 0, overflow: "hidden" }}>
-          <button
+          <AppButton
             type="button"
+            variant="secondary"
             onClick={() => setArchivedOpen((o) => !o)}
             style={{
               width: "100%", display: "flex", alignItems: "center", gap: 10,
@@ -1299,7 +1303,7 @@ export default function TodoBoard() {
             <span style={{ background: "#e2e8f0", borderRadius: 999, padding: "2px 8px", fontSize: 12, fontWeight: 800, color: "#64748b" }}>
               {archivedCards.length}
             </span>
-          </button>
+          </AppButton>
           {archivedOpen && (
             <div style={{ display: "grid", gap: 8, padding: 12, background: "#f8fafc" }}>
               {archivedCards.map((card: any) => (
@@ -1334,9 +1338,9 @@ export default function TodoBoard() {
           >
             <div className="modal-header">
               <div className="modal-title" style={{ fontWeight: 800 }}>{editingTodo ? "Editar" : "Nova"} tarefa</div>
-              <button className="modal-close" onClick={() => setCreateOpen(false)} aria-label="Fechar">
+              <AppButton className="modal-close" variant="ghost" onClick={() => setCreateOpen(false)} aria-label="Fechar">
                 {"×"}
-              </button>
+              </AppButton>
             </div>
             <form onSubmit={addTodo}>
               <div className="modal-body" style={{ display: "grid", gap: 10 }}>
@@ -1409,9 +1413,9 @@ export default function TodoBoard() {
           >
             <div className="modal-header">
               <div className="modal-title" style={{ fontWeight: 800 }}>{editingCategory ? "Editar" : "Nova"} Categoria</div>
-              <button className="modal-close" onClick={() => setCreateCategoryOpen(false)} aria-label="Fechar">
+              <AppButton className="modal-close" variant="ghost" onClick={() => setCreateCategoryOpen(false)} aria-label="Fechar">
                 {"×"}
-              </button>
+              </AppButton>
             </div>
             <form onSubmit={addCategoria}>
               <div className="modal-body" style={{ display: "grid", gap: 10 }}>
@@ -1426,22 +1430,24 @@ export default function TodoBoard() {
                 </div>
                 <div className="form-group" style={{ position: "relative" }}>
                   <label className="form-label">Cor da categoria</label>
-                  <button
+                  <AppButton
                     type="button"
+                    variant="ghost"
                     className="color-select-toggle"
                     onClick={() => setShowCatColor((v) => !v)}
                   >
                     <span className="color-dot" style={{ background: catCor }} />
                     <span>Selecionar cor</span>
                     <span className="color-caret">{"▾"}</span>
-                  </button>
+                  </AppButton>
                   {showCatColor && (
                     <div className="color-select-list" ref={catColorListRef}>
                       <div className="palette-grid">
                         {PALETTE.map((c) => (
-                          <button
+                          <AppButton
                             key={c.hex}
                             type="button"
+                            variant="ghost"
                             className={`palette-swatch ${catCor === c.hex ? "active" : ""}`}
                             style={{ background: c.hex }}
                             onClick={() => {
@@ -1470,8 +1476,9 @@ export default function TodoBoard() {
       )}
 
       {isMobile && !createOpen && !createCategoryOpen && (
-        <button
+        <AppButton
           type="button"
+          variant="primary"
           className="todo-fab"
           onClick={() =>
             mobilePanel === "categorias"
@@ -1482,7 +1489,7 @@ export default function TodoBoard() {
           title={mobilePanel === "categorias" ? "Nova categoria" : "Nova tarefa"}
         >
           +
-        </button>
+        </AppButton>
       )}
       </div>
     </AppPrimerProvider>

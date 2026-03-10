@@ -1334,8 +1334,9 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
 
   return (
     <AppPrimerProvider>
-      <button
+      <AppButton
         type="button"
+        variant="ghost"
         className="sidebar-mobile-trigger"
         aria-expanded={mobileOpen}
         aria-controls={sidebarId}
@@ -1343,7 +1344,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       >
         <span className="sidebar-mobile-icon">{mobileOpen ? "✕" : "☰"}</span>
         <span>{mobileOpen ? "Fechar" : "Menu"}</span>
-      </button>
+      </AppButton>
       <div className={`sidebar-overlay ${mobileOpen ? "visible" : ""}`} onClick={closeMobile} />
 
       <nav className={`mobile-bottom-nav${isTodoMobileNav ? " todo-nav" : ""}`} aria-label="Atalhos principais">
@@ -1375,9 +1376,10 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
           }
 
           return (
-            <button
+            <AppButton
               key={item.key}
               type="button"
+              variant="ghost"
               className={className}
               data-tone={item.tone || undefined}
               onClick={() => {
@@ -1387,11 +1389,12 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
             >
               <span className="mobile-bottom-nav-icon">{item.icon}</span>
               <span className="mobile-bottom-nav-label">{item.label}</span>
-            </button>
+            </AppButton>
           );
         })}
-        <button
+        <AppButton
           type="button"
+          variant="ghost"
           className="mobile-bottom-nav-item"
           onClick={() => {
             if (typeof window !== "undefined") {
@@ -1401,9 +1404,10 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
         >
           <span className="mobile-bottom-nav-icon">❓</span>
           <span className="mobile-bottom-nav-label">Ajuda</span>
-        </button>
-        <button
+        </AppButton>
+        <AppButton
           type="button"
+          variant="ghost"
           className="mobile-bottom-nav-item"
           aria-expanded={mobileOpen}
           aria-controls={sidebarId}
@@ -1411,7 +1415,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
         >
           <span className="mobile-bottom-nav-icon">☰</span>
           <span className="mobile-bottom-nav-label">Mais</span>
-        </button>
+        </AppButton>
       </nav>
 
       <aside id={sidebarId} className={`app-sidebar ${mobileOpen ? "open" : ""}`}>

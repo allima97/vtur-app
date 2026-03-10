@@ -1011,9 +1011,10 @@ export default function EquipeGestorIsland() {
                                       }
                                       aria-label={`${col.full} fim`}
                                     />
-                                    <button
+                                    <AppButton
                                       type="button"
-                                      className="btn-ghost btn-ghost-xs"
+                                      variant="ghost"
+                                      size="small"
                                       onClick={() => toggleDetalheDiasUteis(u.id)}
                                       title={
                                         detalheAberto
@@ -1027,7 +1028,7 @@ export default function EquipeGestorIsland() {
                                       }
                                     >
                                       ⚙️
-                                    </button>
+                                    </AppButton>
                                   </div>
                                 </td>
                               );
@@ -1226,9 +1227,10 @@ export default function EquipeGestorIsland() {
                                       }
                                       aria-label={`${col.full} fim`}
                                     />
-                                    <button
+                                    <AppButton
                                       type="button"
-                                      className="btn-ghost btn-ghost-xs"
+                                      variant="ghost"
+                                      size="small"
                                       onClick={() => toggleDetalheDiasUteis(u.id)}
                                       title={
                                         detalheAberto ? "Ocultar dias úteis" : "Detalhar dias úteis"
@@ -1238,7 +1240,7 @@ export default function EquipeGestorIsland() {
                                       }
                                     >
                                       ⚙️
-                                    </button>
+                                    </AppButton>
                                   </div>
                                 </td>
                               );

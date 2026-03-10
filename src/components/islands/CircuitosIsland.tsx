@@ -1582,14 +1582,15 @@ export default function CircuitosIsland() {
                                 dia.cidades.map((cidade) => (
                                   <span key={cidade.id} className="vtur-import-city-tag">
                                     <span>{cidade.label}</span>
-                                    <button
+                                    <AppButton
                                       type="button"
+                                      variant="ghost"
                                       className="vtur-import-city-tag-remove"
                                       onClick={() => removerCidadeDoDia(dia.tempId, cidade.id)}
                                       disabled={modoSomenteLeitura}
                                     >
                                       x
-                                    </button>
+                                    </AppButton>
                                   </span>
                                 ))
                               )}

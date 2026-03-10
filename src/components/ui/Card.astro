@@ -1,8 +1,9 @@
 ---
 const { color = "blue", title } = Astro.props;
+const toneClass = color === "blue" ? "vtur-app-card-info" : color === "config" ? "vtur-app-card-config" : "";
 ---
 
-<section class={`card-base card-${color}`}>
+<section class={["vtur-app-card", toneClass].filter(Boolean).join(" ")}>
   {title && <h2 class="card-title">{title}</h2>}
   <slot />
 </section>

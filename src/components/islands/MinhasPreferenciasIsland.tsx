@@ -548,16 +548,17 @@ export default function MinhasPreferenciasIsland() {
 
                   {!buscandoCidade &&
                     resultadosCidade.map((c) => (
-                      <button
+                      <AppButton
                         key={c.id}
                         type="button"
+                        variant="ghost"
                         className="w-full text-left"
                         style={{ padding: "6px 12px" }}
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => selecionarCidade(c)}
                       >
                         {c.nome}
-                      </button>
+                      </AppButton>
                     ))}
                 </AppCard>
               )}
@@ -747,9 +748,9 @@ export default function MinhasPreferenciasIsland() {
           >
             <div className="modal-header">
               <div className="modal-title">Compartilhar</div>
-              <button className="btn-ghost" onClick={() => setSharePrefId(null)} aria-label="Fechar">
+              <AppButton variant="ghost" onClick={() => setSharePrefId(null)} aria-label="Fechar">
                 x
-              </button>
+              </AppButton>
             </div>
             <div className="modal-body">
               {sharePrefItem && (sharePrefItem.shares || []).length > 0 && (

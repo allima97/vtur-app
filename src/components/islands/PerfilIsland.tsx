@@ -1004,15 +1004,16 @@ function formatCnpj(value: string) {
                   onChange={(e) => setNovaSenha(e.target.value)}
                   placeholder="Mínimo 6 caracteres"
                 />
-                <button
+                <AppButton
                   type="button"
+                  variant="ghost"
                   className="password-toggle"
                   onClick={() => setMostrarSenha((prev) => !prev)}
                   aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
                   aria-pressed={mostrarSenha}
                 >
                   <i className={`fa-solid ${mostrarSenha ? "fa-eye-slash" : "fa-eye"}`} />
-                </button>
+                </AppButton>
               </div>
             </div>
             <div className="form-group" style={{ marginTop: 6 }}>
@@ -1024,15 +1025,16 @@ function formatCnpj(value: string) {
                   value={confirmaSenha}
                   onChange={(e) => setConfirmaSenha(e.target.value)}
                 />
-                <button
+                <AppButton
                   type="button"
+                  variant="ghost"
                   className="password-toggle"
                   onClick={() => setMostrarConfirmacao((prev) => !prev)}
                   aria-label={mostrarConfirmacao ? "Ocultar senha" : "Mostrar senha"}
                   aria-pressed={mostrarConfirmacao}
                 >
                   <i className={`fa-solid ${mostrarConfirmacao ? "fa-eye-slash" : "fa-eye"}`} />
-                </button>
+                </AppButton>
               </div>
             </div>
             <div className="mobile-stack-buttons" style={{ marginTop: 16 }}>

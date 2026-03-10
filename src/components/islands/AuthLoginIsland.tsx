@@ -303,15 +303,16 @@ export default function AuthLoginIsland() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
-                <button
+                <AppButton
                   type="button"
+                  variant="ghost"
                   className="password-toggle"
                   onClick={() => setMostrarSenha((prev) => !prev)}
                   aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
                   aria-pressed={mostrarSenha}
                 >
                   <i className={`fa-solid ${mostrarSenha ? "fa-eye-slash" : "fa-eye"}`} />
-                </button>
+                </AppButton>
               </div>
             </div>
             <div className="auth-links auth-links-forgot">

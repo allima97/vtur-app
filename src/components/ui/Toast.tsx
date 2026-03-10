@@ -52,7 +52,7 @@ export function ToastStack({
         return (
           <div
             key={toast.id}
-            className="card-base"
+            className="vtur-toast-item"
             role={onDismiss ? "button" : undefined}
             tabIndex={onDismiss ? 0 : undefined}
             onClick={onDismiss ? () => onDismiss(toast.id) : undefined}

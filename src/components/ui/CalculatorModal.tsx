@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import AppButton from "./primer/AppButton";
 
 type CalculatorModalProps = {
   open: boolean;
@@ -502,8 +503,9 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
             onMouseDown={handleCalcMouseDown}
             onTouchStart={handleCalcTouchStart}
           >
-            <button
+            <AppButton
               type="button"
+              variant="ghost"
               onClick={onClose}
               aria-label="Fechar calculadora"
               style={{
@@ -520,7 +522,7 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
               onTouchStart={(event) => event.stopPropagation()}
             >
               X
-            </button>
+            </AppButton>
             <input
               type="text"
               value={formatCalcDisplay(calcValue)}
@@ -588,9 +590,10 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
                   : "linear-gradient(180deg, #d7d5cc, #bdbbb2)";
                 const color = isOperator ? "#1f1f1f" : "#1f2937";
                 return (
-                  <button
+                  <AppButton
                     key={key.label}
                     type="button"
+                    variant="ghost"
                     onClick={() => {
                       if (key.action === "clear") return clearCalc();
                       if (key.action === "toggle_sign") return toggleSign();
@@ -619,7 +622,7 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
                     }}
                   >
                     {key.label}
-                  </button>
+                  </AppButton>
                 );
               })}
             </div>
