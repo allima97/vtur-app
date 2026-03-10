@@ -6,6 +6,11 @@ import AlertMessage from "../ui/AlertMessage";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { fetchGestorEquipeVendedorIds } from "../../lib/gestorEquipe";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type UserRow = {
   id: string;
@@ -474,42 +479,33 @@ export default function MasterUsuariosIsland() {
   }
 
   return (
-    <div className="mt-6 admin-page admin-usuarios-page">
-      <div className="card-base card-blue mb-3 list-toolbar-sticky">
-        <div
-          className="form-row mobile-stack"
-          style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
-        >
-          <div className="form-group">
-            <h3 className="page-title">👥 Usuários do portfólio</h3>
-            <p className="page-subtitle">
-              Cadastre, ative e organize equipes das empresas aprovadas.
-            </p>
-          </div>
-          <div className="form-group" style={{ alignItems: "flex-end" }}>
-            <button className="btn btn-primary w-full sm:w-auto" onClick={openCreateUserModal}>
+    <AppPrimerProvider>
+      <div className="mt-6 admin-page admin-usuarios-page vtur-legacy-module">
+        <AppToolbar
+          className="mb-3 list-toolbar-sticky"
+          tone="info"
+          sticky
+          title="Usuários do portfólio"
+          subtitle="Cadastre, ative e organize equipes das empresas aprovadas."
+          actions={
+            <AppButton type="button" variant="primary" onClick={openCreateUserModal}>
               Enviar convite
-            </button>
-          </div>
-        </div>
-        <div className="form-row mobile-stack" style={{ marginTop: 12 }}>
-          <div className="form-group">
-            <label className="form-label">Filial</label>
-            <select
-              className="form-select"
+            </AppButton>
+          }
+        >
+          <div className="vtur-card-form-grid">
+            <AppField
+              as="select"
+              label="Filial"
               value={empresaFiltro}
               onChange={(e) => setEmpresaFiltro(e.target.value)}
-            >
-              <option value="all">Todas</option>
-              {empresas.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome_fantasia}
-                </option>
-              ))}
-            </select>
+              options={[
+                { label: "Todas", value: "all" },
+                ...empresas.map((c) => ({ label: c.nome_fantasia, value: c.id })),
+              ]}
+            />
           </div>
-        </div>
-      </div>
+        </AppToolbar>
 
       {erro && (
         <div className="mb-3">
@@ -518,7 +514,9 @@ export default function MasterUsuariosIsland() {
       )}
 
       {loading ? (
-        <p className="mt-3">Carregando usuários...</p>
+        <AppCard tone="config" className="mt-4">
+          Carregando usuários...
+        </AppCard>
       ) : (
         <div className="table-container overflow-x-auto mt-4">
           <table className="table-default table-header-blue table-mobile-cards min-w-[980px]">
@@ -570,57 +568,43 @@ export default function MasterUsuariosIsland() {
         </div>
       )}
 
-      <div className="card-base card-config mt-6">
-        <h4 className="mb-2">Equipes (Gestor x Vendedores)</h4>
-        <div className="form-row mobile-stack">
-          <div className="form-group">
-            <label className="form-label">Filial</label>
-            <select
-              className="form-select"
-              value={empresaEquipeId}
-              onChange={(e) => setEmpresaEquipeId(e.target.value)}
-            >
-              {empresas.length === 0 && <option value="">Sem empresas</option>}
-              {empresas.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome_fantasia}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Gestor</label>
-            <select
-              className="form-select"
-              value={gestorEquipeId}
-              onChange={(e) => setGestorEquipeId(e.target.value)}
-            >
-              {gestoresDisponiveis.length === 0 && <option value="">Sem gestores</option>}
-              {gestoresDisponiveis.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.nome_completo || "Gestor"}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Equipe compartilhada</label>
-            <select
-              className="form-select"
-              value={gestorEquipeBaseId}
-              onChange={(e) => salvarEquipeCompartilhada(e.target.value)}
-              disabled={!gestorEquipeId || salvandoEquipeCompartilhada}
-            >
-              <option value="">Equipe própria</option>
-              {gestoresDisponiveis
+      <AppCard className="mt-6" tone="config" title="Equipes (Gestor x Vendedores)">
+        <div className="vtur-card-form-grid vtur-form-grid-3">
+          <AppField
+            as="select"
+            label="Filial"
+            value={empresaEquipeId}
+            onChange={(e) => setEmpresaEquipeId(e.target.value)}
+            options={
+              empresas.length === 0
+                ? [{ label: "Sem empresas", value: "" }]
+                : empresas.map((c) => ({ label: c.nome_fantasia, value: c.id }))
+            }
+          />
+          <AppField
+            as="select"
+            label="Gestor"
+            value={gestorEquipeId}
+            onChange={(e) => setGestorEquipeId(e.target.value)}
+            options={
+              gestoresDisponiveis.length === 0
+                ? [{ label: "Sem gestores", value: "" }]
+                : gestoresDisponiveis.map((g) => ({ label: g.nome_completo || "Gestor", value: g.id }))
+            }
+          />
+          <AppField
+            as="select"
+            label="Equipe compartilhada"
+            value={gestorEquipeBaseId}
+            onChange={(e) => salvarEquipeCompartilhada(e.target.value)}
+            disabled={!gestorEquipeId || salvandoEquipeCompartilhada}
+            options={[
+              { label: "Equipe própria", value: "" },
+              ...gestoresDisponiveis
                 .filter((g) => g.id !== gestorEquipeId)
-                .map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {`Usar equipe de ${g.nome_completo || "Gestor"}`}
-                  </option>
-                ))}
-            </select>
-          </div>
+                .map((g) => ({ label: `Usar equipe de ${g.nome_completo || "Gestor"}`, value: g.id })),
+            ]}
+          />
         </div>
 
         {gestorEquipeBaseId && (
@@ -671,13 +655,14 @@ export default function MasterUsuariosIsland() {
             </tbody>
           </table>
         </div>
-      </div>
+      </AppCard>
 
-      <div className="card-base card-config mt-6">
-        <h4 className="mb-2">Convites pendentes</h4>
-        <p className="text-sm mb-3" style={{ opacity: 0.8 }}>
-          Usuarios convidados que ainda nao finalizaram o perfil.
-        </p>
+      <AppCard
+        className="mt-6"
+        tone="config"
+        title="Convites pendentes"
+        subtitle="Usuários convidados que ainda não finalizaram o perfil."
+      >
         <div className="table-container overflow-x-auto">
           <table className="table-default table-header-blue table-mobile-cards min-w-[900px]">
             <thead>
@@ -715,12 +700,12 @@ export default function MasterUsuariosIsland() {
             </tbody>
           </table>
         </div>
-      </div>
+      </AppCard>
 
       {createModalOpen && (
         <div className="fixed inset-0 z-40 bg-black/50 flex justify-center items-center p-4">
           <form
-            className="card-base card-config w-full max-w-xl"
+            className="card-base card-config w-full max-w-xl vtur-modal-form"
             onSubmit={(e) => {
               e.preventDefault();
               setMensagemConvite(null);
@@ -795,111 +780,96 @@ export default function MasterUsuariosIsland() {
           >
             <div className="flex justify-between items-center mb-3">
               <h4 className="text-lg font-semibold">Cadastro de usuário corporativo</h4>
-              <button
+              <AppButton
                 type="button"
-                className="btn btn-light"
+                variant="default"
                 onClick={() => setCreateModalOpen(false)}
                 disabled={enviandoConvite}
               >
                 Fechar
-              </button>
+              </AppButton>
             </div>
 
             {mensagemConvite && (
-              <div className="card-base card-config mb-3">{mensagemConvite}</div>
+              <AlertMessage variant="warning" className="mb-3">
+                {mensagemConvite}
+              </AlertMessage>
             )}
 
-            <div className="form-group">
-              <label className="form-label">Nome completo</label>
-                <input
-                  className="form-input"
-                  value={novoNomeCompleto}
-                  onChange={(e) => setNovoNomeCompleto(e.target.value)}
-                  onBlur={(e) => setNovoNomeCompleto(titleCaseWithExceptions(e.target.value))}
-                  required
-                  placeholder="Nome do usuário"
-                />
-              </div>
-
-            <div className="form-group">
-              <label className="form-label">E-mail</label>
-              <input
+            <div className="vtur-card-form-grid vtur-form-grid-2">
+              <AppField
+                label="Nome completo"
+                value={novoNomeCompleto}
+                onChange={(e) => setNovoNomeCompleto(e.target.value)}
+                onBlur={(e) => setNovoNomeCompleto(titleCaseWithExceptions(e.target.value))}
+                required
+                placeholder="Nome do usuário"
+              />
+              <AppField
+                as="input"
                 type="email"
-                className="form-input"
+                label="E-mail"
                 value={novoEmail}
                 onChange={(e) => setNovoEmail(e.target.value.toLowerCase())}
                 required
                 placeholder="usuario@empresa.com"
                 disabled={enviandoConvite}
               />
-            </div>
-
-            <div className="form-row mt-2">
-              <div className="form-group flex-1">
-                <label className="form-label">Cargo</label>
-                <select
-                  className="form-select"
-                  value={novoTipoUsuarioId}
-                  onChange={(e) => setNovoTipoUsuarioId(e.target.value)}
-                >
-                  <option value="">Selecione</option>
-                  {userTypes.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group flex-1">
-                <label className="form-label">Empresa</label>
-                <select
-                  className="form-select"
-                  value={novaEmpresaId}
-                  onChange={(e) => setNovaEmpresaId(e.target.value)}
-                >
-                  <option value="">Selecione</option>
-                  {empresas.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nome_fantasia}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group flex-1">
-                <label className="form-label">Ativo?</label>
-                <select
-                  className="form-select"
-                  value={novoAtivo ? "true" : "false"}
-                  onChange={(e) => setNovoAtivo(e.target.value === "true")}
-                >
-                  <option value="true">Sim</option>
-                  <option value="false">Não</option>
-                </select>
-              </div>
+              <AppField
+                as="select"
+                label="Cargo"
+                value={novoTipoUsuarioId}
+                onChange={(e) => setNovoTipoUsuarioId(e.target.value)}
+                options={[
+                  { label: "Selecione", value: "" },
+                  ...userTypes.map((t) => ({ label: t.name, value: t.id })),
+                ]}
+              />
+              <AppField
+                as="select"
+                label="Empresa"
+                value={novaEmpresaId}
+                onChange={(e) => setNovaEmpresaId(e.target.value)}
+                options={[
+                  { label: "Selecione", value: "" },
+                  ...empresas.map((c) => ({ label: c.nome_fantasia, value: c.id })),
+                ]}
+              />
+              <AppField
+                as="select"
+                label="Ativo?"
+                value={novoAtivo ? "true" : "false"}
+                onChange={(e) => setNovoAtivo(e.target.value === "true")}
+                options={[
+                  { label: "Sim", value: "true" },
+                  { label: "Não", value: "false" },
+                ]}
+              />
             </div>
 
             <div className="flex gap-2 flex-wrap mt-3 mobile-stack-buttons">
-              <button
+              <AppButton
                 type="submit"
-                className="btn btn-primary"
+                variant="primary"
                 disabled={enviandoConvite}
               >
                 Enviar convite
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
-                className="btn btn-light"
+                variant="default"
                 onClick={() => setCreateModalOpen(false)}
                 disabled={enviandoConvite}
               >
                 Cancelar
-              </button>
+              </AppButton>
             </div>
           </form>
         </div>
       )}
 
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
-    </div>
+      </div>
+    </AppPrimerProvider>
   );
 }

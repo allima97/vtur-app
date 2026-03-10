@@ -6,6 +6,11 @@ import AlertMessage from "../ui/AlertMessage";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { fetchGestorEquipeVendedorIds } from "../../lib/gestorEquipe";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type UsuarioRow = {
   id: string;
@@ -692,56 +697,49 @@ export default function EquipeGestorIsland() {
 
   if (!isGestorUser(usuario) && !isMasterUser(usuario) && !isAdminUser(usuario) && !podeVer) {
     return (
-      <div className="card-base card-config">
-        Apenas gestores, master ou usuarios com permissao podem definir equipes.
-      </div>
+      <AppPrimerProvider>
+        <AppCard tone="config">Apenas gestores, master ou usuarios com permissao podem definir equipes.</AppCard>
+      </AppPrimerProvider>
     );
   }
 
   if (usuario.uso_individual) {
     return (
-      <div className="card-base card-config">
-        Usuários em plano individual não possuem equipe.
-      </div>
+      <AppPrimerProvider>
+        <AppCard tone="config">Usuários em plano individual não possuem equipe.</AppCard>
+      </AppPrimerProvider>
     );
   }
   if (!vendedorTypeId) {
     return (
-      <div className="card-base card-config">
-        Tipo de usuário VENDEDOR não configurado. Cadastre em user_types.
-      </div>
+      <AppPrimerProvider>
+        <AppCard tone="config">Tipo de usuário VENDEDOR não configurado. Cadastre em user_types.</AppCard>
+      </AppPrimerProvider>
     );
   }
 
   return (
-    <div className="mt-6 gestor-page">
-      <div className="card-base card-blue list-toolbar-sticky mb-3">
-        <div className="form-row mobile-stack" style={{ gap: 12 }}>
-          <div className="form-group">
-            <h3 className="page-title">👥 Equipe do gestor</h3>
-            <p className="page-subtitle">
-              Gerencie os vendedores vinculados à sua empresa.
-            </p>
-          </div>
-          <div className="form-group" style={{ alignItems: "flex-end" }}>
-            <div className="text-sm opacity-75" style={{ textAlign: "right" }}>
-              {Object.keys(relacoes).length} vendedor(es) atribuídos
-            </div>
-            <div
-              className="flex gap-2 flex-wrap mobile-stack-buttons"
-              style={{ justifyContent: "flex-end", width: "100%" }}
-            >
+    <AppPrimerProvider>
+      <div className="mt-6 gestor-page vtur-legacy-module">
+        <AppToolbar
+          className="mb-3 list-toolbar-sticky"
+          tone="info"
+          sticky
+          title="Equipe do gestor"
+          subtitle="Gerencie os vendedores vinculados à sua empresa."
+          actions={
+            <div className="vtur-card-toolbar-actions">
+              <span className="vtur-inline-status">{Object.keys(relacoes).length} vendedor(es) atribuídos</span>
               {podeCriarEquipe ? (
-                <button className="btn btn-primary" onClick={() => setCreateOpen(true)}>
+                <AppButton type="button" variant="primary" onClick={() => setCreateOpen(true)}>
                   Novo usuário
-                </button>
+                </AppButton>
               ) : (
                 <span className="text-sm opacity-70">Somente leitura</span>
               )}
             </div>
-          </div>
-        </div>
-      </div>
+          }
+        />
 
       {erro && (
         <div className="mb-3 mt-3">
@@ -759,58 +757,53 @@ export default function EquipeGestorIsland() {
       )}
 
       {loading ? (
-        <p className="mt-3">Carregando equipe...</p>
+        <AppCard tone="config" className="mt-3">Carregando equipe...</AppCard>
       ) : (
         <>
           {createOpen && podeCriarEquipe && (
-            <div className="card-base card-config mt-3">
-              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                <h4 className="text-lg font-semibold">Cadastrar usuário da equipe</h4>
-                <button className="btn btn-light" onClick={() => setCreateOpen(false)}>
+            <AppCard
+              className="mt-3"
+              tone="config"
+              title="Cadastrar usuário da equipe"
+              actions={
+                <AppButton type="button" variant="default" onClick={() => setCreateOpen(false)}>
                   Fechar
-                </button>
+                </AppButton>
+              }
+            >
+              <div className="vtur-card-form-grid vtur-form-grid-2">
+                <AppField
+                  label="Nome completo"
+                  placeholder="Nome do vendedor"
+                  value={novoNome}
+                  onChange={(e) => setNovoNome(e.target.value)}
+                  onBlur={(e) => setNovoNome(titleCaseWithExceptions(e.target.value))}
+                />
+                <AppField
+                  as="input"
+                  type="email"
+                  label="E-mail *"
+                  placeholder="email@empresa.com"
+                  value={novoEmail}
+                  onChange={(e) => setNovoEmail(e.target.value.toLowerCase())}
+                  required
+                  caption="Será enviado um e-mail para confirmação."
+                />
               </div>
-              <div className="form-row mobile-stack" style={{ marginTop: 12, gap: 12 }}>
-                <div className="form-group flex-1">
-                  <label className="form-label">Nome completo</label>
-                  <input
-                    className="form-input"
-                    placeholder="Nome do vendedor"
-                    value={novoNome}
-                    onChange={(e) => setNovoNome(e.target.value)}
-                    onBlur={(e) => setNovoNome(titleCaseWithExceptions(e.target.value))}
-                  />
-                </div>
-                <div className="form-group flex-1" style={{ flex: "2 1 0" }}>
-                  <label className="form-label">E-mail *</label>
-                  <input
-                    className="form-input"
-                    type="email"
-                    placeholder="email@empresa.com"
-                    value={novoEmail}
-                    onChange={(e) => setNovoEmail(e.target.value.toLowerCase())}
-                    required
-                  />
-                  <small>Será enviado um e-mail para confirmação.</small>
-                </div>
-              </div>
-              <div className="flex gap-2 flex-wrap mobile-stack-buttons" style={{ marginTop: 12 }}>
-                <button
-                  className="btn btn-primary"
-                  onClick={criarUsuarioEquipe}
-                  disabled={criando}
-                >
+              <div className="vtur-form-actions">
+                <AppButton type="button" variant="primary" onClick={criarUsuarioEquipe} disabled={criando}>
                   {criando ? "Enviando..." : "Enviar convite"}
-                </button>
+                </AppButton>
               </div>
-            </div>
+            </AppCard>
           )}
 
-          <div className="card-base card-config mb-3">
-            <h4 className="text-lg font-semibold">Convites pendentes</h4>
-            <p className="text-sm mt-1" style={{ opacity: 0.8 }}>
-              Usuarios convidados que ainda nao finalizaram o perfil.
-            </p>
+          <AppCard
+            className="mb-3"
+            tone="config"
+            title="Convites pendentes"
+            subtitle="Usuários convidados que ainda não finalizaram o perfil."
+          >
             <div className="table-container overflow-x-auto" style={{ marginTop: 12 }}>
               <table className="table-default table-mobile-cards min-w-[780px]">
                 <thead>
@@ -850,22 +843,17 @@ export default function EquipeGestorIsland() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </AppCard>
 
-          <div className="card-base card-blue mb-3">
-            <div className="form-group">
-              <label className="form-label">Buscar usuário</label>
-              <input
-                className="form-input"
-                placeholder="Nome ou e-mail..."
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-              />
-            </div>
-            <p className="text-xs mt-2" style={{ opacity: 0.7 }}>
-              Apenas usuários corporativos da sua empresa aparecem aqui.
-            </p>
-          </div>
+          <AppCard className="mb-3" tone="info">
+            <AppField
+              label="Buscar usuário"
+              placeholder="Nome ou e-mail..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              caption="Apenas usuários corporativos da sua empresa aparecem aqui."
+            />
+          </AppCard>
 
           <div className="table-container overflow-x-auto">
             <table className="table-default table-mobile-cards min-w-[720px]">
@@ -929,18 +917,16 @@ export default function EquipeGestorIsland() {
             </table>
           </div>
 
-          <div className="card-base card-blue mt-4">
-            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-              <div className="flex flex-col gap-1">
-                <h4 className="text-lg font-semibold">Horário de trabalho</h4>
-                <p className="text-sm opacity-80">
-                  Defina o horário padrão por dia da semana e se deve aplicar automaticamente
-                  quando a escala for marcada como Trabalho.
-                </p>
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  className="btn btn-primary"
+          <AppCard
+            className="mt-4"
+            tone="info"
+            title="Horário de trabalho"
+            subtitle="Defina o horário padrão por dia da semana e se deve aplicar automaticamente quando a escala for marcada como Trabalho."
+            actions={
+              <div className="vtur-card-toolbar-actions">
+                <AppButton
+                  type="button"
+                  variant="primary"
                   onClick={salvarTodosHorarios}
                   disabled={
                     !podeEditarHorarios ||
@@ -949,12 +935,11 @@ export default function EquipeGestorIsland() {
                   }
                 >
                   {salvandoHorarios ? "Salvando..." : "Salvar todos"}
-                </button>
-                {!podeEditarHorarios && (
-                  <span className="text-sm opacity-70">Somente leitura</span>
-                )}
+                </AppButton>
+                {!podeEditarHorarios && <span className="text-sm opacity-70">Somente leitura</span>}
               </div>
-            </div>
+            }
+          >
 
             <h5 className="mt-3" style={{ fontWeight: 800 }}>
               Gestores
@@ -1378,11 +1363,12 @@ export default function EquipeGestorIsland() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </AppCard>
         </>
       )}
 
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
-    </div>
+      </div>
+    </AppPrimerProvider>
   );
 }

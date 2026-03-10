@@ -4,6 +4,12 @@ import { registrarLog } from "../../lib/logs";
 import { SUPPORT_EMAIL, SYSTEM_NAME } from "../../lib/systemName";
 import { clearPermissoesCache } from "../../lib/permissoesCache";
 import { refreshPermissoes } from "../../lib/permissoesStore";
+import AlertMessage from "../ui/AlertMessage";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
 export default function AuthLoginIsland() {
   const [email, setEmail] = useState("");
@@ -223,115 +229,105 @@ export default function AuthLoginIsland() {
   }
 
   return (
-    <div className="auth-container">
-      <div className="auth-card auth-card-lg">
-        <div className="auth-header">
-          <div className="auth-icon">
-            <i className="fa-solid fa-plane-departure" aria-hidden />
-          </div>
-          <h1>{`Bem-vindo ao ${SYSTEM_NAME}`}</h1>
-          <p className="auth-subtitle">Use seu e-mail e senha para acessar ou faça seu cadastro</p>
-        </div>
+    <AppPrimerProvider>
+      <div className="auth-container">
+        <AppCard
+          className="auth-card auth-card-lg"
+          title={`Bem-vindo ao ${SYSTEM_NAME}`}
+          subtitle="Use seu e-mail e senha para acessar ou faça seu cadastro"
+        >
+          {mensagem && (
+            <AlertMessage
+              variant={mensagem.tipo === "danger" ? "error" : mensagem.tipo === "warning" ? "warning" : "success"}
+              className="mb-3"
+            >
+              {mensagem.texto}
+            </AlertMessage>
+          )}
+          {erro && (
+            <AlertMessage variant="error" className="mb-3">
+              {erro}
+            </AlertMessage>
+          )}
 
-        {mensagem && (
-          <div className={`alert alert-${mensagem.tipo}`} style={{ marginBottom: 12 }}>
-            {mensagem.texto}
-          </div>
-        )}
-        {erro && <div className="alert alert-danger" style={{ marginBottom: 16 }}>{erro}</div>}
-
-        {/* Modal de Acesso Suspenso */}
-        {modalSuspenso && (
-          <div className="modal">
-            <div className="modal-overlay" onClick={fecharModalSuspenso}></div>
-            <div className="modal-content">
-              <div className="modal-header">
-                <i className="fa-solid fa-triangle-exclamation text-yellow-600"></i>
-                <h2>Acesso Suspenso</h2>
-              </div>
-              <div className="modal-body">
-                <p className="text-lg font-semibold mb-4">Atenção!</p>
-                <p className="text-gray-700 mb-6">
-                  Seu acesso está suspenso, por favor entrar em contato com o Gestor ou Administrador do sistema.
+          <AppNoticeDialog
+            open={modalSuspenso}
+            title="Acesso suspenso"
+            onClose={fecharModalSuspenso}
+            message={
+              <div style={{ display: "grid", gap: 12 }}>
+                <p style={{ margin: 0, fontWeight: 700 }}>
+                  Seu acesso está suspenso. Entre em contato com o gestor ou administrador do sistema.
                 </p>
-                <div className="contact-info">
-                  <p className="text-sm text-gray-600">Se você acredita que isto é um erro, entre em contato:</p>
-                  <ul className="mt-3 space-y-2 text-sm">
-                    <li><strong>Email:</strong> {SUPPORT_EMAIL}</li>
-                    <li><strong>Telefone:</strong> (11) 1234-5678</li>
+                <div>
+                  <p style={{ margin: "0 0 6px", color: "#475569", fontSize: 14 }}>
+                    Se você acredita que isso é um erro, entre em contato:
+                  </p>
+                  <ul style={{ margin: 0, paddingLeft: 18 }}>
+                    <li>
+                      <strong>E-mail:</strong> {SUPPORT_EMAIL}
+                    </li>
+                    <li>
+                      <strong>Telefone:</strong> (11) 1234-5678
+                    </li>
                   </ul>
                 </div>
               </div>
-              <div className="modal-footer">
-                <button onClick={fecharModalSuspenso} className="btn btn-secondary">Fechar</button>
-              </div>
-            </div>
-          </div>
-        )}
+            }
+          />
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div className="form-group">
-            <label htmlFor="email"><i className="fa-solid fa-envelope"></i> E-mail</label>
-            <input
+          <form onSubmit={handleSubmit} className="auth-form">
+            <AppField
+              as="input"
               type="email"
               id="email"
-              className="form-input"
+              label="E-mail"
               placeholder="seu@email.com"
               required
               autoComplete="email"
               value={email}
-              onChange={e => setEmail(e.target.value.toLowerCase())}
+              onChange={(e) => setEmail(e.target.value.toLowerCase())}
             />
-          </div>
-          <div className="form-group">
-            <label htmlFor="senha"><i className="fa-solid fa-lock"></i> Senha</label>
-            <div className="password-field">
-              <input
-                type={mostrarSenha ? "text" : "password"}
-                id="senha"
-                className="form-input"
-                placeholder="Digite sua senha"
-                required
-                autoComplete="current-password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setMostrarSenha((prev) => !prev)}
-                aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
-                aria-pressed={mostrarSenha}
-              >
-                <i className={`fa-solid ${mostrarSenha ? "fa-eye-slash" : "fa-eye"}`} />
-              </button>
+            <div className="form-group">
+              <label htmlFor="senha" className="form-label">
+                Senha
+              </label>
+              <div className="password-field">
+                <input
+                  type={mostrarSenha ? "text" : "password"}
+                  id="senha"
+                  className="form-input"
+                  placeholder="Digite sua senha"
+                  required
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setMostrarSenha((prev) => !prev)}
+                  aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
+                  aria-pressed={mostrarSenha}
+                >
+                  <i className={`fa-solid ${mostrarSenha ? "fa-eye-slash" : "fa-eye"}`} />
+                </button>
+              </div>
             </div>
-          </div>
-          <div className="auth-links auth-links-forgot">
-            <a href="/auth/recover">
-              <i className="fa-solid fa-unlock-keyhole"></i>
-              Esqueceu a senha? Redefinir
-            </a>
-          </div>
-          <div className="auth-actions">
-            <button
-              type="submit"
-              className="btn btn-primary btn-block"
-              disabled={loading}
-            >
-              <i className="fa-solid fa-right-to-bracket"></i>
-              {loading ? " Entrando..." : " Entrar"}
-            </button>
-            <a
-              href="/auth/register"
-              className="btn btn-secondary btn-block"
-            >
-              <i className="fa-solid fa-user-plus"></i>
-              Criar Nova Conta
-            </a>
-          </div>
-        </form>
+            <div className="auth-links auth-links-forgot">
+              <a href="/auth/recover">Esqueceu a senha? Redefinir</a>
+            </div>
+            <div className="auth-actions">
+              <AppButton type="submit" variant="primary" disabled={loading}>
+                {loading ? "Entrando..." : "Entrar"}
+              </AppButton>
+              <a href="/auth/register" className="btn btn-secondary btn-block">
+                Criar nova conta
+              </a>
+            </div>
+          </form>
+        </AppCard>
       </div>
-    </div>
+    </AppPrimerProvider>
   );
 }

@@ -1,3 +1,4 @@
+import { Dialog, Select } from "@primer/react";
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
@@ -12,7 +13,14 @@ import {
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import AlertMessage from "../ui/AlertMessage";
 import ConfirmDialog from "../ui/ConfirmDialog";
+import DataTable from "../ui/DataTable";
+import TableActions from "../ui/TableActions";
 import { ToastStack, useToastQueue } from "../ui/Toast";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type NivelPermissao = "none" | "view" | "create" | "edit" | "delete" | "admin";
 
@@ -417,327 +425,312 @@ export default function AdminUserTypesIsland() {
   }
 
   if (loadingPerm) return <LoadingUsuarioContext />;
-  if (!podeVer) return <div>Acesso negado.</div>;
-  if (!isSystemAdmin) return <div>Somente usuários ADMIN podem gerenciar tipos de usuário.</div>;
+  if (!podeVer) {
+    return (
+      <AppPrimerProvider>
+        <div className="page-content-wrap admin-page admin-user-types-page">
+          <AppCard tone="config">Acesso negado.</AppCard>
+        </div>
+      </AppPrimerProvider>
+    );
+  }
+  if (!isSystemAdmin) {
+    return (
+      <AppPrimerProvider>
+        <div className="page-content-wrap admin-page admin-user-types-page">
+          <AppCard tone="config">Somente usuarios ADMIN podem gerenciar tipos de usuario.</AppCard>
+        </div>
+      </AppPrimerProvider>
+    );
+  }
 
   return (
-    <div className="admin-page admin-user-types-page mt-6">
-      <div className="card-base card-blue mb-3 list-toolbar-sticky">
-        <div
-          className="form-row mobile-stack"
-          style={{
-            gap: 12,
-            gridTemplateColumns: "minmax(240px, 1fr) auto",
-            alignItems: "flex-end",
-          }}
-        >
-          <div className="form-group">
-            <h3 className="page-title">🧩 Tipos de usuário</h3>
-            <p className="page-subtitle">
-              Crie cargos e defina permissões padrão (aplicadas a novos usuários).
-            </p>
-          </div>
-          <div className="form-group" style={{ alignItems: "flex-end" }}>
-            <button className="btn btn-primary w-full sm:w-auto" onClick={abrirNovoTipo}>
+    <AppPrimerProvider>
+      <div className="page-content-wrap admin-page admin-user-types-page">
+        <AppToolbar
+          title="Tipos de usuario"
+          subtitle="Crie cargos e defina permissoes padrao que serao aplicadas a novos usuarios."
+          tone="info"
+          sticky
+          actions={
+            <AppButton type="button" variant="primary" onClick={abrirNovoTipo}>
               Novo tipo
-            </button>
-          </div>
-        </div>
-        <div className="form-row mobile-stack" style={{ marginTop: 12 }}>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Buscar</label>
-            <input
-              className="form-input"
+            </AppButton>
+          }
+        >
+          <div className="vtur-form-grid vtur-form-grid-2">
+            <AppField
+              label="Buscar"
               placeholder="Ex.: Vendedor, Financeiro..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
             />
           </div>
-        </div>
-      </div>
+        </AppToolbar>
 
-      {erro && (
-        <div className="mb-3">
-          <AlertMessage variant="error">{erro}</AlertMessage>
-        </div>
-      )}
+        {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
 
-      {loading ? (
-        <LoadingUsuarioContext />
-      ) : (
-        <div className="table-container overflow-x-auto">
-          <table className="table-default table-header-red table-mobile-cards min-w-[820px]">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Descrição</th>
-                <th>Permissões padrão</th>
-                <th className="th-actions">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tiposFiltrados.length === 0 && (
+        {loading ? (
+          <LoadingUsuarioContext />
+        ) : (
+          <AppCard
+            title="Cargos cadastrados"
+            subtitle={`${tiposFiltrados.length} tipo(s) encontrado(s).`}
+            tone="info"
+          >
+            <DataTable
+              headers={
                 <tr>
-                  <td colSpan={4}>Nenhum tipo encontrado.</td>
+                  <th>Nome</th>
+                  <th>Descricao</th>
+                  <th>Permissoes padrao</th>
+                  <th className="th-actions">Acoes</th>
                 </tr>
-              )}
+              }
+              empty={tiposFiltrados.length === 0}
+              emptyMessage="Nenhum tipo encontrado."
+              colSpan={4}
+              className="table-mobile-cards table-header-red min-w-[820px]"
+            >
               {tiposFiltrados.map((tipo) => (
                 <tr key={tipo.id}>
                   <td data-label="Nome">{tipo.name}</td>
-                  <td data-label="Descrição">{tipo.description || "-"}</td>
-                  <td data-label="Permissões padrão">
-                    {(defaultCounts[tipo.id] ?? 0) > 0
-                      ? `${defaultCounts[tipo.id]} módulo(s)`
-                      : "Nenhuma"}
+                  <td data-label="Descricao">{tipo.description || "-"}</td>
+                  <td data-label="Permissoes padrao">
+                    {(defaultCounts[tipo.id] ?? 0) > 0 ? `${defaultCounts[tipo.id]} modulo(s)` : "Nenhuma"}
                   </td>
-                  <td className="th-actions" data-label="Ações">
-                    <div className="action-buttons">
-                      <button
-                        type="button"
-                        className="btn btn-light"
-                        onClick={() => abrirPermissoes(tipo)}
-                      >
-                        Permissões
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-icon icon-action-btn"
-                        onClick={() => abrirEdicaoTipo(tipo)}
-                        title="Editar tipo"
-                        aria-label="Editar tipo"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-icon btn-danger"
-                        onClick={() => setDeleteTarget(tipo)}
-                        title="Excluir tipo"
-                        aria-label="Excluir tipo"
-                      >
-                        🗑️
-                      </button>
-                    </div>
+                  <td className="th-actions" data-label="Acoes">
+                    <TableActions
+                      actions={[
+                        {
+                          key: "perms",
+                          label: "Permissoes",
+                          title: "Editar permissoes padrao",
+                          onClick: () => abrirPermissoes(tipo),
+                          icon: "🔐",
+                          variant: "primary",
+                        },
+                        {
+                          key: "edit",
+                          label: "Editar",
+                          title: "Editar tipo",
+                          onClick: () => abrirEdicaoTipo(tipo),
+                          icon: "✏️",
+                          variant: "ghost",
+                        },
+                        {
+                          key: "delete",
+                          label: "Excluir",
+                          title: "Excluir tipo",
+                          onClick: () => setDeleteTarget(tipo),
+                          icon: "🗑️",
+                          variant: "danger",
+                        },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </DataTable>
+          </AppCard>
+        )}
 
-      {editModalOpen && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" onClick={() => !salvandoTipo && setEditModalOpen(false)}>
-          <div
-            className="modal-panel"
-            style={{ maxWidth: 560, width: "95vw", background: "#f8fafc" }}
-            onClick={(event) => event.stopPropagation()}
+        {editModalOpen && (
+          <Dialog
+            title={editingType ? "Editar tipo de usuario" : "Novo tipo de usuario"}
+            onClose={() => !salvandoTipo && setEditModalOpen(false)}
+            footerButtons={[
+              {
+                content: "Cancelar",
+                buttonType: "default",
+                onClick: () => setEditModalOpen(false),
+                disabled: salvandoTipo,
+              },
+              {
+                content: salvandoTipo ? "Salvando..." : "Salvar",
+                buttonType: "primary",
+                onClick: () => {
+                  const form = document.getElementById("admin-user-type-form") as HTMLFormElement | null;
+                  form?.requestSubmit();
+                },
+                disabled: salvandoTipo,
+              },
+            ]}
           >
-            <div className="modal-header">
-              <div className="modal-title" style={{ color: "#b91c1c", fontSize: "1.1rem", fontWeight: 800 }}>
-                {editingType ? "Editar tipo de usuário" : "Novo tipo de usuário"}
-              </div>
-              <button className="btn-ghost" type="button" onClick={() => setEditModalOpen(false)} disabled={salvandoTipo}>
-                ✖
-              </button>
-            </div>
-            <form onSubmit={salvarTipo}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Nome *</label>
-                  <input
-                    className="form-input"
-                    value={formNome}
-                    onChange={(e) => setFormNome(e.target.value)}
-                    placeholder="Ex.: Financeiro"
-                    disabled={salvandoTipo}
-                  />
-                </div>
-                <div className="form-group" style={{ marginTop: 10 }}>
-                  <label className="form-label">Descrição</label>
-                  <textarea
-                    className="form-input"
-                    rows={3}
-                    value={formDesc}
-                    onChange={(e) => setFormDesc(e.target.value)}
-                    placeholder="Opcional"
-                    disabled={salvandoTipo}
-                  />
-                </div>
-                <div style={{ marginTop: 10, fontSize: 13, opacity: 0.8 }}>
-                  Dica: evite renomear tipos usados por funções do sistema (ex.: MASTER, ADMIN, GESTOR, VENDEDOR).
-                </div>
-              </div>
-              <div className="modal-footer mobile-stack-buttons">
-                <button type="button" className="btn btn-light w-full sm:w-auto" onClick={() => setEditModalOpen(false)} disabled={salvandoTipo}>
-                  Cancelar
-                </button>
-                <button type="submit" className="btn btn-primary w-full sm:w-auto" disabled={salvandoTipo}>
-                  {salvandoTipo ? "Salvando..." : "Salvar"}
-                </button>
+            <form id="admin-user-type-form" onSubmit={salvarTipo}>
+              <div className="vtur-modal-body-stack">
+                <AppCard tone="info" title="Dados do tipo" subtitle="Configure nome e descricao do cargo.">
+                  <div className="vtur-form-grid vtur-form-grid-2">
+                    <AppField
+                      label="Nome"
+                      value={formNome}
+                      onChange={(e) => setFormNome(e.target.value)}
+                      placeholder="Ex.: Financeiro"
+                      disabled={salvandoTipo}
+                    />
+                    <AppField
+                      as="textarea"
+                      label="Descricao"
+                      rows={3}
+                      value={formDesc}
+                      onChange={(e) => setFormDesc(e.target.value)}
+                      placeholder="Opcional"
+                      disabled={salvandoTipo}
+                    />
+                  </div>
+                  <p style={{ marginTop: 12, fontSize: 13, opacity: 0.8 }}>
+                    Dica: evite renomear tipos usados por funcoes do sistema, como MASTER, ADMIN, GESTOR e VENDEDOR.
+                  </p>
+                </AppCard>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+          </Dialog>
+        )}
 
-      {permsModalOpen && permsTarget && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" onClick={() => !salvandoPerms && setPermsModalOpen(false)}>
-          <div
-            className="modal-panel"
-            style={{ maxWidth: 720, width: "95vw", background: "#f8fafc" }}
-            onClick={(event) => event.stopPropagation()}
+        {permsModalOpen && permsTarget && (
+          <Dialog
+            title={`Permissoes padrao: ${permsTarget.name}`}
+            width="xlarge"
+            onClose={() => !salvandoPerms && setPermsModalOpen(false)}
+            footerButtons={[
+              {
+                content: "Cancelar",
+                buttonType: "default",
+                onClick: () => setPermsModalOpen(false),
+                disabled: salvandoPerms,
+              },
+              {
+                content: salvandoPerms ? "Salvando..." : "Salvar permissoes",
+                buttonType: "primary",
+                onClick: salvarPermissoesPadrao,
+                disabled: salvandoPerms || permsLoading,
+              },
+            ]}
           >
-            <div className="modal-header">
-              <div className="modal-title" style={{ color: "#b91c1c", fontSize: "1.1rem", fontWeight: 800 }}>
-                Permissões padrão: {permsTarget.name}
-              </div>
-              <button className="btn-ghost" type="button" onClick={() => setPermsModalOpen(false)} disabled={salvandoPerms}>
-                ✖
-              </button>
-            </div>
-            <div className="modal-body">
-              <div style={{ fontSize: 13, opacity: 0.85, marginBottom: 10 }}>
-                Essas permissões são copiadas para <code>modulo_acesso</code> quando um usuário é criado/vinculado com este tipo.
-                Usuários já existentes não são alterados automaticamente.
-              </div>
-
-              {permsError && (
-                <div className="mb-3">
-                  <AlertMessage variant="error">{permsError}</AlertMessage>
-                </div>
-              )}
-
-              <div className="form-row mobile-stack" style={{ gap: 10, alignItems: "flex-end" }}>
-                <div className="form-group" style={{ flex: 1 }}>
-                  <label className="form-label">Buscar módulo</label>
-                  <input
-                    className="form-input"
+            <div className="vtur-modal-body-stack">
+              <AppCard
+                tone="info"
+                title="Permissoes padrao"
+                subtitle="Essas permissoes sao copiadas para modulo_acesso quando um usuario e criado ou vinculado a este tipo."
+              >
+                <div className="vtur-form-grid vtur-form-grid-2">
+                  <AppField
+                    label="Buscar modulo"
                     placeholder="Ex.: Vendas, Agenda..."
                     value={permsSearch}
                     onChange={(e) => setPermsSearch(e.target.value)}
                     disabled={permsLoading || salvandoPerms}
                   />
                 </div>
-              </div>
+              </AppCard>
+
+              {permsError && <AlertMessage variant="error">{permsError}</AlertMessage>}
 
               {permsLoading ? (
-                <p style={{ marginTop: 12 }}>Carregando permissões...</p>
+                <AppCard tone="config">Carregando permissoes...</AppCard>
               ) : (
-                <div className="table-container overflow-x-auto" style={{ marginTop: 12 }}>
-                  <table className="table-default table-header-red table-mobile-cards min-w-[720px]">
-                    <thead>
+                <AppCard tone="info" title="Matriz de modulos" subtitle="Aplique niveis por modulo ou em bloco por secao.">
+                  <DataTable
+                    headers={
                       <tr>
-                        <th>Módulo</th>
-                        <th>Permissão</th>
+                        <th>Modulo</th>
+                        <th>Permissao</th>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {modulosPorSecaoVisiveis.length === 0 && (
+                    }
+                    empty={modulosPorSecaoVisiveis.length === 0}
+                    emptyMessage="Nenhum modulo encontrado."
+                    colSpan={2}
+                    className="table-mobile-cards table-header-red min-w-[720px]"
+                  >
+                    {modulosPorSecaoVisiveis.map((secao) => (
+                      <React.Fragment key={secao.id}>
                         <tr>
-                          <td colSpan={2}>Nenhum módulo encontrado.</td>
-                        </tr>
-                      )}
-                      {modulosPorSecaoVisiveis.map((secao) => (
-                        <React.Fragment key={secao.id}>
-                          <tr>
-                            <td colSpan={2} style={{ background: "#eff6ff" }}>
-                              <div className="flex flex-wrap gap-2 items-center justify-between">
-                                <div>
-                                  <strong>{secao.titulo}</strong>
-                                  {secao.includes.length > 0 && (
-                                    <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.75 }}>
-                                      (inclui:{" "}
-                                      {secao.includes
-                                        .map((id) => secoesLabels.get(id) || id)
-                                        .join(", ")}
-                                      )
-                                    </span>
-                                  )}
-                                </div>
-                                {secao.applyModulos.length > 0 && (
-                                  <div className="flex items-center gap-2">
-                                    <span style={{ fontSize: 12, opacity: 0.8 }}>
-                                      Aplicar em {secao.applyModulos.length}:
-                                    </span>
-                                    <select
-                                      className="form-select"
-                                      value={getSecaoNivel(secao.applyModulos)}
-                                      onChange={(e) => {
-                                        const value = e.target.value as NivelPermissao;
-                                        if (!value) return;
-                                        aplicarNivelSecao(secao.applyModulos, value);
-                                      }}
-                                      disabled={salvandoPerms}
-                                    >
-                                      <option value="">—</option>
-                                      {NIVEIS.map((n) => (
-                                        <option key={n.value} value={n.value}>
-                                          {n.label}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </div>
+                          <td colSpan={2} style={{ background: "#eff6ff" }}>
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <div>
+                                <strong>{secao.titulo}</strong>
+                                {secao.includes.length > 0 && (
+                                  <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.75 }}>
+                                    (inclui: {secao.includes.map((id) => secoesLabels.get(id) || id).join(", ")})
+                                  </span>
                                 )}
                               </div>
+                              {secao.applyModulos.length > 0 && (
+                                <div className="flex items-center gap-2">
+                                  <span style={{ fontSize: 12, opacity: 0.8 }}>
+                                    Aplicar em {secao.applyModulos.length}:
+                                  </span>
+                                  <Select
+                                    aria-label={`Nivel da secao ${secao.titulo}`}
+                                    value={getSecaoNivel(secao.applyModulos)}
+                                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                                      const value = e.target.value as NivelPermissao;
+                                      if (!value) return;
+                                      aplicarNivelSecao(secao.applyModulos, value);
+                                    }}
+                                    disabled={salvandoPerms}
+                                    className="vtur-dashboard-select"
+                                  >
+                                    <Select.Option value="">-</Select.Option>
+                                    {NIVEIS.map((n) => (
+                                      <Select.Option key={n.value} value={n.value}>
+                                        {n.label}
+                                      </Select.Option>
+                                    ))}
+                                  </Select>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+
+                        {secao.modulosVisiveis.map((modulo) => (
+                          <tr key={`${secao.id}:${modulo}`}>
+                            <td data-label="Modulo">{modulo}</td>
+                            <td data-label="Permissao">
+                              <Select
+                                block
+                                aria-label={`Permissao do modulo ${modulo}`}
+                                value={permsForm[modulo] || "none"}
+                                onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                                  setPermsForm((prev) => ({
+                                    ...prev,
+                                    [modulo]: e.target.value as NivelPermissao,
+                                  }))
+                                }
+                                disabled={salvandoPerms}
+                              >
+                                {NIVEIS.map((n) => (
+                                  <Select.Option key={n.value} value={n.value}>
+                                    {n.label}
+                                  </Select.Option>
+                                ))}
+                              </Select>
                             </td>
                           </tr>
-
-                          {secao.modulosVisiveis.map((modulo) => (
-                            <tr key={`${secao.id}:${modulo}`}>
-                              <td data-label="Módulo">{modulo}</td>
-                              <td data-label="Permissão">
-                                <select
-                                  className="form-select"
-                                  value={permsForm[modulo] || "none"}
-                                  onChange={(e) =>
-                                    setPermsForm((prev) => ({
-                                      ...prev,
-                                      [modulo]: e.target.value as NivelPermissao,
-                                    }))
-                                  }
-                                  disabled={salvandoPerms}
-                                >
-                                  {NIVEIS.map((n) => (
-                                    <option key={n.value} value={n.value}>
-                                      {n.label}
-                                    </option>
-                                  ))}
-                                </select>
-                              </td>
-                            </tr>
-                          ))}
-                        </React.Fragment>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                        ))}
+                      </React.Fragment>
+                    ))}
+                  </DataTable>
+                </AppCard>
               )}
             </div>
-            <div className="modal-footer mobile-stack-buttons">
-              <button type="button" className="btn btn-light w-full sm:w-auto" onClick={() => setPermsModalOpen(false)} disabled={salvandoPerms}>
-                Cancelar
-              </button>
-              <button type="button" className="btn btn-primary w-full sm:w-auto" onClick={salvarPermissoesPadrao} disabled={salvandoPerms || permsLoading}>
-                {salvandoPerms ? "Salvando..." : "Salvar permissões"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </Dialog>
+        )}
 
-      <ConfirmDialog
-        open={Boolean(deleteTarget)}
-        title="Excluir tipo de usuário"
-        message={`Excluir ${deleteTarget?.name || "este tipo"}?`}
-        confirmLabel={deletando ? "Excluindo..." : "Excluir"}
-        confirmVariant="danger"
-        confirmDisabled={deletando}
-        onCancel={() => (deletando ? null : setDeleteTarget(null))}
-        onConfirm={confirmarDeleteTipo}
-      />
+        <ConfirmDialog
+          open={Boolean(deleteTarget)}
+          title="Excluir tipo de usuario"
+          message={`Excluir ${deleteTarget?.name || "este tipo"}?`}
+          confirmLabel={deletando ? "Excluindo..." : "Excluir"}
+          confirmVariant="danger"
+          confirmDisabled={deletando}
+          onCancel={() => (deletando ? null : setDeleteTarget(null))}
+          onConfirm={confirmarDeleteTipo}
+        />
 
-      <ToastStack toasts={toasts} onDismiss={dismissToast} />
-    </div>
+        <ToastStack toasts={toasts} onDismiss={dismissToast} />
+      </div>
+    </AppPrimerProvider>
   );
 }

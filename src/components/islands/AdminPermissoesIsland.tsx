@@ -1,8 +1,17 @@
+import { Select } from "@primer/react";
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { registrarLog } from "../../lib/logs";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import AlertMessage from "../ui/AlertMessage";
+import DataTable from "../ui/DataTable";
+import TableActions from "../ui/TableActions";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 import {
   agruparModulosPorSecao,
   MAPA_MODULOS,
@@ -351,11 +360,23 @@ export default function AdminPermissoesIsland() {
   }
 
   if (!podeVer) {
-    return <div>Acesso ao módulo de Admin bloqueado.</div>;
+    return (
+      <AppPrimerProvider>
+        <div className="page-content-wrap admin-permissoes-page admin-page">
+          <AppCard tone="config">Acesso ao modulo de Admin bloqueado.</AppCard>
+        </div>
+      </AppPrimerProvider>
+    );
   }
 
   if (!isAdmin) {
-    return <div>Somente usuários ADMIN podem gerenciar permissões.</div>;
+    return (
+      <AppPrimerProvider>
+        <div className="page-content-wrap admin-permissoes-page admin-page">
+          <AppCard tone="config">Somente usuarios ADMIN podem gerenciar permissoes.</AppCard>
+        </div>
+      </AppPrimerProvider>
+    );
   }
 
   if (loading) {
@@ -363,183 +384,175 @@ export default function AdminPermissoesIsland() {
   }
 
   return (
-    <div className="admin-permissoes-page admin-page">
-      {/* FILTRO + INFO */}
-      <div className="card-base card-blue mb-3 list-toolbar-sticky">
-        <div
-          className="form-row mobile-stack"
-          style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) minmax(220px, 320px)", alignItems: "flex-end" }}
+    <AppPrimerProvider>
+      <div className="page-content-wrap admin-permissoes-page admin-page">
+        <AppToolbar
+          title="Permissoes do sistema"
+          subtitle="Defina niveis de acesso por modulo e usuario, com aplicacao em bloco por secao."
+          tone="info"
+          sticky
         >
-          <div className="form-group">
-            <h3 className="page-title">🔐 Permissões do sistema</h3>
-            <p className="page-subtitle">Defina níveis de acesso por módulo e usuário.</p>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Buscar usuário</label>
-            <input
-              className="form-input"
+          <div className="vtur-form-grid vtur-form-grid-2">
+            <AppField
+              label="Buscar usuario"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Nome ou e-mail..."
             />
           </div>
-        </div>
+        </AppToolbar>
 
-        {erro && (
-          <div className="card-base card-config mt-2">
-            <strong>{erro}</strong>
-          </div>
-        )}
-      </div>
+        {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
 
-      {/* TABELA DE USUÁRIOS */}
-      <div className="table-container mb-3 overflow-x-auto">
-        <table className="table-default table-header-blue table-mobile-cards min-w-[780px]">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>E-mail</th>
-              <th>Status</th>
-              <th className="th-actions">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {usuariosFiltrados.length === 0 && (
+        <AppCard
+          title="Usuarios"
+          subtitle={`${usuariosFiltrados.length} usuario(s) encontrado(s).`}
+          tone="info"
+        >
+          <DataTable
+            headers={
               <tr>
-                <td colSpan={4}>Nenhum usuário encontrado.</td>
+                <th>Nome</th>
+                <th>E-mail</th>
+                <th>Status</th>
+                <th className="th-actions">Acoes</th>
               </tr>
-            )}
-
+            }
+            empty={usuariosFiltrados.length === 0}
+            emptyMessage="Nenhum usuario encontrado."
+            colSpan={4}
+            className="table-mobile-cards table-header-blue min-w-[780px]"
+          >
             {usuariosFiltrados.map((u) => (
               <tr key={u.id}>
                 <td data-label="Nome">{u.nome_completo}</td>
                 <td data-label="E-mail">{u.email || "-"}</td>
                 <td data-label="Status">{u.active ? "Ativo" : "Bloqueado"}</td>
-                <td className="th-actions" data-label="Ações">
-                  <div className="action-buttons">
-                    <button
-                      className="btn-icon icon-action-btn"
-                      title="Editar permissões"
-                      onClick={() => abrirEditor(u)}
-                    >
-                      ⚙️
-                    </button>
-                    {usuarioLogadoId !== u.id && (
-                      <button
-                        className={`btn-icon icon-action-btn ${u.active ? "danger" : ""}`}
-                        title={u.active ? "Bloquear usuário" : "Reativar usuário"}
-                        onClick={() => toggleUsuarioAtivo(u)}
-                      >
-                        {u.active ? "🚫" : "✅"}
-                      </button>
-                    )}
-                  </div>
+                <td className="th-actions" data-label="Acoes">
+                  <TableActions
+                    actions={[
+                      {
+                        key: "perms",
+                        label: "Permissoes",
+                        title: "Editar permissoes",
+                        onClick: () => abrirEditor(u),
+                        icon: "⚙️",
+                        variant: "ghost",
+                      },
+                      ...(usuarioLogadoId !== u.id
+                        ? [
+                            {
+                              key: "toggle",
+                              label: u.active ? "Bloquear" : "Reativar",
+                              title: u.active ? "Bloquear usuario" : "Reativar usuario",
+                              onClick: () => toggleUsuarioAtivo(u),
+                              icon: u.active ? "🚫" : "✅",
+                              variant: u.active ? ("danger" as const) : ("primary" as const),
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
                 </td>
               </tr>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </DataTable>
+        </AppCard>
 
-      {/* EDITOR DE PERMISSÕES DO USUÁRIO SELECIONADO */}
-      {selecionado && (
-        <div className="card-base card-blue">
-          <h3>
-            Permissões de: <span className="font-semibold">{selecionado.nome_completo}</span>
-          </h3>
-          <div className="table-container overflow-x-auto">
-            <table className="table-default table-header-blue table-mobile-cards min-w-[680px]">
-              <thead>
+        {selecionado && (
+          <AppCard
+            title={`Permissoes de ${selecionado.nome_completo}`}
+            subtitle="Ajuste o nivel por modulo ou aplique um nivel unico para toda a secao."
+            tone="info"
+            actions={
+              <div className="vtur-form-actions" style={{ marginTop: 0 }}>
+                <AppButton type="button" variant="primary" onClick={salvarPermissoes} disabled={salvando}>
+                  {salvando ? "Salvando..." : "Salvar permissoes"}
+                </AppButton>
+                <AppButton type="button" variant="secondary" onClick={() => setSelecionado(null)}>
+                  Fechar
+                </AppButton>
+              </div>
+            }
+          >
+            <DataTable
+              headers={
                 <tr>
-                  <th>Módulo</th>
-                  <th>Nível</th>
+                  <th>Modulo</th>
+                  <th>Nivel</th>
                 </tr>
-              </thead>
-              <tbody>
-                {modulosPorSecao.map((secao) => (
-                  <React.Fragment key={secao.id}>
-                    <tr>
-                      <td colSpan={2} style={{ background: "#eff6ff" }}>
-                        <div className="flex flex-wrap gap-2 items-center justify-between">
-                          <div>
-                            <strong>{secao.titulo}</strong>
-                            {secao.includes.length > 0 && (
-                              <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.75 }}>
-                                (inclui:{" "}
-                                {secao.includes
-                                  .map((id) => secoesLabels.get(id) || id)
-                                  .join(", ")}
-                                )
-                              </span>
-                            )}
-                          </div>
-                          {secao.applyModulos.length > 0 && (
-                            <div className="flex items-center gap-2">
-                              <span style={{ fontSize: 12, opacity: 0.8 }}>
-                                Aplicar em {secao.applyModulos.length}:
-                              </span>
-                              <select
-                                className="form-select"
-                                value={getSecaoNivel(secao.applyModulos)}
-                                onChange={(e) => {
-                                  const value = e.target.value as NivelPermissao;
-                                  if (!value) return;
-                                  aplicarNivelSecao(secao.applyModulos, value);
-                                }}
-                              >
-                                <option value="">—</option>
-                                {NIVEIS.map((n) => (
-                                  <option key={n.value} value={n.value}>
-                                    {n.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
+              }
+              empty={modulosPorSecao.length === 0}
+              emptyMessage="Nenhum modulo disponivel para editar."
+              colSpan={2}
+              className="table-mobile-cards table-header-blue min-w-[720px]"
+            >
+              {modulosPorSecao.map((secao) => (
+                <React.Fragment key={secao.id}>
+                  <tr>
+                    <td colSpan={2} style={{ background: "#eff6ff" }}>
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <strong>{secao.titulo}</strong>
+                          {secao.includes.length > 0 && (
+                            <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.75 }}>
+                              (inclui: {secao.includes.map((id) => secoesLabels.get(id) || id).join(", ")})
+                            </span>
                           )}
                         </div>
+                        {secao.applyModulos.length > 0 && (
+                          <div className="flex items-center gap-2">
+                            <span style={{ fontSize: 12, opacity: 0.8 }}>
+                              Aplicar em {secao.applyModulos.length}:
+                            </span>
+                            <Select
+                              aria-label={`Nivel da secao ${secao.titulo}`}
+                              value={getSecaoNivel(secao.applyModulos)}
+                              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                                const value = e.target.value as NivelPermissao;
+                                if (!value) return;
+                                aplicarNivelSecao(secao.applyModulos, value);
+                              }}
+                              className="vtur-dashboard-select"
+                            >
+                              <Select.Option value="">-</Select.Option>
+                              {NIVEIS.map((n) => (
+                                <Select.Option key={n.value} value={n.value}>
+                                  {n.label}
+                                </Select.Option>
+                              ))}
+                            </Select>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+
+                  {secao.modulos.map((modulo) => (
+                    <tr key={`${secao.id}:${modulo}`}>
+                      <td data-label="Modulo">{modulo}</td>
+                      <td data-label="Nivel">
+                        <Select
+                          block
+                          aria-label={`Nivel do modulo ${modulo}`}
+                          value={formPermissoes[modulo] || "none"}
+                          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleChangeNivel(modulo, e.target.value)}
+                        >
+                          {NIVEIS.map((n) => (
+                            <Select.Option key={n.value} value={n.value}>
+                              {n.label}
+                            </Select.Option>
+                          ))}
+                        </Select>
                       </td>
                     </tr>
-
-                    {secao.modulos.map((modulo) => (
-                      <tr key={`${secao.id}:${modulo}`}>
-                        <td data-label="Módulo">{modulo}</td>
-                        <td data-label="Nível">
-                          <select
-                            className="form-select"
-                            value={formPermissoes[modulo] || "none"}
-                            onChange={(e) => handleChangeNivel(modulo, e.target.value)}
-                          >
-                            {NIVEIS.map((n) => (
-                              <option key={n.value} value={n.value}>
-                                {n.label}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                      </tr>
-                    ))}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-2 flex gap-2 flex-wrap mobile-stack-buttons">
-            <button
-              className="btn btn-primary"
-              onClick={salvarPermissoes}
-              disabled={salvando}
-            >
-              {salvando ? "Salvando..." : "Salvar permissões"}
-            </button>
-            <button
-              className="btn btn-light"
-              onClick={() => setSelecionado(null)}
-            >
-              Fechar
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+                  ))}
+                </React.Fragment>
+              ))}
+            </DataTable>
+          </AppCard>
+        )}
+      </div>
+    </AppPrimerProvider>
   );
 }

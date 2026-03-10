@@ -35,7 +35,7 @@ Objetivo: aplicar `@primer/react` em toda a experiencia do `vtur`, usando wrappe
 - [x] `QuoteListIsland`
 - [x] `ComissionamentoIsland`
 - [ ] `MetasVendedorIsland`
-- [ ] `AuthLoginIsland`
+- [x] `AuthLoginIsland`
 - [ ] `AuthRecoverIsland`
 - [ ] `AuthRegisterIsland`
 - [ ] `AuthResetIsland`
@@ -45,9 +45,9 @@ Objetivo: aplicar `@primer/react` em toda a experiencia do `vtur`, usando wrappe
 ## Gestor e Master
 
 - [x] `DashboardGestorIsland`
-- [ ] `EquipeGestorIsland`
+- [x] `EquipeGestorIsland`
 - [ ] `EscalaGestorIsland`
-- [ ] `MasterUsuariosIsland`
+- [x] `MasterUsuariosIsland`
 - [ ] `MasterEmpresasIsland`
 - [ ] `MasterPermissoesIsland`
 - [ ] `MinhaEscalaIsland`
@@ -110,7 +110,7 @@ Objetivo: aplicar `@primer/react` em toda a experiencia do `vtur`, usando wrappe
 
 - [x] `ConsultoriaOnlineIsland`
 - [ ] `AgendaCalendar`
-- [ ] `TodoBoard`
+- [x] `TodoBoard`
 - [ ] `MuralRecadosIsland`
 - [ ] `ControleSacIsland`
 - [x] `CampanhasIsland`
@@ -126,7 +126,7 @@ Objetivo: aplicar `@primer/react` em toda a experiencia do `vtur`, usando wrappe
 ## Infra e suporte
 
 - [ ] `HelpDrawerIsland`
-- [ ] `NetMetricsPanelIsland`
+- [x] `NetMetricsPanelIsland`
 - [ ] `LogoutButtonIsland`
 - [ ] `MaintenanceAccessIsland`
 - [ ] `DashboardRouterIsland`

@@ -6,6 +6,9 @@ import {
   subscribeNetMetrics,
   type NetMetric,
 } from "../../lib/netMetrics";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
 function normalizeUrl(raw: string) {
   try {
@@ -86,115 +89,83 @@ export default function NetMetricsPanelIsland() {
   const byEndpoint = useMemo(() => groupEndpointStats(metrics).slice(0, 10), [metrics]);
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        left: 14,
-        bottom: 14,
-        zIndex: 9999,
-        fontFamily:
-          "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-      }}
-    >
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
+    <AppPrimerProvider>
+      <div
         style={{
-          background: "#0f172a",
-          color: "#fff",
-          border: "none",
-          borderRadius: 999,
-          padding: "8px 12px",
-          fontWeight: 800,
-          cursor: "pointer",
-          boxShadow: "0 12px 24px rgba(15, 23, 42, 0.18)",
+          position: "fixed",
+          left: 14,
+          bottom: 14,
+          zIndex: 9999,
         }}
-        title="Net metrics (Ctrl/Cmd+Shift+M)"
       >
-        Net {total}
-      </button>
-
-      {open && (
-        <div
-          style={{
-            marginTop: 10,
-            width: "min(520px, calc(100vw - 28px))",
-            maxHeight: "min(60vh, 520px)",
-            overflow: "auto",
-            background: "#ffffff",
-            border: "1px solid #e2e8f0",
-            borderRadius: 12,
-            padding: 12,
-            boxShadow: "0 20px 40px rgba(15, 23, 42, 0.18)",
-          }}
+        <AppButton
+          type="button"
+          variant={open ? "default" : "primary"}
+          onClick={() => setOpen((v) => !v)}
+          title="Net metrics (Ctrl/Cmd+Shift+M)"
+          className="vtur-netmetrics-toggle"
         >
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-            <div style={{ fontWeight: 900, color: "#0f172a" }}>
-              Requests (dev)
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                clearNetMetrics();
-                setTick((v) => v + 1);
-              }}
-              style={{
-                background: "#f1f5f9",
-                color: "#0f172a",
-                border: "1px solid #e2e8f0",
-                borderRadius: 10,
-                padding: "6px 10px",
-                fontWeight: 800,
-                cursor: "pointer",
-              }}
-            >
-              Limpar
-            </button>
-          </div>
-          <div style={{ marginTop: 6, color: "#475569", fontSize: 12, fontWeight: 700 }}>
-            Tela atual: {currentScreen} • Total: {totalSupabase} Supabase + {totalBff} API • Toggle:
-            Ctrl/Cmd+Shift+M
-          </div>
+          Net {total}
+        </AppButton>
 
-          <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
-            <div>
-              <div style={{ fontWeight: 900, marginBottom: 6 }}>Por tela</div>
-              {byScreen.length === 0 ? (
-                <div style={{ color: "#64748b" }}>Nenhuma requisição registrada ainda.</div>
-              ) : (
-                <ul style={{ margin: 0, paddingLeft: 18 }}>
-                  {byScreen.map(([screen, count]) => (
-                    <li key={screen} style={{ marginBottom: 2 }}>
-                      <span style={{ fontWeight: 900 }}>{screen}</span>: {count}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+        {open && (
+          <AppCard
+            className="vtur-netmetrics-panel"
+            title="Requests (dev)"
+            subtitle={`Tela atual: ${currentScreen} • Total: ${totalSupabase} Supabase + ${totalBff} API • Toggle: Ctrl/Cmd+Shift+M`}
+            actions={
+              <AppButton
+                type="button"
+                variant="default"
+                onClick={() => {
+                  clearNetMetrics();
+                  setTick((v) => v + 1);
+                }}
+              >
+                Limpar
+              </AppButton>
+            }
+          >
+            <div style={{ display: "grid", gap: 10 }}>
+              <div>
+                <div style={{ fontWeight: 900, marginBottom: 6 }}>Por tela</div>
+                {byScreen.length === 0 ? (
+                  <div style={{ color: "#64748b" }}>Nenhuma requisição registrada ainda.</div>
+                ) : (
+                  <ul style={{ margin: 0, paddingLeft: 18 }}>
+                    {byScreen.map(([screen, count]) => (
+                      <li key={screen} style={{ marginBottom: 2 }}>
+                        <span style={{ fontWeight: 900 }}>{screen}</span>: {count}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
 
-            <div>
-              <div style={{ fontWeight: 900, marginBottom: 6 }}>Top endpoints</div>
-              {byEndpoint.length === 0 ? (
-                <div style={{ color: "#64748b" }}>—</div>
-              ) : (
-                <ol style={{ margin: 0, paddingLeft: 18 }}>
-                  {byEndpoint.map((stat) => (
-                    <li key={stat.key} style={{ marginBottom: 2 }}>
-                      <span style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
-                        {stat.key}
-                      </span>{" "}
-                      <span style={{ color: "#475569" }}>({stat.count})</span>
-                      {stat.avgMs != null && (
-                        <span style={{ color: "#64748b" }}> • avg {stat.avgMs}ms</span>
-                      )}
-                    </li>
-                  ))}
-                </ol>
-              )}
+              <div>
+                <div style={{ fontWeight: 900, marginBottom: 6 }}>Top endpoints</div>
+                {byEndpoint.length === 0 ? (
+                  <div style={{ color: "#64748b" }}>—</div>
+                ) : (
+                  <ol style={{ margin: 0, paddingLeft: 18 }}>
+                    {byEndpoint.map((stat) => (
+                      <li key={stat.key} style={{ marginBottom: 2 }}>
+                        <span style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
+                          {stat.key}
+                        </span>{" "}
+                        <span style={{ color: "#475569" }}>({stat.count})</span>
+                        {stat.avgMs != null && (
+                          <span style={{ color: "#64748b" }}> • avg {stat.avgMs}ms</span>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
-      )}
-    </div>
+          </AppCard>
+        )}
+      </div>
+    </AppPrimerProvider>
   );
 }

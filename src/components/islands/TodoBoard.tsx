@@ -1,5 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { readPermissoesCache } from "../../lib/permissoesCache";
+import AlertMessage from "../ui/AlertMessage";
+import EmptyState from "../ui/EmptyState";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 const PRIORITIES = [
   { value: "alta", label: "Alta", color: "#ef4444" },
@@ -928,15 +935,21 @@ export default function TodoBoard() {
   const semCategoriaCount = ((cardsByCategory as any)["sem_categoria"] || []).length as number;
 
   return (
-    <div className={`todo-board${isMobile ? " todo-mobile" : ""}`}>
+    <AppPrimerProvider>
+      <div className={`todo-board${isMobile ? " todo-mobile" : ""} vtur-legacy-module`}>
       {/* Título e subtítulo (apenas desktop) */}
       {!isMobile && (
-        <div style={{ marginBottom: 24 }}>
-          <h2 className="page-title" style={{ margin: 0, fontWeight: 800, fontSize: 28, color: '#7c3aed' }}>Tarefas</h2>
-          <div className="page-subtitle" style={{ color: '#64748b', fontSize: 16, marginTop: 4 }}>
-            Crie e acompanhe suas tarefas de forma rápida e inteligente.
-          </div>
-        </div>
+        <AppToolbar
+          className="mb-4"
+          tone="config"
+          title="Tarefas"
+          subtitle="Crie e acompanhe suas tarefas de forma rápida e inteligente."
+          actions={
+            <AppButton type="button" variant="primary" onClick={() => setCreateOpen(true)}>
+              + Nova tarefa
+            </AppButton>
+          }
+        />
       )}
       {isMobile ? (
         <div className="todo-mobile-shell">
@@ -1064,13 +1077,15 @@ export default function TodoBoard() {
       ) : (
         <>
       {/* Categorias */}
-      <div className="card-base" style={{ padding: 16, marginBottom: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
-          <h3 style={{ margin: 0 }}>Categorias</h3>
-          <button type="button" className="btn btn-light" onClick={() => setCreateCategoryOpen(true)}>
-            Nova Categoria
-          </button>
-        </div>
+      <AppCard
+        style={{ marginBottom: 16 }}
+        title="Categorias"
+        actions={
+          <AppButton type="button" variant="default" onClick={() => setCreateCategoryOpen(true)}>
+            Nova categoria
+          </AppButton>
+        }
+      >
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
           {categorias.length === 0 && <span style={{ color: "#94a3b8" }}>Nenhuma categoria.</span>}
           {categorias.map((c) => (
@@ -1089,9 +1104,9 @@ export default function TodoBoard() {
               }}
             >
               {c.nome}
-              <button
+              <AppButton
                 type="button"
-                className="btn btn-light"
+                variant="default"
                 style={{ padding: "2px 6px", minHeight: 24, fontSize: 11, lineHeight: 1 }}
                 onClick={() => {
                   setEditingCategory(c);
@@ -1102,7 +1117,7 @@ export default function TodoBoard() {
                 aria-label="Editar categoria"
               >
                 {"✎"}
-              </button>
+              </AppButton>
               <button
                 type="button"
                 className="btn-icon danger no-border"
@@ -1117,44 +1132,52 @@ export default function TodoBoard() {
             </span>
           ))}
         </div>
-      </div>
+      </AppCard>
 
       {/* Lista de tarefas */}
-      <div className="card-base" style={{ padding: 12 }}>
+      <AppCard title="Lista de tarefas">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
-          <h3 style={{ margin: 0 }}>Lista de Tarefas</h3>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {loading && <span style={{ color: "#94a3b8" }}>Carregando...</span>}
-            <select
-              className="form-select"
+            <AppField
+              as="select"
+              label="Visualização"
               value={viewMode}
               onChange={(e) => setViewMode(e.target.value as ViewMode)}
-              style={{ minWidth: 120, padding: "6px 10px", fontSize: 13 }}
-            >
-              <option value="kanban">Kanban</option>
-              <option value="lista">Lista Simples</option>
-            </select>
-            {!isMobile && (
-              <button type="button" className="btn btn-primary" onClick={() => setCreateOpen(true)}>
-                + Nova tarefa
-              </button>
-            )}
+              wrapperClassName="vtur-todo-viewmode-field"
+              options={[
+                { label: "Kanban", value: "kanban" },
+                { label: "Lista simples", value: "lista" },
+              ]}
+            />
           </div>
         </div>
+        {error && <AlertMessage variant="error">{error}</AlertMessage>}
+        {!loading && cards.length === 0 && viewMode === "lista" && !archivedCards.length ? (
+          <EmptyState
+            title="Nenhuma tarefa cadastrada"
+            description="Crie a primeira tarefa para começar a organizar seu fluxo."
+            action={
+              <AppButton type="button" variant="primary" onClick={() => setCreateOpen(true)}>
+                Nova tarefa
+              </AppButton>
+            }
+          />
+        ) : null}
         {isMobile && (
           <div className="todo-mobile-tabs" aria-label="Filtrar status">
             {STATUS_COLS.map((col) => {
               const count = statusCounts[col.value as VisibleStatus] || 0;
               const active = mobileStatus === col.value;
               return (
-                <button
+                <AppButton
                   key={`tab-${col.value}`}
                   type="button"
-                  className={`btn ${active ? "btn-primary" : "btn-light"}`}
+                  variant={active ? "primary" : "default"}
                   onClick={() => setMobileStatus(col.value as VisibleStatus)}
                 >
                   {col.label} ({count})
-                </button>
+                </AppButton>
               );
             })}
           </div>
@@ -1246,7 +1269,7 @@ export default function TodoBoard() {
             ))}
           </div>
         )}
-      </div>
+      </AppCard>
       {archivedCards.length > 0 && (
         <div className="card-base" style={{ marginTop: 12, padding: 0, overflow: "hidden" }}>
           <button
@@ -1448,6 +1471,7 @@ export default function TodoBoard() {
           +
         </button>
       )}
-    </div>
+      </div>
+    </AppPrimerProvider>
   );
 }
