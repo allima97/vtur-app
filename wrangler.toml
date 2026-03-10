@@ -19,8 +19,8 @@ build = { command = "PUBLIC_SUPABASE_URL=$PUBLIC_SUPABASE_URL PUBLIC_SUPABASE_AN
 # Mantidos alinhados ao ambiente atual para evitar erro de runtime em preview.
 [[kv_namespaces]]
 binding = "CACHE"
-id = "f89bc788ae7a4c619133ae6c2654d8cb"
-preview_id = "f89bc788ae7a4c619133ae6c2654d8cb"
+id = "36b379c0f78d485a95dc23cf4dc22c12"
+preview_id = "36b379c0f78d485a95dc23cf4dc22c12"
 
 [[kv_namespaces]]
 binding = "SESSION"
@@ -54,8 +54,8 @@ PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_yO4zM8WFfmRTZKtBG1PaHw_9pLyVXMh"
 # KV para cache (já existia)
 [[env.production.kv_namespaces]]
 binding = "CACHE"
-id = "f89bc788ae7a4c619133ae6c2654d8cb"
-preview_id = "f89bc788ae7a4c619133ae6c2654d8cb"
+id = "36b379c0f78d485a95dc23cf4dc22c12"
+preview_id = "36b379c0f78d485a95dc23cf4dc22c12"
 
 # KV para sessão (novo, usando o ID que você mencionou)
 [[env.production.kv_namespaces]]
@@ -101,7 +101,7 @@ binding = "CACHE"
 id = ""  # Opcional para dev
 
 # Se quiser sessão em dev:
- [[env.development.kv_namespaces]]
- binding = "SESSION"
- id = "<KV_ID_DEV>"
- preview_id = "<KV_ID_DEV>"
+# [[env.development.kv_namespaces]]
+# binding = "SESSION"
+# id = "<KV_ID_DEV>"
+# preview_id = "<KV_ID_DEV>"

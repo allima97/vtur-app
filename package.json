@@ -8,6 +8,7 @@
     "check:modulos": "node scripts/check-modulos-map.mjs",
     "check:primer-migration": "node scripts/check-primer-migration.mjs",
     "build": "astro build && node scripts/post-build-assetsignore.mjs",
+    "deploy:production": "npx wrangler deploy --env production",
     "preview": "astro preview",
     "clean:delivery": "node scripts/clean-delivery.mjs",
     "docs:publish": "node scripts/publish-documentacao.mjs"
