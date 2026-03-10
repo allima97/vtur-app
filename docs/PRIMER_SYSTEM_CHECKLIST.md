@@ -145,7 +145,7 @@ Objetivo: aplicar `@primer/react` em toda a experiencia do `vtur`, usando wrappe
 - [ ] modais/dialogos em `Dialog` ou `AppDialog`
 - [ ] estados de acesso/carregamento padronizados
 - [ ] responsividade revisada
-- [ ] `npm run build` validado apos a rodada
+- [x] `npm run build` validado apos a rodada
 
 ## Ordem de fechamento recomendada
 
