@@ -4,6 +4,7 @@ import path from "node:path";
 const ROOT = process.cwd();
 const SRC_DIR = path.join(ROOT, "src");
 const FILE_EXTENSIONS = new Set([".ts", ".tsx", ".astro"]);
+const BLOCKED_BACKUP_EXTENSIONS = new Set([".bak", ".orig"]);
 const RAW_BUTTON_ALLOWLIST = new Set([
   "src/components/ui/Button.astro",
 ]);
@@ -37,6 +38,21 @@ function walk(dir) {
   return files;
 }
 
+function walkAll(dir) {
+  const entries = readdirSync(dir);
+  const files = [];
+  for (const entry of entries) {
+    const full = path.join(dir, entry);
+    const st = statSync(full);
+    if (st.isDirectory()) {
+      files.push(...walkAll(full));
+      continue;
+    }
+    files.push(full);
+  }
+  return files;
+}
+
 function rel(file) {
   return path.relative(ROOT, file).split(path.sep).join("/");
 }
@@ -59,6 +75,13 @@ for (const file of files) {
   if (hasRawButton && !RAW_BUTTON_ALLOWLIST.has(relative)) {
     failures.push(`${relative}: raw <button> is not allowed`);
   }
+}
+
+const allSourceEntries = walkAll(SRC_DIR);
+for (const file of allSourceEntries) {
+  const ext = path.extname(file);
+  if (!BLOCKED_BACKUP_EXTENSIONS.has(ext) && !file.endsWith("~")) continue;
+  failures.push(`${rel(file)}: backup file must be removed`);
 }
 
 if (failures.length > 0) {
