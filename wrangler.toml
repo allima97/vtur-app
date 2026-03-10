@@ -1,4 +1,4 @@
-name = "vtur"
+name = "vtur-app"
 main = "dist/_worker.js"
 assets = { directory = "dist", binding = "ASSETS" }
 compatibility_date = "2024-12-20"
