@@ -29,6 +29,17 @@ function ensureSSRDomGlobals() {
   if (typeof g.Node === "undefined") {
     g.Node = class Node {};
   }
+  if (typeof g.customElements === "undefined") {
+    const registry = new Map<string, any>();
+    g.customElements = {
+      define: (name: string, ctor: any) => {
+        if (!registry.has(name)) registry.set(name, ctor);
+      },
+      get: (name: string) => registry.get(name),
+      whenDefined: async (_name: string) => undefined,
+      upgrade: (_root: unknown) => undefined,
+    };
+  }
 }
 
 function logUncaughtError(params: {
