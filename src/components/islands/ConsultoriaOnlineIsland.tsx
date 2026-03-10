@@ -1,3 +1,4 @@
+import { Dialog } from "@primer/react";
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import {
@@ -5,7 +6,16 @@ import {
   getConsultoriaLembreteLabel,
 } from "../../lib/consultoriaLembretes";
 import { formatDateTimeBR } from "../../lib/format";
+import AlertMessage from "../ui/AlertMessage";
+import ConfirmDialog from "../ui/ConfirmDialog";
+import DataTable from "../ui/DataTable";
+import EmptyState from "../ui/EmptyState";
 import TableActions from "../ui/TableActions";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type ClienteOption = {
   id: string;
@@ -56,6 +66,7 @@ export default function ConsultoriaOnlineIsland() {
   const [interacaoErro, setInteracaoErro] = useState<string | null>(null);
   const [salvandoInteracao, setSalvandoInteracao] = useState(false);
   const [fechandoId, setFechandoId] = useState<string | null>(null);
+  const [consultaParaFechar, setConsultaParaFechar] = useState<ConsultoriaRegistro | null>(null);
 
   useEffect(() => {
     const loadClientes = async () => {
@@ -265,8 +276,6 @@ export default function ConsultoriaOnlineIsland() {
 
   const fecharConsultoria = async (consulta: ConsultoriaRegistro) => {
     if (!consulta.id || consulta.fechada) return;
-    const confirmar = window.confirm(`Fechar a consultoria de ${consulta.cliente_nome}?`);
-    if (!confirmar) return;
     setFechandoId(consulta.id);
     try {
       const resp = await fetch("/api/consultorias", {
@@ -324,309 +333,353 @@ export default function ConsultoriaOnlineIsland() {
       statusLabel: item.fechada ? "Fechada" : "Aberta",
     }));
   }, [consultasFiltradas]);
+  const abertasCount = useMemo(() => consultas.filter((item) => !item.fechada).length, [consultas]);
+  const fechadasCount = useMemo(() => consultas.filter((item) => item.fechada).length, [consultas]);
+  const resumoLista = busca.trim()
+    ? `${tableRows.length} consultoria(s) encontradas para a busca atual.`
+    : `${abertasCount} consultoria(s) aberta(s) e ${fechadasCount} fechada(s) registradas no CRM.`;
 
   return (
-    <div className="consultoria-page">
-      <div className="card-base mb-3 list-toolbar-sticky">
-        <div
-          className="form-row mobile-stack"
-          style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
+    <AppPrimerProvider>
+      <div className="consultoria-page">
+        <AppToolbar
+          sticky
+          tone="config"
+          className="mb-3 list-toolbar-sticky"
+          title={mostrarFormulario ? (editandoId ? "Editar consultoria" : "Nova consultoria") : "Consultoria online"}
+          subtitle={
+            mostrarFormulario
+              ? "Preencha os dados para agendar um atendimento com contexto comercial e lembrete."
+              : resumoLista
+          }
+          actions={
+            <div className="vtur-quote-top-actions">
+              {mostrarFormulario ? (
+                <AppButton type="button" variant="secondary" onClick={cancelarFormulario} disabled={submitting}>
+                  Voltar para lista
+                </AppButton>
+              ) : (
+                <AppButton
+                  type="button"
+                  variant="primary"
+                  onClick={abrirFormulario}
+                  disabled={mostrarFormulario}
+                >
+                  Adicionar consultoria
+                </AppButton>
+              )}
+            </div>
+          }
         >
-          <div className="form-group" style={{ flex: "1 1 320px" }}>
-            <label className="form-label">Buscar consultoria</label>
-            <input
-              className="form-input"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Busque por cliente, destino, orçamento ou observações"
-            />
-          </div>
-          <div className="form-group" style={{ alignItems: "flex-end" }}>
-            <button
-              type="button"
-              className="btn btn-primary w-full sm:w-auto"
-              onClick={abrirFormulario}
-              disabled={mostrarFormulario}
-            >
-              Adicionar nova consultoria
-            </button>
-          </div>
-        </div>
-      </div>
+          {!mostrarFormulario ? (
+            <>
+              <div className="vtur-toolbar-grid">
+                <AppField
+                  label="Buscar consultoria"
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  placeholder="Busque por cliente, destino, orçamento ou observações"
+                />
+              </div>
+              <div className="vtur-quote-summary-grid" style={{ marginTop: 16 }}>
+                <div className="vtur-quote-summary-item">
+                  <span className="vtur-quote-summary-label">Abertas</span>
+                  <strong>{abertasCount}</strong>
+                </div>
+                <div className="vtur-quote-summary-item">
+                  <span className="vtur-quote-summary-label">Fechadas</span>
+                  <strong>{fechadasCount}</strong>
+                </div>
+                <div className="vtur-quote-summary-item">
+                  <span className="vtur-quote-summary-label">Em tela</span>
+                  <strong>{tableRows.length}</strong>
+                </div>
+              </div>
+            </>
+          ) : null}
+        </AppToolbar>
 
-      {mostrarFormulario && (
-        <div className="card-base card-blue mb-3" id="consultoria-form">
-          <div className="card-base-header">
-            <div>
-              <h3>{editandoId ? "Editar consultoria" : "Nova consultoria"}</h3>
-              <p>Preencha os dados para agendar um atendimento.</p>
-            </div>
-          </div>
-          <form className="grid gap-4 lg:grid-cols-2" onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label>Cliente</label>
-              <select
-                className="form-input"
-                value={form.clienteId}
-                onChange={(event) => handleSelectCliente(event.target.value)}
-              >
-                <option value="">Selecionar (opcional)</option>
-                {clientes.map((cliente) => (
-                  <option key={cliente.id} value={cliente.id}>
-                    {cliente.nome}
-                  </option>
-                ))}
-              </select>
-              <input
-                className="form-input"
-                type="text"
-                value={form.clienteNome}
-                placeholder="Nome do cliente"
-                onChange={(event) => handleInputChange("clienteNome", event.target.value)}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Data e hora</label>
-              <input
-                className="form-input"
-                type="datetime-local"
-                value={form.dataHora}
-                onChange={(event) => handleInputChange("dataHora", event.target.value)}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Lembrete</label>
-              <select
-                className="form-input"
-                value={form.lembrete}
-                onChange={(event) => handleInputChange("lembrete", event.target.value)}
-              >
-                {CONSULTORIA_LEMBRETES.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Destino</label>
-              <input
-                className="form-input"
-                type="text"
-                value={form.destino}
-                onChange={(ev) => handleInputChange("destino", ev.target.value)}
-                placeholder="Cidade, país ou produto"
-              />
-            </div>
-            <div className="form-group">
-              <label>Quantidade de pessoas</label>
-              <input
-                className="form-input"
-                type="number"
-                min={1}
-                value={form.quantidadePessoas}
-                onChange={(event) => handleInputChange("quantidadePessoas", event.target.value)}
-              />
-            </div>
-            <div className="form-group">
-              <label>Orçamento sugerido</label>
-              <input
-                type="text"
-                className="form-input"
-                value={form.orcamentoId}
-                placeholder="Cole o ID do orçamento"
-                onChange={(event) => handleInputChange("orcamentoId", event.target.value)}
-              />
-              <small style={{ display: "block", marginTop: 4 }}>
-                <a href="/orcamentos/consulta" className="link">
-                  Buscar orçamento no sistema
-                </a>
-              </small>
-            </div>
-            <div className="form-group">
-              <label>Taxa de consultoria (R$)</label>
-              <input
-                className="form-input"
-                type="number"
-                min={0}
-                step={0.01}
-                value={form.taxaConsultoria}
-                onChange={(event) => handleInputChange("taxaConsultoria", event.target.value)}
-              />
-            </div>
-            <div className="form-group md:col-span-2">
-              <label>Notas</label>
-              <textarea
-                className="form-input"
-                rows={3}
+        {error ? (
+          <AlertMessage variant="error" className="mb-3">
+            {error}
+          </AlertMessage>
+        ) : null}
+        {message ? (
+          <AlertMessage variant="success" className="mb-3">
+            {message}
+          </AlertMessage>
+        ) : null}
+
+        {mostrarFormulario ? (
+          <AppCard
+            className="mb-3"
+            title={editandoId ? "Editar consultoria" : "Nova consultoria"}
+            subtitle="Preencha os dados para agendar um atendimento e manter o histórico consultivo organizado."
+          >
+            <form className="vtur-form-grid" onSubmit={handleSubmit}>
+              <div className="vtur-form-grid vtur-form-grid-2">
+                <div>
+                  <AppField
+                    as="select"
+                    label="Cliente"
+                    value={form.clienteId}
+                    onChange={(event) => handleSelectCliente(event.target.value)}
+                    options={[
+                      { label: "Selecionar (opcional)", value: "" },
+                      ...clientes.map((cliente) => ({
+                        label: cliente.nome,
+                        value: cliente.id,
+                      })),
+                    ]}
+                  />
+                  <AppField
+                    wrapperClassName="mt-2"
+                    label="Nome do cliente"
+                    type="text"
+                    value={form.clienteNome}
+                    placeholder="Nome do cliente"
+                    onChange={(event) => handleInputChange("clienteNome", event.target.value)}
+                    required
+                  />
+                </div>
+                <AppField
+                  label="Data e hora"
+                  type="datetime-local"
+                  value={form.dataHora}
+                  onChange={(event) => handleInputChange("dataHora", event.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="vtur-form-grid vtur-form-grid-3">
+                <AppField
+                  as="select"
+                  label="Lembrete"
+                  value={form.lembrete}
+                  onChange={(event) => handleInputChange("lembrete", event.target.value)}
+                  options={CONSULTORIA_LEMBRETES.map((item) => ({
+                    label: item.label,
+                    value: item.value,
+                  }))}
+                />
+                <AppField
+                  label="Destino"
+                  type="text"
+                  value={form.destino}
+                  onChange={(event) => handleInputChange("destino", event.target.value)}
+                  placeholder="Cidade, país ou produto"
+                />
+                <AppField
+                  label="Quantidade de pessoas"
+                  type="number"
+                  min={1}
+                  value={String(form.quantidadePessoas)}
+                  onChange={(event) => handleInputChange("quantidadePessoas", event.target.value)}
+                />
+              </div>
+
+              <div className="vtur-form-grid vtur-form-grid-2">
+                <AppField
+                  label="Orçamento sugerido"
+                  type="text"
+                  value={form.orcamentoId}
+                  placeholder="Cole o ID do orçamento"
+                  onChange={(event) => handleInputChange("orcamentoId", event.target.value)}
+                  caption={
+                    <a href="/orcamentos/consulta" className="link">
+                      Buscar orçamento no sistema
+                    </a>
+                  }
+                />
+                <AppField
+                  label="Taxa de consultoria (R$)"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={String(form.taxaConsultoria)}
+                  onChange={(event) => handleInputChange("taxaConsultoria", event.target.value)}
+                />
+              </div>
+
+              <AppField
+                as="textarea"
+                label="Notas"
+                rows={4}
                 value={form.notas}
                 onChange={(event) => handleInputChange("notas", event.target.value)}
                 placeholder="Observações, links úteis ou detalhes da consultoria"
               />
-            </div>
-            {error && (
-              <div className="alert alert-danger md:col-span-2">
-                {error}
-              </div>
-            )}
-            {message && (
-              <div className="alert alert-success md:col-span-2">
-                {message}
-              </div>
-            )}
-            <div className="mobile-stack-buttons" style={{ marginTop: 8, justifyContent: "flex-end" }}>
-              <button type="button" className="btn btn-light" onClick={cancelarFormulario} disabled={submitting}>
-                Cancelar
-              </button>
-              <button type="submit" className="btn btn-primary" disabled={submitting}>
-                {submitting ? "Salvando..." : editandoId ? "Salvar alterações" : "Agendar consultoria"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
 
-      <div className="card-base">
-        <section>
-          <h3>Consultorias agendadas</h3>
-          {loadingConsultas && <p>Carregando...</p>}
-          {!loadingConsultas && consultas.length === 0 && <p>Nenhuma consultoria agendada ainda.</p>}
-          {!loadingConsultas && consultas.length > 0 && tableRows.length === 0 && (
-            <p>
-              {busca.trim()
-                ? "Nenhuma consultoria encontrada para a busca atual."
-                : "Nenhuma consultoria em aberto no momento."}
-            </p>
-          )}
-          {!loadingConsultas && tableRows.length > 0 && (
-            <div className="table-container overflow-x-auto">
-              <table className="table-default table-header-blue table-mobile-cards min-w-[920px]">
-                <thead>
-                  <tr>
-                    <th>Cliente</th>
-                    <th>Data/Hora</th>
-                    <th>Lembrete</th>
-                    <th>Destino</th>
-                    <th>Orçamento</th>
-                    <th>Status</th>
-                    <th className="th-actions">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tableRows.map((consulta) => (
-                    <tr key={consulta.id}>
-                      <td data-label="Cliente">{consulta.cliente_nome}</td>
-                      <td data-label="Data/Hora">
-                        {consulta.localDate}
-                        <br />
-                        <small>{consulta.proximidade}</small>
-                        <br />
-                        <small>
-                          <a className="link" href={`/api/consultorias/ics?id=${consulta.id}`} target="_blank" rel="noreferrer">
-                            Adicionar ao calendario
-                          </a>
-                        </small>
-                      </td>
-                      <td data-label="Lembrete">{getConsultoriaLembreteLabel(consulta.lembrete)}</td>
-                      <td data-label="Destino">{consulta.destino || "-"}</td>
-                      <td data-label="Orcamento">
-                        {consulta.orcamento_id ? (
-                          <a href={`/orcamentos/${consulta.orcamento_id}`} className="link">
-                            Abrir orçamento
-                          </a>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-                      <td data-label="Status">{consulta.statusLabel}</td>
-                      <td className="th-actions" data-label="Ações">
-                        <TableActions
-                          actions={[
-                            {
-                              key: "edit",
-                              label: "Editar",
-                              onClick: () => abrirEdicao(consulta),
-                              icon: "✏️",
-                            },
-                            {
-                              key: "interacao",
-                              label: "Interação",
-                              onClick: () => abrirInteracao(consulta),
-                              icon: "📝",
-                            },
-                            {
-                              key: "fechar",
-                              label: consulta.fechada ? "Fechada" : "Fechar",
-                              onClick: () => fecharConsultoria(consulta),
-                              icon: "✅",
-                              disabled: Boolean(consulta.fechada) || fechandoId === consulta.id,
-                              variant: "light",
-                            },
-                          ]}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      </div>
-
-      {interacaoModal && (
-        <div className="modal-backdrop">
-          <div className="modal-panel" style={{ maxWidth: 640, width: "92vw" }}>
-            <div className="modal-header">
-              <div className="modal-title">Registrar interação</div>
-              <button className="btn-ghost" onClick={() => setInteracaoModal(null)}>
-                Fechar
-              </button>
-            </div>
-            <div className="modal-body">
-              <div style={{ marginBottom: 8, fontWeight: 700 }}>
-                {interacaoModal.cliente_nome || "Consultoria"} •{" "}
-                {formatDateTimeBR(interacaoModal.data_hora)}
+              <div className="vtur-form-actions">
+                <AppButton type="button" variant="secondary" onClick={cancelarFormulario} disabled={submitting}>
+                  Cancelar
+                </AppButton>
+                <AppButton type="submit" variant="primary" disabled={submitting}>
+                  {submitting ? "Salvando..." : editandoId ? "Salvar alterações" : "Agendar consultoria"}
+                </AppButton>
               </div>
-              <div className="form-group">
-                <label className="form-label">Descrição</label>
-                <textarea
-                  className="form-input"
-                  rows={4}
+            </form>
+          </AppCard>
+        ) : null}
+
+        <AppCard
+          title="Consultorias agendadas"
+          subtitle="Agenda consultiva com status, destino, orçamento vinculado e acesso rápido às interações."
+        >
+          <DataTable
+            headers={
+              <tr>
+                <th>Cliente</th>
+                <th>Data/Hora</th>
+                <th>Lembrete</th>
+                <th>Destino</th>
+                <th>Orçamento</th>
+                <th>Status</th>
+                <th className="th-actions">Ações</th>
+              </tr>
+            }
+            loading={loadingConsultas}
+            empty={!loadingConsultas && tableRows.length === 0}
+            emptyMessage={
+              <EmptyState
+                title={consultas.length === 0 ? "Nenhuma consultoria agendada ainda" : "Nenhuma consultoria encontrada"}
+                description={
+                  busca.trim()
+                    ? "Nenhuma consultoria encontrada para a busca atual."
+                    : "Nenhuma consultoria em aberto no momento."
+                }
+                action={
+                  !mostrarFormulario ? (
+                    <AppButton type="button" variant="primary" onClick={abrirFormulario}>
+                      Adicionar consultoria
+                    </AppButton>
+                  ) : undefined
+                }
+              />
+            }
+            colSpan={7}
+            className="table-header-blue table-mobile-cards min-w-[920px]"
+          >
+            {tableRows.map((consulta) => (
+              <tr key={consulta.id}>
+                <td data-label="Cliente">{consulta.cliente_nome}</td>
+                <td data-label="Data/Hora">
+                  {consulta.localDate}
+                  <br />
+                  <small>{consulta.proximidade}</small>
+                  <br />
+                  <small>
+                    <a className="link" href={`/api/consultorias/ics?id=${consulta.id}`} target="_blank" rel="noreferrer">
+                      Adicionar ao calendario
+                    </a>
+                  </small>
+                </td>
+                <td data-label="Lembrete">{getConsultoriaLembreteLabel(consulta.lembrete)}</td>
+                <td data-label="Destino">{consulta.destino || "-"}</td>
+                <td data-label="Orcamento">
+                  {consulta.orcamento_id ? (
+                    <a href={`/orcamentos/${consulta.orcamento_id}`} className="link">
+                      Abrir orçamento
+                    </a>
+                  ) : (
+                    "-"
+                  )}
+                </td>
+                <td data-label="Status">{consulta.statusLabel}</td>
+                <td className="th-actions" data-label="Ações">
+                  <TableActions
+                    actions={[
+                      {
+                        key: "edit",
+                        label: "Editar",
+                        onClick: () => abrirEdicao(consulta),
+                        icon: "✏️",
+                      },
+                      {
+                        key: "interacao",
+                        label: "Interação",
+                        onClick: () => abrirInteracao(consulta),
+                        icon: "📝",
+                      },
+                      {
+                        key: "fechar",
+                        label: consulta.fechada ? "Fechada" : "Fechar",
+                        onClick: () => setConsultaParaFechar(consulta),
+                        icon: "✅",
+                        disabled: Boolean(consulta.fechada) || fechandoId === consulta.id,
+                        variant: "light",
+                      },
+                    ]}
+                  />
+                </td>
+              </tr>
+            ))}
+          </DataTable>
+        </AppCard>
+
+        {interacaoModal ? (
+          <Dialog
+            title="Registrar interação"
+            width="large"
+            onClose={() => setInteracaoModal(null)}
+            footerButtons={[
+              {
+                content: "Cancelar",
+                buttonType: "default",
+                onClick: () => setInteracaoModal(null),
+                disabled: salvandoInteracao,
+              },
+              {
+                content: salvandoInteracao ? "Salvando..." : "Salvar interação",
+                buttonType: "primary",
+                onClick: salvarInteracao,
+                disabled: salvandoInteracao,
+              },
+            ]}
+          >
+            <div className="vtur-modal-body-stack">
+              <AppCard
+                tone="info"
+                title={interacaoModal.cliente_nome || "Consultoria"}
+                subtitle={formatDateTimeBR(interacaoModal.data_hora)}
+              >
+                <AppField
+                  as="textarea"
+                  label="Descrição"
+                  rows={5}
                   value={interacaoTexto}
                   onChange={(e) => setInteracaoTexto(e.target.value)}
                   placeholder="Descreva a interação realizada"
                 />
-              </div>
-              {interacaoErro && (
-                <div className="alert alert-danger" style={{ marginTop: 10 }}>
-                  {interacaoErro}
-                </div>
-              )}
-              <div className="mobile-stack-buttons" style={{ marginTop: 12 }}>
-                <button
-                  className="btn btn-primary"
-                  type="button"
-                  onClick={salvarInteracao}
-                  disabled={salvandoInteracao}
-                >
-                  {salvandoInteracao ? "Salvando..." : "Salvar interação"}
-                </button>
-                <button
-                  className="btn btn-light"
-                  type="button"
-                  onClick={() => setInteracaoModal(null)}
-                  disabled={salvandoInteracao}
-                >
-                  Cancelar
-                </button>
-              </div>
+                {interacaoErro ? (
+                  <div style={{ marginTop: 12 }}>
+                    <AlertMessage variant="error">{interacaoErro}</AlertMessage>
+                  </div>
+                ) : null}
+              </AppCard>
             </div>
-          </div>
-        </div>
-      )}
-    </div>
+          </Dialog>
+        ) : null}
+
+        <ConfirmDialog
+          open={Boolean(consultaParaFechar)}
+          title="Fechar consultoria"
+          message={
+            consultaParaFechar
+              ? `Fechar a consultoria de ${consultaParaFechar.cliente_nome}?`
+              : "Fechar esta consultoria?"
+          }
+          confirmLabel={consultaParaFechar && fechandoId === consultaParaFechar.id ? "Fechando..." : "Fechar"}
+          confirmDisabled={Boolean(consultaParaFechar && fechandoId === consultaParaFechar.id)}
+          onCancel={() => setConsultaParaFechar(null)}
+          onConfirm={async () => {
+            if (!consultaParaFechar) return;
+            const alvo = consultaParaFechar;
+            setConsultaParaFechar(null);
+            await fecharConsultoria(alvo);
+          }}
+        />
+      </div>
+    </AppPrimerProvider>
   );
 }

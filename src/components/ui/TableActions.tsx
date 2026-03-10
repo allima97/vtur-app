@@ -1,4 +1,5 @@
 import React from "react";
+import AppButton from "./primer/AppButton";
 
 type ActionVariant = "danger" | "primary" | "light" | "ghost";
 
@@ -49,29 +50,29 @@ export default function TableActions({
   const normalizedActions = (actions || []).filter(Boolean);
   if (normalizedActions.length > 0) {
     return (
-      <div className={`action-buttons ${className}`.trim()}>
+      <div className={`action-buttons vtur-table-actions ${className}`.trim()}>
         {normalizedActions.map((action) => {
-          const variantClass =
-            action.variant === "danger"
-              ? "btn-danger"
-              : action.variant === "primary"
-                ? "btn-primary"
-                : action.variant === "light"
-                  ? "btn-light"
-                  : action.variant === "ghost"
-                    ? "btn-ghost"
-                    : "";
           return (
-            <button
+            <AppButton
               key={action.key}
               type="button"
-              className={`btn-icon ${variantClass} ${action.className || ""}`.trim()}
+              variant={
+                action.variant === "danger"
+                  ? "danger"
+                  : action.variant === "primary"
+                    ? "primary"
+                    : action.variant === "light"
+                      ? "secondary"
+                      : "ghost"
+              }
+              className={`vtur-table-action ${action.className || ""}`.trim()}
               title={action.title || action.label}
+              aria-label={action.title || action.label}
               onClick={action.onClick}
               disabled={action.disabled}
             >
               {action.icon ?? action.label}
-            </button>
+            </AppButton>
           );
         })}
       </div>
@@ -84,28 +85,32 @@ export default function TableActions({
   if (!shouldShowEdit && !shouldShowDelete) return null;
 
   return (
-    <div className={`action-buttons ${className}`.trim()}>
+    <div className={`action-buttons vtur-table-actions ${className}`.trim()}>
       {shouldShowEdit && onEdit && (
-        <button
+        <AppButton
           type="button"
-          className="btn-icon"
+          variant="ghost"
+          className="vtur-table-action"
           title={editLabel}
+          aria-label={editLabel}
           onClick={onEdit}
           disabled={editDisabled}
         >
           {editIcon}
-        </button>
+        </AppButton>
       )}
       {shouldShowDelete && onDelete && (
-        <button
+        <AppButton
           type="button"
-          className="btn-icon btn-danger"
+          variant="danger"
+          className="vtur-table-action"
           title={deleteLabel}
+          aria-label={deleteLabel}
           onClick={onDelete}
           disabled={deleteDisabled}
         >
           {deleteIcon}
-        </button>
+        </AppButton>
       )}
     </div>
   );

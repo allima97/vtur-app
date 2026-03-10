@@ -12,11 +12,18 @@ import { buildReciboSearchTokens, matchesReciboSearch } from "../../lib/searchNo
 import DataTable from "../ui/DataTable";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import AlertMessage from "../ui/AlertMessage";
+import EmptyState from "../ui/EmptyState";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import PaginationControls from "../ui/PaginationControls";
 import { fetchGestorEquipeIdsComGestor } from "../../lib/gestorEquipe";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import { Eye, Trash2 } from "lucide-react";
+import TableActions from "../ui/TableActions";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 function formatarDataCorretamente(dataString: string | null | undefined): string {
   if (!dataString) return "-";
@@ -888,6 +895,20 @@ export default function VendasConsultaIsland() {
     return `Resultados de ${formatarDataCorretamente(periodoFiltro.inicio)} até ${formatarDataCorretamente(periodoFiltro.fim)}`;
   }, [periodoFiltro]);
 
+  const resumoLista = useMemo(() => {
+    const restricao = filtroLabel
+      ? `${filtroLabel}${userCtx?.papel !== "ADMIN" ? " (restrição por vendedor)" : ""}`
+      : "";
+
+    const volume = busca.trim()
+      ? `${vendasFiltradas.length} venda(s) encontradas para a busca atual.`
+      : usaPaginacaoServidor
+        ? `${totalVendasDb} venda(s) cadastradas. Exibindo ${vendasExibidas.length} item(ns) na página ${paginaAtual}.`
+        : `${vendasFiltradas.length} venda(s) encontradas no período.`;
+
+    return [volume, restricao].filter(Boolean).join(" ");
+  }, [busca, filtroLabel, paginaAtual, totalVendasDb, usaPaginacaoServidor, userCtx?.papel, vendasExibidas.length, vendasFiltradas.length]);
+
   // ================================
   // CANCELAR VENDA
   // ================================
@@ -1237,17 +1258,11 @@ export default function VendasConsultaIsland() {
 
   if (!podeVer) {
     return (
-      <div className="card-base card-config">
-        <strong>Acesso negado ao módulo de Vendas.</strong>
-      </div>
-    );
-  }
-
-  if (!podeVer) {
-    return (
-      <div className="card-base card-config">
-        <strong>Você não possui permissão para visualizar Vendas.</strong>
-      </div>
+      <AppPrimerProvider>
+        <AppCard tone="config">
+          <strong>Acesso negado ao módulo de Vendas.</strong>
+        </AppCard>
+      </AppPrimerProvider>
     );
   }
 
@@ -1255,105 +1270,103 @@ export default function VendasConsultaIsland() {
   // UI — LISTAGEM
   // ================================
   return (
-    <div className={`vendas-consulta-page${podeCriar ? " has-mobile-actionbar" : ""}`}>
-      {/* BUSCA */}
-      <div
-        className="card-base mb-3 list-toolbar-sticky"
-        style={{ background: "#ecfdf3", borderColor: "#bbf7d0" }}
-      >
-        <div
-          className="form-row mobile-stack"
-          style={{
-            gap: 12,
-            gridTemplateColumns: "minmax(160px, 220px) minmax(240px, 1fr) auto",
-            alignItems: "flex-end",
-          }}
+    <AppPrimerProvider>
+      <div className={`vendas-consulta-page${podeCriar ? " has-mobile-actionbar" : ""}`}>
+        <AppToolbar
+          sticky
+          tone="config"
+          className="mb-3 list-toolbar-sticky"
+          title="Consulta de vendas"
+          subtitle={resumoLista}
+          actions={
+            podeCriar || podeImportarContratos ? (
+              <>
+                {podeImportarContratos && (
+                  <AppButton
+                    type="button"
+                    variant="secondary"
+                    className="hidden sm:inline-flex"
+                    onClick={() => {
+                      window.location.href = "/vendas/importar";
+                    }}
+                  >
+                    Importar contratos
+                  </AppButton>
+                )}
+                {podeCriar && (
+                  <AppButton
+                    type="button"
+                    variant="primary"
+                    className="hidden sm:inline-flex"
+                    onClick={() => {
+                      window.location.href = "/vendas/cadastro";
+                    }}
+                  >
+                    Nova venda
+                  </AppButton>
+                )}
+              </>
+            ) : null
+          }
         >
-          <div className="form-group">
-            <label className="form-label">Campo de busca</label>
-            <select
-              className="form-select w-full"
+          <div className="vtur-form-grid vtur-form-grid-3">
+            <AppField
+              as="select"
+              label="Campo de busca"
               value={campoBusca}
               onChange={(e) => setCampoBusca(e.target.value as CampoBusca)}
-            >
-              <option value="todos">Todos</option>
-              <option value="cliente">Cliente</option>
-              {podeFiltrarVendedor && <option value="vendedor">Vendedor</option>}
-              <option value="destino">Destino</option>
-              <option value="produto">Produto</option>
-              <option value="recibo">Recibo</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Buscar venda</label>
-            <input
-              className="form-input w-full"
+              options={[
+                { value: "todos", label: "Todos" },
+                { value: "cliente", label: "Cliente" },
+                ...(podeFiltrarVendedor ? [{ value: "vendedor", label: "Vendedor" }] : []),
+                { value: "destino", label: "Destino" },
+                { value: "produto", label: "Produto" },
+                { value: "recibo", label: "Recibo" },
+              ]}
+            />
+            <AppField
+              label="Buscar venda"
               placeholder={placeholderBusca}
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
             />
           </div>
-          {podeCriar && (
-            <div className="hidden sm:flex" style={{ alignItems: "flex-end" }}>
-              <div className="form-group">
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  {podeImportarContratos && (
-                    <a className="btn btn-secondary" href="/vendas/importar" style={{ textDecoration: "none" }}>
-                      Importar contratos
-                    </a>
-                  )}
-                  <a className="btn btn-primary" href="/vendas/cadastro" style={{ textDecoration: "none" }}>
-                    Nova venda
-                  </a>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-        <div
-          className="form-row mobile-stack"
-          style={{
-            gap: 12,
-            marginTop: 12,
-            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-            alignItems: "flex-end",
-          }}
-        >
-          <div className="form-group">
-            <label className="form-label">Período (data da venda)</label>
-            <select
-              className="form-select w-full"
+        </AppToolbar>
+
+        <AppCard className="mb-3" tone="config" title="Filtros do período" subtitle="Refine a consulta por competência, data ou escopo comercial.">
+          <div className="vtur-form-grid vtur-form-grid-4">
+            <AppField
+              as="select"
+              label="Período (data da venda)"
               value={periodoPreset}
               onChange={(e) => setPeriodoPreset(e.target.value as PeriodoPreset)}
-            >
-              <option value="todos">Todos</option>
-              <option value="mes_atual">Mês atual</option>
-              <option value="mes_anterior">Mês anterior</option>
-              <option value="mes">Escolher mês</option>
-              <option value="dia">Data específica</option>
-            </select>
-          </div>
+              options={[
+                { value: "todos", label: "Todos" },
+                { value: "mes_atual", label: "Mês atual" },
+                { value: "mes_anterior", label: "Mês anterior" },
+                { value: "mes", label: "Escolher mês" },
+                { value: "dia", label: "Data específica" },
+              ]}
+            />
 
-          {periodoPreset === "mes" && (
-            <div className="form-group">
-              <label className="form-label">Mês</label>
-              <select className="form-select w-full" value={periodoMes} onChange={(e) => setPeriodoMes(e.target.value)}>
-                {monthOptions.map((value) => (
-                  <option key={value} value={value}>
-                    {formatMonthYearBR(value)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+            {periodoPreset === "mes" && (
+              <AppField
+                as="select"
+                label="Mês"
+                value={periodoMes}
+                onChange={(e) => setPeriodoMes(e.target.value)}
+                options={monthOptions.map((value) => ({
+                  value,
+                  label: formatMonthYearBR(value),
+                }))}
+              />
+            )}
 
-          {periodoPreset === "dia" && (
-            <>
-              <div className="form-group">
-                <label className="form-label">Data início</label>
-                <input
+            {periodoPreset === "dia" && (
+              <>
+                <AppField
+                  label="Data início"
                   type="date"
-                  className="form-input w-full"
                   value={periodoDia}
                   max={dateToISODateLocal(new Date())}
                   onFocus={selectAllInputOnFocus}
@@ -1365,12 +1378,9 @@ export default function VendasConsultaIsland() {
                     }
                   }}
                 />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Data fim</label>
-                <input
+                <AppField
+                  label="Data fim"
                   type="date"
-                  className="form-input w-full"
                   value={periodoDiaFim}
                   min={periodoDia || undefined}
                   max={dateToISODateLocal(new Date())}
@@ -1381,388 +1391,391 @@ export default function VendasConsultaIsland() {
                     setPeriodoDiaFim(boundedFim);
                   }}
                 />
-              </div>
-            </>
-          )}
-        </div>
-        {userCtx?.papel === "MASTER" && (
-          <div
-            className="form-row mobile-stack"
-            style={{ gap: 12, marginTop: 12, gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}
-          >
-            <div className="form-group">
-              <label className="form-label">Filial</label>
-              <select
-                className="form-select w-full"
+              </>
+            )}
+          </div>
+
+          {userCtx?.papel === "MASTER" && (
+            <div className="vtur-form-grid vtur-form-grid-3" style={{ marginTop: 12 }}>
+              <AppField
+                as="select"
+                label="Filial"
                 value={masterScope.empresaSelecionada}
                 onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
-              >
-                <option value="all">Todas</option>
-                {masterScope.empresasAprovadas.map((empresa) => (
-                  <option key={empresa.id} value={empresa.id}>
-                    {empresa.nome_fantasia}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Equipe</label>
-              <select
-                className="form-select w-full"
+                options={[
+                  { value: "all", label: "Todas" },
+                  ...masterScope.empresasAprovadas.map((empresa) => ({
+                    value: empresa.id,
+                    label: empresa.nome_fantasia,
+                  })),
+                ]}
+              />
+              <AppField
+                as="select"
+                label="Equipe"
                 value={masterScope.gestorSelecionado}
                 onChange={(e) => masterScope.setGestorSelecionado(e.target.value)}
-              >
-                <option value="all">Todas</option>
-                {masterScope.gestoresDisponiveis.map((gestor) => (
-                  <option key={gestor.id} value={gestor.id}>
-                    {gestor.nome_completo}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Vendedor</label>
-              <select
-                className="form-select w-full"
+                options={[
+                  { value: "all", label: "Todas" },
+                  ...masterScope.gestoresDisponiveis.map((gestor) => ({
+                    value: gestor.id,
+                    label: gestor.nome_completo,
+                  })),
+                ]}
+              />
+              <AppField
+                as="select"
+                label="Vendedor"
                 value={masterScope.vendedorSelecionado}
                 onChange={(e) => masterScope.setVendedorSelecionado(e.target.value)}
-              >
-                <option value="all">Todos</option>
-                {masterScope.vendedoresDisponiveis.map((vendedor) => (
-                  <option key={vendedor.id} value={vendedor.id}>
-                    {vendedor.nome_completo}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: "all", label: "Todos" },
+                  ...masterScope.vendedoresDisponiveis.map((vendedor) => ({
+                    value: vendedor.id,
+                    label: vendedor.nome_completo,
+                  })),
+                ]}
+              />
+            </div>
+          )}
+
+          {userCtx?.papel === "MASTER" && masterScope.empresasAprovadas.length === 0 && (
+            <div className="vtur-inline-note" style={{ color: "#b91c1c" }}>
+              Nenhuma filial aprovada para este master.
+            </div>
+          )}
+        </AppCard>
+
+        <AppCard className="mb-2" tone="info">
+          <div style={{ textAlign: "center", fontWeight: 700 }}>{textoPeriodoKpi}</div>
+        </AppCard>
+
+        <div className="dashboard-grid-kpi mb-3">
+          <div className="kpi-card kpi-vendas">
+            <div style={{ width: "100%", textAlign: "center" }}>
+              <div className="kpi-label">Total de Vendas</div>
+              <div className="kpi-value">{formatCurrency(kpiMesAtual.totalVendas)}</div>
             </div>
           </div>
-        )}
-        {userCtx?.papel === "MASTER" && masterScope.empresasAprovadas.length === 0 && (
-          <small style={{ color: "#b91c1c", display: "block", marginTop: 8 }}>
-            Nenhuma filial aprovada para este master.
-          </small>
-        )}
-        {filtroLabel && (
-          <small style={{ color: "#64748b", display: "block", marginTop: 6 }}>
-            {filtroLabel} {userCtx?.papel !== "ADMIN" ? "(restrição por vendedor)" : ""}
-          </small>
-        )}
-      </div>
+          <div className="kpi-card kpi-diferenciado">
+            <div style={{ width: "100%", textAlign: "center" }}>
+              <div className="kpi-label">Seguro Viagem</div>
+              <div className="kpi-value">{formatCurrency(kpiMesAtual.totalSeguro)}</div>
+            </div>
+          </div>
+          <div className="kpi-card kpi-meta">
+            <div style={{ width: "100%", textAlign: "center" }}>
+              <div className="kpi-label">Taxas</div>
+              <div className="kpi-value">{formatCurrency(kpiMesAtual.totalTaxas)}</div>
+            </div>
+          </div>
+          <div className="kpi-card kpi-ticket">
+            <div style={{ width: "100%", textAlign: "center" }}>
+              <div className="kpi-label">Total Líquido</div>
+              <div className="kpi-value">{formatCurrency(kpiMesAtual.totalLiquido)}</div>
+            </div>
+          </div>
+        </div>
 
-      <div className="card-base mb-2" style={{ textAlign: "center", fontWeight: 700 }}>
-        {textoPeriodoKpi}
-      </div>
+        {erro && (
+          <div className="mb-3">
+            <AlertMessage variant="error">{erro}</AlertMessage>
+          </div>
+        )}
 
-      <div className="dashboard-grid-kpi mb-3">
-        <div className="kpi-card kpi-vendas">
-          <div style={{ width: "100%", textAlign: "center" }}>
-            <div className="kpi-label">Total de Vendas</div>
-            <div className="kpi-value">{formatCurrency(kpiMesAtual.totalVendas)}</div>
-          </div>
-        </div>
-        <div className="kpi-card kpi-diferenciado">
-          <div style={{ width: "100%", textAlign: "center" }}>
-            <div className="kpi-label">Seguro Viagem</div>
-            <div className="kpi-value">{formatCurrency(kpiMesAtual.totalSeguro)}</div>
-          </div>
-        </div>
-        <div className="kpi-card kpi-meta">
-          <div style={{ width: "100%", textAlign: "center" }}>
-            <div className="kpi-label">Taxas</div>
-            <div className="kpi-value">{formatCurrency(kpiMesAtual.totalTaxas)}</div>
-          </div>
-        </div>
-        <div className="kpi-card kpi-ticket">
-          <div style={{ width: "100%", textAlign: "center" }}>
-            <div className="kpi-label">Total Líquido</div>
-            <div className="kpi-value">{formatCurrency(kpiMesAtual.totalLiquido)}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* ERRO */}
-      {erro && (
         <div className="mb-3">
-          <AlertMessage variant="error">{erro}</AlertMessage>
+          <PaginationControls
+            page={paginaAtual}
+            pageSize={pageSize}
+            totalItems={totalVendas}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(1);
+            }}
+          />
         </div>
-      )}
 
-      {modalReciboDetalhe && (
-        <div className="modal-backdrop modal-recibo">
-          <div className="modal-panel" style={{ maxWidth: "920px" }}>
-            <div className="modal-header">
-              <div>
-                <div className="modal-title" style={{ fontSize: "1.1rem", fontWeight: 700 }}>
-                  Visualização completa do recibo
-                </div>
-              </div>
-              <button className="btn-ghost" onClick={() => setModalReciboDetalhe(null)}>
-                ✕
-              </button>
-            </div>
-            <div className="modal-body">
-              {modalReciboDetalhe.notas?.servicos_inclusos && (
-                <div className="card-base" style={{ marginBottom: 12 }}>
-                  <h4 style={{ marginTop: 0 }}>Serviços inclusos</h4>
-                  <div style={{ fontSize: 14, lineHeight: 1.5 }}>
-                    {modalReciboDetalhe.notas.servicos_inclusos.texto}
+        <DataTable
+          shellClassName="mb-3"
+          className="table-default table-header-green table-mobile-cards min-w-[820px]"
+          containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+          headers={
+            <tr>
+              <th>Cliente</th>
+              <th>Vendedor</th>
+              <th>Destino</th>
+              <th>Produto</th>
+              <th style={{ textAlign: "center" }}>Embarque</th>
+              <th>Valor</th>
+              <th>Taxas</th>
+              {podeVer && <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>}
+            </tr>
+          }
+          loading={loading}
+          loadingMessage="Carregando vendas..."
+          empty={!loading && vendasExibidas.length === 0}
+          emptyMessage={
+            <EmptyState
+              title="Nenhuma venda encontrada"
+              description={
+                busca.trim()
+                  ? "Tente ajustar os filtros ou a busca para localizar vendas."
+                  : "Ainda não há vendas para o período selecionado."
+              }
+              action={
+                podeCriar ? (
+                  <AppButton
+                    type="button"
+                    variant="primary"
+                    onClick={() => {
+                      window.location.href = "/vendas/cadastro";
+                    }}
+                  >
+                    Nova venda
+                  </AppButton>
+                ) : null
+              }
+            />
+          }
+          colSpan={podeVer ? 8 : 7}
+        >
+          {vendasExibidas.map((v) => {
+            const totalValor = recibosDaVenda(v.id).reduce((acc, r) => acc + (r.valor_total || 0), 0);
+            const totalTaxas = recibosDaVenda(v.id).reduce((acc, r) => acc + (r.valor_taxas || 0), 0);
+            const produtosVenda = recibosDaVenda(v.id)
+              .map((r) => r.produto_nome || "")
+              .filter(Boolean);
+            const whatsappLink = construirLinkWhatsApp(v.clientes?.whatsapp);
+
+            return (
+              <tr key={v.id}>
+                <td data-label="Cliente">{v.cliente_nome}</td>
+                <td data-label="Vendedor">{v.vendedor_nome || "-"}</td>
+                <td data-label="Destino">{v.destino_cidade_nome || "-"}</td>
+                <td data-label="Produto">
+                  {produtosVenda.length === 0 ? (
+                    "-"
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      {produtosVenda.map((p, idx) => (
+                        <span key={`${v.id}-prod-${idx}`}>{p}</span>
+                      ))}
+                    </div>
+                  )}
+                </td>
+                <td data-label="Embarque" style={{ textAlign: "center" }}>
+                  {formatarDataCorretamente(v.data_embarque)}
+                </td>
+                <td data-label="Valor">{formatCurrencyBRL(totalValor)}</td>
+                <td data-label="Taxas">{totalTaxas === 0 ? "-" : formatCurrencyBRL(totalTaxas)}</td>
+                <td className="th-actions" data-label="Ações">
+                  <TableActions
+                    actions={[
+                      ...(whatsappLink
+                        ? [
+                            {
+                              key: "whatsapp",
+                              label: "WhatsApp",
+                              title: "Enviar WhatsApp",
+                              onClick: () => window.open(whatsappLink, "_blank", "noopener,noreferrer"),
+                              icon: "💬",
+                              variant: "ghost" as const,
+                            },
+                          ]
+                        : []),
+                      {
+                        key: "details",
+                        label: "Detalhes",
+                        title: "Ver detalhes",
+                        onClick: () => setModalVenda(v),
+                        icon: "👁️",
+                        variant: "primary" as const,
+                      },
+                    ]}
+                  />
+                </td>
+              </tr>
+            );
+          })}
+        </DataTable>
+
+        {modalReciboDetalhe && (
+          <div className="modal-backdrop modal-recibo">
+            <div className="modal-panel vtur-modal-panel-shell" style={{ maxWidth: "920px" }}>
+              <div className="modal-header vtur-modal-header">
+                <div>
+                  <div className="modal-title" style={{ fontSize: "1.1rem", fontWeight: 700 }}>
+                    Visualização completa do recibo
                   </div>
                 </div>
-              )}
-              {modalReciboDetalhe.notas?.roteiro_reserva && (
-                <div className="card-base">
-                  <h4 style={{ marginTop: 0 }}>Roteiro da Reserva</h4>
-                  <div style={{ display: "grid", gap: 10, fontSize: 14 }}>
-                    <div>
-                      <strong>Contratante</strong>
-                      <div>Nome: {modalReciboDetalhe.notas.roteiro_reserva.contratante?.nome || "-"}</div>
-                      <div>Recibo: {modalReciboDetalhe.notas.roteiro_reserva.contratante?.recibo || "-"}</div>
-                      <div>Valor: {formatCurrencyBRL(modalReciboDetalhe.notas.roteiro_reserva.contratante?.valor || 0)}</div>
-                      <div>Taxa embarque: {formatCurrencyBRL(modalReciboDetalhe.notas.roteiro_reserva.contratante?.taxa_embarque || 0)}</div>
-                      <div>Taxa DU: {formatCurrencyBRL(modalReciboDetalhe.notas.roteiro_reserva.contratante?.taxa_du || 0)}</div>
+                <AppButton type="button" variant="ghost" onClick={() => setModalReciboDetalhe(null)}>
+                  Fechar
+                </AppButton>
+              </div>
+              <div className="modal-body vtur-modal-body-stack">
+                {modalReciboDetalhe.notas?.servicos_inclusos && (
+                  <AppCard title="Serviços inclusos" className="vtur-modal-section-card">
+                    <div style={{ fontSize: 14, lineHeight: 1.6 }}>
+                      {modalReciboDetalhe.notas.servicos_inclusos.texto}
                     </div>
-                    <div>
-                      <strong>Roteiro</strong>
-                      <div>Descrição: {modalReciboDetalhe.notas.roteiro_reserva.roteiro?.descricao || "-"}</div>
-                      <div>Tipo de produto: {modalReciboDetalhe.notas.roteiro_reserva.roteiro?.tipo_produto || "-"}</div>
-                      <div>Número do roteiro: {modalReciboDetalhe.notas.roteiro_reserva.roteiro?.numero || "-"}</div>
-                      <div>Roteiro Systur: {modalReciboDetalhe.notas.roteiro_reserva.roteiro?.systur || "-"}</div>
-                      <div>Saída: {formatarDataCorretamente(modalReciboDetalhe.notas.roteiro_reserva.roteiro?.data_saida)}</div>
-                      <div>Retorno: {formatarDataCorretamente(modalReciboDetalhe.notas.roteiro_reserva.roteiro?.data_retorno)}</div>
-                      <div>Vendedor: {modalReciboDetalhe.notas.roteiro_reserva.roteiro?.vendedor || "-"}</div>
-                      <div>Office ID: {modalReciboDetalhe.notas.roteiro_reserva.roteiro?.office_id || "-"}</div>
-                      <div>Voo: {modalReciboDetalhe.notas.roteiro_reserva.roteiro?.voo || "-"}</div>
-                      <div>Mensagem: {modalReciboDetalhe.notas.roteiro_reserva.roteiro?.mensagem || "-"}</div>
-                    </div>
-                    <div>
-                      <strong>Origem</strong>
+                  </AppCard>
+                )}
+                {modalReciboDetalhe.notas?.roteiro_reserva && (
+                  <AppCard title="Roteiro da Reserva" className="vtur-modal-section-card">
+                    <div className="vtur-modal-detail-grid">
                       <div>
-                        {(modalReciboDetalhe.notas.roteiro_reserva.origem?.pais || "-")} /{" "}
-                        {(modalReciboDetalhe.notas.roteiro_reserva.origem?.estado || "-")} /{" "}
-                        {(modalReciboDetalhe.notas.roteiro_reserva.origem?.cidade || "-")}
+                        <strong>Contratante</strong>
+                        <div>Nome: {modalReciboDetalhe.notas.roteiro_reserva.contratante?.nome || "-"}</div>
+                        <div>Recibo: {modalReciboDetalhe.notas.roteiro_reserva.contratante?.recibo || "-"}</div>
+                        <div>Valor: {formatCurrencyBRL(modalReciboDetalhe.notas.roteiro_reserva.contratante?.valor || 0)}</div>
+                        <div>Taxa embarque: {formatCurrencyBRL(modalReciboDetalhe.notas.roteiro_reserva.contratante?.taxa_embarque || 0)}</div>
+                        <div>Taxa DU: {formatCurrencyBRL(modalReciboDetalhe.notas.roteiro_reserva.contratante?.taxa_du || 0)}</div>
                       </div>
-                    </div>
-                    <div>
-                      <strong>Destino</strong>
                       <div>
-                        {(modalReciboDetalhe.notas.roteiro_reserva.destino?.pais || "-")} /{" "}
-                        {(modalReciboDetalhe.notas.roteiro_reserva.destino?.estado || "-")} /{" "}
-                        {(modalReciboDetalhe.notas.roteiro_reserva.destino?.cidade || "-")}
+                        <strong>Roteiro</strong>
+                        <div>Descrição: {modalReciboDetalhe.notas.roteiro_reserva.roteiro?.descricao || "-"}</div>
+                        <div>Tipo de produto: {modalReciboDetalhe.notas.roteiro_reserva.roteiro?.tipo_produto || "-"}</div>
+                        <div>Número do roteiro: {modalReciboDetalhe.notas.roteiro_reserva.roteiro?.numero || "-"}</div>
+                        <div>Roteiro Systur: {modalReciboDetalhe.notas.roteiro_reserva.roteiro?.systur || "-"}</div>
+                        <div>Saída: {formatarDataCorretamente(modalReciboDetalhe.notas.roteiro_reserva.roteiro?.data_saida)}</div>
+                        <div>Retorno: {formatarDataCorretamente(modalReciboDetalhe.notas.roteiro_reserva.roteiro?.data_retorno)}</div>
+                        <div>Vendedor: {modalReciboDetalhe.notas.roteiro_reserva.roteiro?.vendedor || "-"}</div>
+                        <div>Office ID: {modalReciboDetalhe.notas.roteiro_reserva.roteiro?.office_id || "-"}</div>
+                        <div>Voo: {modalReciboDetalhe.notas.roteiro_reserva.roteiro?.voo || "-"}</div>
+                        <div>Mensagem: {modalReciboDetalhe.notas.roteiro_reserva.roteiro?.mensagem || "-"}</div>
                       </div>
-                    </div>
-                    <div>
-                      <strong>Dados da Reserva</strong>
-                      <div>Filial: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.filial || "-"}</div>
-                      <div>Carrinho ID: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.carrinho_id || "-"}</div>
-                      <div>Tipo de venda: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.tipo_venda || "-"}</div>
-                      <div>Pedido: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.pedido || "-"}</div>
-                      <div>Pedido dinâmico: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.pedido_dinamico || "-"}</div>
-                      <div>Número da reserva: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.numero_reserva || "-"}</div>
-                      <div>Vendedor da reserva: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.vendedor_reserva || "-"}</div>
-                      <div>Data da reserva: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.data_reserva || "-"}</div>
-                      <div>Remarcação: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.remarcacao || "-"}</div>
-                      <div>Validade: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.validade_reserva || "-"}</div>
-                      <div>Tipo reserva: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.tipo_reserva || "-"}</div>
-                      <div>Tabela: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.tabela || "-"}</div>
-                      <div>Observação: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.observacao || "-"}</div>
-                      <div>Operador online: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.operador_online || "-"}</div>
-                      <div>Tipo de pacote: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.tipo_pacote || "-"}</div>
-                      <div>Desvio loja: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.desvio_loja || "-"}</div>
-                    </div>
-                    {modalReciboDetalhe.notas.roteiro_reserva.fornecedores?.length > 0 && (
                       <div>
-                        <strong>Fornecedores</strong>
-                        <div style={{ display: "grid", gap: 6, marginTop: 6 }}>
-                          {modalReciboDetalhe.notas.roteiro_reserva.fornecedores.map((f: any, i: number) => {
-                            const produtoNome = getFornecedorProdutoNome(f);
-                            const titulo = produtoNome || f.nome || null;
-                            const mostrarFornecedor = Boolean(produtoNome && f.nome && produtoNome !== f.nome);
-                            return (
-                            <div key={`for-${i}`} style={{ padding: "6px 8px", border: "1px solid #e2e8f0", borderRadius: 6 }}>
-                              <div><strong>{titulo || "-"}</strong></div>
-                              {mostrarFornecedor && (
-                                <div>Fornecedor: {f.nome || "-"}</div>
-                              )}
-                              <div>Tipo: {f.tipo_servico || "-"}</div>
-                              <div>Nº acordo: {f.numero_acordo || "-"}</div>
-                              <div>Cidade: {f.cidade || "-"}</div>
-                              <div>Categoria: {f.categoria || "-"}</div>
-                              <div>Serviço: {f.servico || "-"}</div>
-                              <div>Transporte aéreo: {f.transporte_aereo || "-"}</div>
-                              <div>Trecho: {f.trecho || "-"}</div>
-                              <div>Data inicial: {formatarDataCorretamente(f.data_inicial)}</div>
-                              <div>Data final: {formatarDataCorretamente(f.data_final)}</div>
-                            </div>
-                            );
-                          })}
+                        <strong>Origem</strong>
+                        <div>
+                          {(modalReciboDetalhe.notas.roteiro_reserva.origem?.pais || "-")} /{" "}
+                          {(modalReciboDetalhe.notas.roteiro_reserva.origem?.estado || "-")} /{" "}
+                          {(modalReciboDetalhe.notas.roteiro_reserva.origem?.cidade || "-")}
                         </div>
                       </div>
-                    )}
-                    {modalReciboDetalhe.notas.roteiro_reserva.passageiros?.length > 0 && (
                       <div>
-                        <strong>Passageiros</strong>
-                        <div style={{ display: "grid", gap: 6, marginTop: 6 }}>
-                          {modalReciboDetalhe.notas.roteiro_reserva.passageiros.map((p: any, i: number) => (
-                            <div key={`pax-${i}`} style={{ padding: "6px 8px", border: "1px solid #e2e8f0", borderRadius: 6 }}>
-                              <div>{[p.sobrenome, p.nome].filter(Boolean).join(" ") || "-"}</div>
-                              <div>Nascimento: {formatarDataCorretamente(p.nascimento)}</div>
-                              <div>Sexo: {p.sexo || "-"}</div>
-                              <div>Idade: {p.idade || "-"}</div>
-                              <div>Local embarque: {p.local_embarque || "-"}</div>
-                              <div>Documento: {p.documento_numero || "-"}</div>
-                            </div>
-                          ))}
+                        <strong>Destino</strong>
+                        <div>
+                          {(modalReciboDetalhe.notas.roteiro_reserva.destino?.pais || "-")} /{" "}
+                          {(modalReciboDetalhe.notas.roteiro_reserva.destino?.estado || "-")} /{" "}
+                          {(modalReciboDetalhe.notas.roteiro_reserva.destino?.cidade || "-")}
                         </div>
                       </div>
-                    )}
-                    {modalReciboDetalhe.notas.roteiro_reserva.orcamento && (
                       <div>
-                        <strong>Orçamento</strong>
-                        <div>Valor total: {formatCurrencyBRL(modalReciboDetalhe.notas.roteiro_reserva.orcamento.valor_total || 0)}</div>
-                        <div>Férias protegidas: {formatCurrencyBRL(modalReciboDetalhe.notas.roteiro_reserva.orcamento.valor_ferias_protegidas || 0)}</div>
-                        <div>Forma: {modalReciboDetalhe.notas.roteiro_reserva.orcamento.forma_pagamento || "-"}</div>
-                        <div>Plano: {modalReciboDetalhe.notas.roteiro_reserva.orcamento.plano || "-"}</div>
+                        <strong>Dados da Reserva</strong>
+                        <div>Filial: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.filial || "-"}</div>
+                        <div>Carrinho ID: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.carrinho_id || "-"}</div>
+                        <div>Tipo de venda: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.tipo_venda || "-"}</div>
+                        <div>Pedido: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.pedido || "-"}</div>
+                        <div>Pedido dinâmico: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.pedido_dinamico || "-"}</div>
+                        <div>Número da reserva: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.numero_reserva || "-"}</div>
+                        <div>Vendedor da reserva: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.vendedor_reserva || "-"}</div>
+                        <div>Data da reserva: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.data_reserva || "-"}</div>
+                        <div>Remarcação: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.remarcacao || "-"}</div>
+                        <div>Validade: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.validade_reserva || "-"}</div>
+                        <div>Tipo reserva: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.tipo_reserva || "-"}</div>
+                        <div>Tabela: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.tabela || "-"}</div>
+                        <div>Observação: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.observacao || "-"}</div>
+                        <div>Operador online: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.operador_online || "-"}</div>
+                        <div>Tipo de pacote: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.tipo_pacote || "-"}</div>
+                        <div>Desvio loja: {modalReciboDetalhe.notas.roteiro_reserva.dados_reserva?.desvio_loja || "-"}</div>
                       </div>
-                    )}
-                    {modalReciboDetalhe.notas.roteiro_reserva.pagamento && (
-                      <div>
-                        <strong>Pagamento</strong>
-                        <div>Forma: {modalReciboDetalhe.notas.roteiro_reserva.pagamento.forma || "-"}</div>
-                        <div>Plano: {modalReciboDetalhe.notas.roteiro_reserva.pagamento.plano || "-"}</div>
-                        {modalReciboDetalhe.notas.roteiro_reserva.pagamento.parcelas?.length > 0 && (
-                          <div>
-                            <div>Parcelas:</div>
-                            <div style={{ display: "grid", gap: 4, marginTop: 4 }}>
+                      {modalReciboDetalhe.notas.roteiro_reserva.fornecedores?.length > 0 && (
+                        <div>
+                          <strong>Fornecedores</strong>
+                          <div className="vtur-modal-subgrid">
+                            {modalReciboDetalhe.notas.roteiro_reserva.fornecedores.map((f: any, i: number) => {
+                              const produtoNome = getFornecedorProdutoNome(f);
+                              const titulo = produtoNome || f.nome || null;
+                              const mostrarFornecedor = Boolean(produtoNome && f.nome && produtoNome !== f.nome);
+                              return (
+                                <div key={`for-${i}`} className="vtur-modal-list-item">
+                                  <div>
+                                    <strong>{titulo || "-"}</strong>
+                                  </div>
+                                  {mostrarFornecedor && <div>Fornecedor: {f.nome || "-"}</div>}
+                                  <div>Tipo: {f.tipo_servico || "-"}</div>
+                                  <div>Nº acordo: {f.numero_acordo || "-"}</div>
+                                  <div>Cidade: {f.cidade || "-"}</div>
+                                  <div>Categoria: {f.categoria || "-"}</div>
+                                  <div>Serviço: {f.servico || "-"}</div>
+                                  <div>Transporte aéreo: {f.transporte_aereo || "-"}</div>
+                                  <div>Trecho: {f.trecho || "-"}</div>
+                                  <div>Data inicial: {formatarDataCorretamente(f.data_inicial)}</div>
+                                  <div>Data final: {formatarDataCorretamente(f.data_final)}</div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      {modalReciboDetalhe.notas.roteiro_reserva.passageiros?.length > 0 && (
+                        <div>
+                          <strong>Passageiros</strong>
+                          <div className="vtur-modal-subgrid">
+                            {modalReciboDetalhe.notas.roteiro_reserva.passageiros.map((p: any, i: number) => (
+                              <div key={`pax-${i}`} className="vtur-modal-list-item">
+                                <div>{[p.sobrenome, p.nome].filter(Boolean).join(" ") || "-"}</div>
+                                <div>Nascimento: {formatarDataCorretamente(p.nascimento)}</div>
+                                <div>Sexo: {p.sexo || "-"}</div>
+                                <div>Idade: {p.idade || "-"}</div>
+                                <div>Local embarque: {p.local_embarque || "-"}</div>
+                                <div>Documento: {p.documento_numero || "-"}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {modalReciboDetalhe.notas.roteiro_reserva.orcamento && (
+                        <div>
+                          <strong>Orçamento</strong>
+                          <div>Valor total: {formatCurrencyBRL(modalReciboDetalhe.notas.roteiro_reserva.orcamento.valor_total || 0)}</div>
+                          <div>Férias protegidas: {formatCurrencyBRL(modalReciboDetalhe.notas.roteiro_reserva.orcamento.valor_ferias_protegidas || 0)}</div>
+                          <div>Forma: {modalReciboDetalhe.notas.roteiro_reserva.orcamento.forma_pagamento || "-"}</div>
+                          <div>Plano: {modalReciboDetalhe.notas.roteiro_reserva.orcamento.plano || "-"}</div>
+                        </div>
+                      )}
+                      {modalReciboDetalhe.notas.roteiro_reserva.pagamento && (
+                        <div>
+                          <strong>Pagamento</strong>
+                          <div>Forma: {modalReciboDetalhe.notas.roteiro_reserva.pagamento.forma || "-"}</div>
+                          <div>Plano: {modalReciboDetalhe.notas.roteiro_reserva.pagamento.plano || "-"}</div>
+                          {modalReciboDetalhe.notas.roteiro_reserva.pagamento.parcelas?.length > 0 && (
+                            <div className="vtur-modal-subgrid">
                               {modalReciboDetalhe.notas.roteiro_reserva.pagamento.parcelas.map((par: any, i: number) => (
-                                <div key={`par-${i}`}>
+                                <div key={`par-${i}`} className="vtur-modal-list-item">
                                   {par.numero} - {formatCurrencyBRL(par.valor || 0)} {par.vencimento ? `(${formatarDataCorretamente(par.vencimento)})` : ""}
                                 </div>
                               ))}
                             </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              {!modalReciboDetalhe.notas && (
-                <div style={{ fontSize: 14, color: "#64748b" }}>
-                  Nenhuma informação adicional encontrada para este recibo.
-                </div>
-              )}
-            </div>
-            <div className="modal-footer">
-              <button type="button" className="btn btn-light w-full" onClick={() => setModalReciboDetalhe(null)}>
-                Voltar
-              </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </AppCard>
+                )}
+                {!modalReciboDetalhe.notas && (
+                  <AppCard className="vtur-modal-section-card" tone="config">
+                    Nenhuma informação adicional encontrada para este recibo.
+                  </AppCard>
+                )}
+              </div>
+              <div className="modal-footer">
+                <AppButton type="button" variant="secondary" block onClick={() => setModalReciboDetalhe(null)}>
+                  Voltar
+                </AppButton>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <PaginationControls
-        page={paginaAtual}
-        pageSize={pageSize}
-        totalItems={totalVendas}
-        onPageChange={setPage}
-        onPageSizeChange={(size) => {
-          setPageSize(size);
-          setPage(1);
-        }}
-      />
-
-      {/* TABELA */}
-      <DataTable
-        className="table-default table-header-green table-mobile-cards min-w-[820px]"
-        containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
-        headers={
-          <tr>
-            <th>Cliente</th>
-            <th>Vendedor</th>
-            <th>Destino</th>
-            <th>Produto</th>
-            <th style={{ textAlign: "center" }}>Embarque</th>
-            <th>Valor</th>
-            <th>Taxas</th>
-            {podeVer && <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>}
-          </tr>
-        }
-        loading={loading}
-        loadingMessage="Carregando..."
-        empty={!loading && vendasExibidas.length === 0}
-        emptyMessage="Nenhuma venda encontrada."
-        colSpan={podeVer ? 8 : 7}
-      >
-        {vendasExibidas.map((v) => {
-          const totalValor = recibosDaVenda(v.id).reduce((acc, r) => acc + (r.valor_total || 0), 0);
-          const totalTaxas = recibosDaVenda(v.id).reduce((acc, r) => acc + (r.valor_taxas || 0), 0);
-          const produtosVenda = recibosDaVenda(v.id)
-            .map((r) => r.produto_nome || "")
-            .filter(Boolean);
-          const whatsappLink = construirLinkWhatsApp(v.clientes?.whatsapp);
-
-          return (
-            <tr key={v.id}>
-              <td data-label="Cliente">{v.cliente_nome}</td>
-              <td data-label="Vendedor">{v.vendedor_nome || "-"}</td>
-              <td data-label="Destino">{v.destino_cidade_nome || "-"}</td>
-              <td data-label="Produto">
-                {produtosVenda.length === 0 ? (
-                  "-"
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                    {produtosVenda.map((p, idx) => (
-                      <span key={`${v.id}-prod-${idx}`}>{p}</span>
-                    ))}
-                  </div>
-                )}
-              </td>
-              <td data-label="Embarque" style={{ textAlign: "center" }}>
-                {formatarDataCorretamente(v.data_embarque)}
-              </td>
-              <td data-label="Valor">
-                {formatCurrencyBRL(totalValor)}
-              </td>
-              <td data-label="Taxas">
-                {totalTaxas === 0
-                  ? "-"
-                  : formatCurrencyBRL(totalTaxas)}
-              </td>
-              <td className="th-actions" data-label="Ações">
-                <div className="action-buttons">
-                  {whatsappLink && (
-                    <a
-                      className="btn-icon"
-                      href={whatsappLink}
-                      title="Enviar WhatsApp"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      💬
-                    </a>
-                  )}
-                  <button
-                    className="btn-icon"
-                    title="Ver detalhes"
-                    onClick={() => setModalVenda(v)}
-                  >
-                    👁️
-                  </button>
-                </div>
-              </td>
-            </tr>
-          );
-        })}
-      </DataTable>
-
-      {/* ================================
+        {/* ================================
           MODAL DETALHES
       ================================= */}
-      {modalVenda && (
+        {modalVenda && (
         <div className="modal-backdrop modal-venda">
-          <div className="modal-panel" style={{ maxWidth: "min(1100px, 95vw)" }}>
-            <div className="modal-header">
+          <div className="modal-panel vtur-modal-panel-shell" style={{ maxWidth: "min(1100px, 95vw)" }}>
+            <div className="modal-header vtur-modal-header">
               <div>
                 <div
                   className="modal-title"
@@ -1771,41 +1784,44 @@ export default function VendasConsultaIsland() {
                   Detalhes da venda
                 </div>
               </div>
-              <button className="btn-ghost" onClick={() => setModalVenda(null)}>
-                ✕
-              </button>
+              <AppButton type="button" variant="ghost" onClick={() => setModalVenda(null)}>
+                Fechar
+              </AppButton>
             </div>
 
-            <div className="modal-body" style={{ overflowX: "auto" }}>
-              <div
-                className="mb-3"
-                style={{ display: "grid", gap: 6, lineHeight: 1.4 }}
+            <div className="modal-body vtur-modal-body-stack" style={{ overflowX: "auto" }}>
+              <AppCard
+                className="mb-3 vtur-modal-section-card"
+                tone="info"
+                title="Resumo da venda"
+                subtitle="Visão consolidada da operação comercial antes de editar, cancelar ou mesclar."
               >
-                <div>
-                  <strong>Vendedor:</strong> {modalVenda.vendedor_nome || "-"}
+                <div className="vtur-modal-detail-grid">
+                  <div>
+                    <strong>Vendedor:</strong> {modalVenda.vendedor_nome || "-"}
+                  </div>
+                  <div>
+                    <strong>Cliente:</strong> {modalVenda.cliente_nome || "-"}
+                  </div>
+                  <div>
+                    <strong>Cidade:</strong> {modalVenda.destino_cidade_nome || "Não informada"}
+                  </div>
+                  <div>
+                    <strong>Data da venda:</strong>{" "}
+                    {formatarDataCorretamente(modalVenda.data_venda)}
+                  </div>
+                  <div>
+                    <strong>Lançada em:</strong>{" "}
+                    {formatarDataCorretamente(modalVenda.data_lancamento)}
+                  </div>
+                  <div>
+                    <strong>Embarque:</strong>{" "}
+                    {formatarDataCorretamente(modalVenda.data_embarque)}
+                  </div>
                 </div>
-                <div>
-                  <strong>Cliente:</strong> {modalVenda.cliente_nome || "-"}
-                </div>
-                <div>
-                  <strong>Cidade:</strong> {modalVenda.destino_cidade_nome || "Não informada"}
-                </div>
-                <div>
-                  <strong>Data da venda:</strong>{" "}
-                  {formatarDataCorretamente(modalVenda.data_venda)}
-                </div>
-                <div>
-                  <strong>Lançada em:</strong>{" "}
-                  {formatarDataCorretamente(modalVenda.data_lancamento)}
-                </div>
-                <div>
-                  <strong>Embarque:</strong>{" "}
-                  {formatarDataCorretamente(modalVenda.data_embarque)}
-                </div>
-              </div>
+              </AppCard>
 
-              {/* RECIBOS */}
-              <h4 style={{ marginBottom: 8, textAlign: "center" }}>Recibos</h4>
+              <AppCard className="vtur-modal-section-card" title="Recibos" subtitle="Itens vinculados a esta venda, com acesso rápido a contrato e ações administrativas.">
               <div className="table-container overflow-x-auto">
                 <table
                   className="table-default table-header-green table-mobile-cards"
@@ -1858,30 +1874,37 @@ export default function VendasConsultaIsland() {
                             )}
                           </td>
                           <td className="th-actions" data-label="Ações">
-                            <div className="action-buttons action-buttons-center" style={{ justifyContent: "center" }}>
-                              {recibosNotas[r.id] ? (
-                                <button
-                                  className="btn-icon btn-light"
-                                  title="Visualização completa"
-                                  aria-label="Visualização completa"
-                                  onClick={() => setModalReciboDetalhe({ reciboId: r.id, notas: recibosNotas[r.id] })}
-                                >
-                                  <Eye size={16} />
-                                </button>
-                              ) : null}
-                              {podeExcluir ? (
-                                <button
-                                  className="btn-icon btn-danger"
-                                  title="Excluir recibo"
-                                  aria-label="Excluir recibo"
-                                  disabled={excluindoRecibo === r.id}
-                                  onClick={() => solicitarExclusaoRecibo(r.id, modalVenda.id)}
-                                >
-                                  {excluindoRecibo === r.id ? "…" : <Trash2 size={16} />}
-                                </button>
-                              ) : null}
-                              {!recibosNotas[r.id] && !podeExcluir ? <span>-</span> : null}
-                            </div>
+                            <TableActions
+                              className="action-buttons-center"
+                              actions={[
+                                ...(recibosNotas[r.id]
+                                  ? [
+                                      {
+                                        key: `view-${r.id}`,
+                                        label: "Visualização completa",
+                                        title: "Visualização completa",
+                                        onClick: () => setModalReciboDetalhe({ reciboId: r.id, notas: recibosNotas[r.id] }),
+                                        icon: <Eye size={16} />,
+                                        variant: "light" as const,
+                                      },
+                                    ]
+                                  : []),
+                                ...(podeExcluir
+                                  ? [
+                                      {
+                                        key: `delete-${r.id}`,
+                                        label: excluindoRecibo === r.id ? "Excluindo..." : "Excluir recibo",
+                                        title: "Excluir recibo",
+                                        onClick: () => solicitarExclusaoRecibo(r.id, modalVenda.id),
+                                        icon: excluindoRecibo === r.id ? "…" : <Trash2 size={16} />,
+                                        variant: "danger" as const,
+                                        disabled: excluindoRecibo === r.id,
+                                      },
+                                    ]
+                                  : []),
+                              ]}
+                              show={Boolean(recibosNotas[r.id] || podeExcluir)}
+                            />
                           </td>
                         </tr>
                       );
@@ -1889,115 +1912,69 @@ export default function VendasConsultaIsland() {
                   </tbody>
                 </table>
               </div>
+              </AppCard>
 
-              {/* RECIBOS COMPLEMENTARES */}
-              <div style={{ marginTop: 16 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 8,
-                  }}
-                >
-                  <h4 style={{ margin: 0 }}>Recibos complementares</h4>
-                  <button
-                    type="button"
-                    className="btn btn-outline"
-                    onClick={() => setMostrarComplementares((prev) => !prev)}
-                  >
-                    {mostrarComplementares
-                      ? "Ocultar"
-                      : `Mostrar (${complementaresAtuais.length})`}
-                  </button>
-                </div>
-
+              <AppCard
+                className="vtur-modal-section-card"
+                title="Recibos complementares"
+                subtitle="Conecte recibos relacionados entre vendas e mantenha a visão comercial consolidada."
+                actions={
+                  <AppButton type="button" variant="secondary" onClick={() => setMostrarComplementares((prev) => !prev)}>
+                    {mostrarComplementares ? "Ocultar" : `Mostrar (${complementaresAtuais.length})`}
+                  </AppButton>
+                }
+              >
                 {mostrarComplementares && (
-                  <div
-                    style={{
-                      marginTop: 8,
-                      border: "1px dashed #cbd5e1",
-                      borderRadius: 12,
-                      padding: 12,
-                      background: "#f8fafc",
-                      display: "grid",
-                      gap: 12,
-                    }}
-                  >
+                  <div className="vtur-modal-body-stack">
                     {podeEditar && (
-                      <div className="form-row" style={{ marginBottom: 4 }}>
-                        <div className="form-group" style={{ flex: 1, minWidth: 220 }}>
-                          <label className="form-label">Buscar recibo</label>
-                          <input
-                            className="form-input"
-                            placeholder="Número, cliente ou destino..."
-                            value={buscaReciboComplementar}
-                            onChange={(e) => setBuscaReciboComplementar(e.target.value)}
-                          />
-                          <small style={{ color: "#64748b" }}>
-                            Digite ao menos 2 caracteres para localizar recibos.
-                          </small>
-                        </div>
+                      <div className="vtur-form-grid vtur-form-grid-2">
+                        <AppField
+                          label="Buscar recibo"
+                          placeholder="Número, cliente ou destino..."
+                          value={buscaReciboComplementar}
+                          onChange={(e) => setBuscaReciboComplementar(e.target.value)}
+                          caption="Digite ao menos 2 caracteres para localizar recibos."
+                        />
                       </div>
                     )}
 
                     {podeEditar &&
                       buscaReciboComplementar.trim().length >= 2 &&
                       sugestoesReciboComplementar.length === 0 && (
-                        <div style={{ color: "#64748b" }}>
+                        <div className="vtur-inline-note">
                           Nenhum recibo encontrado com essa busca.
                         </div>
                       )}
 
                     {podeEditar && sugestoesReciboComplementar.length > 0 && (
-                      <div style={{ display: "grid", gap: 6 }}>
+                      <div className="vtur-modal-list">
                         {sugestoesReciboComplementar.map((item) => {
                           const detalhes = item.resumo.detalhes;
                           return (
-                            <button
+                            <AppButton
                               key={item.recibo.id}
                               type="button"
-                              onClick={() =>
-                                vincularReciboComplementar(item.recibo.id, modalVenda.id)
-                              }
+                              variant="secondary"
+                              className="vtur-modal-list-button"
+                              onClick={() => vincularReciboComplementar(item.recibo.id, modalVenda.id)}
                               disabled={vinculandoComplementar}
-                              style={{
-                                width: "100%",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                gap: 12,
-                                textAlign: "left",
-                                border: "1px solid #e2e8f0",
-                                background: "#fff",
-                                borderRadius: 10,
-                                padding: "8px 10px",
-                                cursor: vinculandoComplementar ? "not-allowed" : "pointer",
-                                opacity: vinculandoComplementar ? 0.6 : 1,
-                              }}
                             >
-                              <div style={{ display: "grid", gap: 2 }}>
-                                <span style={{ fontWeight: 600 }}>{item.resumo.titulo}</span>
-                                {detalhes && (
-                                  <span style={{ fontSize: "0.8rem", color: "#64748b" }}>
-                                    {detalhes}
-                                  </span>
-                                )}
-                              </div>
-                              <span
-                                style={{ color: "#16a34a", fontWeight: 700, fontSize: "0.85rem" }}
-                              >
+                              <span className="vtur-choice-button-content">
+                                <span className="vtur-choice-button-title">{item.resumo.titulo}</span>
+                                {detalhes && <span className="vtur-choice-button-caption">{detalhes}</span>}
+                              </span>
+                              <span className="vtur-modal-action-tag">
                                 {vinculandoComplementar ? "Salvando..." : "Adicionar"}
                               </span>
-                            </button>
+                            </AppButton>
                           );
                         })}
                       </div>
                     )}
 
-                    <div style={{ display: "grid", gap: 6 }}>
+                    <div className="vtur-modal-list">
                       {complementaresAtuais.length === 0 && (
-                        <div style={{ color: "#64748b" }}>
+                        <div className="vtur-inline-note">
                           Nenhum recibo complementar vinculado.
                         </div>
                       )}
@@ -2009,37 +1986,20 @@ export default function VendasConsultaIsland() {
                           ? obterResumoReciboComplementar(recibo, vendaRef)
                           : { titulo: "Recibo complementar", detalhes: `ID: ${link.recibo_id}` };
                         return (
-                          <div
-                            key={link.id}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                              gap: 12,
-                              border: "1px solid #e2e8f0",
-                              background: "#fff",
-                              borderRadius: 10,
-                              padding: "8px 10px",
-                            }}
-                          >
-                            <div style={{ display: "grid", gap: 2 }}>
-                              <span style={{ fontWeight: 600 }}>{resumo.titulo}</span>
-                              {resumo.detalhes && (
-                                <span style={{ fontSize: "0.8rem", color: "#64748b" }}>
-                                  {resumo.detalhes}
-                                </span>
-                              )}
+                          <div key={link.id} className="vtur-modal-list-item">
+                            <div className="vtur-choice-button-content">
+                              <span className="vtur-choice-button-title">{resumo.titulo}</span>
+                              {resumo.detalhes && <span className="vtur-choice-button-caption">{resumo.detalhes}</span>}
                             </div>
                             {podeEditar && (
-                              <button
+                              <AppButton
                                 type="button"
-                                className="btn-icon"
-                                title="Remover recibo complementar"
+                                variant="danger"
                                 onClick={() => solicitarRemocaoComplementar(link)}
                                 disabled={removendoComplementar === link.id}
                               >
-                                {removendoComplementar === link.id ? "..." : "✕"}
-                              </button>
+                                {removendoComplementar === link.id ? "Removendo..." : "Remover"}
+                              </AppButton>
                             )}
                           </div>
                         );
@@ -2047,54 +2007,41 @@ export default function VendasConsultaIsland() {
                     </div>
                   </div>
                 )}
-              </div>
+              </AppCard>
 
-              {/* MESCLAR VENDAS */}
               {podeEditar && (
-                <div style={{ marginTop: 16 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 8,
-                    }}
-                  >
-                    <h4 style={{ margin: 0 }}>Mesclar vendas</h4>
-                    <button
+                <AppCard
+                  className="vtur-modal-section-card"
+                  title="Mesclar vendas"
+                  subtitle="Selecione vendas do mesmo cliente e vendedor para unir recibos e deduplicar pagamentos repetidos."
+                  actions={
+                    <AppButton
                       type="button"
-                      className="btn btn-outline"
+                      variant="secondary"
                       onClick={carregarVendasParaMesclar}
                       disabled={mergeLoading}
                     >
                       {mergeLoading ? "Carregando..." : "Recarregar vendas"}
-                    </button>
-                  </div>
-                  <small style={{ color: "#64748b", display: "block", marginTop: 4 }}>
-                    Selecione vendas do mesmo cliente e vendedor para juntar recibos nesta venda. Pagamentos
-                    duplicados (mesma forma/valor) serao deduplicados.
-                  </small>
-
-                  <div className="form-row" style={{ marginTop: 8 }}>
-                    <div className="form-group" style={{ flex: 1, minWidth: 220 }}>
-                      <label className="form-label">Buscar venda</label>
-                      <input
-                        className="form-input"
-                        placeholder="Destino, data ou ID..."
-                        value={mergeBusca}
-                        onChange={(e) => setMergeBusca(e.target.value)}
-                      />
-                    </div>
+                    </AppButton>
+                  }
+                >
+                  <div className="vtur-form-grid vtur-form-grid-2" style={{ marginBottom: 12 }}>
+                    <AppField
+                      label="Buscar venda"
+                      placeholder="Destino, data ou ID..."
+                      value={mergeBusca}
+                      onChange={(e) => setMergeBusca(e.target.value)}
+                    />
                   </div>
 
-                  {mergeLoading && <div style={{ color: "#64748b" }}>Carregando vendas...</div>}
+                  {mergeLoading && <div className="vtur-inline-note">Carregando vendas...</div>}
 
                   {!mergeLoading && vendasParaMesclar.length === 0 && (
-                    <div style={{ color: "#64748b" }}>Nenhuma venda encontrada para mesclar.</div>
+                    <div className="vtur-inline-note">Nenhuma venda encontrada para mesclar.</div>
                   )}
 
                   {!mergeLoading && vendasParaMesclar.length > 0 && (
-                    <div style={{ display: "grid", gap: 8 }}>
+                    <div className="vtur-modal-list">
                       {vendasParaMesclar.map((v) => {
                         const selecionada = mergeSelecionadasSet.has(v.id);
                         const valorInfo =
@@ -2102,31 +2049,18 @@ export default function VendasConsultaIsland() {
                             ? `- ${formatCurrencyBRL(v.valor_total)}`
                             : "";
                         return (
-                          <label
-                            key={v.id}
-                            style={{
-                              display: "flex",
-                              alignItems: "flex-start",
-                              gap: 10,
-                              border: "1px solid #e2e8f0",
-                              background: selecionada ? "#ecfdf3" : "#fff",
-                              borderRadius: 10,
-                              padding: "8px 10px",
-                              cursor: "pointer",
-                            }}
-                          >
+                          <label key={v.id} className={`vtur-modal-checkbox-card${selecionada ? " is-selected" : ""}`}>
                             <input
                               type="checkbox"
                               checked={selecionada}
                               onChange={() => toggleVendaMescla(v.id)}
-                              style={{ marginTop: 2 }}
                             />
-                            <div style={{ display: "grid", gap: 2 }}>
-                              <span style={{ fontWeight: 600 }}>
+                            <div className="vtur-choice-button-content">
+                              <span className="vtur-choice-button-title">
                                 {v.destino_cidade_nome || v.destino_nome || "Venda"} -{" "}
                                 {formatarDataCorretamente(v.data_venda)}
                               </span>
-                              <span style={{ fontSize: "0.8rem", color: "#64748b" }}>
+                              <span className="vtur-choice-button-caption">
                                 {v.destino_nome || "-"} {valorInfo} - ID: {v.id}
                               </span>
                             </div>
@@ -2136,33 +2070,18 @@ export default function VendasConsultaIsland() {
                     </div>
                   )}
 
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "flex-start",
-                      gap: 8,
-                      marginTop: 10,
-                    }}
-                  >
-                    <small style={{ color: "#64748b" }}>
-                      Selecionadas: {mergeSelecionadas.length}
-                    </small>
-                  </div>
-                </div>
+                  <div className="vtur-inline-note">Selecionadas: {mergeSelecionadas.length}</div>
+                </AppCard>
               )}
             </div>
 
             <div className="modal-footer mobile-stack-buttons">
               {podeEditar && (
-                <button
-                  className="btn btn-outline w-full sm:w-auto"
-                  style={{
-                    backgroundColor: "#dcfce7",
-                    color: "#166534",
-                    borderColor: "#86efac",
-                    minWidth: 160,
-                  }}
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  className="w-full sm:w-auto"
+                  style={{ minWidth: 160 }}
                   onClick={() => {
                     const url = `/vendas/cadastro?id=${modalVenda.id}${
                       modalVenda.destino_cidade_id ? `&cidadeId=${modalVenda.destino_cidade_id}` : ""
@@ -2175,50 +2094,50 @@ export default function VendasConsultaIsland() {
                   }}
                 >
                   Editar
-                </button>
+                </AppButton>
               )}
 
               {podeEditar && (
-                <button
-                  className="btn w-full sm:w-auto"
-                  style={{
-                    backgroundColor: "#0ea5e9",
-                    color: "#ffffff",
-                    borderColor: "#0284c7",
-                    minWidth: 160,
-                  }}
+                <AppButton
+                  type="button"
+                  variant="primary"
+                  className="w-full sm:w-auto"
+                  style={{ minWidth: 160 }}
                   onClick={solicitarMescla}
                   disabled={mergeExecutando || mergeSelecionadas.length === 0}
                 >
                   {mergeExecutando ? "Mesclando..." : "Mesclar vendas"}
-                </button>
+                </AppButton>
               )}
 
               {podeExcluir && (
-                <button
-                  className="btn btn-danger w-full sm:w-auto"
+                <AppButton
+                  type="button"
+                  variant="danger"
+                  className="w-full sm:w-auto"
                   style={{ minWidth: 160 }}
                   onClick={() => solicitarCancelamentoVenda(modalVenda)}
                   disabled={cancelando}
                 >
                   {cancelando ? "Cancelando..." : "Cancelar Venda"}
-                </button>
+                </AppButton>
               )}
 
-              <button
+              <AppButton
                 type="button"
-                className="btn btn-light w-full sm:w-auto"
-                style={{ backgroundColor: "#e5e7eb", color: "#111827", minWidth: 160 }}
+                variant="secondary"
+                className="w-full sm:w-auto"
+                style={{ minWidth: 160 }}
                 onClick={() => setModalVenda(null)}
               >
                 Fechar
-              </button>
+              </AppButton>
             </div>
           </div>
         </div>
-      )}
-      <ToastStack toasts={toasts} onDismiss={dismissToast} />
-      <ConfirmDialog
+        )}
+        <ToastStack toasts={toasts} onDismiss={dismissToast} />
+        <ConfirmDialog
         open={Boolean(confirmVendaCancelamento)}
         title="Cancelar Venda!"
         titleColor="#b91c1c"
@@ -2249,9 +2168,9 @@ export default function VendasConsultaIsland() {
           await cancelarVenda(confirmVendaCancelamento);
           setConfirmVendaCancelamento(null);
         }}
-      />
+        />
 
-      <ConfirmDialog
+        <ConfirmDialog
         open={Boolean(confirmReciboExclusao)}
         title="Excluir recibo"
         message="Deseja excluir este recibo?"
@@ -2264,9 +2183,9 @@ export default function VendasConsultaIsland() {
           await excluirRecibo(confirmReciboExclusao.id, confirmReciboExclusao.vendaId);
           setConfirmReciboExclusao(null);
         }}
-      />
+        />
 
-      <ConfirmDialog
+        <ConfirmDialog
         open={Boolean(confirmComplementarRemover)}
         title="Remover recibo complementar"
         message="Deseja remover este recibo complementar?"
@@ -2279,8 +2198,8 @@ export default function VendasConsultaIsland() {
           await removerReciboComplementar(confirmComplementarRemover);
           setConfirmComplementarRemover(null);
         }}
-      />
-      <ConfirmDialog
+        />
+        <ConfirmDialog
         open={Boolean(confirmMerge)}
         title="Mesclar vendas"
         message={`Deseja mesclar ${confirmMerge?.mergeIds.length || 0} venda(s) nesta venda? Esta acao move recibos e pagamentos para a venda principal e remove as vendas selecionadas.`}
@@ -2292,35 +2211,36 @@ export default function VendasConsultaIsland() {
           if (!confirmMerge) return;
           await mesclarVendasSelecionadas(confirmMerge.vendaId, confirmMerge.mergeIds);
         }}
-      />
-      {(podeCriar || podeImportarContratos) && (
+        />
+        {(podeCriar || podeImportarContratos) && (
         <div className="mobile-actionbar sm:hidden">
           <div className="mobile-stack-buttons">
             {podeCriar && (
-              <button
+              <AppButton
                 type="button"
-                className="btn btn-primary"
+                variant="primary"
                 onClick={() => {
                   window.location.href = "/vendas/cadastro";
                 }}
               >
                 Nova venda
-              </button>
+              </AppButton>
             )}
             {podeImportarContratos && (
-              <button
+              <AppButton
                 type="button"
-                className="btn btn-secondary"
+                variant="secondary"
                 onClick={() => {
                   window.location.href = "/vendas/importar";
                 }}
               >
                 Importar contratos
-              </button>
+              </AppButton>
             )}
           </div>
         </div>
-      )}
-    </div>
+        )}
+      </div>
+    </AppPrimerProvider>
   );
 }

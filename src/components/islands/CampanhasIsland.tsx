@@ -1,10 +1,19 @@
+import { Dialog } from "@primer/react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { useMasterScope } from "../../lib/useMasterScope";
 import { boundDateEndISO, selectAllInputOnFocus } from "../../lib/inputNormalization";
+import AlertMessage from "../ui/AlertMessage";
 import ConfirmDialog from "../ui/ConfirmDialog";
+import EmptyState from "../ui/EmptyState";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import TableActions from "../ui/TableActions";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type CampanhaStatus = "ativa" | "inativa" | "cancelada";
 
@@ -63,6 +72,14 @@ function getCompanyLabel(companyId: string, empresas: { id: string; nome_fantasi
   return found?.nome_fantasia || id;
 }
 
+function formatDateLabel(date?: string | null) {
+  const raw = String(date || "").trim();
+  if (!raw) return "-";
+  const [year, month, day] = raw.split("-");
+  if (!year || !month || !day) return raw;
+  return `${day}/${month}/${year}`;
+}
+
 export default function CampanhasIsland() {
   const { loading: loadingPerms, ready, userType } = usePermissoesStore();
   const loadingPerm = loadingPerms || !ready;
@@ -114,6 +131,8 @@ export default function CampanhasIsland() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [aplicarEmTodasFiliais, setAplicarEmTodasFiliais] = useState(false);
   const [empresaDestinoId, setEmpresaDestinoId] = useState<string>("");
+  const [busca, setBusca] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState<"todas" | CampanhaStatus>("todas");
 
   const resetForm = () => {
     setTitulo("");
@@ -237,8 +256,8 @@ export default function CampanhasIsland() {
     return { path, url: publicUrl };
   }
 
-  async function salvarCampanha(e: React.FormEvent) {
-    e.preventDefault();
+  async function salvarCampanha(e?: React.FormEvent) {
+    e?.preventDefault();
     if (!userId) {
       setErro("Usuário não autenticado.");
       return;
@@ -407,357 +426,458 @@ export default function CampanhasIsland() {
   if (loadingPerm) return <LoadingUsuarioContext />;
   // Visualização é liberada para todos (controle de escrita via role/RLS).
 
-  const ativas = campanhas.filter((c) => !c.arquivada_em);
-  const arquivadas = campanhas.filter((c) => !!c.arquivada_em);
+  const campanhasFiltradas = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    return campanhas.filter((campanha) => {
+      if (filtroStatus !== "todas" && campanha.status !== filtroStatus) return false;
+      if (!termo) return true;
+
+      const searchable = [
+        campanha.titulo,
+        campanha.regras,
+        campanha.link_url,
+        campanha.link_instagram,
+        campanha.link_facebook,
+        getCompanyLabel(campanha.company_id, masterScope.empresasAprovadas),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return searchable.includes(termo);
+    });
+  }, [busca, campanhas, filtroStatus, masterScope.empresasAprovadas]);
+
+  const ativas = campanhasFiltradas.filter((c) => !c.arquivada_em);
+  const arquivadas = campanhasFiltradas.filter((c) => !!c.arquivada_em);
+  const contextEmpresa = isMaster
+    ? scopedCompanyId
+      ? `Filial ${getCompanyLabel(scopedCompanyId, masterScope.empresasAprovadas)} selecionada para consulta e publicacao.`
+      : "Selecione uma filial para visualizar e publicar campanhas."
+    : "Campanhas vinculadas a sua filial atual, com acessos controlados por permissao.";
+  const campanhasComAnexo = campanhasFiltradas.filter((c) => Boolean(c.imagem_url)).length;
+
+  function closeModal() {
+    setModalOpen(false);
+    setEditing(null);
+    resetForm();
+  }
+
+  function openExternalUrl(url?: string | null) {
+    if (!url || typeof window === "undefined") return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  function downloadExternalUrl(url?: string | null, downloadName?: string) {
+    if (!url || typeof document === "undefined") return;
+    const link = document.createElement("a");
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noreferrer";
+    if (downloadName) link.download = downloadName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function renderCampanhaCard(campanha: Campanha, archived = false) {
+    const anexoUrl = campanha.imagem_url || null;
+    const anexoNome = getAttachmentNameFromPath(campanha.imagem_path);
+    const anexoKind = detectAttachmentKind(campanha.imagem_path || campanha.imagem_url) || "file";
+    const empresaLabel = getCompanyLabel(campanha.company_id, masterScope.empresasAprovadas);
+    const openPreview = () => {
+      if (!anexoUrl) return;
+      setPreview({
+        url: anexoUrl,
+        title: campanha.titulo,
+        kind: anexoKind,
+        downloadName: anexoNome,
+      });
+    };
+
+    const actionItems = [
+      anexoUrl
+        ? {
+            key: `preview-${campanha.id}`,
+            label: "Preview",
+            variant: "ghost" as const,
+            onClick: openPreview,
+          }
+        : null,
+      archived
+        ? {
+            key: `restore-${campanha.id}`,
+            label: "Restaurar",
+            variant: "light" as const,
+            onClick: () => restaurarCampanha(campanha.id),
+          }
+        : podeEditar
+          ? {
+              key: `edit-${campanha.id}`,
+              label: "Editar",
+              variant: "ghost" as const,
+              onClick: () => openEdit(campanha),
+            }
+          : null,
+      !archived && podeEditar
+        ? {
+            key: `archive-${campanha.id}`,
+            label: "Arquivar",
+            variant: "light" as const,
+            onClick: () => setConfirmArchivar(campanha),
+          }
+        : null,
+      podeExcluir
+        ? {
+            key: `delete-${campanha.id}`,
+            label: "Excluir",
+            variant: "danger" as const,
+            onClick: () => setConfirmDelete(campanha),
+          }
+        : null,
+    ].filter(Boolean);
+
+    return (
+      <div
+        key={campanha.id}
+        className={`vtur-campaign-card ${archived ? "is-archived" : ""}`.trim()}
+      >
+        <div className="vtur-campaign-media">
+          {anexoUrl ? (
+            anexoKind === "image" ? (
+              <button type="button" className="vtur-campaign-media-button" onClick={openPreview} title="Pre-visualizar anexo">
+                <img src={anexoUrl} alt={campanha.titulo} className="vtur-campaign-media-image" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="vtur-campaign-media-button vtur-campaign-media-file"
+                onClick={openPreview}
+                title={anexoKind === "pdf" ? "Pre-visualizar PDF" : "Pre-visualizar anexo"}
+              >
+                <span className="vtur-campaign-file-icon">{anexoKind === "pdf" ? "PDF" : "Anexo"}</span>
+                <span className="vtur-campaign-file-name">{anexoNome}</span>
+              </button>
+            )
+          ) : (
+            <div className="vtur-campaign-media-empty">Sem anexo</div>
+          )}
+        </div>
+
+        <div className="vtur-campaign-content">
+          <div className="vtur-campaign-head">
+            <div className="vtur-campaign-title-group">
+              <strong className="vtur-campaign-title">{campanha.titulo}</strong>
+              <span
+                className="vtur-campaign-status"
+                style={statusStyle(campanha.status)}
+              >
+                {campanha.status}
+              </span>
+            </div>
+            <TableActions actions={actionItems as any[]} className="vtur-campaign-actions" />
+          </div>
+
+          <div className="vtur-campaign-meta">
+            <span>
+              <strong>Publicacao:</strong> {formatDateLabel(campanha.data_campanha)}
+            </span>
+            {campanha.validade_ate ? (
+              <span>
+                <strong>Validade:</strong> {formatDateLabel(campanha.validade_ate)}
+              </span>
+            ) : null}
+            {isMaster && empresaLabel ? (
+              <span>
+                <strong>Filial:</strong> {empresaLabel}
+              </span>
+            ) : null}
+          </div>
+
+          {campanha.regras ? <div className="vtur-campaign-rules">{campanha.regras}</div> : null}
+
+          <div className="vtur-campaign-links">
+            {anexoUrl ? (
+              <>
+                <AppButton type="button" variant="secondary" onClick={openPreview}>
+                  Visualizar anexo
+                </AppButton>
+                <AppButton
+                  type="button"
+                  variant="ghost"
+                  onClick={() => downloadExternalUrl(anexoUrl, anexoNome)}
+                >
+                  Baixar
+                </AppButton>
+              </>
+            ) : null}
+            {campanha.link_url ? (
+              <AppButton type="button" variant="ghost" onClick={() => openExternalUrl(campanha.link_url)}>
+                Site
+              </AppButton>
+            ) : null}
+            {campanha.link_instagram ? (
+              <AppButton type="button" variant="ghost" onClick={() => openExternalUrl(campanha.link_instagram)}>
+                Instagram
+              </AppButton>
+            ) : null}
+            {campanha.link_facebook ? (
+              <AppButton type="button" variant="ghost" onClick={() => openExternalUrl(campanha.link_facebook)}>
+                Facebook
+              </AppButton>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      {isMaster && (
-        <div className="card-base card-config mb-3" style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
-          <div className="form-group" style={{ minWidth: 240 }}>
-            <label className="form-label">Filial</label>
-            <select
-              className="form-select"
-              value={masterScope.empresaSelecionada}
-              onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
-            >
-              <option value="all">Selecione</option>
-              {masterScope.empresasAprovadas.map((empresa) => (
-                <option key={empresa.id} value={empresa.id}>
-                  {empresa.nome_fantasia}
-                </option>
-              ))}
-            </select>
-            {masterScope.erro && <small style={{ color: "#b91c1c" }}>{masterScope.erro}</small>}
+    <AppPrimerProvider>
+      <div>
+        <AppToolbar
+          className="mb-3"
+          sticky
+          tone="config"
+          title="Campanhas promocionais"
+          subtitle={contextEmpresa}
+          actions={
+            <div className="vtur-quote-top-actions">
+              <AppButton type="button" variant="secondary" onClick={() => void carregar()} disabled={loading}>
+                {loading ? "Atualizando..." : "Atualizar"}
+              </AppButton>
+              {podeCriar ? (
+                <AppButton type="button" variant="primary" onClick={openCreate} disabled={isMaster && masterScope.loading}>
+                  Nova campanha
+                </AppButton>
+              ) : null}
+            </div>
+          }
+        >
+          <div className="vtur-form-grid vtur-form-grid-3">
+            {isMaster ? (
+              <AppField
+                as="select"
+                label="Filial"
+                value={masterScope.empresaSelecionada}
+                onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
+                options={[
+                  { label: "Selecione", value: "all" },
+                  ...masterScope.empresasAprovadas.map((empresa) => ({
+                    label: empresa.nome_fantasia,
+                    value: empresa.id,
+                  })),
+                ]}
+              />
+            ) : null}
+            <AppField
+              label="Buscar campanha"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Titulo, regra, link ou filial"
+            />
+            <AppField
+              as="select"
+              label="Status"
+              value={filtroStatus}
+              onChange={(e) => setFiltroStatus(e.target.value as "todas" | CampanhaStatus)}
+              options={[
+                { label: "Todos os status", value: "todas" },
+                { label: "Ativa", value: "ativa" },
+                { label: "Inativa", value: "inativa" },
+                { label: "Cancelada", value: "cancelada" },
+              ]}
+            />
           </div>
-          <div style={{ flex: 1 }} />
-          {podeCriar && (
-            <button type="button" className="btn btn-primary" onClick={openCreate}>
-              Nova campanha
-            </button>
-          )}
-        </div>
-      )}
 
-      {!isMaster && (
-        <div className="mobile-stack-buttons mb-3" style={{ justifyContent: "space-between" }}>
-          <button type="button" className="btn btn-light" onClick={carregar} disabled={loading}>
-            Atualizar
-          </button>
-          {podeCriar && (
-            <button type="button" className="btn btn-primary" onClick={openCreate}>
-              Nova campanha
-            </button>
-          )}
-        </div>
-      )}
+          <div className="vtur-quote-summary-grid" style={{ marginTop: 16 }}>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Ativas</span>
+              <strong>{ativas.length}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Arquivadas</span>
+              <strong>{arquivadas.length}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Com anexo</span>
+              <strong>{campanhasComAnexo}</strong>
+            </div>
+          </div>
 
-      {erro && (
-        <div className="card-base card-config mb-3">
-          <strong style={{ color: "#b91c1c" }}>{erro}</strong>
-        </div>
-      )}
-      {feedback && (
-        <div className="card-base card-config mb-3">
-          <strong style={{ color: "#166534" }}>{feedback}</strong>
-        </div>
-      )}
+          {masterScope.erro ? (
+            <div style={{ marginTop: 16 }}>
+              <AlertMessage variant="error">{masterScope.erro}</AlertMessage>
+            </div>
+          ) : null}
+        </AppToolbar>
 
-      {!scopedCompanyId && isMaster ? (
-        <div style={{ color: "#64748b" }}>Selecione uma filial para ver as campanhas.</div>
-      ) : loading ? (
-        <div>Carregando...</div>
-      ) : (
-        <>
-        <div style={{ display: "grid", gap: 12 }}>
-          {ativas.length === 0 && arquivadas.length === 0 && <div style={{ color: "#64748b" }}>Nenhuma campanha cadastrada.</div>}
-          {ativas.map((c) => {
-            const anexoUrl = c.imagem_url || null;
-            const anexoNome = getAttachmentNameFromPath(c.imagem_path);
-            const anexoKind = detectAttachmentKind(c.imagem_path || c.imagem_url) || "file";
-            const openPreview = () => {
-              if (!anexoUrl) return;
-              setPreview({
-                url: anexoUrl,
-                title: c.titulo,
-                kind: anexoKind,
-                downloadName: anexoNome,
-              });
-            };
+        {erro ? (
+          <AlertMessage variant="error" className="mb-3">
+            {erro}
+          </AlertMessage>
+        ) : null}
+        {feedback ? (
+          <AlertMessage variant="success" className="mb-3">
+            {feedback}
+          </AlertMessage>
+        ) : null}
 
-            return (
-              <div key={c.id} className="card-base" style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                <div
-                  style={{
-                    width: 96,
-                    height: 72,
-                    borderRadius: 10,
-                    background: "#e2e8f0",
-                    overflow: "hidden",
-                    flexShrink: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {anexoUrl ? (
-                    anexoKind === "image" ? (
-                      <button
-                        type="button"
-                        onClick={openPreview}
-                        title="Pré-visualizar"
-                        style={{
-                          border: "none",
-                          padding: 0,
-                          margin: 0,
-                          width: "100%",
-                          height: "100%",
-                          background: "transparent",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <img src={anexoUrl} alt={c.titulo} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={openPreview}
-                        title={anexoKind === "pdf" ? "Pré-visualizar PDF" : "Pré-visualizar"}
-                        style={{
-                          border: "none",
-                          width: "100%",
-                          height: "100%",
-                          background: "transparent",
-                          cursor: "pointer",
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 4,
-                          color: "#0f172a",
-                          fontWeight: 800,
-                          fontSize: 12,
-                        }}
-                      >
-                        <span style={{ fontSize: 22, lineHeight: 1 }}>{anexoKind === "pdf" ? "📄" : "📎"}</span>
-                        <span>{anexoKind === "pdf" ? "PDF" : "Anexo"}</span>
-                      </button>
-                    )
-                  ) : (
-                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }}>
-                      sem anexo
-                    </div>
-                  )}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                    <strong style={{ fontSize: 16 }}>{c.titulo}</strong>
-                    <span
-                      className="todo-badge"
-                      style={{ ...statusStyle(c.status), padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 800 }}
-                    >
-                      {c.status}
-                    </span>
-                  </div>
-                  <div style={{ marginTop: 6, color: "#475569", fontSize: 13, display: "grid", gap: 4 }}>
-                    <div>
-                      <strong>Data:</strong> {c.data_campanha}
-                      {c.validade_ate ? (
-                        <>
-                          {" "}
-                          <span style={{ opacity: 0.85 }}>•</span> <strong>Validade:</strong> {c.validade_ate}
-                        </>
-                      ) : null}
-                    </div>
-                    {c.regras ? (
-                      <div style={{ whiteSpace: "pre-wrap" }}>
-                        <strong>Regras:</strong> {c.regras}
-                      </div>
-                    ) : null}
-                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                      {anexoUrl ? (
-                        <>
-                          <button type="button" className="btn-icon" onClick={openPreview} title="Pré-visualizar">
-                            👁️
-                          </button>
-                          <a
-                            className="btn-icon"
-                            href={anexoUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            download={anexoNome}
-                            title="Baixar anexo"
-                          >
-                            ⬇️
-                          </a>
-                        </>
-                      ) : null}
-                      {c.link_url ? (
-                        <a className="btn btn-light btn-xs" href={c.link_url} target="_blank" rel="noreferrer">
-                          Link
-                        </a>
-                      ) : null}
-                      {c.link_instagram ? (
-                        <a className="btn btn-light btn-xs" href={c.link_instagram} target="_blank" rel="noreferrer">
-                          Instagram
-                        </a>
-                      ) : null}
-                      {c.link_facebook ? (
-                        <a className="btn btn-light btn-xs" href={c.link_facebook} target="_blank" rel="noreferrer">
-                          Facebook
-                        </a>
-                      ) : null}
-                      {podeEditar && (
-                        <button type="button" className="btn-icon" onClick={() => openEdit(c)} title="Editar">
-                          ✏️
-                        </button>
-                      )}
-                      {podeEditar && (
-                        <button type="button" className="btn-icon" onClick={() => setConfirmArchivar(c)} title="Arquivar">
-                          📁
-                        </button>
-                      )}
-                      {podeExcluir && (
-                        <button type="button" className="btn-icon btn-danger" onClick={() => setConfirmDelete(c)} title="Excluir">
-                          🗑️
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        {arquivadas.length > 0 && (
-          <div className="card-base" style={{ marginTop: 12, padding: 0, overflow: "hidden" }}>
-            <button
-              type="button"
-              onClick={() => setArchivedOpen((o) => !o)}
-              style={{
-                width: "100%", display: "flex", alignItems: "center", gap: 10,
-                padding: "10px 16px", background: "#f1f5f9", border: "none", cursor: "pointer",
-                fontWeight: 700, fontSize: 14, color: "#475569", borderRadius: archivedOpen ? "8px 8px 0 0" : 8,
-              }}
+        {!scopedCompanyId && isMaster ? (
+          <AppCard tone="config">
+            <EmptyState
+              title="Selecione uma filial"
+              description="O contexto Master precisa estar apontando para uma filial especifica antes de listar ou publicar campanhas."
+            />
+          </AppCard>
+        ) : loading ? (
+          <AppCard tone="info">Carregando campanhas...</AppCard>
+        ) : (
+          <div className="vtur-modal-body-stack">
+            <AppCard
+              title="Campanhas ativas"
+              subtitle="Materiais promocionais em circulacao para a filial selecionada."
             >
-              <span>{archivedOpen ? "▼" : "▶"}</span>
-              <span>📁 Arquivadas</span>
-              <span style={{ background: "#e2e8f0", borderRadius: 999, padding: "2px 8px", fontSize: 12, fontWeight: 800, color: "#64748b" }}>
-                {arquivadas.length}
-              </span>
-            </button>
-            {archivedOpen && (
-              <div style={{ display: "grid", gap: 8, padding: 12, background: "#f8fafc" }}>
-                {arquivadas.map((c) => (
-                  <div key={c.id} className="card-base" style={{ opacity: 0.75, display: "flex", gap: 12, alignItems: "flex-start" }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                        <strong style={{ fontSize: 16, textDecoration: "line-through", color: "#475569" }}>{c.titulo}</strong>
-                        <span
-                          className="todo-badge"
-                          style={{ ...statusStyle(c.status), padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 800 }}
-                        >
-                          {c.status}
-                        </span>
-                      </div>
-                      <div style={{ marginTop: 6, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                        <button className="btn btn-light" style={{ fontSize: 12, padding: "3px 10px" }} onClick={() => restaurarCampanha(c.id)}>
-                          Restaurar
-                        </button>
-                        {podeExcluir && (
-                          <button type="button" className="btn-icon btn-danger" onClick={() => setConfirmDelete(c)} title="Excluir">
-                            🗑️
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+              {ativas.length === 0 ? (
+                <EmptyState
+                  title="Nenhuma campanha ativa"
+                  description="Publique a primeira campanha deste contexto ou ajuste os filtros para localizar registros arquivados."
+                  action={
+                    podeCriar ? (
+                      <AppButton type="button" variant="primary" onClick={openCreate}>
+                        Criar campanha
+                      </AppButton>
+                    ) : undefined
+                  }
+                />
+              ) : (
+                <div className="vtur-campaign-list">{ativas.map((campanha) => renderCampanhaCard(campanha))}</div>
+              )}
+            </AppCard>
+
+            <AppCard
+              title="Campanhas arquivadas"
+              subtitle="Historico promocional da filial, com possibilidade de restaurar e reusar materiais."
+              actions={
+                <AppButton
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setArchivedOpen((value) => !value)}
+                  disabled={arquivadas.length === 0}
+                >
+                  {archivedOpen ? "Ocultar" : "Mostrar"} arquivadas
+                </AppButton>
+              }
+            >
+              {arquivadas.length === 0 ? (
+                <EmptyState
+                  title="Nenhuma campanha arquivada"
+                  description="Quando campanhas forem arquivadas, elas aparecerao aqui para consulta e restauracao."
+                />
+              ) : archivedOpen ? (
+                <div className="vtur-campaign-list">{arquivadas.map((campanha) => renderCampanhaCard(campanha, true))}</div>
+              ) : (
+                <div className="vtur-inline-note">
+                  {arquivadas.length} campanha(s) arquivada(s) pronta(s) para restauracao quando necessario.
+                </div>
+              )}
+            </AppCard>
           </div>
         )}
-        </>
-      )}
 
-      {modalOpen && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" onClick={() => setModalOpen(false)}>
-          <div
-            className="modal-panel"
-            style={{ maxWidth: 820, width: "95vw", background: "#f8fafc" }}
-            onClick={(e) => e.stopPropagation()}
+        {modalOpen ? (
+          <Dialog
+            title={editing ? "Editar campanha" : "Nova campanha"}
+            width="xlarge"
+            onClose={closeModal}
+            footerButtons={[
+              {
+                content: "Cancelar",
+                buttonType: "default",
+                onClick: closeModal,
+                disabled: saving,
+              },
+              {
+                content: saving ? "Salvando..." : editing ? "Salvar alteracoes" : "Publicar campanha",
+                buttonType: "primary",
+                onClick: () => void salvarCampanha(),
+                disabled: saving,
+              },
+            ]}
           >
-            <div className="modal-header">
-              <div className="modal-title" style={{ fontWeight: 800 }}>
-                {editing ? "Editar campanha" : "Nova campanha"}
-              </div>
-              <button className="modal-close" onClick={() => setModalOpen(false)} aria-label="Fechar">
-                {"×"}
-              </button>
-            </div>
             <form onSubmit={salvarCampanha}>
-              <div className="modal-body" style={{ display: "grid", gap: 12 }}>
+              <div className="vtur-modal-body-stack">
                 {isMaster ? (
-                  <div className="form-row mobile-stack" style={{ gap: 10 }}>
-                    <div className="form-group" style={{ flex: 1, minWidth: 240 }}>
-                      <label className="form-label">Filial</label>
+                  <AppCard
+                    tone="config"
+                    title="Escopo de publicacao"
+                    subtitle="Defina em qual filial a campanha sera criada ou atualizada."
+                  >
+                    <div className="vtur-form-grid vtur-form-grid-2">
                       {editing ? (
-                        <input
-                          className="form-input"
+                        <AppField
+                          label="Filial"
                           value={getCompanyLabel(editing.company_id, masterScope.empresasAprovadas)}
                           disabled
                         />
                       ) : (
-                        <select
-                          className="form-select"
+                        <AppField
+                          as="select"
+                          label="Filial"
                           value={empresaDestinoId}
                           onChange={(e) => setEmpresaDestinoId(e.target.value)}
                           disabled={aplicarEmTodasFiliais}
-                        >
-                          <option value="">Selecione</option>
-                          {masterScope.empresasAprovadas.map((empresa) => (
-                            <option key={empresa.id} value={empresa.id}>
-                              {empresa.nome_fantasia}
-                            </option>
-                          ))}
-                        </select>
+                          caption="Selecione uma filial especifica ou habilite a distribuicao para todas."
+                          options={[
+                            { label: "Selecione", value: "" },
+                            ...masterScope.empresasAprovadas.map((empresa) => ({
+                              label: empresa.nome_fantasia,
+                              value: empresa.id,
+                            })),
+                          ]}
+                        />
                       )}
+
                       {!editing ? (
-                        <small style={{ color: "#64748b" }}>
-                          Selecione a filial ou marque “todas as filiais”.
-                        </small>
+                        <div>
+                          <label className={`vtur-modal-checkbox-card ${aplicarEmTodasFiliais ? "is-selected" : ""}`}>
+                            <input
+                              type="checkbox"
+                              checked={aplicarEmTodasFiliais}
+                              onChange={(e) => setAplicarEmTodasFiliais(e.target.checked)}
+                            />
+                            <div>
+                              <strong>Todas as filiais</strong>
+                              <div className="vtur-inline-note">
+                                Cria uma campanha por filial aprovada neste contexto Master.
+                              </div>
+                              {aplicarEmTodasFiliais ? (
+                                <div className="vtur-inline-note">
+                                  Serão criadas {masterScope.empresasAprovadas.length} campanha(s).
+                                </div>
+                              ) : null}
+                            </div>
+                          </label>
+                        </div>
                       ) : null}
                     </div>
-                    {!editing ? (
-                      <div className="form-group" style={{ minWidth: 260 }}>
-                        <label className="form-label">Atribuir</label>
-                        <label style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                          <input
-                            type="checkbox"
-                            checked={aplicarEmTodasFiliais}
-                            onChange={(e) => setAplicarEmTodasFiliais(e.target.checked)}
-                          />
-                          <span>Todas as filiais (somente Master)</span>
-                        </label>
-                        {aplicarEmTodasFiliais ? (
-                          <small style={{ color: "#64748b" }}>
-                            Serão criadas {masterScope.empresasAprovadas.length} campanha(s), uma por filial.
-                          </small>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </div>
+                  </AppCard>
                 ) : null}
-                <div className="form-row" style={{ gap: 10 }}>
-                  <div className="form-group" style={{ flex: 2, minWidth: 240 }}>
-                    <label className="form-label">Título *</label>
-                    <input className="form-input" value={titulo} onChange={(e) => setTitulo(e.target.value)} required />
-                  </div>
-                  <div className="form-group" style={{ minWidth: 160 }}>
-                    <label className="form-label">Data *</label>
-                    <input
+
+                <AppCard
+                  title="Conteudo da campanha"
+                  subtitle="Defina titulo, periodo de publicacao, status e instrucoes de uso."
+                >
+                  <div className="vtur-form-grid vtur-form-grid-4">
+                    <AppField
+                      label="Titulo"
+                      value={titulo}
+                      onChange={(e) => setTitulo(e.target.value)}
+                      required
+                    />
+                    <AppField
+                      label="Data"
                       type="date"
-                      className="form-input"
                       value={dataCampanha}
                       onFocus={selectAllInputOnFocus}
                       onChange={(e) => {
@@ -767,185 +887,159 @@ export default function CampanhasIsland() {
                       }}
                       required
                     />
-                  </div>
-                  <div className="form-group" style={{ minWidth: 160 }}>
-                    <label className="form-label">Validade</label>
-                    <input
+                    <AppField
+                      label="Validade"
                       type="date"
-                      className="form-input"
                       value={validadeAte}
                       min={dataCampanha || undefined}
                       onFocus={selectAllInputOnFocus}
                       onChange={(e) => setValidadeAte(boundDateEndISO(dataCampanha, e.target.value))}
                     />
+                    <AppField
+                      as="select"
+                      label="Status"
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value as CampanhaStatus)}
+                      options={[
+                        { label: "Ativa", value: "ativa" },
+                        { label: "Inativa", value: "inativa" },
+                        { label: "Cancelada", value: "cancelada" },
+                      ]}
+                    />
                   </div>
-                  <div className="form-group" style={{ minWidth: 160 }}>
-                    <label className="form-label">Status</label>
-                    <select className="form-select" value={status} onChange={(e) => setStatus(e.target.value as CampanhaStatus)}>
-                      <option value="ativa">Ativa</option>
-                      <option value="inativa">Inativa</option>
-                      <option value="cancelada">Cancelada</option>
-                    </select>
-                  </div>
-                </div>
 
-                <div className="form-row" style={{ gap: 10 }}>
-                  <div className="form-group" style={{ flex: 1, minWidth: 220 }}>
-                    <label className="form-label">Link</label>
-                    <input className="form-input" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..." />
+                  <div className="vtur-form-grid" style={{ marginTop: 16 }}>
+                    <AppField
+                      as="textarea"
+                      label="Regras e observacoes"
+                      rows={4}
+                      value={regras}
+                      onChange={(e) => setRegras(e.target.value)}
+                      placeholder="Descreva elegibilidade, janela de uso, restricoes ou orientacoes comerciais."
+                    />
                   </div>
-                  <div className="form-group" style={{ flex: 1, minWidth: 220 }}>
-                    <label className="form-label">Instagram</label>
-                    <input
-                      className="form-input"
+                </AppCard>
+
+                <AppCard
+                  title="Canais e anexo"
+                  subtitle="Anexe criativos e links publicos para apoiar a divulgacao comercial."
+                >
+                  <div className="vtur-form-grid vtur-form-grid-3">
+                    <AppField
+                      label="Link principal"
+                      value={linkUrl}
+                      onChange={(e) => setLinkUrl(e.target.value)}
+                      placeholder="https://..."
+                    />
+                    <AppField
+                      label="Instagram"
                       value={linkInstagram}
                       onChange={(e) => setLinkInstagram(e.target.value)}
                       placeholder="https://instagram.com/..."
                     />
-                  </div>
-                  <div className="form-group" style={{ flex: 1, minWidth: 220 }}>
-                    <label className="form-label">Facebook</label>
-                    <input
-                      className="form-input"
+                    <AppField
+                      label="Facebook"
                       value={linkFacebook}
                       onChange={(e) => setLinkFacebook(e.target.value)}
                       placeholder="https://facebook.com/..."
                     />
                   </div>
-                </div>
 
-                <div className="form-group">
-                  <label className="form-label">Regras</label>
-                  <textarea className="form-input" rows={4} value={regras} onChange={(e) => setRegras(e.target.value)} />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Anexo (imagem ou PDF)</label>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*,application/pdf"
-                    className="form-input"
-                    onChange={(e) => setImagemFile(e.target.files?.[0] || null)}
-                  />
-                  {editing?.imagem_url && !imagemFile && (
-                    <small style={{ color: "#64748b" }}>Anexo atual configurado (faça upload para substituir).</small>
-                  )}
-                </div>
-              </div>
-              <div className="modal-footer mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-                <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? "Salvando..." : "Salvar"}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-light"
-                  onClick={() => {
-                    setModalOpen(false);
-                    setEditing(null);
-                    resetForm();
-                  }}
-                  disabled={saving}
-                >
-                  Cancelar
-                </button>
+                  <div className="vtur-campaign-upload-block">
+                    <label className="form-label">Anexo (imagem ou PDF)</label>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*,application/pdf"
+                      className="form-input vtur-campaign-file-input"
+                      onChange={(e) => setImagemFile(e.target.files?.[0] || null)}
+                    />
+                    {editing?.imagem_url && !imagemFile ? (
+                      <div className="vtur-inline-note">
+                        O anexo atual permanece ativo ate que um novo arquivo seja enviado.
+                      </div>
+                    ) : null}
+                  </div>
+                </AppCard>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+          </Dialog>
+        ) : null}
 
-      {preview && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" onClick={() => setPreview(null)}>
-          <div
-            className="modal-panel"
-            style={{ maxWidth: 980, width: "95vw", background: "#f8fafc" }}
-            onClick={(e) => e.stopPropagation()}
+        {preview ? (
+          <Dialog
+            title={preview.title}
+            width="xlarge"
+            onClose={() => setPreview(null)}
+            footerButtons={[
+              {
+                content: "Fechar",
+                buttonType: "default",
+                onClick: () => setPreview(null),
+              },
+              {
+                content: "Abrir",
+                buttonType: "default",
+                onClick: () => openExternalUrl(preview.url),
+              },
+              {
+                content: "Baixar",
+                buttonType: "primary",
+                onClick: () => downloadExternalUrl(preview.url, preview.downloadName),
+              },
+            ]}
           >
-            <div className="modal-header">
-              <div className="modal-title" style={{ fontWeight: 800 }}>
-                {preview.title}
-              </div>
-              <button className="modal-close" onClick={() => setPreview(null)} aria-label="Fechar">
-                {"×"}
-              </button>
-            </div>
-            <div className="modal-body" style={{ paddingTop: 10 }}>
-              {preview.kind === "image" ? (
-                <div
-                  style={{
-                    width: "100%",
-                    maxHeight: "70vh",
-                    borderRadius: 12,
-                    overflow: "hidden",
-                    background: "#0f172a",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <img
+            <div className="vtur-modal-body-stack">
+              <AppCard
+                tone="info"
+                title="Pre-visualizacao do anexo"
+                subtitle={preview.downloadName}
+              >
+                {preview.kind === "image" ? (
+                  <div className="vtur-campaign-preview-frame">
+                    <img src={preview.url} alt={preview.title} className="vtur-campaign-preview-image" />
+                  </div>
+                ) : preview.kind === "pdf" ? (
+                  <iframe
                     src={preview.url}
-                    alt={preview.title}
-                    style={{ width: "100%", maxHeight: "70vh", objectFit: "contain", display: "block" }}
+                    title={`Pre-visualizacao: ${preview.title}`}
+                    className="vtur-campaign-preview-pdf"
                   />
-                </div>
-              ) : preview.kind === "pdf" ? (
-                <iframe
-                  src={preview.url}
-                  title={`Pré-visualização: ${preview.title}`}
-                  style={{
-                    width: "100%",
-                    height: "70vh",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: 12,
-                    background: "#fff",
-                  }}
-                />
-              ) : (
-                <div style={{ color: "#475569" }}>
-                  Este anexo não possui pré-visualização embutida. Use “Abrir” ou “Baixar”.
-                </div>
-              )}
+                ) : (
+                  <EmptyState
+                    title="Sem pre-visualizacao embutida"
+                    description="Use abrir ou baixar para consultar o arquivo completo em uma nova aba."
+                  />
+                )}
+              </AppCard>
             </div>
-            <div className="modal-footer mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-              <a className="btn btn-light" href={preview.url} target="_blank" rel="noreferrer">
-                Abrir
-              </a>
-              <a className="btn btn-primary" href={preview.url} target="_blank" rel="noreferrer" download={preview.downloadName}>
-                Baixar
-              </a>
-              <button type="button" className="btn btn-light" onClick={() => setPreview(null)}>
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </Dialog>
+        ) : null}
 
-      {confirmDelete && (
-        <ConfirmDialog
-          open={true}
-          title="Excluir campanha"
-          message={`Deseja excluir a campanha "${confirmDelete.titulo}"?`}
-          confirmLabel="Excluir"
-          cancelLabel="Cancelar"
-          confirmVariant="danger"
-          onCancel={() => setConfirmDelete(null)}
-          onConfirm={excluirCampanha}
-        />
-      )}
-      {confirmArchivar && (
-        <ConfirmDialog
-          open={true}
-          title="Arquivar campanha"
-          message={`Arquivar "${confirmArchivar.titulo}"? Poderá restaurar depois.`}
-          confirmLabel="Arquivar"
-          cancelLabel="Cancelar"
-          onCancel={() => setConfirmArchivar(null)}
-          onConfirm={() => arquivarCampanha(confirmArchivar)}
-        />
-      )}
-    </div>
+        {confirmDelete ? (
+          <ConfirmDialog
+            open={true}
+            title="Excluir campanha"
+            message={`Deseja excluir a campanha "${confirmDelete.titulo}"?`}
+            confirmLabel="Excluir"
+            cancelLabel="Cancelar"
+            confirmVariant="danger"
+            onCancel={() => setConfirmDelete(null)}
+            onConfirm={excluirCampanha}
+          />
+        ) : null}
+        {confirmArchivar ? (
+          <ConfirmDialog
+            open={true}
+            title="Arquivar campanha"
+            message={`Arquivar "${confirmArchivar.titulo}"? Podera restaurar depois.`}
+            confirmLabel="Arquivar"
+            cancelLabel="Cancelar"
+            onCancel={() => setConfirmArchivar(null)}
+            onConfirm={() => arquivarCampanha(confirmArchivar)}
+          />
+        ) : null}
+      </div>
+    </AppPrimerProvider>
   );
 }

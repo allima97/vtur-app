@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Dialog } from "@primer/react";
 import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { registrarLog } from "../../lib/logs";
@@ -15,8 +16,17 @@ import { matchesCpfSearch } from "../../lib/searchNormalization";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import { renderTemplateText } from "../../lib/messageTemplates";
 import { resolveThemeAssetMeta } from "../../lib/cards/officialLibrary";
+import AlertMessage from "../ui/AlertMessage";
 import ConfirmDialog from "../ui/ConfirmDialog";
+import DataTable from "../ui/DataTable";
+import EmptyState from "../ui/EmptyState";
 import PaginationControls from "../ui/PaginationControls";
+import TableActions from "../ui/TableActions";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 function titleCaseAllWords(valor: string) {
   const trimmed = (valor || "").trim();
@@ -1871,515 +1881,429 @@ export default function ClientesIsland() {
 
   if (!podeVer) {
     return (
-      <div className="card-base card-config">
-        <strong>Acesso negado ao módulo de Clientes.</strong>
-      </div>
+      <AppPrimerProvider>
+        <div className="page-content-wrap clientes-page">
+          <AppCard tone="config">
+            <strong>Acesso negado ao modulo de Clientes.</strong>
+          </AppCard>
+        </div>
+      </AppPrimerProvider>
     );
   }
 
   const acompanhantesCard = (
-    <div className="card-base mb-2">
-      <h4 style={{ marginBottom: 8 }}>Acompanhantes do cliente</h4>
-      {acompErro && (
-        <div style={{ color: "red", marginBottom: 8 }}>{acompErro}</div>
-      )}
-      <div className="table-container overflow-x-auto">
-        <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
-          <thead>
+    <AppCard
+      title="Acompanhantes do cliente"
+      subtitle="Gerencie passageiros vinculados ao titular e mantenha os dados de viagem consolidados."
+      tone="info"
+      className="vtur-sales-embedded-card"
+      actions={
+        !modoVisualizacao && podeCriar && !mostrarFormAcomp && !acompEditId ? (
+          <AppButton
+            type="button"
+            variant="primary"
+            onClick={() => {
+              resetAcompForm();
+              setMostrarFormAcomp(true);
+            }}
+          >
+            Adicionar acompanhante
+          </AppButton>
+        ) : undefined
+      }
+    >
+      {acompErro && <AlertMessage variant="error" className="mb-3">{acompErro}</AlertMessage>}
+
+      {!acompLoading && acompanhantes.length === 0 ? (
+        <EmptyState
+          title="Nenhum acompanhante cadastrado"
+          description="Cadastre acompanhantes para reutilizar dados em orcamentos, vendas e historico."
+        />
+      ) : (
+        <DataTable
+          headers={
             <tr>
               <th>Nome</th>
               <th>CPF</th>
               <th>Telefone</th>
               <th>Parentesco</th>
               <th>Ativo</th>
-              {!modoVisualizacao && (podeEditar || podeExcluir) && (
-                <th className="th-actions">Ações</th>
-              )}
+              {!modoVisualizacao && (podeEditar || podeExcluir) ? (
+                <th className="th-actions">Acoes</th>
+              ) : null}
             </tr>
-          </thead>
-          <tbody>
-            {acompLoading && (
-              <tr>
-                <td colSpan={6}>Carregando acompanhantes...</td>
-              </tr>
-            )}
-            {!acompLoading && acompanhantes.length === 0 && (
-              <tr>
-                <td colSpan={6}>Nenhum acompanhante cadastrado.</td>
-              </tr>
-            )}
-            {!acompLoading &&
-              acompanhantes.map((a) => (
-                <tr key={a.id}>
-                  <td data-label="Nome">{a.nome_completo}</td>
-                  <td data-label="CPF">{a.cpf || "-"}</td>
-                  <td data-label="Telefone">{a.telefone || "-"}</td>
-                  <td data-label="Parentesco">{a.grau_parentesco || "-"}</td>
-                  <td data-label="Ativo">{a.ativo ? "Sim" : "Não"}</td>
-                  {!modoVisualizacao && (podeEditar || podeExcluir) && (
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        {podeEditar && (
-                          <button className="btn-icon" type="button" onClick={() => iniciarEdicaoAcomp(a)} title="Editar">
-                            ✏️
-                          </button>
-                        )}
-                        {podeExcluir && (
-                          <button
-                            className="btn-icon btn-danger"
-                            type="button"
-                            onClick={() => solicitarExclusaoAcompanhante(a)}
-                            disabled={acompExcluindo === a.id}
-                            title="Excluir"
-                          >
-                            {acompExcluindo === a.id ? "..." : "🗑️"}
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
-
-      {!modoVisualizacao && podeCriar && (
-        <div className="card-base" style={{ marginTop: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" }}>
-          {acompEditId && (
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>Editar acompanhante</div>
-          )}
-          {!mostrarFormAcomp && !acompEditId && (
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => {
-                resetAcompForm();
-                setMostrarFormAcomp(true);
-              }}
-            >
-              Adicionar acompanhante
-            </button>
-          )}
-          {(mostrarFormAcomp || acompEditId) && (
-            <>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Nome completo</label>
-                  <input
-                    className="form-input"
-                    value={acompForm.nome_completo}
-                    onChange={(e) => setAcompForm((prev) => ({ ...prev, nome_completo: e.target.value }))}
-                    onBlur={(e) =>
-                      setAcompForm((prev) => ({
-                        ...prev,
-                        nome_completo: titleCaseAllWords(e.target.value || ""),
-                      }))
-                    }
+          }
+          loading={acompLoading}
+          loadingMessage="Carregando acompanhantes..."
+          empty={false}
+          colSpan={!modoVisualizacao && (podeEditar || podeExcluir) ? 6 : 5}
+          className="table-mobile-cards"
+        >
+          {acompanhantes.map((a) => (
+            <tr key={a.id}>
+              <td data-label="Nome">{a.nome_completo}</td>
+              <td data-label="CPF">{a.cpf || "-"}</td>
+              <td data-label="Telefone">{a.telefone || "-"}</td>
+              <td data-label="Parentesco">{a.grau_parentesco || "-"}</td>
+              <td data-label="Ativo">{a.ativo ? "Sim" : "Nao"}</td>
+              {!modoVisualizacao && (podeEditar || podeExcluir) ? (
+                <td className="th-actions" data-label="Acoes">
+                  <TableActions
+                    actions={[
+                      ...(podeEditar
+                        ? [{
+                            key: `editar-${a.id}`,
+                            label: "Editar",
+                            onClick: () => iniciarEdicaoAcomp(a),
+                            variant: "ghost" as const,
+                          }]
+                        : []),
+                      ...(podeExcluir
+                        ? [{
+                            key: `excluir-${a.id}`,
+                            label: acompExcluindo === a.id ? "Removendo..." : "Excluir",
+                            onClick: () => solicitarExclusaoAcompanhante(a),
+                            disabled: acompExcluindo === a.id,
+                            variant: "danger" as const,
+                          }]
+                        : []),
+                    ]}
                   />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">CPF</label>
-                  <input
-                    className="form-input"
-                    value={acompForm.cpf}
-                    onChange={(e) => setAcompForm((prev) => ({ ...prev, cpf: e.target.value }))}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Telefone</label>
-                  <input
-                    className="form-input"
-                    value={acompForm.telefone}
-                    onChange={(e) => setAcompForm((prev) => ({ ...prev, telefone: e.target.value }))}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Parentesco</label>
-                  <select
-                    className="form-select"
-                    value={acompForm.grau_parentesco}
-                    onChange={(e) => setAcompForm((prev) => ({ ...prev, grau_parentesco: e.target.value }))}
-                  >
-                    <option value="">Selecione</option>
-                    {parentescoOptions.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">RG</label>
-                  <input
-                    className="form-input"
-                    value={acompForm.rg}
-                    onChange={(e) => setAcompForm((prev) => ({ ...prev, rg: e.target.value }))}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Data nascimento</label>
-                  <input
-                    type="date"
-                    className="form-input"
-                    value={acompForm.data_nascimento}
-                    onFocus={selectAllInputOnFocus}
-                    onChange={(e) => setAcompForm((prev) => ({ ...prev, data_nascimento: e.target.value }))}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Observações</label>
-                  <input
-                    className="form-input"
-                    value={acompForm.observacoes}
-                    onChange={(e) => setAcompForm((prev) => ({ ...prev, observacoes: e.target.value }))}
-                  />
-                </div>
-                <div className="form-group" style={{ alignSelf: "flex-end" }}>
-                  <label className="form-label">Ativo</label>
-                  <input
-                    type="checkbox"
-                    checked={acompForm.ativo}
-                    onChange={(e) => setAcompForm((prev) => ({ ...prev, ativo: e.target.checked }))}
-                  />
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                <button className="btn btn-primary" type="button" onClick={salvarAcompanhante} disabled={acompSalvando}>
-                  {acompSalvando ? "Salvando..." : acompEditId ? "Salvar alterações" : "Salvar"}
-                </button>
-                <button
-                  className="btn btn-light"
-                  type="button"
-                  onClick={() => resetAcompForm(true)}
-                  disabled={acompSalvando}
-                >
-                  Cancelar
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+                </td>
+              ) : null}
+            </tr>
+          ))}
+        </DataTable>
       )}
-    </div>
+
+      {!modoVisualizacao && podeCriar && (mostrarFormAcomp || acompEditId) && (
+        <AppCard
+          title={acompEditId ? "Editar acompanhante" : "Novo acompanhante"}
+          tone="config"
+          style={{ marginTop: 16 }}
+        >
+          <div className="vtur-form-grid vtur-form-grid-4">
+            <AppField
+              label="Nome completo"
+              value={acompForm.nome_completo}
+              onChange={(e) => setAcompForm((prev) => ({ ...prev, nome_completo: e.target.value }))}
+              onBlur={(e) =>
+                setAcompForm((prev) => ({
+                  ...prev,
+                  nome_completo: titleCaseAllWords(e.target.value || ""),
+                }))
+              }
+            />
+            <AppField
+              label="CPF"
+              value={acompForm.cpf}
+              onChange={(e) => setAcompForm((prev) => ({ ...prev, cpf: e.target.value }))}
+            />
+            <AppField
+              label="Telefone"
+              value={acompForm.telefone}
+              onChange={(e) => setAcompForm((prev) => ({ ...prev, telefone: e.target.value }))}
+            />
+            <AppField
+              as="select"
+              label="Parentesco"
+              value={acompForm.grau_parentesco}
+              onChange={(e) => setAcompForm((prev) => ({ ...prev, grau_parentesco: e.target.value }))}
+              options={[
+                { value: "", label: "Selecione" },
+                ...parentescoOptions.map((opt) => ({ value: opt, label: opt })),
+              ]}
+            />
+            <AppField
+              label="RG"
+              value={acompForm.rg}
+              onChange={(e) => setAcompForm((prev) => ({ ...prev, rg: e.target.value }))}
+            />
+            <AppField
+              type="date"
+              label="Data nascimento"
+              value={acompForm.data_nascimento}
+              onFocus={selectAllInputOnFocus}
+              onChange={(e) => setAcompForm((prev) => ({ ...prev, data_nascimento: e.target.value }))}
+            />
+            <AppField
+              label="Observacoes"
+              value={acompForm.observacoes}
+              onChange={(e) => setAcompForm((prev) => ({ ...prev, observacoes: e.target.value }))}
+            />
+            <AppField
+              as="select"
+              label="Ativo"
+              value={acompForm.ativo ? "sim" : "nao"}
+              onChange={(e) => setAcompForm((prev) => ({ ...prev, ativo: e.target.value === "sim" }))}
+              options={[
+                { value: "sim", label: "Sim" },
+                { value: "nao", label: "Nao" },
+              ]}
+            />
+          </div>
+          <div className="vtur-form-actions">
+            <AppButton type="button" variant="primary" onClick={salvarAcompanhante} disabled={acompSalvando}>
+              {acompSalvando ? "Salvando..." : acompEditId ? "Salvar alteracoes" : "Salvar"}
+            </AppButton>
+            <AppButton
+              type="button"
+              variant="ghost"
+              onClick={() => resetAcompForm(true)}
+              disabled={acompSalvando}
+            >
+              Cancelar
+            </AppButton>
+          </div>
+        </AppCard>
+      )}
+    </AppCard>
   );
 
   // =====================================
   // UI
   // =====================================
   return (
-    <>
-    <div className={`clientes-page${podeCriar ? " has-mobile-actionbar" : ""}`}>
+    <AppPrimerProvider>
+    <div className={`page-content-wrap clientes-page${podeCriar ? " has-mobile-actionbar" : ""}`}>
 
       {/* FORMULÁRIO */}
       {mostrarFormCliente && (
-        <div className="card-base card-blue mb-3">
-          <h3>{modoVisualizacao ? "Visualizar cliente" : editId ? "Editar cliente" : "Novo cliente"}</h3>
-          {editId && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              <button
-                type="button"
-                className={`btn w-full sm:w-auto ${abaFormCliente === "dados" ? "btn-primary" : "btn-outline"}`}
-                onClick={() => setAbaFormCliente("dados")}
-              >
-                Dados do cliente
-              </button>
-              <button
-                type="button"
-                className={`btn w-full sm:w-auto ${abaFormCliente === "acompanhantes" ? "btn-primary" : "btn-outline"}`}
-                onClick={() => setAbaFormCliente("acompanhantes")}
-              >
-                Acompanhantes
-              </button>
-            </div>
-          )}
+        <AppCard
+          title={modoVisualizacao ? "Visualizar cliente" : editId ? "Editar cliente" : "Novo cliente"}
+          subtitle="Centralize dados cadastrais, contato, endereco e acompanhantes em um unico fluxo do CRM."
+          tone="info"
+          actions={
+            editId ? (
+              <div className="vtur-form-actions" style={{ marginTop: 0 }}>
+                <AppButton
+                  type="button"
+                  variant={abaFormCliente === "dados" ? "primary" : "ghost"}
+                  onClick={() => setAbaFormCliente("dados")}
+                >
+                  Dados do cliente
+                </AppButton>
+                <AppButton
+                  type="button"
+                  variant={abaFormCliente === "acompanhantes" ? "primary" : "ghost"}
+                  onClick={() => setAbaFormCliente("acompanhantes")}
+                >
+                  Acompanhantes
+                </AppButton>
+              </div>
+            ) : undefined
+          }
+        >
           {(!editId || abaFormCliente === "dados") && (
           <form onSubmit={salvar}>
             <fieldset disabled={modoVisualizacao} style={{ border: "none", padding: 0, margin: 0 }}>
-            <div
-              className="form-row mobile-stack"
-              style={{
-                marginTop: 12,
-                display: "grid",
-                gridTemplateColumns:
-                  form.tipo_pessoa === "PJ"
-                    ? "minmax(0, 2fr) repeat(4, minmax(0, 1fr))"
-                    : "minmax(0, 2fr) repeat(6, minmax(0, 1fr))",
-                gap: 12,
-              }}
-            >
-              <div className="form-group">
-                <label className="form-label">Nome completo *</label>
-                <input
-                  className="form-input"
-                  value={form.nome || ""}
-                  onChange={(e) => handleChange("nome", e.target.value)}
-                  onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Tipo pessoa *</label>
-                <select
-                  className="form-select"
-                  value={form.tipo_pessoa || "PF"}
-                  onChange={(e) => {
-                    const tipo = (e.target.value as "PF" | "PJ") || "PF";
-                    setForm((prev) => ({
-                      ...prev,
-                      tipo_pessoa: tipo,
-                      cpf: formatDocumento(prev.cpf || "", tipo),
-                      genero: tipo === "PJ" ? "" : prev.genero,
-                      nacionalidade: tipo === "PJ" ? "" : prev.nacionalidade || "Brasileira",
-                    }));
-                  }}
-                >
-                  <option value="PF">Pessoa Física</option>
-                  <option value="PJ">Pessoa Jurídica</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">{form.tipo_pessoa === "PJ" ? "CNPJ *" : "CPF *"}</label>
-                <input
-                  className="form-input"
-                  value={form.cpf || ""}
-                  onChange={(e) => handleChange("cpf", formatDocumento(e.target.value, form.tipo_pessoa || "PF"))}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">{form.tipo_pessoa === "PJ" ? "Inscrição Estadual" : "RG"}</label>
-                <input
-                  className="form-input"
-                  value={form.rg || ""}
-                  onChange={(e) => handleChange("rg", e.target.value)}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">
-                  {form.tipo_pessoa === "PJ" ? "Data de Fundação" : "Nascimento"}
-                </label>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={form.nascimento || ""}
-                  onFocus={selectAllInputOnFocus}
-                  onChange={(e) => handleChange("nascimento", e.target.value)}
-                />
-              </div>
+            <div className="vtur-form-grid vtur-form-grid-4" style={{ marginTop: 12 }}>
+              <AppField
+                label="Nome completo *"
+                value={form.nome || ""}
+                onChange={(e) => handleChange("nome", e.target.value)}
+                onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
+                required
+                wrapperClassName="md:col-span-2"
+              />
+              <AppField
+                as="select"
+                label="Tipo pessoa *"
+                value={form.tipo_pessoa || "PF"}
+                onChange={(e) => {
+                  const tipo = (e.target.value as "PF" | "PJ") || "PF";
+                  setForm((prev) => ({
+                    ...prev,
+                    tipo_pessoa: tipo,
+                    cpf: formatDocumento(prev.cpf || "", tipo),
+                    genero: tipo === "PJ" ? "" : prev.genero,
+                    nacionalidade: tipo === "PJ" ? "" : prev.nacionalidade || "Brasileira",
+                  }));
+                }}
+                options={[
+                  { value: "PF", label: "Pessoa Fisica" },
+                  { value: "PJ", label: "Pessoa Juridica" },
+                ]}
+              />
+              <AppField
+                label={form.tipo_pessoa === "PJ" ? "CNPJ *" : "CPF *"}
+                value={form.cpf || ""}
+                onChange={(e) => handleChange("cpf", formatDocumento(e.target.value, form.tipo_pessoa || "PF"))}
+                required
+              />
+              <AppField
+                label={form.tipo_pessoa === "PJ" ? "Inscricao Estadual" : "RG"}
+                value={form.rg || ""}
+                onChange={(e) => handleChange("rg", e.target.value)}
+              />
+              <AppField
+                type="date"
+                label={form.tipo_pessoa === "PJ" ? "Data de Fundacao" : "Nascimento"}
+                value={form.nascimento || ""}
+                onFocus={selectAllInputOnFocus}
+                onChange={(e) => handleChange("nascimento", e.target.value)}
+              />
               {form.tipo_pessoa !== "PJ" && (
-                <div className="form-group">
-                  <label className="form-label">Gênero</label>
-                  <select
-                    className="form-select"
-                    value={form.genero || ""}
-                    onChange={(e) => handleChange("genero", e.target.value)}
-                  >
-                    <option value="">Selecione</option>
-                    <option value="Masculino">Masculino</option>
-                    <option value="Feminino">Feminino</option>
-                    <option value="Outros">Outros</option>
-                  </select>
-                </div>
+                <AppField
+                  as="select"
+                  label="Genero"
+                  value={form.genero || ""}
+                  onChange={(e) => handleChange("genero", e.target.value)}
+                  options={[
+                    { value: "", label: "Selecione" },
+                    { value: "Masculino", label: "Masculino" },
+                    { value: "Feminino", label: "Feminino" },
+                    { value: "Outros", label: "Outros" },
+                  ]}
+                />
               )}
               {form.tipo_pessoa !== "PJ" && (
-                <div className="form-group">
-                  <label className="form-label">Nacionalidade</label>
-                  <input
-                    className="form-input"
-                    list="listaNacionalidades"
-                    value={form.nacionalidade || ""}
-                    onChange={(e) => handleChange("nacionalidade", e.target.value)}
-                  />
-                  <datalist id="listaNacionalidades">
-                    {nacionalidades.map((n) => (
-                      <option key={n} value={n} />
-                    ))}
-                  </datalist>
-                </div>
+                <AppField
+                  label="Nacionalidade"
+                  list="listaNacionalidades"
+                  value={form.nacionalidade || ""}
+                  onChange={(e) => handleChange("nacionalidade", e.target.value)}
+                />
+              )}
+              {form.tipo_pessoa !== "PJ" && (
+                <datalist id="listaNacionalidades">
+                  {nacionalidades.map((n) => (
+                    <option key={n} value={n} />
+                  ))}
+                </datalist>
               )}
             </div>
 
-            <div
-              className="form-row mobile-stack"
-              style={{
-                marginTop: 12,
-                display: "grid",
-                gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-                gap: 12,
-              }}
-            >
-              <div className="form-group">
-                <label className="form-label">Telefone *</label>
-                <input
-                  className="form-input"
-                  value={form.telefone || ""}
-                  onChange={(e) => handleChange("telefone", formatTelefone(e.target.value))}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Whatsapp</label>
-                <input
-                  className="form-input"
-                  value={form.whatsapp || ""}
-                  onChange={(e) => handleChange("whatsapp", formatTelefone(e.target.value))}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">E-mail</label>
-                <input
-                  className="form-input"
-                  value={form.email || ""}
-                  onChange={(e) => handleChange("email", e.target.value)}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Classificação</label>
-                <select
-                  className="form-select"
-                  value={form.classificacao || ""}
-                  onChange={(e) => handleChange("classificacao", e.target.value)}
-                >
-                  <option value="">Selecione</option>
-                  <option value="A" title="Cliente frequente">A</option>
-                  <option value="B" title="Compra mas não é frequente">B</option>
-                  <option value="C" title="Já comprou, mas não é fiel">C</option>
-                  <option value="D" title="Busca preço e a maioria das vezes compra na Internet">D</option>
-                  <option value="E" title="Cliente de internet, nunca compra">E</option>
-                </select>
-              </div>
+            <div className="vtur-form-grid vtur-form-grid-4" style={{ marginTop: 12 }}>
+              <AppField
+                label="Telefone *"
+                value={form.telefone || ""}
+                onChange={(e) => handleChange("telefone", formatTelefone(e.target.value))}
+              />
+              <AppField
+                label="Whatsapp"
+                value={form.whatsapp || ""}
+                onChange={(e) => handleChange("whatsapp", formatTelefone(e.target.value))}
+              />
+              <AppField
+                label="E-mail"
+                value={form.email || ""}
+                onChange={(e) => handleChange("email", e.target.value)}
+              />
+              <AppField
+                as="select"
+                label="Classificacao"
+                value={form.classificacao || ""}
+                onChange={(e) => handleChange("classificacao", e.target.value)}
+                options={[
+                  { value: "", label: "Selecione" },
+                  { value: "A", label: "A" },
+                  { value: "B", label: "B" },
+                  { value: "C", label: "C" },
+                  { value: "D", label: "D" },
+                  { value: "E", label: "E" },
+                ]}
+              />
             </div>
 
-            <div
-              className="form-row mobile-stack"
-              style={{
-                marginTop: 12,
-                display: "grid",
-                gridTemplateColumns:
-                  "minmax(0, 0.75fr) minmax(0, 1.7fr) minmax(0, 0.8fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 0.9fr)",
-                gap: 12,
-              }}
-            >
-              <div className="form-group">
-                <label className="form-label">CEP</label>
-                <input
-                  className="form-input"
-                  value={form.cep || ""}
-                  onChange={(e) => handleChange("cep", formatCep(e.target.value))}
-                  onBlur={(e) => {
-                    const val = formatCep(e.target.value);
-                    handleChange("cep", val);
-                    if (val.replace(/\D/g, "").length === 8) {
-                      buscarCepIfNeeded(val);
-                    } else {
-                      setCepStatus(null);
-                    }
-                  }}
-                />
-                <small style={{ color: cepStatus?.includes("Não foi") ? "#b91c1c" : "#475569" }}>
-                  {cepStatus || "Preencha para auto-preencher endereço."}
-                </small>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Endereço</label>
-                <input
-                  className="form-input"
-                  value={form.endereco || ""}
-                  onChange={(e) => handleChange("endereco", e.target.value)}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Número</label>
-                <input
-                  className="form-input"
-                  value={form.numero || ""}
-                  onChange={(e) => handleChange("numero", e.target.value)}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Complemento</label>
-                <input
-                  className="form-input"
-                  value={form.complemento || ""}
-                  onChange={(e) => handleChange("complemento", e.target.value)}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Cidade</label>
-                <input
-                  className="form-input"
-                  value={form.cidade || ""}
-                  onChange={(e) => handleChange("cidade", e.target.value)}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Estado</label>
-                <input
-                  className="form-input"
-                  value={form.estado || ""}
-                  onChange={(e) => handleChange("estado", e.target.value)}
-                />
-              </div>
+            <div className="vtur-form-grid vtur-form-grid-4" style={{ marginTop: 12 }}>
+              <AppField
+                label="CEP"
+                value={form.cep || ""}
+                onChange={(e) => handleChange("cep", formatCep(e.target.value))}
+                onBlur={(e) => {
+                  const val = formatCep(e.target.value);
+                  handleChange("cep", val);
+                  if (val.replace(/\D/g, "").length === 8) {
+                    buscarCepIfNeeded(val);
+                  } else {
+                    setCepStatus(null);
+                  }
+                }}
+                caption={cepStatus || "Preencha para auto-preencher endereco."}
+              />
+              <AppField
+                label="Endereco"
+                value={form.endereco || ""}
+                onChange={(e) => handleChange("endereco", e.target.value)}
+                wrapperClassName="md:col-span-2"
+              />
+              <AppField
+                label="Numero"
+                value={form.numero || ""}
+                onChange={(e) => handleChange("numero", e.target.value)}
+              />
+              <AppField
+                label="Complemento"
+                value={form.complemento || ""}
+                onChange={(e) => handleChange("complemento", e.target.value)}
+              />
+              <AppField
+                label="Cidade"
+                value={form.cidade || ""}
+                onChange={(e) => handleChange("cidade", e.target.value)}
+              />
+              <AppField
+                label="Estado"
+                value={form.estado || ""}
+                onChange={(e) => handleChange("estado", e.target.value)}
+              />
             </div>
 
-            <div className="form-row" style={{ marginTop: 12 }}>
-              <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label">Notas</label>
-                <textarea
-                  className="form-textarea"
-                  rows={3}
-                  value={form.notas || ""}
-                  onChange={(e) => handleChange("notas", e.target.value)}
-                  placeholder="Informações adicionais"
-                />
-              </div>
+            <div style={{ marginTop: 12 }}>
+              <AppField
+                as="textarea"
+                label="Notas"
+                rows={3}
+                value={form.notas || ""}
+                onChange={(e) => handleChange("notas", e.target.value)}
+                placeholder="Informacoes adicionais"
+              />
             </div>
 
             </fieldset>
 
-            <div className="mt-2 mobile-stack-buttons">
+            <div className="vtur-form-actions">
               {modoVisualizacao ? (
                 <>
                   {podeEditar && (
-                    <button
+                    <AppButton
                       key="btn-view-editar"
                       type="button"
-                      className="btn btn-primary w-full sm:w-auto"
+                      variant="primary"
                       onClick={() => setModoVisualizacao(false)}
                     >
                       Editar cliente
-                    </button>
+                    </AppButton>
                   )}
-                  <button
+                  <AppButton
                     key="btn-view-fechar"
                     type="button"
-                    className="btn btn-light w-full sm:w-auto"
+                    variant="ghost"
                     onClick={fecharFormularioCliente}
                   >
                     Fechar
-                  </button>
+                  </AppButton>
                 </>
               ) : (
                 <>
-                  <button
+                  <AppButton
                     key="btn-edit-salvar"
-                    className="btn btn-primary w-full sm:w-auto"
                     disabled={salvando}
                     type="submit"
+                    variant="primary"
                   >
-                    {salvando ? "Salvando..." : editId ? "Salvar alterações" : "Salvar"}
-                  </button>
-                  <button
+                    {salvando ? "Salvando..." : editId ? "Salvar alteracoes" : "Salvar"}
+                  </AppButton>
+                  <AppButton
                     key="btn-edit-cancelar"
                     type="button"
-                    className="btn btn-light w-full sm:w-auto"
+                    variant="ghost"
                     onClick={fecharFormularioCliente}
                     disabled={salvando}
                   >
                     Cancelar
-                  </button>
+                  </AppButton>
                 </>
               )}
             </div>
@@ -2390,239 +2314,253 @@ export default function ClientesIsland() {
               {acompanhantesCard}
             </div>
           )}
-        </div>
+        </AppCard>
       )}
 
       {msg && (
-        <div className="card-base card-green mb-3">
+        <AlertMessage variant="success" className="mb-3">
           <strong>{msg}</strong>
-        </div>
+        </AlertMessage>
       )}
 
       {!mostrarFormCliente && (
         <>
           {/* BUSCA */}
-          <div className="card-base mb-3 list-toolbar-sticky">
-            <div
-              className="form-row mobile-stack"
-              style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
-            >
-              <div className="form-group">
-                <label className="form-label">Buscar cliente</label>
-                <input
-                  className="form-input"
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  placeholder="Nome, CPF/CNPJ ou e-mail"
-                />
-              </div>
-              {podeCriar && (
-                <div className="hidden sm:flex" style={{ alignItems: "flex-end" }}>
-                  <div className="form-group">
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      onClick={iniciarNovoCliente}
-                      disabled={mostrarFormCliente}
-                    >
-                      Adicionar cliente
-                    </button>
-                  </div>
-                </div>
-              )}
+          <AppToolbar
+            title="Clientes"
+            subtitle="Consulte, edite e acione contatos com uma visao centralizada da carteira."
+            tone="info"
+            sticky
+            actions={
+              podeCriar ? (
+                <AppButton
+                  type="button"
+                  variant="primary"
+                  onClick={iniciarNovoCliente}
+                  disabled={mostrarFormCliente}
+                >
+                  Adicionar cliente
+                </AppButton>
+              ) : undefined
+            }
+          >
+            <div className="vtur-form-grid vtur-form-grid-2">
+              <AppField
+                label="Buscar cliente"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Nome, CPF/CNPJ ou e-mail"
+                caption="Digite para consultar toda a carteira."
+              />
             </div>
-          </div>
+          </AppToolbar>
 
           {/* ERRO */}
           {erro && (
-            <div className="card-base card-config mb-3">
+            <AlertMessage variant="error" className="mb-3">
               <strong>{erro}</strong>
-            </div>
+            </AlertMessage>
           )}
 
           {!carregouTodos && !erro && (
-            <div className="card-base card-config mb-3">
+            <AppCard tone="config" className="mb-3">
               Use a paginação para navegar. Digite na busca para filtrar todos.
-            </div>
+            </AppCard>
           )}
 
-          <PaginationControls
-            page={paginaAtual}
-            pageSize={pageSize}
-            totalItems={totalClientes}
-            onPageChange={setPage}
-            onPageSizeChange={(size) => {
-              setPageSize(size);
-              setPage(1);
-            }}
-          />
-
-          {/* LISTA */}
-          <div
-            className="table-container overflow-x-auto"
-            style={{ maxHeight: "65vh", overflowY: "auto" }}
+          <AppCard
+            title="Carteira de clientes"
+            subtitle={`${totalClientes} cliente(s) no escopo atual.`}
+            tone="info"
+            actions={
+              <PaginationControls
+                page={paginaAtual}
+                pageSize={pageSize}
+                totalItems={totalClientes}
+                onPageChange={setPage}
+                onPageSizeChange={(size) => {
+                  setPageSize(size);
+                  setPage(1);
+                }}
+              />
+            }
           >
-            <table className="table-default table-header-blue clientes-table table-mobile-cards min-w-[820px]">
-              <thead>
+          {!loading && clientesExibidos.length === 0 ? (
+            <EmptyState
+              title="Nenhum cliente encontrado"
+              description="Ajuste a busca ou cadastre um novo cliente para iniciar a carteira."
+              action={
+                podeCriar ? (
+                  <AppButton
+                    type="button"
+                    variant="primary"
+                    onClick={iniciarNovoCliente}
+                    disabled={mostrarFormCliente}
+                  >
+                    Adicionar cliente
+                  </AppButton>
+                ) : undefined
+              }
+            />
+          ) : (
+            <DataTable
+              containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+              headers={
                 <tr>
                   <th>Nome</th>
                   <th>CPF/CNPJ</th>
                   <th>Telefone</th>
                   <th>E-mail</th>
-                  {exibeColunaAcoes && (
+                  {exibeColunaAcoes ? (
                     <th className="th-actions" style={{ textAlign: "center" }}>
-                      Ações
+                      Acoes
                     </th>
-                  )}
+                  ) : null}
                 </tr>
-              </thead>
-              <tbody>
-                {loading && (
-                  <tr>
-                    <td colSpan={6}>Carregando...</td>
-                  </tr>
-                )}
+              }
+              loading={loading}
+              loadingMessage="Carregando clientes..."
+              empty={false}
+              colSpan={exibeColunaAcoes ? 5 : 4}
+              className="clientes-table table-mobile-cards min-w-[820px]"
+            >
+              {clientesExibidos.map((c) => (
+                <tr key={c.id}>
+                  <td data-label="Nome">{c.nome}</td>
+                  <td data-label="CPF/CNPJ">
+                    {formatDocumento(
+                      c.cpf || "",
+                      c.tipo_pessoa === "PJ" || onlyDigits(c.cpf || "").length > 11 ? "PJ" : "PF"
+                    )}
+                  </td>
+                  <td data-label="Telefone">{c.telefone}</td>
+                  <td data-label="E-mail">{c.email || "-"}</td>
 
-                {!loading && clientesExibidos.length === 0 && (
-                  <tr>
-                    <td colSpan={6}>Nenhum cliente encontrado.</td>
-                  </tr>
-                )}
-
-                {!loading &&
-                  clientesExibidos.map((c) => (
-                    <tr key={c.id}>
-                      <td data-label="Nome">{c.nome}</td>
-                      <td data-label="CPF/CNPJ">
-                        {formatDocumento(
-                          c.cpf || "",
-                          c.tipo_pessoa === "PJ" || onlyDigits(c.cpf || "").length > 11 ? "PJ" : "PF"
-                        )}
-                      </td>
-                      <td data-label="Telefone">{c.telefone}</td>
-                      <td data-label="E-mail">{c.email || "-"}</td>
-
-                      {exibeColunaAcoes && (
-                        <td className="th-actions" data-label="Ações">
-                          <div className="action-buttons">
-                            {(() => {
-                              const whatsappLink = construirLinkWhatsApp(c.whatsapp);
-                              if (!whatsappLink) return null;
-                              return (
-                                <a
-                                  className="btn-icon"
-                                  href={whatsappLink}
-                                  title="Abrir WhatsApp"
-                                  target="_blank"
-                                  rel="noreferrer"
-                                >
-                                  💬
-                                </a>
-                              );
-                            })()}
-                            <button
-                              className="btn-icon"
-                              onClick={() => abrirHistorico(c)}
-                              title="Histórico"
-                            >
-                              🗂️
-                            </button>
-                            <button
-                              className="btn-icon"
-                              onClick={() => abrirModalAviso(c)}
-                              title="Enviar template"
-                            >
-                              📨
-                            </button>
-                            {podeEditar && (
-                              <button
-                                className="btn-icon"
-                                onClick={() => iniciarEdicao(c)}
-                                title="Editar"
-                              >
-                                ✏️
-                              </button>
-                            )}
-
-                            {podeExcluir && (
-                              <button
-                                className="btn-icon btn-danger"
-                                onClick={() => solicitarExclusaoCliente(c)}
-                                disabled={excluindoId === c.id}
-                                title="Excluir"
-                              >
-                                {excluindoId === c.id ? "..." : "🗑️"}
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
+                  {exibeColunaAcoes ? (
+                    <td className="th-actions" data-label="Acoes">
+                      <TableActions
+                        actions={[
+                          ...(construirLinkWhatsApp(c.whatsapp)
+                            ? [{
+                                key: `whatsapp-${c.id}`,
+                                label: "WhatsApp",
+                                onClick: () => window.open(construirLinkWhatsApp(c.whatsapp) || "", "_blank", "noopener,noreferrer"),
+                                variant: "ghost" as const,
+                              }]
+                            : []),
+                          {
+                            key: `historico-${c.id}`,
+                            label: "Historico",
+                            onClick: () => abrirHistorico(c),
+                            variant: "ghost" as const,
+                          },
+                          {
+                            key: `template-${c.id}`,
+                            label: "Template",
+                            onClick: () => abrirModalAviso(c),
+                            variant: "ghost" as const,
+                          },
+                          ...(podeEditar
+                            ? [{
+                                key: `editar-${c.id}`,
+                                label: "Editar",
+                                onClick: () => iniciarEdicao(c),
+                                variant: "ghost" as const,
+                              }]
+                            : []),
+                          ...(podeExcluir
+                            ? [{
+                                key: `excluir-${c.id}`,
+                                label: excluindoId === c.id ? "Excluindo..." : "Excluir",
+                                onClick: () => solicitarExclusaoCliente(c),
+                                disabled: excluindoId === c.id,
+                                variant: "danger" as const,
+                              }]
+                            : []),
+                        ]}
+                      />
+                    </td>
+                  ) : null}
+                </tr>
+              ))}
+            </DataTable>
+          )}
+          </AppCard>
           {podeCriar && (
             <div className="mobile-actionbar sm:hidden">
-              <button
+              <AppButton
                 type="button"
-                className="btn btn-primary"
+                variant="primary"
                 onClick={iniciarNovoCliente}
                 disabled={mostrarFormCliente}
+                block
               >
                 Adicionar cliente
-              </button>
+              </AppButton>
             </div>
           )}
         </>
       )}
     </div>
     {modalAvisoCliente && (
-      <div className="modal-backdrop">
-        <div className="modal-panel" style={{ maxWidth: 960, width: "95vw" }}>
-          <div className="modal-header">
-            <div>
-              <div className="modal-title" style={{ color: "#1d4ed8", fontWeight: 800 }}>
-                Enviar mensagem personalizada
-              </div>
-              <small style={{ color: "#64748b" }}>Cliente: {modalAvisoCliente.nome}</small>
-            </div>
-            <button className="btn-ghost" onClick={fecharModalAviso}>✕</button>
-          </div>
-          <div className="modal-body">
-            {erroAviso && <div style={{ color: "#b91c1c", marginBottom: 8 }}>{erroAviso}</div>}
-            {msgAviso && <div style={{ color: "#166534", marginBottom: 8 }}>{msgAviso}</div>}
-            <div className="form-row mobile-stack" style={{ gap: 12 }}>
-              <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label">Destinatário</label>
-                <select
-                  className="form-select"
-                  value={formAviso.recipientId}
-                  onChange={(e) => setFormAviso((p) => ({ ...p, recipientId: e.target.value }))}
-                >
-                  {recipientsAviso.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group" style={{ width: 180 }}>
-                <label className="form-label">Canal</label>
-                <select
-                  className="form-select"
-                  value={formAviso.canal}
-                  onChange={(e) => setFormAviso((p) => ({ ...p, canal: e.target.value as "whatsapp" | "email" }))}
-                >
-                  <option value="whatsapp">WhatsApp</option>
-                  <option value="email">E-mail</option>
-                </select>
-              </div>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Template</label>
-              <select
-                className="form-select"
+      <Dialog
+        title="Enviar mensagem personalizada"
+        width="xlarge"
+        onClose={fecharModalAviso}
+        footerButtons={[
+          {
+            content: "Cancelar",
+            buttonType: "default",
+            onClick: fecharModalAviso,
+            disabled: sendingAviso || renderingPreviewAviso || openingWhatsappAviso,
+          },
+          formAviso.canal === "whatsapp"
+            ? {
+                content: openingWhatsappAviso ? "Abrindo..." : "Abrir WhatsApp",
+                buttonType: "primary",
+                onClick: abrirWhatsAppAviso,
+                disabled: openingWhatsappAviso || renderingPreviewAviso || !previewAviso,
+                loading: openingWhatsappAviso,
+              }
+            : {
+                content: sendingAviso ? "Enviando..." : "Enviar e-mail",
+                buttonType: "primary",
+                onClick: enviarTemplateClienteEmail,
+                disabled: sendingAviso || templatesAviso.length === 0,
+                loading: sendingAviso,
+              },
+        ]}
+      >
+        <div className="vtur-modal-body-stack">
+          <AppCard
+            title={`Cliente: ${modalAvisoCliente.nome}`}
+            subtitle="Monte a mensagem, selecione a arte e gere a previa operacional antes do envio."
+            tone="info"
+          >
+            {erroAviso && <AlertMessage variant="error" className="mb-3">{erroAviso}</AlertMessage>}
+            {msgAviso && <AlertMessage variant="success" className="mb-3">{msgAviso}</AlertMessage>}
+
+            <div className="vtur-form-grid vtur-form-grid-4">
+              <AppField
+                as="select"
+                label="Destinatario"
+                value={formAviso.recipientId}
+                onChange={(e) => setFormAviso((p) => ({ ...p, recipientId: e.target.value }))}
+                options={recipientsAviso.map((r) => ({ value: r.id, label: r.nome }))}
+              />
+              <AppField
+                as="select"
+                label="Canal"
+                value={formAviso.canal}
+                onChange={(e) => setFormAviso((p) => ({ ...p, canal: e.target.value as "whatsapp" | "email" }))}
+                options={[
+                  { value: "whatsapp", label: "WhatsApp" },
+                  { value: "email", label: "E-mail" },
+                ]}
+              />
+              <AppField
+                as="select"
+                label="Template"
                 value={formAviso.templateId}
                 onChange={(e) => {
                   const templateId = e.target.value;
@@ -2633,444 +2571,301 @@ export default function ClientesIsland() {
                     themeId: tpl?.theme_id || "",
                   }));
                 }}
-              >
-                {templatesAviso.map((tpl) => (
-                  <option key={tpl.id} value={tpl.id}>
-                    {tpl.nome}
-                  </option>
-                ))}
-              </select>
-              {templatesAviso.length === 0 && (
-                <small style={{ color: "#b45309" }}>
-                  Nenhum template ativo. Cadastre em <strong>Parâmetros &gt; Avisos</strong>.
-                </small>
-              )}
-            </div>
-            <div className="form-group">
-              <label className="form-label">Arte</label>
-              <select
-                className="form-select"
+                caption={
+                  templatesAviso.length === 0
+                    ? "Nenhum template ativo. Cadastre em Parametros > Avisos."
+                    : undefined
+                }
+                options={templatesAviso.map((tpl) => ({ value: tpl.id, label: tpl.nome }))}
+              />
+              <AppField
+                as="select"
+                label="Arte"
                 value={formAviso.themeId}
                 onChange={(e) => setFormAviso((p) => ({ ...p, themeId: e.target.value }))}
-              >
-                <option value="">Sem arte</option>
-                {themesDisponiveisAviso.map((theme) => (
-                  <option key={theme.id} value={theme.id}>
-                    {theme.categoria} • {theme.nome}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: "", label: "Sem arte" },
+                  ...themesDisponiveisAviso.map((theme) => ({
+                    value: theme.id,
+                    label: `${theme.categoria} • ${theme.nome}`,
+                  })),
+                ]}
+              />
             </div>
+          </AppCard>
 
-            <div className="card-base card-config" style={{ marginTop: 8 }}>
-              <div className="mobile-stack-buttons" style={{ marginBottom: 8, justifyContent: "space-between" }}>
-                <strong>Prévia operacional (mensagem + cartão)</strong>
-                <button
-                  type="button"
-                  className="btn btn-light"
-                  onClick={gerarPreviewAviso}
-                  disabled={renderingPreviewAviso || templatesAviso.length === 0}
-                >
-                  {renderingPreviewAviso ? "Gerando prévia..." : "Gerar prévia"}
-                </button>
-              </div>
-
-              {previewAviso ? (
-                <>
-                  <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "2fr 1fr" }}>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label className="form-label">Mensagem pronta</label>
-                      <pre style={{ whiteSpace: "pre-wrap", margin: 0 }}>{previewAviso.text}</pre>
-                    </div>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label className="form-label">
-                        Cartão {previewAviso.cardMime === "image/png" ? "PNG" : "SVG"}
-                      </label>
-                      <img
-                        src={previewAviso.cardUrl}
-                        alt="Prévia do cartão"
-                        style={{ width: "100%", maxWidth: 260, borderRadius: 10, border: "1px solid #cbd5e1" }}
-                      />
-                      {previewAviso.cardMime !== "image/png" && (
-                        <small style={{ color: "#92400e" }}>
-                          PNG indisponível no runtime atual. Use o SVG ou ajuste o ambiente para PNG no servidor.
-                        </small>
-                      )}
-                    </div>
-                  </div>
-                  <div className="mobile-stack-buttons" style={{ marginTop: 8 }}>
-                    <button type="button" className="btn btn-light" onClick={copiarMensagemAviso}>
-                      Copiar mensagem
-                    </button>
-                    <button type="button" className="btn btn-light" onClick={baixarCartaoAviso}>
-                      Baixar cartão
-                    </button>
-                    <button type="button" className="btn btn-light" onClick={abrirCartaoAviso}>
-                      Abrir cartão
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <small style={{ color: "#64748b" }}>
-                  Clique em <strong>Gerar prévia</strong> para renderizar o cartão e preparar a mensagem.
-                </small>
-              )}
-            </div>
-          </div>
-          <div className="modal-footer">
-            <button
-              className="btn btn-light"
-              onClick={fecharModalAviso}
-              disabled={sendingAviso || renderingPreviewAviso || openingWhatsappAviso}
-            >
-              Cancelar
-            </button>
-            {formAviso.canal === "whatsapp" ? (
-              <button
-                className="btn btn-primary"
-                onClick={abrirWhatsAppAviso}
-                disabled={openingWhatsappAviso || renderingPreviewAviso || !previewAviso}
+          <AppCard
+            title="Previa operacional"
+            subtitle="Mensagem renderizada e cartao usado no envio."
+            tone="config"
+            actions={
+              <AppButton
+                type="button"
+                variant="secondary"
+                onClick={gerarPreviewAviso}
+                disabled={renderingPreviewAviso || templatesAviso.length === 0}
               >
-                {openingWhatsappAviso ? "Abrindo..." : "Abrir WhatsApp"}
-              </button>
+                {renderingPreviewAviso ? "Gerando previa..." : "Gerar previa"}
+              </AppButton>
+            }
+          >
+            {previewAviso ? (
+              <>
+                <div className="vtur-form-grid vtur-form-grid-2">
+                  <div className="form-group">
+                    <label className="form-label">Mensagem pronta</label>
+                    <pre style={{ whiteSpace: "pre-wrap", margin: 0 }}>{previewAviso.text}</pre>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">
+                      Cartao {previewAviso.cardMime === "image/png" ? "PNG" : "SVG"}
+                    </label>
+                    <img
+                      src={previewAviso.cardUrl}
+                      alt="Previa do cartao"
+                      style={{ width: "100%", maxWidth: 260, borderRadius: 10, border: "1px solid #cbd5e1" }}
+                    />
+                    {previewAviso.cardMime !== "image/png" && (
+                      <div className="vtur-inline-note">
+                        PNG indisponivel no runtime atual. Use o SVG ou ajuste o ambiente para PNG no servidor.
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="vtur-form-actions">
+                  <AppButton type="button" variant="ghost" onClick={copiarMensagemAviso}>
+                    Copiar mensagem
+                  </AppButton>
+                  <AppButton type="button" variant="ghost" onClick={baixarCartaoAviso}>
+                    Baixar cartao
+                  </AppButton>
+                  <AppButton type="button" variant="ghost" onClick={abrirCartaoAviso}>
+                    Abrir cartao
+                  </AppButton>
+                </div>
+              </>
             ) : (
-              <button
-                className="btn btn-primary"
-                onClick={enviarTemplateClienteEmail}
-                disabled={sendingAviso || templatesAviso.length === 0}
-              >
-                {sendingAviso ? "Enviando..." : "Enviar e-mail"}
-              </button>
+              <div className="vtur-inline-note">
+                Clique em <strong>Gerar previa</strong> para renderizar o cartao e preparar a mensagem.
+              </div>
             )}
-          </div>
+          </AppCard>
         </div>
-      </div>
+      </Dialog>
     )}
 
     {historicoCliente && (
-      <div className="modal-backdrop">
-        <div className="modal-panel historico-viagens-modal" style={{ maxWidth: 1100, width: "95vw" }}>
-          <div className="modal-header">
-            <div>
-              <div
-                className="modal-title"
-                style={{ color: "#1d4ed8", fontSize: "1.2rem", fontWeight: 800 }}
+      <Dialog
+        title={`Historico de ${historicoCliente.nome}`}
+        width="xlarge"
+        onClose={fecharHistorico}
+        footerButtons={[
+          {
+            content: "Fechar",
+            buttonType: "primary",
+            onClick: fecharHistorico,
+          },
+        ]}
+      >
+        <div className="vtur-modal-body-stack">
+          {loadingHistorico ? (
+            <AppCard tone="info">Carregando historico...</AppCard>
+          ) : (
+            <>
+              {acompanhantesCard}
+
+              <AppCard
+                title="Vendas"
+                subtitle={`Resumo de viagens: ${resumoHistoricoVendas.totalViagens} • Valor ${formatCurrencyBRL(
+                  resumoHistoricoVendas.totalValor
+                )} • Taxas ${formatCurrencyBRL(resumoHistoricoVendas.totalTaxas)}`}
+                tone="info"
               >
-                Histórico de {historicoCliente.nome}
-              </div>
-              <small style={{ color: "#64748b" }}>Vendas e orçamentos do cliente</small>
-            </div>
-            <button className="btn-ghost" onClick={fecharHistorico}>✕</button>
-          </div>
-
-          <div className="modal-body">
-            {loadingHistorico && <p>Carregando histórico...</p>}
-
-            {!loadingHistorico && (
-              <>
-                {acompanhantesCard}
-
-                <div className="mb-2">
-                  <h4 style={{ marginBottom: 8 }}>Vendas</h4>
-                  <small style={{ display: "block", marginBottom: 8, color: "#475569" }}>
-                    Resumo de viagens: {resumoHistoricoVendas.totalViagens} • Valor{" "}
-                    {formatCurrencyBRL(resumoHistoricoVendas.totalValor)} • Taxas{" "}
-                    {formatCurrencyBRL(resumoHistoricoVendas.totalTaxas)}
-                  </small>
-                  <div className="table-container overflow-x-auto">
-                    <table className="table-default table-header-blue table-mobile-cards min-w-[820px]">
-                      <thead>
-                        <tr>
-                          <th>Data Lançamento</th>
-                          <th>Destino</th>
-                          <th>Embarque</th>
-                          <th>Vínculo</th>
-                          <th>Valor</th>
-                          <th>Taxas</th>
-                          <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {historicoVendas.length === 0 && (
-                          <tr>
-                            <td colSpan={7}>Nenhuma venda encontrada.</td>
-                          </tr>
-                        )}
-                        {historicoVendas.map((v) => (
-                          <tr key={v.id}>
-                            <td data-label="Data Lançamento">
-                              {v.data_lancamento
-                                ? formatDateBR(v.data_lancamento)
-                                : "-"}
-                            </td>
-                            <td data-label="Destino">{v.destino_cidade_nome || "-"}</td>
-                            <td data-label="Embarque">
-                              {v.data_embarque
-                                ? formatDateBR(v.data_embarque)
-                                : "-"}
-                            </td>
-                            <td data-label="Vínculo">
-                              {v.origem_vinculo === "passageiro" ? "Passageiro" : "Titular"}
-                            </td>
-                            <td data-label="Valor">
-                              {formatCurrencyBRL(v.valor_total)}
-                            </td>
-                            <td data-label="Taxas">
-                              {formatCurrencyBRL(v.valor_taxas)}
-                            </td>
-                            <td className="th-actions" data-label="Ações">
-                              <div className="action-buttons">
-                                <button
-                                  className="btn-icon"
-                                  type="button"
-                                  onClick={() => verDetalheVenda(v)}
-                                  title="Visualizar recibos completos"
-                                >
-                                  👁️
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="mb-2">
-                  <h4 style={{ marginBottom: 8 }}>Orçamentos do cliente</h4>
-                  <div className="table-container overflow-x-auto">
-                    <table className="table-default table-header-blue table-mobile-cards min-w-[760px]">
-                      <thead>
-                        <tr>
-                          <th>Data</th>
-                          <th>Status</th>
-                          <th>Destino</th>
-                          <th>Produto</th>
-                          <th>Valor</th>
-                          <th>Venda</th>
-                          <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {historicoOrcamentos.length === 0 && (
-                          <tr>
-                            <td colSpan={7}>Nenhum orçamento encontrado.</td>
-                          </tr>
-                        )}
-                        {historicoOrcamentos.map((o) => (
-                          <tr key={o.id}>
-                            <td data-label="Data">
-                              {o.data_orcamento
-                                ? formatDateBR(o.data_orcamento).replaceAll("/", "-")
-                                : "-"}
-                            </td>
-                            <td data-label="Status" style={{ textTransform: "capitalize" }}>{o.status || "-"}</td>
-                            <td data-label="Destino">{o.destino_cidade_nome || "-"}</td>
-                            <td data-label="Produto">{o.produto_nome || "-"}</td>
-                            <td data-label="Valor">
-                              {formatCurrencyBRL(o.valor ?? 0)}
-                            </td>
-                            <td data-label="Venda">{o.numero_venda || "-"}</td>
-                            <td className="th-actions" data-label="Ações">
-                              <div className="action-buttons">
-                                <button
-                                  className="btn-icon"
-                                  type="button"
-                                  onClick={() => verDetalheOrcamento(o)}
-                                  title="Ver detalhes"
-                                >
-                                  👁️
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="modal-footer">
-            <button className="btn btn-outline" onClick={fecharHistorico}>
-              Fechar
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-
-    {/* Detalhe da venda */}
-    {detalheVenda && (
-      <div className="modal-backdrop">
-        <div className="modal-panel" style={{ maxWidth: 720 }}>
-          <div className="modal-header">
-            <div>
-              <div
-                className="modal-title"
-                style={{ color: "#16a34a", fontSize: "1.15rem", fontWeight: 800 }}
-              >
-                Detalhes da venda
-              </div>
-            </div>
-            <button className="btn-ghost" onClick={() => { setDetalheVenda(null); setDetalheRecibos([]); }}>
-              ✕
-            </button>
-          </div>
-          <div className="modal-body">
-              <div
-                style={{
-                  display: "grid",
-                  gap: 6,
-                  lineHeight: 1.4,
-                marginBottom: 8,
-              }}
-              >
-                <div>
-                  <strong>Recibo:</strong>{" "}
-                  {detalheRecibos.length > 0
-                    ? detalheRecibos.map((r) => r.numero_recibo || "-").join(", ")
-                    : "—"}
-                </div>
-                <div>
-                  <strong>Destino:</strong> {detalheVenda.destino_cidade_nome || "-"}
-                </div>
-                <div>
-                  <strong>Lançamento:</strong>{" "}
-                  {formatDateBR(detalheVenda.data_lancamento)}
-                </div>
-              <div>
-                <strong>Embarque:</strong>{" "}
-                {detalheVenda.data_embarque
-                  ? formatDateBR(detalheVenda.data_embarque)
-                  : "-"}
-              </div>
-              <div>
-                <strong>Valor:</strong>{" "}
-                {formatCurrencyBRL(detalheVenda.valor_total)}
-              </div>
-              <div>
-                <strong>Taxas:</strong>{" "}
-                {detalheVenda.valor_taxas === 0
-                  ? "-"
-                  : formatCurrencyBRL(detalheVenda.valor_taxas)}
-              </div>
-            </div>
-
-            <h4 style={{ marginBottom: 8, textAlign: "center" }}>Recibos</h4>
-            {carregandoRecibos ? (
-              <p>Carregando recibos...</p>
-            ) : (
-              <div className="table-container overflow-x-auto">
-                <table className="table-default table-header-blue table-mobile-cards" style={{ minWidth: 520 }}>
-                  <thead>
+                <DataTable
+                  headers={
                     <tr>
-                      <th>Número</th>
-                      <th>Produto</th>
-                      <th style={{ textAlign: "center" }}>Início</th>
-                      <th style={{ textAlign: "center" }}>Fim</th>
+                      <th>Data Lancamento</th>
+                      <th>Destino</th>
+                      <th>Embarque</th>
+                      <th>Vinculo</th>
                       <th>Valor</th>
                       <th>Taxas</th>
+                      <th className="th-actions" style={{ textAlign: "center" }}>Acoes</th>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {detalheRecibos.length === 0 && (
-                      <tr>
-                        <td colSpan={4}>Nenhum recibo encontrado.</td>
-                      </tr>
-                    )}
-                    {detalheRecibos.map((r, idx) => {
-                      const formatarData = (value: string | null | undefined) =>
-                        value ? formatDateBR(value) : "-";
-                      return (
-                        <tr key={idx}>
-                          <td data-label="Número">{r.numero_recibo || "-"}</td>
-                          <td data-label="Produto">{r.produto_nome || "-"}</td>
-                          <td data-label="Início" style={{ textAlign: "center" }}>{formatarData(r.data_inicio)}</td>
-                          <td data-label="Fim" style={{ textAlign: "center" }}>{formatarData(r.data_fim)}</td>
-                          <td data-label="Valor">
-                            {formatCurrencyBRL(r.valor_total || 0)}
-                          </td>
-                          <td data-label="Taxas">
-                            {formatCurrencyBRL(r.valor_taxas || 0)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-          <div className="modal-footer">
-            <button
-              className="btn btn-outline"
-              onClick={() => { setDetalheVenda(null); setDetalheRecibos([]); }}
-            >
-              Fechar
-            </button>
-          </div>
+                  }
+                  empty={historicoVendas.length === 0}
+                  emptyMessage="Nenhuma venda encontrada."
+                  colSpan={7}
+                  className="table-mobile-cards min-w-[820px]"
+                >
+                  {historicoVendas.map((v) => (
+                    <tr key={v.id}>
+                      <td data-label="Data Lancamento">{v.data_lancamento ? formatDateBR(v.data_lancamento) : "-"}</td>
+                      <td data-label="Destino">{v.destino_cidade_nome || "-"}</td>
+                      <td data-label="Embarque">{v.data_embarque ? formatDateBR(v.data_embarque) : "-"}</td>
+                      <td data-label="Vinculo">{v.origem_vinculo === "passageiro" ? "Passageiro" : "Titular"}</td>
+                      <td data-label="Valor">{formatCurrencyBRL(v.valor_total)}</td>
+                      <td data-label="Taxas">{formatCurrencyBRL(v.valor_taxas)}</td>
+                      <td className="th-actions" data-label="Acoes">
+                        <TableActions
+                          actions={[
+                            {
+                              key: `detalhe-venda-${v.id}`,
+                              label: "Detalhes",
+                              onClick: () => verDetalheVenda(v),
+                              variant: "ghost",
+                            },
+                          ]}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </DataTable>
+              </AppCard>
+
+              <AppCard title="Orcamentos do cliente" subtitle="Orcamentos vinculados ao titular ou passageiros.">
+                <DataTable
+                  headers={
+                    <tr>
+                      <th>Data</th>
+                      <th>Status</th>
+                      <th>Destino</th>
+                      <th>Produto</th>
+                      <th>Valor</th>
+                      <th>Venda</th>
+                      <th className="th-actions" style={{ textAlign: "center" }}>Acoes</th>
+                    </tr>
+                  }
+                  empty={historicoOrcamentos.length === 0}
+                  emptyMessage="Nenhum orcamento encontrado."
+                  colSpan={7}
+                  className="table-mobile-cards min-w-[760px]"
+                >
+                  {historicoOrcamentos.map((o) => (
+                    <tr key={o.id}>
+                      <td data-label="Data">
+                        {o.data_orcamento ? formatDateBR(o.data_orcamento).replaceAll("/", "-") : "-"}
+                      </td>
+                      <td data-label="Status" style={{ textTransform: "capitalize" }}>{o.status || "-"}</td>
+                      <td data-label="Destino">{o.destino_cidade_nome || "-"}</td>
+                      <td data-label="Produto">{o.produto_nome || "-"}</td>
+                      <td data-label="Valor">{formatCurrencyBRL(o.valor ?? 0)}</td>
+                      <td data-label="Venda">{o.numero_venda || "-"}</td>
+                      <td className="th-actions" data-label="Acoes">
+                        <TableActions
+                          actions={[
+                            {
+                              key: `detalhe-orc-${o.id}`,
+                              label: "Detalhes",
+                              onClick: () => verDetalheOrcamento(o),
+                              variant: "ghost",
+                            },
+                          ]}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </DataTable>
+              </AppCard>
+            </>
+          )}
         </div>
-      </div>
+      </Dialog>
     )}
 
-    {/* Detalhe do orçamento */}
-    {detalheOrcamento && (
-      <div className="modal-backdrop">
-        <div className="modal-panel orcamento-detalhe-modal" style={{ maxWidth: 640 }}>
-          <div className="modal-header">
-            <div className="orcamento-detalhe-header">
-              <div className="modal-title orcamento-detalhe-nome">
-                {historicoCliente?.nome || form.nome || "-"}
-              </div>
-              <div className="orcamento-detalhe-status">
-                Status: {detalheOrcamento.status || "-"}
-              </div>
+    {detalheVenda && (
+      <Dialog
+        title="Detalhes da venda"
+        width="large"
+        onClose={() => { setDetalheVenda(null); setDetalheRecibos([]); }}
+        footerButtons={[
+          {
+            content: "Fechar",
+            buttonType: "primary",
+            onClick: () => { setDetalheVenda(null); setDetalheRecibos([]); },
+          },
+        ]}
+      >
+        <div className="vtur-modal-body-stack">
+          <AppCard title="Resumo da venda" tone="info">
+            <div className="vtur-modal-detail-grid">
+              <div><strong>Recibo:</strong> {detalheRecibos.length > 0 ? detalheRecibos.map((r) => r.numero_recibo || "-").join(", ") : "—"}</div>
+              <div><strong>Destino:</strong> {detalheVenda.destino_cidade_nome || "-"}</div>
+              <div><strong>Lancamento:</strong> {formatDateBR(detalheVenda.data_lancamento)}</div>
+              <div><strong>Embarque:</strong> {detalheVenda.data_embarque ? formatDateBR(detalheVenda.data_embarque) : "-"}</div>
+              <div><strong>Valor:</strong> {formatCurrencyBRL(detalheVenda.valor_total)}</div>
+              <div><strong>Taxas:</strong> {detalheVenda.valor_taxas === 0 ? "-" : formatCurrencyBRL(detalheVenda.valor_taxas)}</div>
             </div>
-            <button className="btn-ghost" onClick={() => setDetalheOrcamento(null)}>
-              ✕
-            </button>
-          </div>
-          <div className="modal-body">
-            <div className="card-base" style={{ marginBottom: 12, textAlign: "center" }}>
-              <div className="orcamento-detalhe-subtitle">Visualizar orçamento</div>
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gap: 6,
-                lineHeight: 1.4,
-                marginBottom: 4,
-              }}
-            >
-              <div>
-                <strong>Data:</strong>{" "}
-                {detalheOrcamento.data_orcamento
-                  ? formatDateBR(detalheOrcamento.data_orcamento)
-                  : "-"}
-              </div>
-              <div>
-                <strong>Status:</strong> {detalheOrcamento.status || "-"}
-              </div>
-              <div>
-                <strong>Valor:</strong>{" "}
-                {formatCurrencyBRL(detalheOrcamento.valor || 0)}
-              </div>
-              <div>
-                <strong>Venda vinculada:</strong> {detalheOrcamento.numero_venda || "-"}
-              </div>
-            </div>
-          </div>
-          <div className="modal-footer">
-            <button className="btn btn-outline" onClick={() => setDetalheOrcamento(null)}>
-              Fechar
-            </button>
-          </div>
+          </AppCard>
+
+          <AppCard title="Recibos" subtitle="Recibos vinculados a esta venda.">
+            {carregandoRecibos ? (
+              <div className="vtur-inline-note">Carregando recibos...</div>
+            ) : (
+              <DataTable
+                headers={
+                  <tr>
+                    <th>Numero</th>
+                    <th>Produto</th>
+                    <th style={{ textAlign: "center" }}>Inicio</th>
+                    <th style={{ textAlign: "center" }}>Fim</th>
+                    <th>Valor</th>
+                    <th>Taxas</th>
+                  </tr>
+                }
+                empty={detalheRecibos.length === 0}
+                emptyMessage="Nenhum recibo encontrado."
+                colSpan={6}
+                className="table-mobile-cards"
+              >
+                {detalheRecibos.map((r, idx) => {
+                  const formatarData = (value: string | null | undefined) => (value ? formatDateBR(value) : "-");
+                  return (
+                    <tr key={idx}>
+                      <td data-label="Numero">{r.numero_recibo || "-"}</td>
+                      <td data-label="Produto">{r.produto_nome || "-"}</td>
+                      <td data-label="Inicio" style={{ textAlign: "center" }}>{formatarData(r.data_inicio)}</td>
+                      <td data-label="Fim" style={{ textAlign: "center" }}>{formatarData(r.data_fim)}</td>
+                      <td data-label="Valor">{formatCurrencyBRL(r.valor_total || 0)}</td>
+                      <td data-label="Taxas">{formatCurrencyBRL(r.valor_taxas || 0)}</td>
+                    </tr>
+                  );
+                })}
+              </DataTable>
+            )}
+          </AppCard>
         </div>
-      </div>
+      </Dialog>
+    )}
+
+    {detalheOrcamento && (
+      <Dialog
+        title="Detalhes do orcamento"
+        width="medium"
+        onClose={() => setDetalheOrcamento(null)}
+        footerButtons={[
+          {
+            content: "Fechar",
+            buttonType: "primary",
+            onClick: () => setDetalheOrcamento(null),
+          },
+        ]}
+      >
+        <div className="vtur-modal-body-stack">
+          <AppCard
+            title={historicoCliente?.nome || form.nome || "-"}
+            subtitle={`Status: ${detalheOrcamento.status || "-"}`}
+            tone="info"
+          >
+            <div className="vtur-modal-detail-grid">
+              <div><strong>Data:</strong> {detalheOrcamento.data_orcamento ? formatDateBR(detalheOrcamento.data_orcamento) : "-"}</div>
+              <div><strong>Status:</strong> {detalheOrcamento.status || "-"}</div>
+              <div><strong>Valor:</strong> {formatCurrencyBRL(detalheOrcamento.valor || 0)}</div>
+              <div><strong>Venda vinculada:</strong> {detalheOrcamento.numero_venda || "-"}</div>
+            </div>
+          </AppCard>
+        </div>
+      </Dialog>
     )}
     <ConfirmDialog
       open={Boolean(clienteParaExcluir)}
@@ -3092,6 +2887,6 @@ export default function ClientesIsland() {
       onCancel={() => setAcompanhanteParaExcluir(null)}
       onConfirm={confirmarExclusaoAcompanhante}
     />
-    </>
+    </AppPrimerProvider>
   );
 }

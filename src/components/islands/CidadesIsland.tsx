@@ -10,6 +10,13 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import DataTable from "../ui/DataTable";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import TableActions from "../ui/TableActions";
+import EmptyState from "../ui/EmptyState";
+import AlertMessage from "../ui/AlertMessage";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 const normalizeText = (value: string) =>
   baseNormalizeText(value, { collapseWhitespace: true, trim: true });
 
@@ -299,6 +306,11 @@ export default function CidadesIsland() {
     );
     return [...cidadesNome, ...cidadesOutros];
   }, [busca, cidadesEnriquecidas]);
+  const resumoLista = busca.trim()
+    ? `${filtradas.length} cidade(s) encontradas para a busca atual.`
+    : carregouTodos
+      ? `${filtradas.length} cidade(s) carregadas para consulta completa.`
+      : "Ultimas 5 cidades cadastradas. Digite na busca para consultar todas.";
 
   // Busca direta de subdivisoes no Supabase (debounced) — sem depender de cache
   useEffect(() => {
@@ -559,111 +571,85 @@ export default function CidadesIsland() {
   }
 
   return (
-    <div className="cidades-page">
+    <AppPrimerProvider>
+      <div className="cidades-page">
       {!mostrarFormulario && (
-        <div
-          className="card-base mb-3 list-toolbar-sticky"
-          style={{ background: "#f5f3ff", borderColor: "#ddd6fe" }}
+        <AppToolbar
+          sticky
+          tone="config"
+          className="mb-3 list-toolbar-sticky"
+          title="Consulta de cidades"
+          subtitle={resumoLista}
+          actions={
+            podeCriar ? (
+              <AppButton
+                type="button"
+                variant="primary"
+                onClick={abrirFormulario}
+                disabled={mostrarFormulario}
+              >
+                Adicionar cidade
+              </AppButton>
+            ) : null
+          }
         >
-          <div
-            className="form-row mobile-stack"
-            style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
-          >
-            <div className="form-group" style={{ flex: "1 1 320px" }}>
-              <label className="form-label">Buscar cidade</label>
-              <input
-                className="form-input"
-                placeholder="Nome, subdivisao ou pais..."
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-              />
-            </div>
-            {podeCriar && (
-              <div className="form-group" style={{ alignItems: "flex-end" }}>
-                <button
-                  type="button"
-                  className="btn btn-primary w-full sm:w-auto"
-                  onClick={abrirFormulario}
-                  disabled={mostrarFormulario}
-                >
-                  Adicionar cidade
-                </button>
-              </div>
-            )}
+          <div className="vtur-toolbar-grid">
+            <AppField
+              label="Buscar cidade"
+              placeholder="Nome, subdivisao ou pais..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+            />
           </div>
-        </div>
+        </AppToolbar>
       )}
 
       {(podeCriar || podeEditar) && mostrarFormulario && (
-        <div className="card-base card-blue form-card mb-3">
+        <AppCard
+          className="form-card mb-3"
+          title={editId ? "Editar cidade" : "Nova cidade"}
+          subtitle="Mantenha cidades e vinculos com subdivisoes consistentes para destinos, produtos e operacao."
+          tone="info"
+        >
           <form onSubmit={salvar}>
-            <h3>{editId ? "Editar cidade" : "Nova cidade"}</h3>
+            <div className="vtur-form-grid vtur-form-grid-2">
+              <AppField
+                label="Nome *"
+                value={form.nome}
+                onChange={(e) => handleChange("nome", e.target.value)}
+                onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
+                required
+                validation={!form.nome.trim() && erro ? "Nome e obrigatorio." : undefined}
+              />
 
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Nome *</label>
-                <input
-                  className="form-input"
-                  value={form.nome}
-                  onChange={(e) => handleChange("nome", e.target.value)}
-                  onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
-                  required
-                />
-              </div>
-
-              <div className="form-group" style={{ position: "relative" }}>
-                <label className="form-label">Subdivisao *</label>
-                <input
-                  className="form-input"
+              <div className="form-group vtur-subdivisao-picker">
+                <AppField
+                  label="Subdivisao *"
                   placeholder="Digite a subdivisao"
                   value={subdivisaoBusca}
                   onChange={(e) => handleSubdivisaoBusca(e.target.value)}
                   onFocus={() => setMostrarSugestoesSubdivisao(true)}
                   onBlur={() => setTimeout(() => setMostrarSugestoesSubdivisao(false), 150)}
                   required
+                  validation={!form.subdivisao_id && erro ? "Subdivisao e obrigatoria." : undefined}
                 />
                 {mostrarSugestoesSubdivisao && (
-                  <div
-                    className="card-base"
-                    style={{
-                      position: "absolute",
-                      top: "100%",
-                      left: 0,
-                      right: 0,
-                      zIndex: 20,
-                      maxHeight: 200,
-                      overflowY: "auto",
-                      padding: 6,
-                      marginTop: 4,
-                      border: "1px solid #e5e7eb",
-                      background: "#fff",
-                    }}
-                  >
+                  <AppCard className="vtur-subdivisao-dropdown">
                     {buscandoSubdivisao && (
-                      <div style={{ padding: "4px 6px", color: "#6b7280" }}>Buscando...</div>
+                      <div className="vtur-subdivisao-helper">Buscando...</div>
                     )}
                     {!buscandoSubdivisao && subdivisaoBusca.trim().length < 2 && (
-                      <div style={{ padding: "4px 6px", color: "#6b7280" }}>
-                        Digite ao menos 2 caracteres...
-                      </div>
+                      <div className="vtur-subdivisao-helper">Digite ao menos 2 caracteres...</div>
                     )}
                     {!buscandoSubdivisao && subdivisaoBusca.trim().length >= 2 && subdivisaoOpcoes.length === 0 && (
-                      <div style={{ padding: "4px 6px", color: "#6b7280" }}>
-                        Nenhuma subdivisao encontrada.
-                      </div>
+                      <div className="vtur-subdivisao-helper">Nenhuma subdivisao encontrada.</div>
                     )}
                     {subdivisaoOpcoes.map((s) => (
-                      <button
+                      <AppButton
                         key={s.id}
                         type="button"
-                        className="btn btn-light"
-                        style={{
-                          width: "100%",
-                          justifyContent: "flex-start",
-                          marginBottom: 4,
-                          background: form.subdivisao_id === s.id ? "#e0f2fe" : "#fff",
-                          borderColor: form.subdivisao_id === s.id ? "#38bdf8" : "#e5e7eb",
-                        }}
+                        variant={form.subdivisao_id === s.id ? "primary" : "secondary"}
+                        className="vtur-subdivisao-option"
                         onMouseDown={(e) => {
                           e.preventDefault();
                           handleChange("subdivisao_id", s.id);
@@ -672,50 +658,50 @@ export default function CidadesIsland() {
                         }}
                       >
                         {s.label}
-                      </button>
+                      </AppButton>
                     ))}
-                  </div>
+                  </AppCard>
                 )}
               </div>
             </div>
 
-            <div className="form-group" style={{ marginTop: 12 }}>
-              <label className="form-label">Descricao</label>
-              <textarea
-                className="form-input"
+            <div style={{ marginTop: 12 }}>
+              <AppField
+                as="textarea"
+                label="Descricao"
                 rows={3}
                 value={form.descricao}
                 onChange={(e) => handleChange("descricao", e.target.value)}
               />
             </div>
 
-            <div className="mobile-stack-buttons" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
-              <button className="btn btn-primary" disabled={salvando}>
+            <div className="vtur-form-actions mobile-stack-buttons" style={{ marginTop: 12 }}>
+              <AppButton type="submit" variant="primary" disabled={salvando} loading={salvando}>
                 {salvando ? "Salvando..." : "Salvar cidade"}
-              </button>
-
-              <button type="button" className="btn btn-light" onClick={fecharFormulario} disabled={salvando}>
+              </AppButton>
+              <AppButton type="button" variant="secondary" onClick={fecharFormulario} disabled={salvando}>
                 Cancelar
-              </button>
+              </AppButton>
             </div>
           </form>
-        </div>
+        </AppCard>
       )}
 
       {!mostrarFormulario && carregando && <LoadingUsuarioContext className="mb-3" />}
       {!mostrarFormulario && !carregando && erro && (
-        <div className="card-base card-config mb-3">
-          <strong>{erro}</strong>
-        </div>
+        <AlertMessage variant="error" className="mb-3">
+          {erro}
+        </AlertMessage>
       )}
       {!mostrarFormulario && !carregouTodos && !erro && (
-        <div className="card-base card-config mb-3">
-          Ultimas Cidades Cadastradas (5). Digite na busca para consultar todas.
-        </div>
+        <AlertMessage variant="info" className="mb-3">
+          Ultimas cidades cadastradas (5). Digite na busca para consultar todas.
+        </AlertMessage>
       )}
 
       {!mostrarFormulario && (
         <DataTable
+          shellClassName="mb-3"
           className="table-default table-header-blue table-mobile-cards min-w-[720px]"
           containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
           headers={
@@ -728,9 +714,18 @@ export default function CidadesIsland() {
             </tr>
           }
           loading={loading}
-          loadingMessage="Carregando..."
+          loadingMessage="Carregando cidades..."
           empty={!loading && filtradas.length === 0}
-          emptyMessage="Nenhuma cidade encontrada."
+          emptyMessage={
+            <EmptyState
+              title="Nenhuma cidade encontrada"
+              description={
+                busca.trim()
+                  ? "Tente ajustar a busca ou cadastre uma nova cidade."
+                  : "Cadastre uma cidade para comecar."
+              }
+            />
+          }
           colSpan={podeEditar || podeExcluir ? 5 : 4}
         >
           {filtradas.map((c) => (
@@ -746,11 +741,10 @@ export default function CidadesIsland() {
                     actions={[
                       ...(podeEditar
                         ? [
-                            {
+                          {
                               key: "edit",
                               label: "Editar",
                               onClick: () => iniciarEdicao(c),
-                              icon: "✏️",
                             },
                           ]
                         : []),
@@ -760,7 +754,6 @@ export default function CidadesIsland() {
                               key: "delete",
                               label: "Excluir",
                               onClick: () => solicitarExclusao(c),
-                              icon: excluindoId === c.id ? "..." : "🗑️",
                               variant: "danger" as const,
                               disabled: excluindoId === c.id,
                             },
@@ -785,6 +778,7 @@ export default function CidadesIsland() {
         onCancel={() => setCidadeParaExcluir(null)}
         onConfirm={confirmarExclusao}
       />
-    </div>
+      </div>
+    </AppPrimerProvider>
   );
 }

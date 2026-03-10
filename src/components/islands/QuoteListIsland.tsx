@@ -1,6 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Dialog } from "@primer/react";
 import { normalizeText } from "../../lib/normalizeText";
 import ConfirmDialog from "../ui/ConfirmDialog";
+import AlertMessage from "../ui/AlertMessage";
+import DataTable from "../ui/DataTable";
+import EmptyState from "../ui/EmptyState";
+import TableActions from "../ui/TableActions";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 import { matchesCpfSearch } from "../../lib/searchNormalization";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 
@@ -9,6 +19,7 @@ type QuoteItemRow = {
   title?: string | null;
   product_name?: string | null;
   item_type?: string | null;
+  quantity?: number | null;
   total_amount?: number | null;
   order_index?: number | null;
 };
@@ -81,7 +92,6 @@ export default function QuoteListIsland() {
   const [erro, setErro] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("all");
-  const [showFilters, setShowFilters] = useState(false);
   const [deletandoId, setDeletandoId] = useState<string | null>(null);
   const [visualizandoQuote, setVisualizandoQuote] = useState<QuoteRow | null>(null);
   const [exportingQuoteId, setExportingQuoteId] = useState<string | null>(null);
@@ -143,6 +153,15 @@ export default function QuoteListIsland() {
     const mostrarTodos = busca.trim().length > 0 || statusFiltro !== "all";
     return mostrarTodos ? quotesFiltrados : quotesFiltrados.slice(0, 5);
   }, [quotesFiltrados, busca, statusFiltro]);
+  const resumoLista = useMemo(() => {
+    const fechados = quotes.filter((quote) =>
+      normalizeText(quote.status_negociacao || "Enviado") === "fechado"
+    ).length;
+    const negociando = quotes.filter((quote) =>
+      normalizeText(quote.status_negociacao || "Enviado") === "negociando"
+    ).length;
+    return `${quotesFiltrados.length} orcamentos no recorte atual · ${negociando} negociando · ${fechados} fechados`;
+  }, [quotes, quotesFiltrados]);
 
   async function handleExportPdf(quoteId: string) {
     setExportError(null);
@@ -268,417 +287,334 @@ export default function QuoteListIsland() {
   }
 
   return (
-    <div className="page-content-wrap orcamentos-consulta-page">
-      <div className="card-base card-purple mb-3 list-toolbar-sticky">
-        <div className="flex flex-col gap-2 sm:hidden">
-          <div className="form-group">
-            <label className="form-label">Buscar</label>
-            <input
-              className="form-input"
-              placeholder="Cliente, item, status..."
+    <AppPrimerProvider>
+      <div className="page-content-wrap orcamentos-consulta-page">
+        <AppToolbar
+          sticky
+          tone="config"
+          className="mb-3 list-toolbar-sticky"
+          title="Base de orcamentos"
+          subtitle={resumoLista}
+        >
+          <div className="vtur-form-grid vtur-form-grid-2">
+            <AppField
+              label="Buscar"
+              placeholder="Cliente, item, status ou ID..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
+              caption="Busque por nome do cliente, CPF, itens do orcamento, status ou identificador."
+            />
+            <AppField
+              as="select"
+              label="Status"
+              value={statusFiltro}
+              onChange={(e) => setStatusFiltro(e.target.value)}
+              options={[
+                { value: "all", label: "Todos" },
+                ...STATUS_OPTIONS.map((status) => ({ value: status, label: status })),
+              ]}
+              caption="Filtre a carteira por etapa atual da negociacao."
             />
           </div>
-          <button type="button" className="btn btn-light" onClick={() => setShowFilters(true)}>
-            Filtros
-          </button>
-        </div>
-        <div className="hidden sm:block">
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Buscar</label>
-              <input
-                className="form-input"
-                placeholder="Cliente, item, status..."
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
+        </AppToolbar>
+
+        {erro && (
+          <AlertMessage variant="error" className="mb-3">
+            {erro}
+          </AlertMessage>
+        )}
+        {exportError && (
+          <AlertMessage variant="error" className="mb-3">
+            {exportError}
+          </AlertMessage>
+        )}
+
+        <AppCard
+          tone="config"
+          title="Orcamentos recentes"
+          subtitle="Acompanhe itens, negociacao, ultima interacao comercial e proximos passos de cada proposta."
+        >
+          <DataTable
+            className="table-mobile-cards table-header-purple quote-list-table"
+            containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+            headers={
+              <tr>
+                <th>Cliente</th>
+                <th>Itens</th>
+                <th>Status</th>
+                <th>Total</th>
+                <th>Criado</th>
+                <th>Ultima interacao</th>
+                <th className="th-actions" style={{ textAlign: "center" }}>
+                  Acoes
+                </th>
+              </tr>
+            }
+            loading={loading}
+            loadingMessage="Carregando orcamentos..."
+            empty={!loading && quotesExibidos.length === 0}
+            emptyMessage={
+              <EmptyState
+                title="Nenhum orcamento encontrado"
+                description={
+                  busca.trim() || statusFiltro !== "all"
+                    ? "Ajuste os filtros para localizar propostas existentes."
+                    : "Os orcamentos mais recentes aparecerao aqui assim que forem criados ou importados."
+                }
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Status</label>
-              <select
-                className="form-input"
-                value={statusFiltro}
-                onChange={(e) => setStatusFiltro(e.target.value)}
-              >
-                <option value="all">Todos</option>
-                {STATUS_OPTIONS.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {showFilters && (
-        <div className="mobile-drawer-backdrop" onClick={() => setShowFilters(false)}>
-          <div
-            className="mobile-drawer-panel"
-            role="dialog"
-            aria-modal="true"
-            onClick={(e) => e.stopPropagation()}
+            }
+            colSpan={7}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <strong>Filtros</strong>
-              <button type="button" className="btn-ghost" onClick={() => setShowFilters(false)}>
-                ✕
-              </button>
-            </div>
-            <div className="form-group" style={{ marginTop: 12 }}>
-              <label className="form-label">Status</label>
-              <select
-                className="form-input"
-                value={statusFiltro}
-                onChange={(e) => setStatusFiltro(e.target.value)}
-              >
-                <option value="all">Todos</option>
-                {STATUS_OPTIONS.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{ marginTop: 12, width: "100%" }}
-              onClick={() => setShowFilters(false)}
-            >
-              Aplicar filtros
-            </button>
-          </div>
-        </div>
-      )}
+            {quotesExibidos.map((quote) => {
+              const itens = quote.quote_item || [];
+              const itensOrdenados = [...itens].sort(
+                (a, b) => (a.order_index ?? 0) - (b.order_index ?? 0)
+              );
+              const itensLabel = itens.length
+                ? itensOrdenados.map((item) => buildItemLabel(item))
+                : [];
+              const statusAtual = quote.status_negociacao || "Enviado";
+              const isFechado = normalizeText(statusAtual) === "fechado";
+              const clienteLabel =
+                quote.client_name ||
+                quote.cliente?.nome ||
+                (quote.client_id ? "Cliente" : "-");
 
-      {erro && (
-        <div className="card-base card-config mb-3">
-          <strong>{erro}</strong>
-        </div>
-      )}
-      {exportError && (
-        <div className="card-base card-config mb-3">
-          <strong>{exportError}</strong>
-        </div>
-      )}
-
-      <div className="table-container overflow-x-auto" style={{ maxHeight: "65vh", overflowY: "auto" }}>
-        <table className="table-default table-header-purple table-mobile-cards min-w-[1100px]">
-          <thead style={{ position: "sticky", top: 0, zIndex: 1 }}>
-            <tr>
-              <th>Cliente</th>
-              <th>Itens</th>
-              <th>Status</th>
-              <th>Total</th>
-              <th>Criado</th>
-              <th>Última interação</th>
-              <th className="th-actions" style={{ textAlign: "center" }}>
-                Ações
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={7}>Carregando...</td>
-              </tr>
-            )}
-
-            {!loading && quotesExibidos.length === 0 && (
-              <tr>
-                <td colSpan={7}>Nenhum orcamento encontrado.</td>
-              </tr>
-            )}
-
-            {!loading &&
-              quotesExibidos.map((quote) => {
-                const itens = quote.quote_item || [];
-                const itensOrdenados = [...itens].sort(
-                  (a, b) => (a.order_index ?? 0) - (b.order_index ?? 0)
-                );
-                const itensLabel = itens.length
-                  ? itensOrdenados.map((item) => buildItemLabel(item))
-                  : [];
-                const statusAtual = quote.status_negociacao || "Enviado";
-                const isFechado = normalizeText(statusAtual) === "fechado";
-                const clienteLabel =
-                  quote.client_name ||
-                  quote.cliente?.nome ||
-                  (quote.client_id ? "Cliente" : "-");
-                return (
-                  <tr key={quote.id}>
-                    <td data-label="Cliente">{clienteLabel}</td>
-                    <td data-label="Itens">
-                      {itensLabel.length === 0 ? (
-                        "-"
-                      ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                          {itensLabel.map((item, idx) => (
-                            <span key={`${quote.id}-item-${idx}`}>{item}</span>
-                          ))}
-                        </div>
-                      )}
-                    </td>
-                    <td data-label="Status">
-                      <select
-                        className="form-input"
-                        value={statusAtual}
-                        onChange={(e) => atualizarStatus(quote.id, e.target.value)}
-                        disabled={isFechado}
-                      >
-                        {STATUS_OPTIONS.map((status) => (
-                          <option key={status} value={status}>
-                            {status}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td data-label="Total">{formatCurrency(Number(quote.total || 0))}</td>
-                    <td data-label="Criado">{formatDate(quote.created_at)}</td>
-                    <td data-label="Última interação">
-                      {quote.last_interaction_at ? formatDate(quote.last_interaction_at) : "-"}
-                    </td>
-                    <td className="th-actions th-actions-quote" data-label="Ações">
-                      <div className="action-buttons action-buttons-quote">
-                        <button
-                          className="btn-icon"
-                          title={
-                            quote.last_interaction_at
-                              ? `Ultima interacao: ${formatDateTime(quote.last_interaction_at)}`
-                              : "Registrar ultima interacao"
+              const actions = [
+                {
+                  key: "interaction",
+                  label: "CRM",
+                  variant: "light" as const,
+                  onClick: () => abrirInteracaoModal(quote),
+                  title: quote.last_interaction_at
+                    ? `Ultima interacao: ${formatDateTime(quote.last_interaction_at)}`
+                    : "Registrar ultima interacao",
+                },
+                {
+                  key: "sale",
+                  label: "Venda",
+                  variant: "primary" as const,
+                  onClick: () => converterParaVenda(quote.id),
+                  disabled: isFechado,
+                  title: "Converter em venda",
+                },
+                {
+                  key: "view",
+                  label: "Abrir",
+                  variant: "ghost" as const,
+                  onClick: () => setVisualizandoQuote(quote),
+                  title: "Visualizar orcamento",
+                },
+                {
+                  key: "pdf",
+                  label: exportingQuoteId === quote.id ? "..." : "PDF",
+                  variant: "light" as const,
+                  onClick: () => handleExportPdf(quote.id),
+                  disabled: exportingQuoteId === quote.id,
+                  title: "Visualizar PDF",
+                },
+                ...(!isFechado
+                  ? [
+                      {
+                        key: "edit",
+                        label: "Editar",
+                        variant: "ghost" as const,
+                        onClick: () => {
+                          if (typeof window !== "undefined") {
+                            window.location.href = `/orcamentos/${quote.id}`;
                           }
-                          onClick={() => abrirInteracaoModal(quote)}
-                        >
-                          🕒
-                        </button>
-                        <button
-                          className="btn-icon"
-                          title="Converter em venda"
-                          onClick={() => converterParaVenda(quote.id)}
-                          disabled={isFechado}
-                        >
-                          <span style={{ color: "#16a34a", fontWeight: 700 }}>$</span>
-                        </button>
-                        <button
-                          className="btn-icon"
-                          title="Visualizar orçamento"
-                          onClick={() => setVisualizandoQuote(quote)}
-                        >
-                          👁️
-                        </button>
-                        <button
-                          className="btn-icon"
-                          title="Visualizar PDF"
-                          onClick={() => handleExportPdf(quote.id)}
-                          disabled={exportingQuoteId === quote.id}
-                        >
-                          {exportingQuoteId === quote.id ? (
-                            "⏳"
-                          ) : (
-                            <span
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                width: 24,
-                                height: 24,
-                                borderRadius: 4,
-                                background: "#dc2626",
-                                color: "#fff",
-                                fontSize: 10,
-                                fontWeight: 700,
-                                fontFamily: "Arial, sans-serif",
-                              }}
-                            >
-                              PDF
-                            </span>
-                          )}
-                        </button>
-                        {!isFechado && (
-                          <a
-                            className="btn-icon"
-                            href={`/orcamentos/${quote.id}`}
-                            title="Editar orcamento"
-                          >
-                            ✏️
-                          </a>
-                        )}
-                        <button
-                          className="btn-icon btn-danger"
-                          title="Excluir orcamento"
-                          onClick={() => solicitarExclusao(quote)}
-                          disabled={deletandoId === quote.id}
-                        >
-                          {deletandoId === quote.id ? "..." : "🗑️"}
-                        </button>
+                        },
+                        title: "Editar orcamento",
+                      },
+                    ]
+                  : []),
+                {
+                  key: "delete",
+                  label: deletandoId === quote.id ? "..." : "Excluir",
+                  variant: "danger" as const,
+                  onClick: () => solicitarExclusao(quote),
+                  disabled: deletandoId === quote.id,
+                  title: "Excluir orcamento",
+                },
+              ];
+
+              return (
+                <tr key={quote.id}>
+                  <td data-label="Cliente">{clienteLabel}</td>
+                  <td data-label="Itens">
+                    {itensLabel.length === 0 ? (
+                      "-"
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        {itensLabel.map((item, idx) => (
+                          <span key={`${quote.id}-item-${idx}`}>{item}</span>
+                        ))}
                       </div>
-                    </td>
-                  </tr>
-                );
-              })}
-          </tbody>
-        </table>
-      </div>
-      {interacaoQuote && (
-        <div className="modal-backdrop">
-          <div className="modal-panel interacao-modal" style={{ maxWidth: 720, width: "92vw" }}>
-            <div className="modal-header">
-              <div>
-                <div className="modal-title">Última interação</div>
-                <div style={{ fontSize: "0.9rem", color: "#475569" }}>
-                  Cliente:{" "}
-                  {interacaoQuote.client_name ||
-                    interacaoQuote.cliente?.nome ||
-                    "—"}{" "}
-                  | Status:{" "}
-                  {interacaoQuote.status_negociacao || "Enviado"}
-                </div>
-              </div>
-              <button className="btn-ghost" onClick={() => setInteracaoQuote(null)}>
-                ✖
-              </button>
-            </div>
-            <div className="modal-body" style={{ display: "grid", gap: 12 }}>
-              <div>
-                <strong>Total:</strong>{" "}
-                {formatCurrency(Number(interacaoQuote.total || 0))}
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Data do último contato</label>
-                  <input
-                    className="form-input"
+                    )}
+                  </td>
+                  <td data-label="Status">
+                    <select
+                      className="form-input"
+                      value={statusAtual}
+                      onChange={(e) => atualizarStatus(quote.id, e.target.value)}
+                      disabled={isFechado}
+                    >
+                      {STATUS_OPTIONS.map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td data-label="Total">{formatCurrency(Number(quote.total || 0))}</td>
+                  <td data-label="Criado">{formatDate(quote.created_at)}</td>
+                  <td data-label="Ultima interacao">
+                    {quote.last_interaction_at ? formatDate(quote.last_interaction_at) : "-"}
+                  </td>
+                  <td className="th-actions th-actions-quote" data-label="Acoes">
+                    <TableActions actions={actions} />
+                  </td>
+                </tr>
+              );
+            })}
+          </DataTable>
+        </AppCard>
+
+        {interacaoQuote && (
+          <Dialog
+            title="Ultima interacao"
+            width="large"
+            onClose={() => setInteracaoQuote(null)}
+            footerButtons={[
+              {
+                content: "Cancelar",
+                buttonType: "default",
+                onClick: () => setInteracaoQuote(null),
+                disabled: interactionSaving,
+              },
+              {
+                content: interactionSaving ? "Salvando..." : "Salvar",
+                buttonType: "primary",
+                onClick: salvarInteracao,
+                disabled: interactionSaving,
+              },
+            ]}
+          >
+            <div className="vtur-modal-body-stack">
+              <AppCard
+                tone="info"
+                title={interacaoQuote.client_name || interacaoQuote.cliente?.nome || "-"}
+                subtitle={`Status ${interacaoQuote.status_negociacao || "Enviado"} · Total ${formatCurrency(
+                  Number(interacaoQuote.total || 0)
+                )}`}
+              >
+                <div className="vtur-form-grid vtur-form-grid-2">
+                  <AppField
+                    label="Data do ultimo contato"
                     type="date"
                     value={interactionDate}
                     onFocus={selectAllInputOnFocus}
                     onChange={(e) => setInteractionDate(e.target.value)}
                   />
+                  <AppField
+                    as="textarea"
+                    label="Notas"
+                    rows={4}
+                    value={interactionNotes}
+                    onChange={(e) => setInteractionNotes(e.target.value)}
+                    placeholder="Descreva o ultimo contato..."
+                  />
                 </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Notas</label>
-                <textarea
-                  className="form-input"
-                  rows={4}
-                  value={interactionNotes}
-                  onChange={(e) => setInteractionNotes(e.target.value)}
-                  placeholder="Descreva o último contato..."
-                />
-              </div>
-              <div>
-                <strong>Itens:</strong>
+              </AppCard>
+
+              <AppCard title="Itens do orcamento" subtitle="Resumo rapido dos itens vinculados a esta proposta.">
                 {interacaoQuote.quote_item && interacaoQuote.quote_item.length > 0 ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 6 }}>
+                  <div className="vtur-modal-list">
                     {[...(interacaoQuote.quote_item || [])]
                       .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
                       .map((item) => (
-                        <span key={`${interacaoQuote.id}-${item.id}`}>{buildItemLabel(item)}</span>
+                        <div key={`${interacaoQuote.id}-${item.id}`} className="vtur-modal-list-item">
+                          {buildItemLabel(item)}
+                        </div>
                       ))}
                   </div>
                 ) : (
-                  <div style={{ marginTop: 6 }}>-</div>
+                  <EmptyState
+                    title="Sem itens vinculados"
+                    description="Este orcamento nao possui itens listados para exibir no historico."
+                  />
                 )}
-              </div>
+              </AppCard>
+
               {interactionError && (
-                <div style={{ color: "#b91c1c" }}>{interactionError}</div>
+                <AlertMessage variant="error">{interactionError}</AlertMessage>
               )}
             </div>
-            <div className="modal-footer mobile-stack-buttons">
-              <button
-                className="btn btn-light w-full sm:w-auto"
-                type="button"
-                onClick={() => setInteracaoQuote(null)}
-                disabled={interactionSaving}
-              >
-                Cancelar
-              </button>
-              <button
-                className="btn btn-primary w-full sm:w-auto"
-                type="button"
-                onClick={salvarInteracao}
-                disabled={interactionSaving}
-              >
-                {interactionSaving ? "Salvando..." : "Salvar"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </Dialog>
+        )}
 
-      {visualizandoQuote && (
-        <div className="modal-backdrop">
-          <div
-            className="modal-panel orcamento-detalhe-modal"
-            style={{ maxWidth: 640, width: "90vw" }}
+        {visualizandoQuote && (
+          <Dialog
+            title={visualizandoQuote.client_name || visualizandoQuote.cliente?.nome || "-"}
+            width="large"
+            onClose={() => setVisualizandoQuote(null)}
+            footerButtons={[
+              {
+                content: "Fechar",
+                buttonType: "primary",
+                onClick: () => setVisualizandoQuote(null),
+              },
+            ]}
           >
-            <div className="modal-header">
-              <div className="orcamento-detalhe-header">
-                <div className="modal-title orcamento-detalhe-nome">
-                  {visualizandoQuote.client_name ||
-                    visualizandoQuote.cliente?.nome ||
-                    "—"}
-                </div>
-              <div className="orcamento-detalhe-status">
-                Status: {visualizandoQuote.status_negociacao || "Enviado"}
-              </div>
-            </div>
-            <button className="btn-ghost" onClick={() => setVisualizandoQuote(null)}>
-              ✖
-            </button>
-          </div>
-            <div className="modal-body" style={{ display: "grid", gap: 12 }}>
-              <div className="card-base" style={{ textAlign: "center" }}>
-                <div className="orcamento-detalhe-subtitle">Visualizar orçamento</div>
-              </div>
-              <div>
-                <strong>Total:</strong>{" "}
-                {formatCurrency(Number(visualizandoQuote.total || 0))}
-              </div>
-              <div className="table-container overflow-x-auto">
-                <table className="table-default table-header-purple table-mobile-cards">
-                  <thead>
+            <div className="vtur-modal-body-stack">
+              <AppCard
+                tone="info"
+                title="Resumo do orcamento"
+                subtitle={`Status ${visualizandoQuote.status_negociacao || "Enviado"} · Total ${formatCurrency(
+                  Number(visualizandoQuote.total || 0)
+                )}`}
+              />
+
+              <AppCard title="Itens" subtitle="Itens principais da proposta selecionada.">
+                <DataTable
+                  headers={
                     <tr>
                       <th>Item</th>
                       <th>Qtd</th>
                       <th>Total</th>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {(visualizandoQuote.quote_item || []).map((item) => (
-                      <tr key={`${visualizandoQuote.id}-${item.id}`}>
-                        <td data-label="Item">{buildItemLabel(item)}</td>
-                        <td data-label="Qtd">{item.quantity || 1}</td>
-                        <td data-label="Total">
-                          {formatCurrency(Number(item.total_amount || 0))}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  }
+                  empty={!visualizandoQuote.quote_item || visualizandoQuote.quote_item.length === 0}
+                  emptyMessage="Nenhum item encontrado."
+                  colSpan={3}
+                  className="table-mobile-cards table-header-purple"
+                >
+                  {(visualizandoQuote.quote_item || []).map((item) => (
+                    <tr key={`${visualizandoQuote.id}-${item.id}`}>
+                      <td data-label="Item">{buildItemLabel(item)}</td>
+                      <td data-label="Qtd">{item.quantity || 1}</td>
+                      <td data-label="Total">
+                        {formatCurrency(Number(item.total_amount || 0))}
+                      </td>
+                    </tr>
+                  ))}
+                </DataTable>
+              </AppCard>
             </div>
-            <div className="modal-footer mobile-stack-buttons">
-              <button className="btn btn-primary w-full sm:w-auto" onClick={() => setVisualizandoQuote(null)}>
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      <ConfirmDialog
-        open={Boolean(quoteParaExcluir)}
-        title="Excluir orçamento"
-        message="Excluir este orçamento? Esta ação não pode ser desfeita."
-        confirmLabel={deletandoId ? "Excluindo..." : "Excluir"}
-        confirmVariant="danger"
-        confirmDisabled={Boolean(deletandoId)}
-        onCancel={() => setQuoteParaExcluir(null)}
-        onConfirm={confirmarExclusao}
-      />
-    </div>
+          </Dialog>
+        )}
+
+        <ConfirmDialog
+          open={Boolean(quoteParaExcluir)}
+          title="Excluir orcamento"
+          message="Excluir este orcamento? Esta acao nao pode ser desfeita."
+          confirmLabel={deletandoId ? "Excluindo..." : "Excluir"}
+          confirmVariant="danger"
+          confirmDisabled={Boolean(deletandoId)}
+          onCancel={() => setQuoteParaExcluir(null)}
+          onConfirm={confirmarExclusao}
+        />
+      </div>
+    </AppPrimerProvider>
   );
 }

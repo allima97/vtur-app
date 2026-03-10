@@ -1,3 +1,4 @@
+import { Dialog } from "@primer/react";
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
@@ -8,18 +9,19 @@ import { formatarDataParaExibicao } from "../../lib/formatDate";
 import { formatCurrencyBRL } from "../../lib/format";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import AlertMessage from "../ui/AlertMessage";
+import DataTable from "../ui/DataTable";
+import EmptyState from "../ui/EmptyState";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import PaginationControls from "../ui/PaginationControls";
 import { fetchGestorEquipeIdsComGestor } from "../../lib/gestorEquipe";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type StatusFiltro = "todos" | "aberto" | "confirmado" | "cancelado";
-type MobilePeriodoPreset =
-  | "hoje"
-  | "7"
-  | "30"
-  | "mes_atual"
-  | "mes_anterior"
-  | "personalizado";
 type PeriodoPreset = "hoje" | "7" | "30" | "mes_atual" | "mes_anterior" | "limpar" | "";
 
 type LinhaDestino = {
@@ -142,8 +144,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
   const [exportFlags, setExportFlags] = useState<ExportFlags>({ pdf: true, excel: true });
   const [showFilters, setShowFilters] = useState(false);
   const [showExport, setShowExport] = useState(false);
-  const [mobilePeriodoPreset, setMobilePeriodoPreset] =
-    useState<MobilePeriodoPreset>("30");
+  const [exportando, setExportando] = useState(false);
   const [exportTipo, setExportTipo] = useState<"csv" | "excel" | "pdf">("csv");
   const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
@@ -301,7 +302,6 @@ export default function RelatorioAgrupadoDestinoIsland() {
     const inicio = addDays(hoje, -30);
     setDataInicio(formatISO(inicio));
     setDataFim(hojeISO());
-    setMobilePeriodoPreset("30");
     setPeriodoPreset("30");
   }, []);
 
@@ -641,543 +641,382 @@ export default function RelatorioAgrupadoDestinoIsland() {
   }
 
   async function exportarSelecionado() {
-    if (exportTipo === "csv") {
-      await exportarCSV();
-      return;
+    if (exportando) return;
+    setExportando(true);
+    try {
+      if (exportTipo === "csv") {
+        await exportarCSV();
+        return;
+      }
+      if (exportTipo === "excel") {
+        await exportarExcel();
+        return;
+      }
+      await exportarPDF();
+    } finally {
+      setExportando(false);
     }
-    if (exportTipo === "excel") {
-      await exportarExcel();
-      return;
-    }
-    await exportarPDF();
   }
 
   const exportDisabled =
     (exportTipo === "excel" && !exportFlags.excel) ||
     (exportTipo === "pdf" && !exportFlags.pdf);
 
-  return (
-    <div className="relatorio-vendas-destino-page">
-      <div className="card-base card-purple form-card mb-3">
-        <div className="flex flex-col gap-2 sm:hidden">
-          <div className="form-group">
-            <label className="form-label">Buscar destino ou cidade</label>
-            <input
-              className="form-input"
-              value={buscaDestino}
-              onChange={(e) => setBuscaDestino(e.target.value)}
-              placeholder="Destino ou cidade..."
-            />
-          </div>
-          <button type="button" className="btn btn-light" onClick={() => setShowExport(true)}>
-            Exportar
-          </button>
-        </div>
-        <div className="hidden sm:block">
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Data início</label>
-            <input
-              type="date"
-              className="form-input"
-              value={dataInicio}
-              onFocus={selectAllInputOnFocus}
-              onChange={(e) => {
-                const nextInicio = e.target.value;
-                setPeriodoPreset("");
-                setDataInicio(nextInicio);
-                if (dataFim && nextInicio && dataFim < nextInicio) {
-                  setDataFim(nextInicio);
-                }
-              }}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Data fim</label>
-            <input
-              type="date"
-              className="form-input"
-              value={dataFim}
-              min={dataInicio || undefined}
-              onFocus={selectAllInputOnFocus}
-              onChange={(e) => {
-                const nextFim = e.target.value;
-                setPeriodoPreset("");
-                const boundedFim = dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
-                setDataFim(boundedFim);
-              }}
-            />
-          </div>
-          {userCtx?.papel === "MASTER" && (
-            <>
-              <div className="form-group">
-                <label className="form-label">Filial</label>
-                <select
-                  className="form-select"
-                  value={masterScope.empresaSelecionada}
-                  onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
-                >
-                  <option value="all">Todas</option>
-                  {masterScope.empresasAprovadas.map((empresa) => (
-                    <option key={empresa.id} value={empresa.id}>
-                      {empresa.nome_fantasia}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Equipe</label>
-                <select
-                  className="form-select"
-                  value={masterScope.gestorSelecionado}
-                  onChange={(e) => masterScope.setGestorSelecionado(e.target.value)}
-                >
-                  <option value="all">Todas</option>
-                  {masterScope.gestoresDisponiveis.map((gestor) => (
-                    <option key={gestor.id} value={gestor.id}>
-                      {gestor.nome_completo}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </>
-          )}
-          {(userCtx?.papel === "GESTOR" || userCtx?.papel === "MASTER") && (
-            <div className="form-group">
-              <label className="form-label">Vendedor</label>
-              <select
-                className="form-select"
-                value={vendedorSelecionadoAtual || todosValue}
-                onChange={(e) => setVendedorSelecionadoAtual(e.target.value)}
-              >
-                <option value={todosValue}>Todos</option>
-                {vendedoresEquipe.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          <div className="form-group">
-            <label className="form-label">Status</label>
-            <select
-              className="form-select"
-              value={statusFiltro}
-              onChange={(e) => setStatusFiltro(e.target.value as StatusFiltro)}
-            >
-              <option value="todos">Todos</option>
-              <option value="aberto">Aberto</option>
-              <option value="confirmado">Confirmado</option>
-              <option value="cancelado">Cancelado</option>
-            </select>
-          </div>
-        </div>
+  if (loadingUser) return <LoadingUsuarioContext />;
 
-        <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button
-            type="button"
-            className={`btn btn-light ${periodoPreset === "hoje" ? "preset-active" : ""}`}
-            onClick={() => aplicarPeriodoPreset("hoje")}
-          >
-            Hoje
-          </button>
-          <button
-            type="button"
-            className={`btn btn-light ${periodoPreset === "7" ? "preset-active" : ""}`}
-            onClick={() => aplicarPeriodoPreset("7")}
-          >
-            Últimos 7 dias
-          </button>
-          <button
-            type="button"
-            className={`btn btn-light ${periodoPreset === "30" ? "preset-active" : ""}`}
-            onClick={() => aplicarPeriodoPreset("30")}
-          >
-            Últimos 30 dias
-          </button>
-          <button
-            type="button"
-            className={`btn btn-light ${periodoPreset === "mes_atual" ? "preset-active" : ""}`}
-            onClick={() => aplicarPeriodoPreset("mes_atual")}
-          >
-            Este mês
-          </button>
-          <button
-            type="button"
-            className={`btn btn-light ${periodoPreset === "mes_anterior" ? "preset-active" : ""}`}
-            onClick={() => aplicarPeriodoPreset("mes_anterior")}
-          >
-            Mês anterior
-          </button>
-          <button
-            type="button"
-            className={`btn btn-light ${periodoPreset === "limpar" ? "preset-active" : ""}`}
-            onClick={() => aplicarPeriodoPreset("limpar")}
-          >
-            Limpar datas
-          </button>
+  const aplicarFiltrosRelatorio = () => {
+    setPage(1);
+    carregarResumo(1);
+    setShowFilters(false);
+  };
 
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => {
-              setPage(1);
-              carregarResumo(1);
-            }}
-          >
-            Aplicar filtros
-          </button>
+  const periodoResumo =
+    dataInicio && dataFim
+      ? `${formatarDataParaExibicao(dataInicio)} ate ${formatarDataParaExibicao(dataFim)}`
+      : dataInicio
+      ? `A partir de ${formatarDataParaExibicao(dataInicio)}`
+      : dataFim
+      ? `Ate ${formatarDataParaExibicao(dataFim)}`
+      : "Sem recorte de data";
 
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button type="button" className="btn btn-purple" onClick={exportarCSV}>
-              Exportar CSV
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={exportarExcel}
-              disabled={!exportFlags.excel}
-              title={!exportFlags.excel ? "Exportação Excel desabilitada nos parâmetros" : ""}
-            >
-              Exportar Excel
-            </button>
-            <button
-              type="button"
-              className="btn btn-light"
-              onClick={exportarPDF}
-              disabled={!exportFlags.pdf}
-              title={!exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : ""}
-            >
-              Exportar PDF
-            </button>
-          </div>
-        </div>
-        </div>
-      </div>
+  const escopoResumo =
+    userCtx && userCtx.papel !== "ADMIN"
+      ? `Relatorio limitado a ${
+          userCtx.papel === "GESTOR"
+            ? "sua equipe"
+            : userCtx.papel === "MASTER"
+            ? "seu portfolio selecionado"
+            : "suas vendas"
+        }.`
+      : null;
 
-      {showFilters && (
-        <div className="mobile-drawer-backdrop" onClick={() => setShowFilters(false)}>
-          <div
-            className="mobile-drawer-panel"
-            role="dialog"
-            aria-modal="true"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <strong>Filtros</strong>
-              <button type="button" className="btn-ghost" onClick={() => setShowFilters(false)}>
-                ✕
-              </button>
-            </div>
-            {userCtx?.papel === "MASTER" && (
-              <>
-                <div className="form-group" style={{ marginTop: 12 }}>
-                  <label className="form-label">Filial</label>
-                  <select
-                    className="form-select"
-                    value={masterScope.empresaSelecionada}
-                    onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
-                  >
-                    <option value="all">Todas</option>
-                    {masterScope.empresasAprovadas.map((empresa) => (
-                      <option key={empresa.id} value={empresa.id}>
-                        {empresa.nome_fantasia}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group" style={{ marginTop: 12 }}>
-                  <label className="form-label">Equipe</label>
-                  <select
-                    className="form-select"
-                    value={masterScope.gestorSelecionado}
-                    onChange={(e) => masterScope.setGestorSelecionado(e.target.value)}
-                  >
-                    <option value="all">Todas</option>
-                    {masterScope.gestoresDisponiveis.map((gestor) => (
-                      <option key={gestor.id} value={gestor.id}>
-                        {gestor.nome_completo}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </>
-            )}
-            {(userCtx?.papel === "GESTOR" || userCtx?.papel === "MASTER") && (
-              <div className="form-group" style={{ marginTop: 12 }}>
-                <label className="form-label">Vendedor</label>
-                <select
-                  className="form-select"
-                  value={vendedorSelecionadoAtual || todosValue}
-                  onChange={(e) => setVendedorSelecionadoAtual(e.target.value)}
-                >
-                  <option value={todosValue}>Todos</option>
-                  {vendedoresEquipe.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <div className="form-group" style={{ marginTop: 12 }}>
-              <label className="form-label">Período</label>
-                <select
-                  className="form-select"
-                  value={mobilePeriodoPreset}
-                  onChange={(e) => {
-                    const nextPreset = e.target.value as MobilePeriodoPreset;
-                    setMobilePeriodoPreset(nextPreset);
-                    if (nextPreset !== "personalizado") {
-                      aplicarPeriodoPreset(nextPreset);
-                    } else {
-                      setPeriodoPreset("");
-                    }
-                  }}
-                  style={{ width: "100%" }}
-              >
-                <option value="hoje">Hoje</option>
-                <option value="7">Últimos 7 dias</option>
-                <option value="30">Últimos 30 dias</option>
-                <option value="mes_atual">Este mês</option>
-                <option value="mes_anterior">Mês anterior</option>
-                <option value="personalizado">Personalizado</option>
-              </select>
-            </div>
-
-            {mobilePeriodoPreset === "personalizado" && (
-              <>
-                <div className="form-group" style={{ marginTop: 12 }}>
-                  <label className="form-label">Data início</label>
-                    <input
-                      type="date"
-                      className="form-input"
-                      style={{ width: "100%" }}
-                      value={dataInicio}
-                      onFocus={selectAllInputOnFocus}
-                      onChange={(e) => {
-                        const nextInicio = e.target.value;
-                        setMobilePeriodoPreset("personalizado");
-                        setPeriodoPreset("");
-                        setDataInicio(nextInicio);
-                        if (dataFim && nextInicio && dataFim < nextInicio) {
-                          setDataFim(nextInicio);
-                        }
-                      }}
-                    />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Data fim</label>
-                      <input
-                        type="date"
-                        className="form-input"
-                        style={{ width: "100%" }}
-                        value={dataFim}
-                        min={dataInicio || undefined}
-                        onFocus={selectAllInputOnFocus}
-                        onChange={(e) => {
-                          setMobilePeriodoPreset("personalizado");
-                          setPeriodoPreset("");
-                          const nextFim = e.target.value;
-                          const boundedFim =
-                            dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
-                          setDataFim(boundedFim);
-                    }}
-                  />
-                </div>
-              </>
-            )}
-
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{ marginTop: 12, width: "100%" }}
-              onClick={() => {
-                setPage(1);
-                carregarResumo(1);
-                setShowFilters(false);
-              }}
-            >
-              Aplicar filtros
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showExport && (
-        <div className="mobile-drawer-backdrop" onClick={() => setShowExport(false)}>
-          <div
-            className="mobile-drawer-panel"
-            role="dialog"
-            aria-modal="true"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <strong>Exportar</strong>
-              <button type="button" className="btn-ghost" onClick={() => setShowExport(false)}>
-                ✕
-              </button>
-            </div>
-            <div className="form-group" style={{ marginTop: 12 }}>
-              <label className="form-label">Formato</label>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button
-                  type="button"
-                  className={`btn ${exportTipo === "csv" ? "btn-primary" : "btn-light"}`}
-                  onClick={() => setExportTipo("csv")}
-                >
-                  CSV
-                </button>
-                <button
-                  type="button"
-                  className={`btn ${exportTipo === "excel" ? "btn-primary" : "btn-light"}`}
-                  onClick={() => setExportTipo("excel")}
-                  disabled={!exportFlags.excel}
-                  title={
-                    !exportFlags.excel
-                      ? "Exportação Excel desabilitada nos parâmetros"
-                      : ""
-                  }
-                >
-                  Excel
-                </button>
-                <button
-                  type="button"
-                  className={`btn ${exportTipo === "pdf" ? "btn-primary" : "btn-light"}`}
-                  onClick={() => setExportTipo("pdf")}
-                  disabled={!exportFlags.pdf}
-                  title={
-                    !exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : ""
-                  }
-                >
-                  PDF
-                </button>
-              </div>
-            </div>
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{ marginTop: 12, width: "100%" }}
-              onClick={() => {
-                exportarSelecionado();
-                setShowExport(false);
-              }}
-              disabled={exportDisabled}
-            >
-              Exportar
-            </button>
-          </div>
-        </div>
-      )}
-
-      {loadingUser && (
-        <div className="card-base card-config mb-3">Carregando contexto do usuário...</div>
-      )}
-      {userCtx && userCtx.papel !== "ADMIN" && (
-        <div className="card-base card-config mb-3" style={{ color: "#334155" }}>
-          Relatório limitado a {userCtx.papel === "GESTOR" ? "sua equipe" : "suas vendas"}.
-        </div>
-      )}
-
-      {erro && (
-        <div className="mb-3">
-          <AlertMessage variant="error">{erro}</AlertMessage>
-        </div>
-      )}
-
-      <div className="card-base mb-3">
-        <div className="form-row">
-          <div className="form-group">
-            <span>
-              Destinos: <strong>{totalLinhas}</strong>
-            </span>
-          </div>
-          <div className="form-group">
-            <span>
-              Faturamento total:{" "}
-              <strong>
-                {formatCurrencyBRL(totalGeral)}
-              </strong>
-            </span>
-          </div>
-          <div className="form-group">
-            <span>
-              Ticket médio geral:{" "}
-              <strong>
-                {formatCurrencyBRL(ticketGeral)}
-              </strong>
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <PaginationControls
-        page={paginaAtual}
-        pageSize={pageSize}
-        totalItems={totalLinhas}
-        onPageChange={setPage}
-        onPageSizeChange={(size) => {
-          setPageSize(size);
-          setPage(1);
-        }}
-      />
-
-      <div className="table-container overflow-x-auto">
-        <table className="table-default table-header-purple table-mobile-cards min-w-[620px]">
-          <thead>
-            <tr>
-              <th>Destino</th>
-              <th
-                style={{ cursor: "pointer" }}
-                onClick={() => mudarOrdenacao("quantidade")}
-              >
-                Qtde {ordenacao === "quantidade" ? (ordemDesc ? "↓" : "↑") : ""}
-              </th>
-              <th
-                style={{ cursor: "pointer" }}
-                onClick={() => mudarOrdenacao("total")}
-              >
-                Faturamento {ordenacao === "total" ? (ordemDesc ? "↓" : "↑") : ""}
-              </th>
-              <th
-                style={{ cursor: "pointer" }}
-                onClick={() => mudarOrdenacao("ticket")}
-              >
-                Ticket médio {ordenacao === "ticket" ? (ordemDesc ? "↓" : "↑") : ""}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={4}>Carregando...</td>
-              </tr>
-            )}
-            {!loading && linhasExibidas.length === 0 && (
-              <tr>
-                <td colSpan={4}>
-                  Nenhum destino encontrado com os filtros atuais.
-                </td>
-              </tr>
-            )}
-            {!loading &&
-              linhasExibidas.map((l) => (
-                <tr key={l.destino_id}>
-                  <td data-label="Destino">{l.destino_nome}</td>
-                  <td data-label="Qtde">{l.quantidade}</td>
-                  <td data-label="Faturamento">
-                    {formatCurrencyBRL(l.total)}
-                  </td>
-                  <td data-label="Ticket médio">
-                    {formatCurrencyBRL(l.ticketMedio)}
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
-      <ToastStack toasts={toasts} onDismiss={dismissToast} />
+  const renderPeriodButtons = () => (
+    <div className="vtur-quote-top-actions">
+      {[
+        { id: "hoje", label: "Hoje" },
+        { id: "7", label: "Ultimos 7 dias" },
+        { id: "30", label: "Ultimos 30 dias" },
+        { id: "mes_atual", label: "Este mes" },
+        { id: "mes_anterior", label: "Mes anterior" },
+        { id: "limpar", label: "Limpar datas" },
+      ].map((periodo) => (
+        <AppButton
+          key={periodo.id}
+          type="button"
+          variant={periodoPreset === periodo.id ? "primary" : "secondary"}
+          onClick={() => aplicarPeriodoPreset(periodo.id as Exclude<PeriodoPreset, "">)}
+        >
+          {periodo.label}
+        </AppButton>
+      ))}
     </div>
+  );
+
+  const renderFiltersGrid = () => (
+    <>
+      <div className="vtur-commission-filters-grid">
+        <AppField
+          label="Data inicio"
+          type="date"
+          value={dataInicio}
+          onFocus={selectAllInputOnFocus}
+          onChange={(e) => {
+            const nextInicio = e.target.value;
+            setPeriodoPreset("");
+            setDataInicio(nextInicio);
+            if (dataFim && nextInicio && dataFim < nextInicio) {
+              setDataFim(nextInicio);
+            }
+          }}
+        />
+        <AppField
+          label="Data fim"
+          type="date"
+          value={dataFim}
+          min={dataInicio || undefined}
+          onFocus={selectAllInputOnFocus}
+          onChange={(e) => {
+            const nextFim = e.target.value;
+            setPeriodoPreset("");
+            const boundedFim = dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
+            setDataFim(boundedFim);
+          }}
+        />
+        {userCtx?.papel === "MASTER" ? (
+          <>
+            <AppField
+              as="select"
+              label="Filial"
+              value={masterScope.empresaSelecionada}
+              onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
+              options={[
+                { label: "Todas", value: "all" },
+                ...masterScope.empresasAprovadas.map((empresa) => ({
+                  label: empresa.nome_fantasia,
+                  value: empresa.id,
+                })),
+              ]}
+            />
+            <AppField
+              as="select"
+              label="Equipe"
+              value={masterScope.gestorSelecionado}
+              onChange={(e) => masterScope.setGestorSelecionado(e.target.value)}
+              options={[
+                { label: "Todas", value: "all" },
+                ...masterScope.gestoresDisponiveis.map((gestor) => ({
+                  label: gestor.nome_completo,
+                  value: gestor.id,
+                })),
+              ]}
+            />
+          </>
+        ) : null}
+        {userCtx?.papel === "GESTOR" || userCtx?.papel === "MASTER" ? (
+          <AppField
+            as="select"
+            label="Vendedor"
+            value={vendedorSelecionadoAtual || todosValue}
+            onChange={(e) => setVendedorSelecionadoAtual(e.target.value)}
+            options={[
+              { label: "Todos", value: todosValue },
+              ...vendedoresEquipe.map((vendedor) => ({
+                label: vendedor.nome,
+                value: vendedor.id,
+              })),
+            ]}
+          />
+        ) : null}
+        <AppField
+          as="select"
+          label="Status"
+          value={statusFiltro}
+          onChange={(e) => setStatusFiltro(e.target.value as StatusFiltro)}
+          options={[
+            { label: "Todos", value: "todos" },
+            { label: "Aberto", value: "aberto" },
+            { label: "Confirmado", value: "confirmado" },
+            { label: "Cancelado", value: "cancelado" },
+          ]}
+        />
+        <AppField
+          label="Buscar destino"
+          value={buscaDestino}
+          onChange={(e) => setBuscaDestino(e.target.value)}
+          placeholder="Destino ou cidade..."
+        />
+      </div>
+      <div style={{ marginTop: 16 }}>{renderPeriodButtons()}</div>
+    </>
+  );
+
+  return (
+    <AppPrimerProvider>
+      <div className="relatorio-vendas-destino-page">
+        <ToastStack toasts={toasts} onDismiss={dismissToast} />
+
+        <AppToolbar
+          sticky
+          tone="config"
+          className="mb-3 list-toolbar-sticky"
+          title="Relatorio agrupado por destino"
+          subtitle={`Periodo: ${periodoResumo}. Consolidacao por destino e cidade no recorte atual.`}
+          actions={
+            <div className="vtur-quote-top-actions">
+              <AppButton type="button" variant="secondary" className="sm:hidden" onClick={() => setShowFilters(true)}>
+                Filtros
+              </AppButton>
+              <AppButton type="button" variant="primary" onClick={aplicarFiltrosRelatorio}>
+                Aplicar filtros
+              </AppButton>
+              <AppButton type="button" variant="secondary" onClick={() => setShowExport(true)}>
+                Exportar
+              </AppButton>
+            </div>
+          }
+        >
+          <div className="hidden sm:block">{renderFiltersGrid()}</div>
+        </AppToolbar>
+
+        {showFilters ? (
+          <Dialog
+            title="Filtros do relatorio"
+            width="xlarge"
+            onClose={() => setShowFilters(false)}
+            footerButtons={[
+              {
+                content: "Cancelar",
+                buttonType: "default",
+                onClick: () => setShowFilters(false),
+              },
+              {
+                content: "Aplicar filtros",
+                buttonType: "primary",
+                onClick: aplicarFiltrosRelatorio,
+              },
+            ]}
+          >
+            <div className="vtur-modal-body-stack">
+              <AppCard
+                title="Refine o recorte comercial"
+                subtitle="Ajuste datas, escopo, status e busca por destino antes de atualizar o relatorio."
+              >
+                {renderFiltersGrid()}
+              </AppCard>
+            </div>
+          </Dialog>
+        ) : null}
+
+        {showExport ? (
+          <Dialog
+            title="Exportar relatorio"
+            width="large"
+            onClose={() => setShowExport(false)}
+            footerButtons={[
+              {
+                content: "Cancelar",
+                buttonType: "default",
+                onClick: () => setShowExport(false),
+              },
+              {
+                content: exportando ? "Preparando..." : "Exportar",
+                buttonType: "primary",
+                onClick: () => {
+                  exportarSelecionado();
+                  setShowExport(false);
+                },
+                disabled: exportDisabled || exportando,
+              },
+            ]}
+          >
+            <div className="vtur-modal-body-stack">
+              <AppCard
+                title="Formato da exportacao"
+                subtitle="Escolha o formato final respeitando as permissoes definidas nos parametros da empresa."
+              >
+                <div className="vtur-quote-top-actions">
+                  <AppButton
+                    type="button"
+                    variant={exportTipo === "csv" ? "primary" : "secondary"}
+                    onClick={() => setExportTipo("csv")}
+                  >
+                    CSV
+                  </AppButton>
+                  <AppButton
+                    type="button"
+                    variant={exportTipo === "excel" ? "primary" : "secondary"}
+                    onClick={() => setExportTipo("excel")}
+                    disabled={!exportFlags.excel}
+                  >
+                    Excel
+                  </AppButton>
+                  <AppButton
+                    type="button"
+                    variant={exportTipo === "pdf" ? "primary" : "secondary"}
+                    onClick={() => setExportTipo("pdf")}
+                    disabled={!exportFlags.pdf}
+                  >
+                    PDF
+                  </AppButton>
+                </div>
+                {exportDisabled ? (
+                  <div style={{ marginTop: 16 }}>
+                    <AlertMessage variant="warning">
+                      O formato selecionado esta desabilitado nos parametros da empresa.
+                    </AlertMessage>
+                  </div>
+                ) : null}
+              </AppCard>
+            </div>
+          </Dialog>
+        ) : null}
+
+        {escopoResumo ? (
+          <AlertMessage variant="info" className="mb-3">
+            {escopoResumo}
+          </AlertMessage>
+        ) : null}
+
+        {erro ? (
+          <AlertMessage variant="error" className="mb-3">
+            {erro}
+          </AlertMessage>
+        ) : null}
+
+        <AppCard
+          title="Resumo por destino"
+          subtitle="Quantidade, faturamento e ticket medio consolidados por destino e cidade."
+        >
+          <div className="vtur-quote-summary-grid">
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Destinos</span>
+              <strong>{totalLinhas}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Quantidade</span>
+              <strong>{totalQtd}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Faturamento</span>
+              <strong>{formatCurrencyBRL(totalGeral)}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Ticket medio</span>
+              <strong>{formatCurrencyBRL(ticketGeral)}</strong>
+            </div>
+          </div>
+
+          <div className="mb-3" style={{ marginTop: 16 }}>
+            <PaginationControls
+              page={paginaAtual}
+              pageSize={pageSize}
+              totalItems={totalLinhas}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setPage(1);
+              }}
+            />
+          </div>
+
+          <DataTable
+            headers={
+              <tr>
+                <th>Destino</th>
+                <th style={{ cursor: "pointer" }} onClick={() => mudarOrdenacao("quantidade")}>
+                  Qtde {ordenacao === "quantidade" ? (ordemDesc ? "↓" : "↑") : ""}
+                </th>
+                <th style={{ cursor: "pointer" }} onClick={() => mudarOrdenacao("total")}>
+                  Faturamento {ordenacao === "total" ? (ordemDesc ? "↓" : "↑") : ""}
+                </th>
+                <th style={{ cursor: "pointer" }} onClick={() => mudarOrdenacao("ticket")}>
+                  Ticket medio {ordenacao === "ticket" ? (ordemDesc ? "↓" : "↑") : ""}
+                </th>
+              </tr>
+            }
+            loading={loading}
+            loadingMessage="Carregando consolidacao por destino..."
+            empty={!loading && linhasExibidas.length === 0}
+            emptyMessage={
+              <EmptyState
+                title="Nenhum destino encontrado"
+                description="Ajuste datas, escopo, status ou busca para ampliar o recorte do relatorio."
+              />
+            }
+            colSpan={4}
+            className="table-header-purple table-mobile-cards min-w-[620px]"
+          >
+            {linhasExibidas.map((linha) => (
+              <tr key={linha.destino_id}>
+                <td data-label="Destino">{linha.destino_nome}</td>
+                <td data-label="Qtde">{linha.quantidade}</td>
+                <td data-label="Faturamento">{formatCurrencyBRL(linha.total)}</td>
+                <td data-label="Ticket medio">{formatCurrencyBRL(linha.ticketMedio)}</td>
+              </tr>
+            ))}
+          </DataTable>
+        </AppCard>
+      </div>
+    </AppPrimerProvider>
   );
 }

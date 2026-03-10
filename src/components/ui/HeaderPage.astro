@@ -1,14 +1,15 @@
 ---
+import AppPageHeader from "./primer/AppPageHeader";
+
 const { title, subtitle = "", subtitleHtml = "", color = "blue", stackActionsOnMobile = false } = Astro.props;
-const headerClass = `page-header ${color}-header${stackActionsOnMobile ? " page-header-stack" : ""}`;
 ---
 
-<header class={headerClass}>
-  <div>
-    <h1>{title}</h1>
-    {subtitleHtml ? <p set:html={subtitleHtml} /> : (subtitle && <p>{subtitle}</p>)}
-  </div>
-  <div class="page-header-actions mobile-stack-buttons">
+<AppPageHeader
+  title={title}
+  subtitle={subtitle}
+  subtitleHtml={subtitleHtml}
+  color={color}
+  stackActionsOnMobile={stackActionsOnMobile}
+>
     <slot />
-  </div>
-</header>
+</AppPageHeader>

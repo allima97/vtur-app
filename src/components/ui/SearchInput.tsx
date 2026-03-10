@@ -1,4 +1,6 @@
 import React from "react";
+import AppField from "./primer/AppField";
+import AppPrimerProvider from "./primer/AppPrimerProvider";
 
 type SearchInputProps = {
   label?: string;
@@ -24,17 +26,18 @@ export default function SearchInput({
   inputClassName,
 }: SearchInputProps) {
   return (
-    <div className={`form-group ${wrapperClassName || ""}`.trim()}>
-      {label && <label className="form-label">{label}</label>}
-      <input
-        className={`form-input ${inputClassName || ""}`.trim()}
+    <AppPrimerProvider>
+      <AppField
+        label={label || "Buscar"}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         name={name}
         disabled={disabled}
+        caption={helpText}
+        wrapperClassName={wrapperClassName}
+        className={inputClassName}
       />
-      {helpText && <small style={{ color: "#64748b" }}>{helpText}</small>}
-    </div>
+    </AppPrimerProvider>
   );
 }

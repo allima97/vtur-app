@@ -5,6 +5,13 @@ import { formatNumberBR } from "../../lib/format";
 import { matchesCpfSearch, onlyDigits } from "../../lib/searchNormalization";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import ConfirmDialog from "../ui/ConfirmDialog";
+import AlertMessage from "../ui/AlertMessage";
+import TableActions from "../ui/TableActions";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type ClienteOption = {
   id: string;
@@ -129,7 +136,6 @@ function gerarIdTemporario() {
 
 const TIPO_DATALIST_ID = "quote-manual-tipos-list";
 const DESTINO_DATALIST_ID = "quote-manual-destinos-list";
-
 
 function criarItemManual(tempId?: string): ManualItem {
   return {
@@ -423,20 +429,20 @@ export default function QuoteManualIsland() {
     }
   }
 
-const clientesFiltrados = useMemo(() => {
-  const q = clienteBusca.trim();
-  if (q.length < 2) return []; // <- não mostra nada com 0/1 caractere
+  const clientesFiltrados = useMemo(() => {
+    const q = clienteBusca.trim();
+    if (q.length < 2) return [];
 
-  const termo = normalizeText(q);
+    const termo = normalizeText(q);
 
-  return clientes
-    .filter((c) => {
-      if (normalizeText(c.nome).includes(termo)) return true;
-      if (matchesCpfSearch(c.cpf || "", q)) return true;
-      return false;
-    })
-    .slice(0, 10); // <- evita listas gigantes mesmo digitando
-}, [clientes, clienteBusca]);
+    return clientes
+      .filter((c) => {
+        if (normalizeText(c.nome).includes(termo)) return true;
+        if (matchesCpfSearch(c.cpf || "", q)) return true;
+        return false;
+      })
+      .slice(0, 10);
+  }, [clientes, clienteBusca]);
 
   const clienteSelecionado = useMemo(
     () => clientes.find((c) => c.id === clienteId) || null,
@@ -595,6 +601,31 @@ const clientesFiltrados = useMemo(() => {
     [items]
   );
   const total = useMemo(() => subtotal + taxesTotal, [subtotal, taxesTotal]);
+  const itensPreenchidos = useMemo(
+    () => items.filter((item) => !isItemEmpty(item)).length,
+    [items]
+  );
+  const resumoItens = useMemo(() => {
+    const itemLabel = itensPreenchidos === 1 ? "item preenchido" : "itens preenchidos";
+    return `${itensPreenchidos} ${itemLabel} · Subtotal R$ ${formatCurrency(
+      subtotal
+    )} · Taxas R$ ${formatCurrency(taxesTotal)} · Total R$ ${formatCurrency(total)}`;
+  }, [itensPreenchidos, subtotal, taxesTotal, total]);
+  const contextoCliente = useMemo(() => {
+    if (!clienteSelecionado) {
+      return "Selecione o cliente e monte um orcamento completo com itens, datas e valores revisados.";
+    }
+
+    const detalhes = [
+      clienteSelecionado.cpf ? `CPF ${clienteSelecionado.cpf}` : null,
+      clienteSelecionado.whatsapp || null,
+      clienteSelecionado.email || null,
+    ].filter(Boolean);
+
+    return detalhes.length > 0
+      ? `${clienteSelecionado.nome} · ${detalhes.join(" · ")}`
+      : clienteSelecionado.nome;
+  }, [clienteSelecionado]);
 
   function updateItem(index: number, updates: Partial<ManualItem>) {
     setItems((prev) => {
@@ -794,349 +825,433 @@ const clientesFiltrados = useMemo(() => {
   }
 
   return (
-    <div className="page-content-wrap orcamentos-criar-page">
-      <div className="card-base" style={{ marginBottom: 16 }}>
-        <h2 className="page-title">Criar orcamento</h2>
-        <p className="page-subtitle">
-          Preencha os itens manualmente e confirme para salvar o orcamento.
-        </p>
-        <div className="form-row quote-manual-client-row mobile-stack" style={{ marginTop: 12 }}>
-          <div className="form-group" style={{ flex: 2, minWidth: 220 }}>
-            <label className="form-label">Cliente *</label>
-            <input
-              className="form-input"
+    <AppPrimerProvider>
+      <div className="page-content-wrap orcamentos-criar-page">
+        <AppToolbar
+          sticky
+          tone="info"
+          className="mb-3 list-toolbar-sticky"
+          title="Criar orcamento manual"
+          subtitle="Monte um orcamento completo com cliente, itens, destinos, datas e valores revisados antes da confirmacao."
+          actions={
+            <div className="vtur-quote-top-actions">
+              <AppButton type="button" variant="secondary" onClick={handleCancel} disabled={saving}>
+                Cancelar
+              </AppButton>
+              <AppButton
+                type="button"
+                variant="primary"
+                onClick={handleSave}
+                disabled={saving}
+                loading={saving}
+              >
+                {saving ? "Salvando..." : "Salvar orcamento"}
+              </AppButton>
+            </div>
+          }
+        >
+          <div className="vtur-quote-summary-grid">
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Cliente</span>
+              <strong>{clienteSelecionado ? clienteSelecionado.nome : "Nao selecionado"}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Itens preenchidos</span>
+              <strong>{itensPreenchidos}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Subtotal</span>
+              <strong>R$ {formatCurrency(subtotal)}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Total estimado</span>
+              <strong>R$ {formatCurrency(total)}</strong>
+            </div>
+          </div>
+        </AppToolbar>
+
+        {status && (
+          <AlertMessage variant="info" className="mb-3">
+            {status}
+          </AlertMessage>
+        )}
+        {error && (
+          <AlertMessage variant="error" className="mb-3">
+            {error}
+          </AlertMessage>
+        )}
+        {successId && (
+          <AlertMessage variant="success" className="mb-3">
+            Salvo com sucesso. <a href={`/orcamentos/${successId}`}>Abrir quote</a>
+          </AlertMessage>
+        )}
+
+        <AppCard
+          className="mb-3"
+          tone="info"
+          title="Cliente do orcamento"
+          subtitle={contextoCliente}
+          actions={
+            !novoClienteAberto ? (
+              <AppButton type="button" variant="secondary" onClick={abrirNovoCliente}>
+                Novo cliente rapido
+              </AppButton>
+            ) : undefined
+          }
+        >
+          <div className="vtur-form-grid vtur-form-grid-2 quote-manual-client-row">
+            <AppField
+              label="Cliente *"
               list="listaClientes"
-              placeholder="Buscar cliente..."
+              placeholder="Buscar cliente por nome ou CPF..."
               value={clienteSelecionado?.nome || clienteBusca}
               onChange={(e) => handleClienteInputChange(e.target.value)}
               onBlur={handleClienteBlur}
               required
+              caption={
+                carregandoClientes
+                  ? "Carregando clientes..."
+                  : "Digite ao menos 2 caracteres para localizar um cliente existente."
+              }
+              validation={!carregandoClientes ? clientesErro ?? undefined : undefined}
             />
-            {clienteBusca.trim().length >= 2 && (
-              <datalist id="listaClientes">
-                {clientesFiltrados.map((c) => (
-                  <React.Fragment key={c.id}>
-                    <option value={c.nome} label={c.cpf ? `CPF: ${c.cpf}` : undefined} />
-                    {c.cpf ? <option value={c.cpf} label={c.nome} /> : null}
-                  </React.Fragment>
-                ))}
-              </datalist>
-            )}
-            {carregandoClientes && (
-              <small style={{ color: "#64748b" }}>Carregando clientes...</small>
-            )}
-            {clientesErro && <small style={{ color: "#b91c1c" }}>{clientesErro}</small>}
-            <div style={{ marginTop: 8 }}>
-              {!novoClienteAberto ? (
-                <button type="button" className="btn btn-light w-full sm:w-auto" onClick={abrirNovoCliente}>
-                  Novo cliente
-                </button>
-              ) : (
-                <div className="card-base" style={{ padding: 12, marginTop: 8 }}>
-                  <div className="form-row mobile-stack">
-                    <div className="form-group" style={{ flex: 1, minWidth: 200 }}>
-                      <label className="form-label">Nome do cliente *</label>
-                      <input
-                        className="form-input"
-                        value={novoClienteNome}
-                        onChange={(e) => setNovoClienteNome(e.target.value)}
-                        onBlur={(e) => setNovoClienteNome(titleCaseWithExceptions(e.target.value))}
-                        placeholder="Nome do cliente"
-                      />
-                    </div>
-                    <div className="form-group" style={{ flex: 1, minWidth: 160 }}>
-                      <label className="form-label">Telefone *</label>
-                      <input
-                        className="form-input"
-                        value={novoClienteTelefone}
-                        onChange={(e) => setNovoClienteTelefone(formatTelefoneValue(e.target.value))}
-                        placeholder="Telefone do cliente"
-                      />
-                    </div>
-                  </div>
-                  {novoClienteErro && <small style={{ color: "#b91c1c" }}>{novoClienteErro}</small>}
-                  <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end", marginTop: 8 }}>
-                    <button
-                      type="button"
-                      className="btn btn-light w-full sm:w-auto"
-                      onClick={cancelarNovoCliente}
-                      disabled={novoClienteSalvando}
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-primary w-full sm:w-auto"
-                      onClick={salvarNovoCliente}
-                      disabled={novoClienteSalvando}
-                    >
-                      {novoClienteSalvando ? "Salvando..." : "Salvar cliente"}
-                    </button>
-                  </div>
-                </div>
+          </div>
+
+          {clienteBusca.trim().length >= 2 && (
+            <datalist id="listaClientes">
+              {clientesFiltrados.map((c) => (
+                <React.Fragment key={c.id}>
+                  <option value={c.nome} label={c.cpf ? `CPF: ${c.cpf}` : undefined} />
+                  {c.cpf ? <option value={c.cpf} label={c.nome} /> : null}
+                </React.Fragment>
+              ))}
+            </datalist>
+          )}
+
+          {novoClienteAberto && (
+            <AppCard
+              className="vtur-quote-inline-card"
+              tone="config"
+              title="Novo cliente rapido"
+              subtitle="Cadastre um cliente enxuto sem sair do fluxo do orcamento."
+            >
+              <div className="vtur-form-grid vtur-form-grid-2">
+                <AppField
+                  label="Nome do cliente *"
+                  value={novoClienteNome}
+                  onChange={(e) => setNovoClienteNome(e.target.value)}
+                  onBlur={(e) => setNovoClienteNome(titleCaseWithExceptions(e.target.value))}
+                  placeholder="Nome do cliente"
+                />
+                <AppField
+                  label="Telefone *"
+                  value={novoClienteTelefone}
+                  onChange={(e) => setNovoClienteTelefone(formatTelefoneValue(e.target.value))}
+                  placeholder="Telefone do cliente"
+                />
+              </div>
+              {novoClienteErro && (
+                <AlertMessage variant="error" className="mt-3">
+                  {novoClienteErro}
+                </AlertMessage>
               )}
+              <div className="vtur-form-actions">
+                <AppButton
+                  type="button"
+                  variant="primary"
+                  onClick={salvarNovoCliente}
+                  disabled={novoClienteSalvando}
+                  loading={novoClienteSalvando}
+                >
+                  {novoClienteSalvando ? "Salvando..." : "Salvar cliente"}
+                </AppButton>
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  onClick={cancelarNovoCliente}
+                  disabled={novoClienteSalvando}
+                >
+                  Cancelar
+                </AppButton>
+              </div>
+            </AppCard>
+          )}
+        </AppCard>
+
+        <AppCard
+          className="mb-3"
+          tone="config"
+          title="Itens do orcamento"
+          subtitle={resumoItens}
+          actions={
+            <div className="vtur-quote-top-actions">
+              <AppButton type="button" variant="secondary" onClick={limparItens} disabled={saving}>
+                Limpar itens
+              </AppButton>
+              <AppButton type="button" variant="primary" onClick={adicionarItem} disabled={saving}>
+                Adicionar item
+              </AppButton>
             </div>
-          </div>
-        </div>
-        {status && <div style={{ marginTop: 12, fontSize: 14 }}>{status}</div>}
-        {error && <div style={{ marginTop: 12, color: "#b91c1c" }}>{error}</div>}
-      </div>
-
-      <div className="mb-3">
-        <div className="card-base mb-2" style={{ padding: "12px 16px" }}>
-          <h3 style={{ margin: 0 }}>Itens do orcamento</h3>
-          <div style={{ marginTop: 6, fontSize: 14 }}>
-            Total estimado: R$ {formatCurrency(total)}
-          </div>
-        </div>
-        <div
-          className="table-container overflow-x-auto"
-          style={{ maxHeight: "65vh", overflowY: "auto" }}
+          }
         >
-          <table className="table-default table-compact table-mobile-cards quote-items-table">
-            <thead>
-              <tr>
-                <th className="order-cell">Ordem</th>
-                <th>Tipo</th>
-                <th>Cidade</th>
-                <th>Destino</th>
-                <th>Produto</th>
-                <th>Inicio</th>
-                <th>Fim</th>
-                <th>Qtd</th>
-                <th>Total</th>
-                <th>Taxas</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, index) => {
-                const rowKey = item.temp_id || `row-${index}`;
-                const produtoOptions = buildProdutoSuggestions(item);
-                return (
-                  <React.Fragment key={rowKey}>
-                    <tr>
-                      <td className="order-cell" data-label="">
-                        <div className="order-cell-head">
-                          <span className="order-label">Ordem</span>
-                          <div className="icon-action-group">
-                            <button
-                              type="button"
-                              className="icon-action-btn"
-                              title="Mover para cima"
-                              onClick={() => moveItem(index, "up")}
-                              disabled={index === 0}
-                            >
-                              ⬆️
-                            </button>
-                            <button
-                              type="button"
-                              className="icon-action-btn"
-                              title="Mover para baixo"
-                              onClick={() => moveItem(index, "down")}
-                              disabled={index === items.length - 1}
-                            >
-                              ⬇️
-                            </button>
-                            <button
-                              type="button"
-                              className="icon-action-btn danger"
-                              title="Remover item"
-                              onClick={() => solicitarRemocaoItem(index)}
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </div>
-                        <div className="order-value">#{index + 1}</div>
-                      </td>
-                      <td data-label="Tipo">
-                        <input
-                          className="form-input"
-                          list={TIPO_DATALIST_ID}
-                          value={item.item_type}
-                          placeholder="Selecione um tipo"
-                          onChange={(e) => updateItem(index, { item_type: e.target.value })}
-                        />
-                      </td>
-                      <td data-label="Cidade">
-                        <input
-                          className="form-input"
-                          list={`quote-manual-cidades-${rowKey}`}
-                          value={getCidadeInputValue(item, rowKey)}
-                          placeholder="Buscar cidade..."
-                          onChange={(e) => handleCidadeInputChange(index, e.target.value, rowKey)}
-                          onFocus={() => scheduleCidadeFetch(rowKey, getCidadeInputValue(item, rowKey))}
-                        />
-                      </td>
-                      <td data-label="Destino">
-                        <input
-                          className="form-input"
-                          list={DESTINO_DATALIST_ID}
-                          value={item.city_name}
-                          onChange={(e) => updateItem(index, { city_name: e.target.value })}
-                        />
-                      </td>
-                      <td data-label="Produto">
-                        <input
-                          className="form-input"
-                          list={`quote-manual-produtos-${rowKey}`}
-                          value={item.title}
-                          onChange={(e) =>
-                            updateItem(index, {
-                              title: e.target.value,
-                              product_name: e.target.value,
-                            })
-                          }
-                        />
-                      </td>
-                      <td data-label="Inicio">
-                        <input
-                          className="form-input"
-                          type="date"
-                          value={item.start_date || ""}
-                          min={dataMinimaInicio}
-                          onFocus={selectAllInputOnFocus}
-                          onChange={(e) => {
-                            const nextStartRaw = e.target.value;
-                            const nextStart =
-                              nextStartRaw && dataMinimaInicio && nextStartRaw < dataMinimaInicio
-                                ? dataMinimaInicio
-                                : nextStartRaw;
-                            const updates: Partial<ManualItem> = { start_date: nextStart };
-                            if (item.end_date && nextStart && item.end_date < nextStart) {
-                              updates.end_date = nextStart;
-                            }
-                            updateItem(index, updates);
-                          }}
-                        />
-                      </td>
-                      <td data-label="Fim">
-                        <input
-                          className="form-input"
-                          type="date"
-                          value={item.end_date || ""}
-                          min={item.start_date || dataMinimaInicio || undefined}
-                          onFocus={selectAllInputOnFocus}
-                          onChange={(e) => {
-                            const nextEnd = e.target.value;
-                            const boundedEnd =
-                              (item.start_date || dataMinimaInicio) &&
-                              nextEnd &&
-                              nextEnd < (item.start_date || dataMinimaInicio)
-                                ? item.start_date || dataMinimaInicio
-                                : nextEnd;
-                            updateItem(index, { end_date: boundedEnd });
-                          }}
-                        />
-                      </td>
-                      <td data-label="Qtd">
-                        <input
-                          className="form-input"
-                          type="number"
-                          min={1}
-                          value={item.quantity}
-                          onChange={(e) => updateItem(index, { quantity: Number(e.target.value) || 1 })}
-                        />
-                      </td>
-                      <td data-label="Total">
-                        <input
-                          className="form-input"
-                          inputMode="decimal"
-                          value={getValorInput(rowKey, "total", item.total_amount)}
-                          onChange={(e) => {
-                            const raw = e.target.value;
-                            setValorInputs((prev) => ({
-                              ...prev,
-                              [rowKey]: { ...prev[rowKey], total: raw },
-                            }));
-                            updateItem(index, { total_amount: normalizeNumber(raw) });
-                          }}
-                          onBlur={(e) => handleValorBlur(rowKey, "total", e.target.value)}
-                        />
-                      </td>
-                      <td data-label="Taxas">
-                        <input
-                          className="form-input"
-                          inputMode="decimal"
-                          value={getValorInput(rowKey, "taxes", item.taxes_amount || 0)}
-                          onChange={(e) => {
-                            const raw = e.target.value;
-                            setValorInputs((prev) => ({
-                              ...prev,
-                              [rowKey]: { ...prev[rowKey], taxes: raw },
-                            }));
-                            updateItem(index, { taxes_amount: normalizeNumber(raw) });
-                          }}
-                          onBlur={(e) => handleValorBlur(rowKey, "taxes", e.target.value)}
-                        />
-                      </td>
-                    </tr>
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-          {items.map((item, index) => {
-            const rowKey = item.temp_id || `row-${index}`;
-            const produtoOptions = buildProdutoSuggestions(item);
-            return (
-              <React.Fragment key={rowKey}>
-                <datalist id={`quote-manual-cidades-${rowKey}`}>
-                  {(cidadeSuggestions[rowKey] || []).map((cidade) => {
-                    const label = formatCidadeLabel(cidade);
-                    return <option key={cidade.id} value={label} />;
-                  })}
-                </datalist>
-                <datalist id={`quote-manual-produtos-${rowKey}`}>
-                  {produtoOptions.map((produto) => (
-                    <option key={`${rowKey}-${produto}`} value={produto} />
-                  ))}
-                </datalist>
-              </React.Fragment>
-            );
-          })}
-          <datalist id={TIPO_DATALIST_ID}>
-            {tipoOptions.map((tipo) => (
-              <option key={tipo.id} value={tipo.label} />
-            ))}
-          </datalist>
-          <datalist id={DESTINO_DATALIST_ID}>
-            {destinoOptions.map((destino) => (
-              <option key={destino} value={destino} />
-            ))}
-          </datalist>
-        </div>
-
-        <div className="mobile-stack-buttons" style={{ marginTop: 16 }}>
-          <button type="button" className="btn btn-light w-full sm:w-auto" onClick={adicionarItem} disabled={saving}>
-            Adicionar produto
-          </button>
-          <button type="button" className="btn btn-primary w-full sm:w-auto" onClick={handleSave} disabled={saving}>
-            {saving ? "Salvando..." : "Salvar orcamento"}
-          </button>
-          <button type="button" className="btn btn-light w-full sm:w-auto" onClick={handleCancel} disabled={saving}>
-            Cancelar
-          </button>
-          <button type="button" className="btn btn-light w-full sm:w-auto" onClick={limparItens} disabled={saving}>
-            Limpar itens
-          </button>
-        </div>
-
-        {successId && (
-          <div style={{ marginTop: 12 }}>
-            Salvo com sucesso. <a href={`/orcamentos/${successId}`}>Abrir quote</a>
+          <div className="vtur-inline-note">
+            Revise tipo, cidade, datas e valores de cada linha. O inicio nao pode ser anterior a hoje.
           </div>
-        )}
+
+          <div
+            className="table-container overflow-x-auto"
+            style={{ maxHeight: "65vh", overflowY: "auto", marginTop: 16 }}
+          >
+            <table className="table-default table-compact table-mobile-cards quote-items-table">
+              <thead>
+                <tr>
+                  <th className="order-cell">Ordem</th>
+                  <th>Tipo</th>
+                  <th>Cidade</th>
+                  <th>Destino</th>
+                  <th>Produto</th>
+                  <th>Inicio</th>
+                  <th>Fim</th>
+                  <th>Qtd</th>
+                  <th>Total</th>
+                  <th>Taxas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, index) => {
+                  const rowKey = item.temp_id || `row-${index}`;
+                  const produtoOptions = buildProdutoSuggestions(item);
+                  return (
+                    <React.Fragment key={rowKey}>
+                      <tr>
+                        <td className="order-cell" data-label="">
+                          <div className="order-cell-head">
+                            <span className="order-label">Ordem</span>
+                            <TableActions
+                              className="vtur-quote-order-actions"
+                              actions={[
+                                {
+                                  key: "up",
+                                  label: "Mover para cima",
+                                  icon: "↑",
+                                  variant: "ghost",
+                                  onClick: () => moveItem(index, "up"),
+                                  disabled: index === 0,
+                                },
+                                {
+                                  key: "down",
+                                  label: "Mover para baixo",
+                                  icon: "↓",
+                                  variant: "ghost",
+                                  onClick: () => moveItem(index, "down"),
+                                  disabled: index === items.length - 1,
+                                },
+                                {
+                                  key: "delete",
+                                  label: "Excluir item",
+                                  icon: "×",
+                                  variant: "danger",
+                                  onClick: () => solicitarRemocaoItem(index),
+                                },
+                              ]}
+                            />
+                          </div>
+                          <div className="order-value">#{index + 1}</div>
+                        </td>
+                        <td data-label="Tipo">
+                          <input
+                            className="form-input"
+                            list={TIPO_DATALIST_ID}
+                            value={item.item_type}
+                            placeholder="Selecione um tipo"
+                            onChange={(e) => updateItem(index, { item_type: e.target.value })}
+                          />
+                        </td>
+                        <td data-label="Cidade">
+                          <input
+                            className="form-input"
+                            list={`quote-manual-cidades-${rowKey}`}
+                            value={getCidadeInputValue(item, rowKey)}
+                            placeholder="Buscar cidade..."
+                            onChange={(e) => handleCidadeInputChange(index, e.target.value, rowKey)}
+                            onFocus={() =>
+                              scheduleCidadeFetch(rowKey, getCidadeInputValue(item, rowKey))
+                            }
+                          />
+                        </td>
+                        <td data-label="Destino">
+                          <input
+                            className="form-input"
+                            list={DESTINO_DATALIST_ID}
+                            value={item.city_name}
+                            onChange={(e) => updateItem(index, { city_name: e.target.value })}
+                          />
+                        </td>
+                        <td data-label="Produto">
+                          <input
+                            className="form-input"
+                            list={`quote-manual-produtos-${rowKey}`}
+                            value={item.title}
+                            onChange={(e) =>
+                              updateItem(index, {
+                                title: e.target.value,
+                                product_name: e.target.value,
+                              })
+                            }
+                          />
+                        </td>
+                        <td data-label="Inicio">
+                          <input
+                            className="form-input"
+                            type="date"
+                            value={item.start_date || ""}
+                            min={dataMinimaInicio}
+                            onFocus={selectAllInputOnFocus}
+                            onChange={(e) => {
+                              const nextStartRaw = e.target.value;
+                              const nextStart =
+                                nextStartRaw && dataMinimaInicio && nextStartRaw < dataMinimaInicio
+                                  ? dataMinimaInicio
+                                  : nextStartRaw;
+                              const updates: Partial<ManualItem> = { start_date: nextStart };
+                              if (item.end_date && nextStart && item.end_date < nextStart) {
+                                updates.end_date = nextStart;
+                              }
+                              updateItem(index, updates);
+                            }}
+                          />
+                        </td>
+                        <td data-label="Fim">
+                          <input
+                            className="form-input"
+                            type="date"
+                            value={item.end_date || ""}
+                            min={item.start_date || dataMinimaInicio || undefined}
+                            onFocus={selectAllInputOnFocus}
+                            onChange={(e) => {
+                              const nextEnd = e.target.value;
+                              const boundedEnd =
+                                (item.start_date || dataMinimaInicio) &&
+                                nextEnd &&
+                                nextEnd < (item.start_date || dataMinimaInicio)
+                                  ? item.start_date || dataMinimaInicio
+                                  : nextEnd;
+                              updateItem(index, { end_date: boundedEnd });
+                            }}
+                          />
+                        </td>
+                        <td data-label="Qtd">
+                          <input
+                            className="form-input"
+                            type="number"
+                            min={1}
+                            value={item.quantity}
+                            onChange={(e) =>
+                              updateItem(index, { quantity: Number(e.target.value) || 1 })
+                            }
+                          />
+                        </td>
+                        <td data-label="Total">
+                          <input
+                            className="form-input"
+                            inputMode="decimal"
+                            value={getValorInput(rowKey, "total", item.total_amount)}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              setValorInputs((prev) => ({
+                                ...prev,
+                                [rowKey]: { ...prev[rowKey], total: raw },
+                              }));
+                              updateItem(index, { total_amount: normalizeNumber(raw) });
+                            }}
+                            onBlur={(e) => handleValorBlur(rowKey, "total", e.target.value)}
+                          />
+                        </td>
+                        <td data-label="Taxas">
+                          <input
+                            className="form-input"
+                            inputMode="decimal"
+                            value={getValorInput(rowKey, "taxes", item.taxes_amount || 0)}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              setValorInputs((prev) => ({
+                                ...prev,
+                                [rowKey]: { ...prev[rowKey], taxes: raw },
+                              }));
+                              updateItem(index, { taxes_amount: normalizeNumber(raw) });
+                            }}
+                            onBlur={(e) => handleValorBlur(rowKey, "taxes", e.target.value)}
+                          />
+                        </td>
+                      </tr>
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+            {items.map((item, index) => {
+              const rowKey = item.temp_id || `row-${index}`;
+              const produtoOptions = buildProdutoSuggestions(item);
+              return (
+                <React.Fragment key={rowKey}>
+                  <datalist id={`quote-manual-cidades-${rowKey}`}>
+                    {(cidadeSuggestions[rowKey] || []).map((cidade) => {
+                      const label = formatCidadeLabel(cidade);
+                      return <option key={cidade.id} value={label} />;
+                    })}
+                  </datalist>
+                  <datalist id={`quote-manual-produtos-${rowKey}`}>
+                    {produtoOptions.map((produto) => (
+                      <option key={`${rowKey}-${produto}`} value={produto} />
+                    ))}
+                  </datalist>
+                </React.Fragment>
+              );
+            })}
+            <datalist id={TIPO_DATALIST_ID}>
+              {tipoOptions.map((tipo) => (
+                <option key={tipo.id} value={tipo.label} />
+              ))}
+            </datalist>
+            <datalist id={DESTINO_DATALIST_ID}>
+              {destinoOptions.map((destino) => (
+                <option key={destino} value={destino} />
+              ))}
+            </datalist>
+          </div>
+        </AppCard>
+
+        <div className="vtur-form-actions">
+          <AppButton type="button" variant="secondary" onClick={adicionarItem} disabled={saving}>
+            Adicionar item
+          </AppButton>
+          <AppButton type="button" variant="secondary" onClick={limparItens} disabled={saving}>
+            Limpar itens
+          </AppButton>
+          <AppButton type="button" variant="secondary" onClick={handleCancel} disabled={saving}>
+            Cancelar
+          </AppButton>
+          <AppButton
+            type="button"
+            variant="primary"
+            onClick={handleSave}
+            disabled={saving}
+            loading={saving}
+          >
+            {saving ? "Salvando..." : "Salvar orcamento"}
+          </AppButton>
+        </div>
+
+        <ConfirmDialog
+          open={Boolean(itemParaExcluir)}
+          title="Excluir item"
+          message={`Confirma a exclusão de ${itemParaExcluir?.label || "este item"}?`}
+          confirmLabel="Excluir"
+          confirmVariant="danger"
+          onCancel={() => setItemParaExcluir(null)}
+          onConfirm={confirmarRemocaoItem}
+        />
       </div>
-      <ConfirmDialog
-        open={Boolean(itemParaExcluir)}
-        title="Excluir item"
-        message={`Confirma a exclusão de ${itemParaExcluir?.label || "este item"}?`}
-        confirmLabel="Excluir"
-        confirmVariant="danger"
-        onCancel={() => setItemParaExcluir(null)}
-        onConfirm={confirmarRemocaoItem}
-      />
-    </div>
+    </AppPrimerProvider>
   );
 }

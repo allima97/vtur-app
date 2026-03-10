@@ -1,3 +1,4 @@
+import { Dialog } from "@primer/react";
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
@@ -9,9 +10,17 @@ import { normalizeText } from "../../lib/normalizeText";
 import { formatCurrencyBRL } from "../../lib/format";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import AlertMessage from "../ui/AlertMessage";
+import DataTable from "../ui/DataTable";
+import EmptyState from "../ui/EmptyState";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import PaginationControls from "../ui/PaginationControls";
 import { fetchGestorEquipeIdsComGestor } from "../../lib/gestorEquipe";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type Produto = {
   id: string;
@@ -310,6 +319,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
   const [totalQtd, setTotalQtd] = useState(0);
   const [exportFlags, setExportFlags] = useState<ExportFlags>({ pdf: true, excel: true });
   const [showExport, setShowExport] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [exportando, setExportando] = useState(false);
   const [exportTipo, setExportTipo] = useState<"csv" | "excel" | "pdf">("csv");
   const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
@@ -653,9 +663,10 @@ export default function RelatorioAgrupadoProdutoIsland() {
           : userCtx.vendedorIds;
 
       if (userCtx.papel !== "ADMIN" && (!vendedorIdsFiltro || vendedorIdsFiltro.length === 0)) {
-        setResumoMeta({ totalQtd: 0, totalGeral: 0, totalTicket: 0 });
-        setResumoSeguro({ totalQtd: 0, totalGeral: 0, totalTicket: 0 });
-        setResumoGeral({ totalQtd: 0, totalGeral: 0, totalTicket: 0 });
+        setLinhas([]);
+        setTotalLinhas(0);
+        setTotalGeral(0);
+        setTotalQtd(0);
         return;
       }
 
@@ -765,7 +776,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
           : userCtx.vendedorIds;
 
       if (userCtx.papel !== "ADMIN" && (!vendedorIdsFiltro || vendedorIdsFiltro.length === 0)) {
-        setRecibos([]);
+        setVendas([]);
         return;
       }
 
@@ -814,6 +825,10 @@ export default function RelatorioAgrupadoProdutoIsland() {
     ordenacao,
     ordemDesc,
     vendedorSelecionado,
+    masterScope.vendedorSelecionado,
+    masterScope.empresaSelecionada,
+    masterScope.gestorSelecionado,
+    masterScope.vendedorIds,
   ]);
 
   useEffect(() => {
@@ -1135,617 +1150,534 @@ export default function RelatorioAgrupadoProdutoIsland() {
     (exportTipo === "excel" && !exportFlags.excel) ||
     (exportTipo === "pdf" && !exportFlags.pdf);
 
-  return (
-    <div className="relatorio-vendas-produto-page">
-      <div className="card-base card-purple form-card mb-3">
-        <div className="flex flex-col gap-2 sm:hidden">
-          {userCtx?.papel === "MASTER" && (
-            <>
-              <div className="form-group">
-                <label className="form-label">Filial</label>
-                <select
-                  className="form-select"
-                  value={masterScope.empresaSelecionada}
-                  onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
-                >
-                  <option value="all">Todas</option>
-                  {masterScope.empresasAprovadas.map((empresa) => (
-                    <option key={empresa.id} value={empresa.id}>
-                      {empresa.nome_fantasia}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Equipe</label>
-                <select
-                  className="form-select"
-                  value={masterScope.gestorSelecionado}
-                  onChange={(e) => masterScope.setGestorSelecionado(e.target.value)}
-                >
-                  <option value="all">Todas</option>
-                  {masterScope.gestoresDisponiveis.map((gestor) => (
-                    <option key={gestor.id} value={gestor.id}>
-                      {gestor.nome_completo}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </>
-          )}
-          {(userCtx?.papel === "GESTOR" || userCtx?.papel === "MASTER") && (
-            <div className="form-group">
-              <label className="form-label">Vendedor</label>
-              <select
-                className="form-select"
-                value={vendedorSelecionadoAtual || todosValue}
-                onChange={(e) => setVendedorSelecionadoAtual(e.target.value)}
-              >
-                <option value={todosValue}>Todos</option>
-                {vendedoresEquipe.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          <div className="form-group">
-            <label className="form-label">Buscar produto</label>
-            <input
-              type="text"
-              className="form-input"
-              placeholder="Nome do produto"
-              value={buscaProduto}
-              onChange={(e) => setBuscaProduto(e.target.value)}
-            />
-          </div>
-          <button type="button" className="btn btn-light" onClick={() => setShowExport(true)}>
-            Exportar
-          </button>
-        </div>
-        <div className="hidden sm:block">
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Data início</label>
-            <input
-              type="date"
-              className="form-input"
-              value={dataInicio}
-              onFocus={selectAllInputOnFocus}
-              onChange={(e) => {
-                const nextInicio = e.target.value;
-                setPeriodoPreset("");
-                setDataInicio(nextInicio);
-                if (dataFim && nextInicio && dataFim < nextInicio) {
-                  setDataFim(nextInicio);
-                }
-              }}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Data fim</label>
-            <input
-              type="date"
-              className="form-input"
-              value={dataFim}
-              min={dataInicio || undefined}
-              onFocus={selectAllInputOnFocus}
-              onChange={(e) => {
-                const nextFim = e.target.value;
-                setPeriodoPreset("");
-                const boundedFim = dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
-                setDataFim(boundedFim);
-              }}
-            />
-          </div>
-          <div className="form-group" style={{ position: "relative" }}>
-            <label className="form-label">Cidade</label>
-            <input
-              className="form-input"
-              placeholder="Digite a cidade"
-              value={cidadeNomeInput}
-              onChange={(e) => {
-                setCidadeNomeInput(e.target.value);
-                setCidadeFiltro("");
-                setMostrarSugestoesCidadeFiltro(true);
-              }}
-              onFocus={() => {
-                if (cidadeNomeInput.trim().length > 0) {
-                  setMostrarSugestoesCidadeFiltro(true);
-                }
-              }}
-              onBlur={() => {
-                setTimeout(() => setMostrarSugestoesCidadeFiltro(false), 150);
-                if (!cidadeNomeInput.trim()) {
-                  setCidadeFiltro("");
-                  return;
-                }
-                const match = cidadesLista.find((cidade) =>
-                  normalizeText(cidade.nome) === normalizeText(cidadeNomeInput)
-                );
-                if (match) {
-                  setCidadeFiltro(match.id);
-                  setCidadeNomeInput(match.nome);
-                }
-              }}
-            />
-            {mostrarSugestoesCidadeFiltro && cidadeNomeInput.trim().length > 0 && (
-              <div
-                className="card-base card-config"
-                style={{
-                  position: "absolute",
-                  top: "100%",
-                  left: 0,
-                  right: 0,
-                  maxHeight: 160,
-                  overflowY: "auto",
-                  zIndex: 20,
-                  padding: "4px 0",
+  if (loadingUser) return <LoadingUsuarioContext />;
+
+  const aplicarFiltrosRelatorio = () => {
+    if (activeTab === "agrupado") {
+      setPage(1);
+      carregarResumo(1);
+    } else {
+      carregarRecibos();
+    }
+    setShowFilters(false);
+  };
+
+  const periodoResumo =
+    dataInicio && dataFim
+      ? `${formatarDataParaExibicao(dataInicio)} ate ${formatarDataParaExibicao(dataFim)}`
+      : dataInicio
+      ? `A partir de ${formatarDataParaExibicao(dataInicio)}`
+      : dataFim
+      ? `Ate ${formatarDataParaExibicao(dataFim)}`
+      : "Sem recorte de data";
+
+  const escopoResumo =
+    userCtx && userCtx.papel !== "ADMIN"
+      ? `Relatorio limitado a ${
+          userCtx.papel === "GESTOR"
+            ? "sua equipe"
+            : userCtx.papel === "MASTER"
+            ? "seu portfolio selecionado"
+            : "suas vendas"
+        }.`
+      : null;
+
+  const renderCidadeField = () => (
+    <div className="vtur-city-picker">
+      <AppField
+        label="Cidade"
+        placeholder="Digite a cidade"
+        value={cidadeNomeInput}
+        onChange={(e) => {
+          const value = e.target.value;
+          setCidadeNomeInput(value);
+          setCidadeFiltro("");
+          if (value.trim().length > 0) {
+            setMostrarSugestoesCidadeFiltro(true);
+          }
+        }}
+        onFocus={() => {
+          if (cidadeNomeInput.trim().length >= 2) {
+            setMostrarSugestoesCidadeFiltro(true);
+          }
+        }}
+        onBlur={() => {
+          setTimeout(() => setMostrarSugestoesCidadeFiltro(false), 150);
+          if (!cidadeNomeInput.trim()) {
+            setCidadeFiltro("");
+            return;
+          }
+          const match = cidadesLista.find(
+            (cidade) => normalizeText(cidade.nome) === normalizeText(cidadeNomeInput)
+          );
+          if (match) {
+            setCidadeFiltro(match.id);
+            setCidadeNomeInput(match.nome);
+          }
+        }}
+      />
+      {mostrarSugestoesCidadeFiltro && cidadeNomeInput.trim().length >= 1 ? (
+        <div className="vtur-city-dropdown vtur-quote-client-dropdown">
+          {buscandoCidade ? <div className="vtur-subdivisao-helper">Buscando cidades...</div> : null}
+          {!buscandoCidade && erroCidade ? (
+            <div className="vtur-subdivisao-helper">{erroCidade}</div>
+          ) : null}
+          {!buscandoCidade && !erroCidade && cidadeSugestoes.length === 0 ? (
+            <div className="vtur-subdivisao-helper">Nenhuma cidade encontrada.</div>
+          ) : null}
+          {!buscandoCidade &&
+            !erroCidade &&
+            cidadeSugestoes.map((cidade) => (
+              <AppButton
+                key={cidade.id}
+                type="button"
+                variant="ghost"
+                className="vtur-city-option"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setCidadeFiltro(cidade.id);
+                  setCidadeNomeInput(cidade.nome);
+                  setMostrarSugestoesCidadeFiltro(false);
                 }}
               >
-                {buscandoCidade && (
-                  <div style={{ padding: "6px 12px", color: "#64748b" }}>
-                    Buscando cidades...
-                  </div>
-                )}
-                {!buscandoCidade && erroCidade && (
-                  <div style={{ padding: "6px 12px", color: "#dc2626" }}>{erroCidade}</div>
-                )}
-                {!buscandoCidade && !erroCidade && cidadeSugestoes.length === 0 && (
-                  <div style={{ padding: "6px 12px", color: "#94a3b8" }}>
-                    Nenhuma cidade encontrada.
-                  </div>
-                )}
-                {!buscandoCidade && !erroCidade && cidadeSugestoes.map((cidade) => (
-                  <button
-                    key={cidade.id}
-                    type="button"
-                    className="btn btn-ghost w-full text-left"
-                    style={{ padding: "6px 12px" }}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      setCidadeFiltro(cidade.id);
-                      setCidadeNomeInput(cidade.nome);
-                      setMostrarSugestoesCidadeFiltro(false);
-                    }}
-                  >
-                    {cidade.nome}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          {userCtx?.papel === "MASTER" && (
-            <>
-              <div className="form-group">
-                <label className="form-label">Filial</label>
-                <select
-                  className="form-select"
-                  value={masterScope.empresaSelecionada}
-                  onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
-                >
-                  <option value="all">Todas</option>
-                  {masterScope.empresasAprovadas.map((empresa) => (
-                    <option key={empresa.id} value={empresa.id}>
-                      {empresa.nome_fantasia}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Equipe</label>
-                <select
-                  className="form-select"
-                  value={masterScope.gestorSelecionado}
-                  onChange={(e) => masterScope.setGestorSelecionado(e.target.value)}
-                >
-                  <option value="all">Todas</option>
-                  {masterScope.gestoresDisponiveis.map((gestor) => (
-                    <option key={gestor.id} value={gestor.id}>
-                      {gestor.nome_completo}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </>
-          )}
-          {(userCtx?.papel === "GESTOR" || userCtx?.papel === "MASTER") && (
-            <div className="form-group">
-              <label className="form-label">Vendedor</label>
-              <select
-                className="form-select"
-                value={vendedorSelecionadoAtual || todosValue}
-                onChange={(e) => setVendedorSelecionadoAtual(e.target.value)}
-              >
-                <option value={todosValue}>Todos</option>
-                {vendedoresEquipe.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          {activeTab === "recibos" && (
-            <div className="form-group">
-              <label className="form-label">Tipo de Produto</label>
-              <select
-                className="form-select"
-                value={tipoReciboSelecionado}
-                onChange={(e) => setTipoReciboSelecionado(e.target.value)}
-              >
-                <option value="">Todos os tipos</option>
-                {produtos.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nome || p.tipo || p.id}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          <div className="form-group">
-            <label className="form-label">Buscar produto</label>
-            <input
-              type="text"
-              className="form-input"
-              placeholder="Nome do produto"
-              value={buscaProduto}
-              onChange={(e) => setBuscaProduto(e.target.value)}
-            />
-          </div>
+                {cidade.nome}
+              </AppButton>
+            ))}
         </div>
+      ) : null}
+    </div>
+  );
 
-        <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button
-            type="button"
-            className={`btn btn-light ${periodoPreset === "hoje" ? "preset-active" : ""}`}
-            onClick={() => aplicarPeriodoPreset("hoje")}
-          >
-            Hoje
-          </button>
-          <button
-            type="button"
-            className={`btn btn-light ${periodoPreset === "7" ? "preset-active" : ""}`}
-            onClick={() => aplicarPeriodoPreset("7")}
-          >
-            Últimos 7 dias
-          </button>
-          <button
-            type="button"
-            className={`btn btn-light ${periodoPreset === "30" ? "preset-active" : ""}`}
-            onClick={() => aplicarPeriodoPreset("30")}
-          >
-            Últimos 30 dias
-          </button>
-          <button
-            type="button"
-            className={`btn btn-light ${periodoPreset === "mes_atual" ? "preset-active" : ""}`}
-            onClick={() => aplicarPeriodoPreset("mes_atual")}
-          >
-            Este mês
-          </button>
-          <button
-            type="button"
-            className={`btn btn-light ${periodoPreset === "mes_anterior" ? "preset-active" : ""}`}
-            onClick={() => aplicarPeriodoPreset("mes_anterior")}
-          >
-            Mês anterior
-          </button>
-          <button
-            type="button"
-            className={`btn btn-light ${periodoPreset === "limpar" ? "preset-active" : ""}`}
-            onClick={() => aplicarPeriodoPreset("limpar")}
-          >
-            Limpar datas
-          </button>
+  const renderPeriodButtons = () => (
+    <div className="vtur-quote-top-actions">
+      {[
+        { id: "hoje", label: "Hoje" },
+        { id: "7", label: "Ultimos 7 dias" },
+        { id: "30", label: "Ultimos 30 dias" },
+        { id: "mes_atual", label: "Este mes" },
+        { id: "mes_anterior", label: "Mes anterior" },
+        { id: "limpar", label: "Limpar datas" },
+      ].map((periodo) => (
+        <AppButton
+          key={periodo.id}
+          type="button"
+          variant={periodoPreset === periodo.id ? "primary" : "secondary"}
+          onClick={() => aplicarPeriodoPreset(periodo.id as Exclude<PeriodoPreset, "">)}
+        >
+          {periodo.label}
+        </AppButton>
+      ))}
+    </div>
+  );
 
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => {
-              if (activeTab === "agrupado") {
-                setPage(1);
-                carregarResumo(1);
-                return;
-              }
-              carregarRecibos();
-            }}
-          >
-            Aplicar filtros
-          </button>
-
-          <button
-            type="button"
-            className="btn btn-purple"
-            onClick={exportarCSV}
-            disabled={exportando}
-          >
-            {exportando ? "Exportando..." : "Exportar CSV"}
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={exportarExcel}
-            disabled={!exportFlags.excel || exportando}
-            title={!exportFlags.excel ? "Exportação Excel desabilitada nos parâmetros" : ""}
-          >
-            {exportando ? "Exportando..." : "Exportar Excel"}
-          </button>
-          <button
-            type="button"
-            className="btn btn-light"
-            onClick={exportarPDF}
-            disabled={!exportFlags.pdf || exportando}
-            title={
-              !exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : ""
+  const renderFiltersGrid = () => (
+    <>
+      <div className="vtur-commission-filters-grid">
+        <AppField
+          label="Data inicio"
+          type="date"
+          value={dataInicio}
+          onFocus={selectAllInputOnFocus}
+          onChange={(e) => {
+            const nextInicio = e.target.value;
+            setPeriodoPreset("");
+            setDataInicio(nextInicio);
+            if (dataFim && nextInicio && dataFim < nextInicio) {
+              setDataFim(nextInicio);
             }
-          >
-            {exportando ? "Exportando..." : "Exportar PDF"}
-          </button>
-          {exportando && (
-            <span className="text-muted" style={{ alignSelf: "center" }}>
-              Preparando exportação...
-            </span>
-          )}
-        </div>
-        </div>
-        <div className="mt-4 mobile-stack-buttons">
-          {tabOptions.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              className={`btn ${
-                activeTab === tab.id ? "btn-primary" : "btn-outline"
-              }`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-
-      {showExport && (
-        <div className="mobile-drawer-backdrop" onClick={() => setShowExport(false)}>
-          <div
-            className="mobile-drawer-panel"
-            role="dialog"
-            aria-modal="true"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <strong>Exportar</strong>
-              <button type="button" className="btn-ghost" onClick={() => setShowExport(false)}>
-                ✕
-              </button>
-            </div>
-            <div className="form-group" style={{ marginTop: 12 }}>
-              <label className="form-label">Formato</label>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button
-                  type="button"
-                  className={`btn ${exportTipo === "csv" ? "btn-primary" : "btn-light"}`}
-                  onClick={() => setExportTipo("csv")}
-                >
-                  CSV
-                </button>
-                <button
-                  type="button"
-                  className={`btn ${exportTipo === "excel" ? "btn-primary" : "btn-light"}`}
-                  onClick={() => setExportTipo("excel")}
-                  disabled={!exportFlags.excel}
-                  title={
-                    !exportFlags.excel
-                      ? "Exportação Excel desabilitada nos parâmetros"
-                      : ""
-                  }
-                >
-                  Excel
-                </button>
-                <button
-                  type="button"
-                  className={`btn ${exportTipo === "pdf" ? "btn-primary" : "btn-light"}`}
-                  onClick={() => setExportTipo("pdf")}
-                  disabled={!exportFlags.pdf}
-                  title={
-                    !exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : ""
-                  }
-                >
-                  PDF
-                </button>
-              </div>
-            </div>
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{ marginTop: 12, width: "100%" }}
-              onClick={() => {
-                exportarSelecionado();
-                setShowExport(false);
-              }}
-              disabled={exportDisabled || exportando}
-            >
-              {exportando ? "Exportando..." : "Exportar"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {loadingUser && (
-        <div className="card-base card-config mb-3">Carregando contexto do usuário...</div>
-      )}
-      {userCtx && userCtx.papel !== "ADMIN" && (
-        <div className="card-base card-config mb-3" style={{ color: "#334155" }}>
-          Relatório limitado a {userCtx.papel === "GESTOR" ? "sua equipe" : "suas vendas"}.
-        </div>
-      )}
-
-      {erro && (
-        <div className="mb-3">
-          <AlertMessage variant="error">{erro}</AlertMessage>
-        </div>
-      )}
-
-      {activeTab === "agrupado" && (
-        <>
-          <div className="card-base mb-3">
-            <div className="form-row">
-              <div className="form-group">
-                <span>
-                  Produtos: <strong>{totalLinhas}</strong>
-                </span>
-              </div>
-              <div className="form-group">
-                <span>
-                  Faturamento total: <strong>{formatCurrency(totalGeral)}</strong>
-                </span>
-              </div>
-              <div className="form-group">
-                <span>
-                  Ticket médio geral: <strong>{formatCurrency(ticketGeral)}</strong>
-                </span>
-              </div>
-            </div>
-          </div>
-          <PaginationControls
-            page={paginaAtual}
-            pageSize={pageSize}
-            totalItems={totalLinhas}
-            onPageChange={setPage}
-            onPageSizeChange={(size) => {
-              setPageSize(size);
-              setPage(1);
-            }}
+          }}
+        />
+        <AppField
+          label="Data fim"
+          type="date"
+          value={dataFim}
+          min={dataInicio || undefined}
+          onFocus={selectAllInputOnFocus}
+          onChange={(e) => {
+            const nextFim = e.target.value;
+            setPeriodoPreset("");
+            const boundedFim = dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
+            setDataFim(boundedFim);
+          }}
+        />
+        <AppField
+          as="select"
+          label="Status"
+          value={statusFiltro}
+          onChange={(e) => setStatusFiltro(e.target.value as StatusFiltro)}
+          options={[
+            { label: "Todos", value: "todos" },
+            { label: "Aberto", value: "aberto" },
+            { label: "Confirmado", value: "confirmado" },
+            { label: "Cancelado", value: "cancelado" },
+          ]}
+        />
+        {userCtx?.papel === "MASTER" ? (
+          <>
+            <AppField
+              as="select"
+              label="Filial"
+              value={masterScope.empresaSelecionada}
+              onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
+              options={[
+                { label: "Todas", value: "all" },
+                ...masterScope.empresasAprovadas.map((empresa) => ({
+                  label: empresa.nome_fantasia,
+                  value: empresa.id,
+                })),
+              ]}
+            />
+            <AppField
+              as="select"
+              label="Equipe"
+              value={masterScope.gestorSelecionado}
+              onChange={(e) => masterScope.setGestorSelecionado(e.target.value)}
+              options={[
+                { label: "Todas", value: "all" },
+                ...masterScope.gestoresDisponiveis.map((gestor) => ({
+                  label: gestor.nome_completo,
+                  value: gestor.id,
+                })),
+              ]}
+            />
+          </>
+        ) : null}
+        {userCtx?.papel === "GESTOR" || userCtx?.papel === "MASTER" ? (
+          <AppField
+            as="select"
+            label="Vendedor"
+            value={vendedorSelecionadoAtual || todosValue}
+            onChange={(e) => setVendedorSelecionadoAtual(e.target.value)}
+            options={[
+              { label: "Todos", value: todosValue },
+              ...vendedoresEquipe.map((vendedor) => ({
+                label: vendedor.nome,
+                value: vendedor.id,
+              })),
+            ]}
           />
-          <div className="table-container overflow-x-auto">
-            <table className="table-default table-header-purple table-mobile-cards min-w-[620px]">
-              <thead>
+        ) : null}
+        {renderCidadeField()}
+        {activeTab === "recibos" ? (
+          <AppField
+            as="select"
+            label="Tipo de produto"
+            value={tipoReciboSelecionado}
+            onChange={(e) => setTipoReciboSelecionado(e.target.value)}
+            options={[
+              { label: "Todos os tipos", value: "" },
+              ...produtos.map((produto) => ({
+                label: produto.nome || produto.tipo || produto.id,
+                value: produto.id,
+              })),
+            ]}
+          />
+        ) : null}
+        <AppField
+          label="Buscar produto"
+          placeholder={activeTab === "recibos" ? "Produto ou destino" : "Nome do produto"}
+          value={buscaProduto}
+          onChange={(e) => setBuscaProduto(e.target.value)}
+        />
+      </div>
+      <div style={{ marginTop: 16 }}>{renderPeriodButtons()}</div>
+    </>
+  );
+
+  return (
+    <AppPrimerProvider>
+      <div className="relatorio-vendas-produto-page">
+        <ToastStack toasts={toasts} onDismiss={dismissToast} />
+
+        <AppToolbar
+          sticky
+          tone="config"
+          className="mb-3 list-toolbar-sticky"
+          title="Relatorio agrupado por produto"
+          subtitle={`Periodo: ${periodoResumo}. ${activeTab === "recibos" ? "Visao por recibo." : "Resumo consolidado por tipo de produto."}`}
+          actions={
+            <div className="vtur-quote-top-actions">
+              <AppButton type="button" variant="secondary" className="sm:hidden" onClick={() => setShowFilters(true)}>
+                Filtros
+              </AppButton>
+              <AppButton type="button" variant="primary" onClick={aplicarFiltrosRelatorio}>
+                Aplicar filtros
+              </AppButton>
+              <AppButton type="button" variant="secondary" onClick={() => setShowExport(true)}>
+                Exportar
+              </AppButton>
+            </div>
+          }
+        >
+          <div className="hidden sm:block">{renderFiltersGrid()}</div>
+        </AppToolbar>
+
+        <AppCard className="mb-3" title="Modo de leitura" subtitle="Alterne entre a consolidacao por tipo e a visao analitica por recibo.">
+          <div className="vtur-quote-top-actions">
+            {tabOptions.map((tab) => (
+              <AppButton
+                key={tab.id}
+                type="button"
+                variant={activeTab === tab.id ? "primary" : "secondary"}
+                onClick={() => setActiveTab(tab.id as typeof activeTab)}
+              >
+                {tab.label}
+              </AppButton>
+            ))}
+          </div>
+        </AppCard>
+
+        {showFilters ? (
+          <Dialog
+            title="Filtros do relatorio"
+            width="xlarge"
+            onClose={() => setShowFilters(false)}
+            footerButtons={[
+              {
+                content: "Cancelar",
+                buttonType: "default",
+                onClick: () => setShowFilters(false),
+              },
+              {
+                content: "Aplicar filtros",
+                buttonType: "primary",
+                onClick: aplicarFiltrosRelatorio,
+              },
+            ]}
+          >
+            <div className="vtur-modal-body-stack">
+              <AppCard
+                title="Refine o recorte comercial"
+                subtitle="Ajuste datas, escopo, cidade, status e filtros de produto antes de atualizar o relatorio."
+              >
+                {renderFiltersGrid()}
+              </AppCard>
+            </div>
+          </Dialog>
+        ) : null}
+
+        {showExport ? (
+          <Dialog
+            title="Exportar relatorio"
+            width="large"
+            onClose={() => setShowExport(false)}
+            footerButtons={[
+              {
+                content: "Cancelar",
+                buttonType: "default",
+                onClick: () => setShowExport(false),
+              },
+              {
+                content: exportando ? "Preparando..." : "Exportar",
+                buttonType: "primary",
+                onClick: () => {
+                  exportarSelecionado();
+                  setShowExport(false);
+                },
+                disabled: exportDisabled || exportando,
+              },
+            ]}
+          >
+            <div className="vtur-modal-body-stack">
+              <AppCard
+                title="Formato da exportacao"
+                subtitle="Escolha o formato final respeitando as permissoes definidas nos parametros da empresa."
+              >
+                <div className="vtur-quote-top-actions">
+                  <AppButton
+                    type="button"
+                    variant={exportTipo === "csv" ? "primary" : "secondary"}
+                    onClick={() => setExportTipo("csv")}
+                  >
+                    CSV
+                  </AppButton>
+                  <AppButton
+                    type="button"
+                    variant={exportTipo === "excel" ? "primary" : "secondary"}
+                    onClick={() => setExportTipo("excel")}
+                    disabled={!exportFlags.excel}
+                  >
+                    Excel
+                  </AppButton>
+                  <AppButton
+                    type="button"
+                    variant={exportTipo === "pdf" ? "primary" : "secondary"}
+                    onClick={() => setExportTipo("pdf")}
+                    disabled={!exportFlags.pdf}
+                  >
+                    PDF
+                  </AppButton>
+                </div>
+                {exportDisabled ? (
+                  <div style={{ marginTop: 16 }}>
+                    <AlertMessage variant="warning">
+                      O formato selecionado esta desabilitado nos parametros da empresa.
+                    </AlertMessage>
+                  </div>
+                ) : null}
+              </AppCard>
+            </div>
+          </Dialog>
+        ) : null}
+
+        {escopoResumo ? (
+          <AlertMessage variant="info" className="mb-3">
+            {escopoResumo}
+          </AlertMessage>
+        ) : null}
+
+        {erro ? (
+          <AlertMessage variant="error" className="mb-3">
+            {erro}
+          </AlertMessage>
+        ) : null}
+
+        {activeTab === "agrupado" ? (
+          <AppCard
+            title="Resumo por tipo de produto"
+            subtitle="Quantidade, faturamento e ticket medio consolidados no recorte atual."
+          >
+            <div className="vtur-quote-summary-grid">
+              <div className="vtur-quote-summary-item">
+                <span className="vtur-quote-summary-label">Tipos listados</span>
+                <strong>{totalLinhas}</strong>
+              </div>
+              <div className="vtur-quote-summary-item">
+                <span className="vtur-quote-summary-label">Quantidade</span>
+                <strong>{totalQtd}</strong>
+              </div>
+              <div className="vtur-quote-summary-item">
+                <span className="vtur-quote-summary-label">Faturamento</span>
+                <strong>{formatCurrency(totalGeral)}</strong>
+              </div>
+              <div className="vtur-quote-summary-item">
+                <span className="vtur-quote-summary-label">Ticket medio</span>
+                <strong>{formatCurrency(ticketGeral)}</strong>
+              </div>
+            </div>
+
+            <div className="mb-3" style={{ marginTop: 16 }}>
+              <PaginationControls
+                page={paginaAtual}
+                pageSize={pageSize}
+                totalItems={totalLinhas}
+                onPageChange={setPage}
+                onPageSizeChange={(size) => {
+                  setPageSize(size);
+                  setPage(1);
+                }}
+              />
+            </div>
+
+            <DataTable
+              headers={
                 <tr>
                   <th>Tipo de Produto</th>
-                  <th
-                    style={{ cursor: "pointer" }}
-                    onClick={() => mudarOrdenacao("quantidade")}
-                  >
+                  <th style={{ cursor: "pointer" }} onClick={() => mudarOrdenacao("quantidade")}>
                     Qtde {ordenacao === "quantidade" ? (ordemDesc ? "↓" : "↑") : ""}
                   </th>
-                  <th
-                    style={{ cursor: "pointer" }}
-                    onClick={() => mudarOrdenacao("total")}
-                  >
+                  <th style={{ cursor: "pointer" }} onClick={() => mudarOrdenacao("total")}>
                     Faturamento {ordenacao === "total" ? (ordemDesc ? "↓" : "↑") : ""}
                   </th>
-                  <th
-                    style={{ cursor: "pointer" }}
-                    onClick={() => mudarOrdenacao("ticket")}
-                  >
-                    Ticket médio {ordenacao === "ticket" ? (ordemDesc ? "↓" : "↑") : ""}
+                  <th style={{ cursor: "pointer" }} onClick={() => mudarOrdenacao("ticket")}>
+                    Ticket medio {ordenacao === "ticket" ? (ordemDesc ? "↓" : "↑") : ""}
                   </th>
                 </tr>
-              </thead>
-              <tbody>
-                {loading && (
-                  <tr>
-                    <td colSpan={4}>Carregando...</td>
-                  </tr>
-                )}
-                {!loading && linhasExibidas.length === 0 && (
-                  <tr>
-                    <td colSpan={4}>
-                      Nenhum produto encontrado com os filtros atuais.
-                    </td>
-                  </tr>
-                )}
-                {!loading &&
-                  linhasExibidas.map((l, idx) => (
-                    <tr key={l.produto_id ?? `sem-${idx}`}>
-                      <td data-label="Tipo de Produto">{l.produto_nome}</td>
-                      <td data-label="Qtde">{l.quantidade}</td>
-                      <td data-label="Faturamento">{formatCurrency(l.total)}</td>
-                      <td data-label="Ticket médio">{formatCurrency(l.ticketMedio)}</td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-
-      {activeTab === "recibos" && (
-        <>
-          <div className="card-base mb-3">
-            <div className="form-row">
-              <div className="form-group">
-                <span>
-                  Recibos: <strong>{totalRecibosCount}</strong>
-                </span>
+              }
+              loading={loading}
+              loadingMessage="Carregando consolidacao por produto..."
+              empty={!loading && linhasExibidas.length === 0}
+              emptyMessage={
+                <EmptyState
+                  title="Nenhum produto encontrado"
+                  description="Ajuste datas, escopo ou busca para ampliar o recorte do relatorio."
+                />
+              }
+              colSpan={4}
+              className="table-header-purple table-mobile-cards min-w-[620px]"
+            >
+              {linhasExibidas.map((linha, idx) => (
+                <tr key={linha.produto_id ?? `sem-${idx}`}>
+                  <td data-label="Tipo de Produto">{linha.produto_nome}</td>
+                  <td data-label="Qtde">{linha.quantidade}</td>
+                  <td data-label="Faturamento">{formatCurrency(linha.total)}</td>
+                  <td data-label="Ticket medio">{formatCurrency(linha.ticketMedio)}</td>
+                </tr>
+              ))}
+            </DataTable>
+          </AppCard>
+        ) : (
+          <AppCard
+            title="Produtos por recibo"
+            subtitle="Visao analitica dos recibos com produto, cidade, destino, valor total e taxas."
+          >
+            <div className="vtur-quote-summary-grid">
+              <div className="vtur-quote-summary-item">
+                <span className="vtur-quote-summary-label">Recibos</span>
+                <strong>{totalRecibosCount}</strong>
               </div>
-              <div className="form-group">
-                <span>
-                  Total recebido: <strong>{formatCurrency(totalRecibosValor)}</strong>
-                </span>
+              <div className="vtur-quote-summary-item">
+                <span className="vtur-quote-summary-label">Total recebido</span>
+                <strong>{formatCurrency(totalRecibosValor)}</strong>
               </div>
-              <div className="form-group">
-                <span>
-                  Taxas: <strong>{formatCurrency(totalRecibosTaxas)}</strong>
-                </span>
+              <div className="vtur-quote-summary-item">
+                <span className="vtur-quote-summary-label">Taxas</span>
+                <strong>{formatCurrency(totalRecibosTaxas)}</strong>
+              </div>
+              <div className="vtur-quote-summary-item">
+                <span className="vtur-quote-summary-label">Liquido</span>
+                <strong>{formatCurrency(totalRecibosValor - totalRecibosTaxas)}</strong>
               </div>
             </div>
-          </div>
-          <div className="table-container overflow-x-auto">
-            <table className="table-default table-header-purple table-mobile-cards min-w-[720px]">
-              <thead>
-                <tr>
-                  <th>Recibo</th>
-                  <th>Produto</th>
-                  <th>Cidade</th>
-                  <th>Destino</th>
-                  <th>Data venda</th>
-                  <th style={{ textAlign: "right" }}>Valor total</th>
-                  <th style={{ textAlign: "right" }}>Taxas</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading && (
+
+            <div style={{ marginTop: 16 }}>
+              <DataTable
+                headers={
                   <tr>
-                    <td colSpan={7}>Carregando...</td>
+                    <th>Recibo</th>
+                    <th>Produto</th>
+                    <th>Cidade</th>
+                    <th>Destino</th>
+                    <th>Data venda</th>
+                    <th style={{ textAlign: "right" }}>Valor total</th>
+                    <th style={{ textAlign: "right" }}>Taxas</th>
                   </tr>
-                )}
-                {!loading && recibosExibidos.length === 0 && (
-                  <tr>
-                    <td colSpan={7}>
-                      Nenhum recibo encontrado com os filtros atuais.
-                    </td>
-                  </tr>
-                )}
-                {!loading &&
-                  recibosExibidos.map((recibo) => {
-                    const dataLabel = recibo.dataVenda
-                      ? recibo.dataVenda.split("T")[0]
-                      : "-";
-                    return (
-                      <tr key={recibo.rowId}>
-                        <td data-label="Recibo">{recibo.numeroRecibo || "-"}</td>
-                        <td data-label="Produto">{recibo.produtoNome}</td>
-                        <td data-label="Cidade">{recibo.cidadeNome || "-"}</td>
-                        <td data-label="Destino">{recibo.destinoNome || "-"}</td>
-                        <td data-label="Data venda">{dataLabel}</td>
-                        <td data-label="Valor total" style={{ textAlign: "right" }}>
-                          {formatCurrency(recibo.valorTotal)}
-                        </td>
-                        <td data-label="Taxas" style={{ textAlign: "right" }}>
-                          {formatCurrency(recibo.valorTaxas)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-      <ToastStack toasts={toasts} onDismiss={dismissToast} />
-    </div>
+                }
+                loading={loading}
+                loadingMessage="Carregando recibos..."
+                empty={!loading && recibosExibidos.length === 0}
+                emptyMessage={
+                  <EmptyState
+                    title="Nenhum recibo encontrado"
+                    description="Ajuste os filtros de data, cidade, status ou produto para ampliar o recorte."
+                  />
+                }
+                colSpan={7}
+                className="table-header-purple table-mobile-cards min-w-[720px]"
+              >
+                {recibosExibidos.map((recibo) => {
+                  const dataLabel = recibo.dataVenda ? recibo.dataVenda.split("T")[0] : "-";
+                  return (
+                    <tr key={recibo.rowId}>
+                      <td data-label="Recibo">{recibo.numeroRecibo || "-"}</td>
+                      <td data-label="Produto">{recibo.produtoNome}</td>
+                      <td data-label="Cidade">{recibo.cidadeNome || "-"}</td>
+                      <td data-label="Destino">{recibo.destinoNome || "-"}</td>
+                      <td data-label="Data venda">{dataLabel}</td>
+                      <td data-label="Valor total" style={{ textAlign: "right" }}>
+                        {formatCurrency(recibo.valorTotal)}
+                      </td>
+                      <td data-label="Taxas" style={{ textAlign: "right" }}>
+                        {formatCurrency(recibo.valorTaxas)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </DataTable>
+            </div>
+          </AppCard>
+        )}
+      </div>
+    </AppPrimerProvider>
   );
 }

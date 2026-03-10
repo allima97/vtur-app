@@ -3,7 +3,14 @@ import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import AlertMessage from "../ui/AlertMessage";
+import DataTable from "../ui/DataTable";
+import EmptyState from "../ui/EmptyState";
 import { ToastStack, useToastQueue } from "../ui/Toast";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type Papel = "ADMIN" | "MASTER" | "GESTOR" | "VENDEDOR" | "OUTRO";
 
@@ -748,170 +755,298 @@ export default function ConciliacaoIsland() {
     return parsedLinhas.slice(0, 10);
   }, [parsedLinhas]);
 
+  useEffect(() => {
+    if (!showChanges || !resolvedCompanyId) return;
+    carregarAlteracoes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showChanges, resolvedCompanyId, somenteAlteracoesPendentes]);
+
+  const conciliadosCount = useMemo(
+    () => itens.filter((item) => item.conciliado).length,
+    [itens]
+  );
+  const pendentesCount = useMemo(
+    () => itens.filter((item) => !item.conciliado).length,
+    [itens]
+  );
+  const divergenciasCount = useMemo(
+    () =>
+      itens.filter(
+        (item) =>
+          Math.abs(Number(item.diff_total || 0)) > 0.009 ||
+          Math.abs(Number(item.diff_taxas || 0)) > 0.009
+      ).length,
+    [itens]
+  );
+  const alteracoesPendentesCount = useMemo(
+    () => changeGroups.reduce((total, group) => total + group.count_pendentes, 0),
+    [changeGroups]
+  );
+  const selectedPendingCount = useMemo(
+    () =>
+      changeGroups.reduce(
+        (total, group) =>
+          selectedGroupKeys.has(group.key) ? total + group.pending_change_ids.length : total,
+        0
+      ),
+    [changeGroups, selectedGroupKeys]
+  );
+
   if (loadingPerm) return <LoadingUsuarioContext />;
   if (!podeVer) {
     return (
-      <div className="card-base card-config">
-        <strong>Você não possui acesso ao módulo Conciliação.</strong>
-      </div>
+      <AppPrimerProvider>
+        <AppCard
+          title="Acesso ao modulo de conciliacao"
+          subtitle="Seu perfil nao possui permissao para consultar a conciliacao financeira."
+        >
+          <p>Solicite ao gestor ou ao master a liberacao do acesso ao modulo.</p>
+        </AppCard>
+      </AppPrimerProvider>
     );
   }
 
   if (loadingUser) return <LoadingUsuarioContext />;
 
   const precisaEmpresaMaster = isMaster && !resolvedCompanyId;
+  const empresaAtualLabel = isMaster
+    ? empresas.find((empresa) => empresa.id === empresaSelecionada)?.nome_fantasia || "empresa selecionada"
+    : userCtx?.companyNome || "empresa atual";
+  const resumoToolbar = precisaEmpresaMaster
+    ? "Selecione uma empresa para importar arquivo, conciliar lancamentos e revisar alteracoes."
+    : `Operacao ativa em ${empresaAtualLabel}. Pendentes: ${pendentesCount}. Divergencias: ${divergenciasCount}.`;
 
   return (
-    <div className="conciliacao-page">
-      <ToastStack toasts={toasts} onDismiss={dismissToast} />
+    <AppPrimerProvider>
+      <div className="conciliacao-page">
+        <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
-      {erro && (
-        <div className="mb-3">
-          <AlertMessage variant="error">{erro}</AlertMessage>
-        </div>
-      )}
-
-      <div className="card-base mb-3 list-toolbar-sticky">
-        <div
-          className="form-row mobile-stack"
-          style={{ gap: 12, gridTemplateColumns: isMaster ? "minmax(240px, 1fr) 1fr auto" : "minmax(240px, 1fr) auto" }}
-        >
-          {isMaster && (
-            <div className="form-group">
-              <label className="form-label">Empresa</label>
-              <select
-                className="form-select"
-                value={empresaSelecionada}
-                onChange={(e) => setEmpresaSelecionada(e.target.value)}
-              >
-                <option value="all">Selecione...</option>
-                {empresas.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome_fantasia || c.id}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div className="form-group">
-            <label className="form-label">Arquivo (TXT/XLS/XLSX)</label>
-            <input
-              ref={fileRef}
-              className="form-input"
-              type="file"
-              accept=".txt,.xls,.xlsx"
-              disabled={importando || conciliando || precisaEmpresaMaster}
-              onChange={(e) => onPickFile(e.target.files?.[0] || null)}
-            />
-            <small className="text-muted">
-              Linhas reconhecidas: <strong>{parsedLinhas.length}</strong>
-              {parsedMovimentoData ? ` • Data: ${parsedMovimentoData}` : ""}
-            </small>
-          </div>
-
-          <div className="form-group" style={{ alignItems: "flex-end" }}>
-            <div className="form-label" aria-hidden="true">
-              &nbsp;
-            </div>
-            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-              <button
+        <AppToolbar
+          sticky
+          tone="info"
+          className="mb-3 list-toolbar-sticky"
+          title="Conciliacao financeira"
+          subtitle={resumoToolbar}
+          actions={
+            <div className="vtur-quote-top-actions">
+              <AppButton
                 type="button"
-                className="btn btn-primary w-full sm:w-auto"
-                disabled={importando || conciliando || !arquivo || parsedLinhas.length === 0 || precisaEmpresaMaster}
-                onClick={importar}
-              >
-                {importando ? "Importando..." : "Importar"}
-              </button>
-              <button
-                type="button"
-                className="btn btn-light w-full sm:w-auto"
+                variant="secondary"
                 disabled={importando || conciliando || precisaEmpresaMaster}
                 onClick={conciliarPendentes}
               >
                 {conciliando ? "Conciliando..." : "Conciliar pendentes"}
-              </button>
+              </AppButton>
+              <AppButton
+                type="button"
+                variant="secondary"
+                disabled={precisaEmpresaMaster}
+                onClick={() => setShowChanges((prev) => !prev)}
+              >
+                {showChanges ? "Ocultar alteracoes" : "Ver alteracoes"}
+              </AppButton>
             </div>
-          </div>
-        </div>
+          }
+        >
+          <div className="vtur-commission-filters-grid">
+            {isMaster ? (
+              <AppField
+                as="select"
+                label="Empresa"
+                value={empresaSelecionada}
+                onChange={(e) => setEmpresaSelecionada(e.target.value)}
+                options={[
+                  { label: "Selecione...", value: "all" },
+                  ...empresas.map((empresa) => ({
+                    label: empresa.nome_fantasia || empresa.id,
+                    value: empresa.id,
+                  })),
+                ]}
+              />
+            ) : null}
 
-        {preview.length > 0 && (
-          <div style={{ marginTop: 12 }}>
-            <small className="text-muted">
-              Preview (primeiras {preview.length} linhas):
-            </small>
-            <div className="table-container overflow-x-auto mt-2">
-              <table className="table-default table-mobile-cards min-w-[820px]">
-                <thead>
-                  <tr>
-                    <th>Documento</th>
-                    <th>Status</th>
-                    <th>Descrição</th>
-                    <th>Total</th>
-                    <th>Taxas</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {preview.map((l) => (
-                    <tr key={l.documento}>
-                      <td data-label="Documento">{l.documento}</td>
-                      <td data-label="Status">{l.status || "OUTRO"}</td>
-                      <td data-label="Descrição">{l.descricao || "-"}</td>
-                      <td data-label="Total">{formatMoney(l.valor_lancamentos)}</td>
-                      <td data-label="Taxas">{formatMoney(l.valor_taxas)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="card-base mb-3">
-        <div className="form-row mobile-stack" style={{ gap: 12, alignItems: "flex-end" }}>
-          <div className="form-group">
-            <label className="form-label">Mostrar</label>
-            <select
-              className="form-select"
+            <AppField
+              as="select"
+              label="Registros"
               value={somentePendentes ? "pendentes" : "todas"}
               onChange={(e) => setSomentePendentes(e.target.value === "pendentes")}
               disabled={loadingLista}
-            >
-              <option value="pendentes">Somente pendentes</option>
-              <option value="todas">Todas</option>
-            </select>
-          </div>
-          <div className="form-group" style={{ alignItems: "flex-end" }}>
-            <button
-              type="button"
-              className="btn btn-light w-full sm:w-auto"
-              disabled={loadingLista || precisaEmpresaMaster}
-              onClick={carregarLista}
-            >
-              {loadingLista ? "Atualizando..." : "Atualizar"}
-            </button>
-          </div>
-        </div>
-      </div>
+              options={[
+                { label: "Somente pendentes", value: "pendentes" },
+                { label: "Todas", value: "todas" },
+              ]}
+            />
 
-      <div className="table-container overflow-x-auto">
-        <table className="table-default table-mobile-cards min-w-[1200px]">
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>Documento</th>
-              <th>Status</th>
-              <th>Total (arq)</th>
-              <th>Taxas (arq)</th>
-              <th>Total (sist)</th>
-              <th>Taxas (sist)</th>
-              <th>Diff total</th>
-              <th>Diff taxas</th>
-              <th>Conciliado</th>
-            </tr>
-          </thead>
-          <tbody>
+            <AppField
+              as="select"
+              label="Alteracoes"
+              value={somenteAlteracoesPendentes ? "pendentes" : "todas"}
+              onChange={(e) => setSomenteAlteracoesPendentes(e.target.value === "pendentes")}
+              disabled={loadingChanges}
+              options={[
+                { label: "Somente nao revertidas", value: "pendentes" },
+                { label: "Todas", value: "todas" },
+              ]}
+            />
+
+            <div className="vtur-form-actions" style={{ alignItems: "flex-end" }}>
+              <AppButton
+                type="button"
+                variant="secondary"
+                disabled={loadingLista || precisaEmpresaMaster}
+                onClick={carregarLista}
+              >
+                {loadingLista ? "Atualizando..." : "Atualizar lista"}
+              </AppButton>
+            </div>
+          </div>
+
+          <div className="vtur-quote-summary-grid" style={{ marginTop: 16 }}>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Em tela</span>
+              <strong>{itens.length}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Pendentes</span>
+              <strong>{pendentesCount}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Conciliados</span>
+              <strong>{conciliadosCount}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Divergencias</span>
+              <strong>{divergenciasCount}</strong>
+            </div>
+          </div>
+        </AppToolbar>
+
+        {erro ? (
+          <AlertMessage variant="error" className="mb-3">
+            {erro}
+          </AlertMessage>
+        ) : null}
+
+        <AppCard
+          className="mb-3"
+          title="Importar arquivo da conciliacao"
+          subtitle="Carregue TXT, XLS ou XLSX, revise o preview e envie para cruzar os recibos com o sistema."
+          actions={
+            <AppButton
+              type="button"
+              variant="primary"
+              disabled={importando || conciliando || !arquivo || parsedLinhas.length === 0 || precisaEmpresaMaster}
+              onClick={importar}
+            >
+              {importando ? "Importando..." : "Importar"}
+            </AppButton>
+          }
+        >
+          <div className="vtur-import-upload-stack">
+            <div className="vtur-import-upload-row">
+              <label className="vtur-import-upload-trigger" htmlFor="conciliacao-upload-input">
+                Selecionar arquivo
+              </label>
+              <input
+                id="conciliacao-upload-input"
+                ref={fileRef}
+                type="file"
+                accept=".txt,.xls,.xlsx"
+                style={{ display: "none" }}
+                disabled={importando || conciliando || precisaEmpresaMaster}
+                onChange={(e) => onPickFile(e.target.files?.[0] || null)}
+              />
+              <span className="vtur-import-file-name">
+                {arquivo?.name || "Nenhum arquivo selecionado"}{" "}
+                {parsedMovimentoData ? `• Data do movimento: ${parsedMovimentoData}` : ""}
+              </span>
+            </div>
+
+            <div className="vtur-quote-summary-grid">
+              <div className="vtur-quote-summary-item">
+                <span className="vtur-quote-summary-label">Linhas reconhecidas</span>
+                <strong>{parsedLinhas.length}</strong>
+              </div>
+              <div className="vtur-quote-summary-item">
+                <span className="vtur-quote-summary-label">Arquivo</span>
+                <strong>{arquivo?.name || "-"}</strong>
+              </div>
+              <div className="vtur-quote-summary-item">
+                <span className="vtur-quote-summary-label">Empresa</span>
+                <strong>{precisaEmpresaMaster ? "Selecione uma empresa" : empresaAtualLabel}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <DataTable
+              headers={
+                <tr>
+                  <th>Documento</th>
+                  <th>Status</th>
+                  <th>Descricao</th>
+                  <th>Total</th>
+                  <th>Taxas</th>
+                </tr>
+              }
+              empty={preview.length === 0}
+              emptyMessage={
+                <EmptyState
+                  title="Nenhum preview carregado"
+                  description="Selecione um arquivo valido para revisar as primeiras linhas antes da importacao."
+                />
+              }
+              colSpan={5}
+              className="table-header-blue table-mobile-cards min-w-[820px]"
+            >
+              {preview.map((linha) => (
+                <tr key={linha.documento}>
+                  <td data-label="Documento">{linha.documento}</td>
+                  <td data-label="Status">{linha.status || "OUTRO"}</td>
+                  <td data-label="Descricao">{linha.descricao || "-"}</td>
+                  <td data-label="Total">{formatMoney(linha.valor_lancamentos)}</td>
+                  <td data-label="Taxas">{formatMoney(linha.valor_taxas)}</td>
+                </tr>
+              ))}
+            </DataTable>
+          </div>
+        </AppCard>
+
+        <AppCard
+          className="mb-3"
+          title="Registros conciliados"
+          subtitle="Comparativo entre o arquivo importado e os dados do sistema, com foco em pendencias e divergencias."
+        >
+          <DataTable
+            headers={
+              <tr>
+                <th>Data</th>
+                <th>Documento</th>
+                <th>Status</th>
+                <th>Total (arq)</th>
+                <th>Taxas (arq)</th>
+                <th>Total (sist)</th>
+                <th>Taxas (sist)</th>
+                <th>Diff total</th>
+                <th>Diff taxas</th>
+                <th>Conciliado</th>
+              </tr>
+            }
+            loading={loadingLista}
+            empty={!loadingLista && itens.length === 0}
+            emptyMessage={
+              <EmptyState
+                title={precisaEmpresaMaster ? "Selecione uma empresa" : "Nenhum registro encontrado"}
+                description={
+                  precisaEmpresaMaster
+                    ? "Escolha a empresa para liberar a listagem e as acoes da conciliacao."
+                    : "Nao ha registros para o recorte atual. Ajuste os filtros ou importe um novo arquivo."
+                }
+              />
+            }
+            colSpan={10}
+            className="table-header-green table-mobile-cards min-w-[1200px]"
+          >
             {itens.map((row) => (
               <tr key={row.id}>
                 <td data-label="Data">{row.movimento_data || "-"}</td>
@@ -923,111 +1058,98 @@ export default function ConciliacaoIsland() {
                 <td data-label="Taxas (sist)">{formatMoney(row.sistema_valor_taxas)}</td>
                 <td data-label="Diff total">{formatMoney(row.diff_total)}</td>
                 <td data-label="Diff taxas">{formatMoney(row.diff_taxas)}</td>
-                <td data-label="Conciliado">{row.conciliado ? "Sim" : "Não"}</td>
+                <td data-label="Conciliado">{row.conciliado ? "Sim" : "Nao"}</td>
               </tr>
             ))}
-            {itens.length === 0 && (
-              <tr>
-                <td colSpan={10} className="text-muted" style={{ textAlign: "center", padding: 16 }}>
-                  {precisaEmpresaMaster
-                    ? "Selecione uma empresa."
-                    : loadingLista
-                    ? "Carregando..."
-                    : "Nenhum registro."}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+          </DataTable>
+        </AppCard>
 
-      <div className="card-base mt-3">
-        <div className="form-row mobile-stack" style={{ gap: 12, alignItems: "flex-end" }}>
-          <div className="form-group">
-            <label className="form-label">Alterações</label>
-            <select
-              className="form-select"
-              value={somenteAlteracoesPendentes ? "pendentes" : "todas"}
-              onChange={(e) => setSomenteAlteracoesPendentes(e.target.value === "pendentes")}
-              disabled={loadingChanges}
-            >
-              <option value="pendentes">Somente não revertidas</option>
-              <option value="todas">Todas</option>
-            </select>
-          </div>
-
-          <div className="form-group" style={{ alignItems: "flex-end" }}>
-            <div className="mobile-stack-buttons">
-              <button
+        <AppCard
+          title="Historico de alteracoes"
+          subtitle="Controle alteracoes de taxas, identifique o autor e reverta ajustes pendentes quando necessario."
+          actions={
+            <div className="vtur-quote-top-actions">
+              <AppButton
                 type="button"
-                className="btn btn-light w-full sm:w-auto"
+                variant="secondary"
                 disabled={loadingChanges || precisaEmpresaMaster}
-                onClick={() => {
-                  setShowChanges(true);
-                  carregarAlteracoes();
-                }}
+                onClick={() => setShowChanges((prev) => !prev)}
               >
-                {loadingChanges ? "Carregando..." : "Ver alterações"}
-              </button>
-              <button
+                {showChanges ? "Ocultar" : "Exibir"}
+              </AppButton>
+              <AppButton
                 type="button"
-                className="btn btn-light w-full sm:w-auto"
-                disabled={loadingChanges || precisaEmpresaMaster}
-                onClick={() => setShowChanges(false)}
-              >
-                Ocultar
-              </button>
-            </div>
-          </div>
-
-          <div className="form-group" style={{ alignItems: "flex-end" }}>
-            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-              <button
-                type="button"
-                className="btn btn-light w-full sm:w-auto"
+                variant="secondary"
                 disabled={loadingChanges || precisaEmpresaMaster || selectedGroupKeys.size === 0}
                 onClick={reverterSelecionados}
               >
-                Reverter selecionados
-              </button>
-              <button
+                {loadingChanges ? "Processando..." : `Reverter selecionados (${selectedPendingCount})`}
+              </AppButton>
+              <AppButton
                 type="button"
-                className="btn btn-light w-full sm:w-auto"
+                variant="secondary"
                 disabled={loadingChanges || precisaEmpresaMaster}
                 onClick={reverterTudo}
               >
                 Reverter tudo
-              </button>
+              </AppButton>
+            </div>
+          }
+        >
+          <div className="vtur-quote-summary-grid">
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Grupos</span>
+              <strong>{changeGroups.length}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Pendentes</span>
+              <strong>{alteracoesPendentesCount}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Selecionadas</span>
+              <strong>{selectedPendingCount}</strong>
             </div>
           </div>
-        </div>
 
-        {showChanges && (
-          <div className="table-container overflow-x-auto mt-3">
-            <table className="table-default table-mobile-cards min-w-[920px]">
-              <thead>
-                <tr>
-                  <th style={{ width: 48 }}></th>
-                  <th>Quando</th>
-                  <th>Recibo</th>
-                  <th>Alterações</th>
-                  <th>Taxas (antes)</th>
-                  <th>Taxas (novo)</th>
-                  <th>Origem</th>
-                  <th>Por</th>
-                  <th>Revertido</th>
-                </tr>
-              </thead>
-              <tbody>
-                {changeGroups.map((g) => {
-                  const hasPending = g.count_pendentes > 0;
-                  const checked = selectedGroupKeys.has(g.key);
-                  const labelRecibo = g.numero_recibo || "-";
-                  const origem = g.actor === "user" ? "manual" : "cron";
-                  const revertLabel = g.reverted_at ? formatDateTime(g.reverted_at) : "-";
+          {showChanges ? (
+            <div className="mt-3">
+              <DataTable
+                headers={
+                  <tr>
+                    <th style={{ width: 48 }} />
+                    <th>Quando</th>
+                    <th>Recibo</th>
+                    <th>Alteracoes</th>
+                    <th>Taxas (antes)</th>
+                    <th>Taxas (novo)</th>
+                    <th>Origem</th>
+                    <th>Por</th>
+                    <th>Revertido</th>
+                  </tr>
+                }
+                loading={loadingChanges}
+                empty={!loadingChanges && changeGroups.length === 0}
+                emptyMessage={
+                  <EmptyState
+                    title={precisaEmpresaMaster ? "Selecione uma empresa" : "Nenhuma alteracao registrada"}
+                    description={
+                      precisaEmpresaMaster
+                        ? "Escolha a empresa para consultar o historico de alteracoes."
+                        : "Nao ha alteracoes para o recorte atual."
+                    }
+                  />
+                }
+                colSpan={9}
+                className="table-header-purple table-mobile-cards min-w-[920px]"
+              >
+                {changeGroups.map((group) => {
+                  const hasPending = group.count_pendentes > 0;
+                  const checked = selectedGroupKeys.has(group.key);
+                  const origem = group.actor === "user" ? "manual" : "cron";
+                  const revertLabel = group.reverted_at ? formatDateTime(group.reverted_at) : "-";
 
                   return (
-                    <tr key={g.key}>
+                    <tr key={group.key}>
                       <td data-label="Selecionar">
                         <input
                           type="checkbox"
@@ -1036,43 +1158,49 @@ export default function ConciliacaoIsland() {
                           onChange={(e) => {
                             setSelectedGroupKeys((prev) => {
                               const next = new Set(prev);
-                              if (e.target.checked) next.add(g.key);
-                              else next.delete(g.key);
+                              if (e.target.checked) next.add(group.key);
+                              else next.delete(group.key);
                               return next;
                             });
                           }}
                         />
                       </td>
-                      <td data-label="Quando">{formatDateTime(g.last_changed_at)}</td>
-                      <td data-label="Recibo">{labelRecibo}</td>
-                      <td data-label="Alterações">
-                        {g.count_total}
-                        {hasPending ? ` (${g.count_pendentes} pend.)` : ""}
+                      <td data-label="Quando">{formatDateTime(group.last_changed_at)}</td>
+                      <td data-label="Recibo">{group.numero_recibo || "-"}</td>
+                      <td data-label="Alteracoes">
+                        {group.count_total}
+                        {hasPending ? ` (${group.count_pendentes} pend.)` : ""}
                       </td>
-                      <td data-label="Taxas (antes)">{formatMoney(g.old_value)}</td>
-                      <td data-label="Taxas (novo)">{formatMoney(g.new_value)}</td>
+                      <td data-label="Taxas (antes)">{formatMoney(group.old_value)}</td>
+                      <td data-label="Taxas (novo)">{formatMoney(group.new_value)}</td>
                       <td data-label="Origem">{origem}</td>
-                      <td data-label="Por">{g.changed_by_label}</td>
+                      <td data-label="Por">{group.changed_by_label}</td>
                       <td data-label="Revertido">{revertLabel}</td>
                     </tr>
                   );
                 })}
-                {changeGroups.length === 0 && (
-                  <tr>
-                    <td colSpan={9} className="text-muted" style={{ textAlign: "center", padding: 16 }}>
-                      {precisaEmpresaMaster
-                        ? "Selecione uma empresa."
-                        : loadingChanges
-                        ? "Carregando..."
-                        : "Nenhuma alteração registrada."}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+              </DataTable>
+            </div>
+          ) : (
+            <div className="mt-3">
+              <EmptyState
+                title="Historico recolhido"
+                description="Abra o historico para revisar alteracoes de taxas, selecionar grupos e executar reversoes."
+                action={
+                  <AppButton
+                    type="button"
+                    variant="secondary"
+                    disabled={precisaEmpresaMaster}
+                    onClick={() => setShowChanges(true)}
+                  >
+                    Exibir alteracoes
+                  </AppButton>
+                }
+              />
+            </div>
+          )}
+        </AppCard>
       </div>
-    </div>
+    </AppPrimerProvider>
   );
 }

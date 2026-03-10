@@ -3,7 +3,15 @@ import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { registrarLog } from "../../lib/logs";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import DataTable from "../ui/DataTable";
 import ConfirmDialog from "../ui/ConfirmDialog";
+import AlertMessage from "../ui/AlertMessage";
+import EmptyState from "../ui/EmptyState";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type Template = {
   id: string;
@@ -54,6 +62,10 @@ const initialForm: Template = {
 
   ativo: true,
 };
+
+function parseNumberOrNull(value: string) {
+  return value === "" ? null : Number(value);
+}
 
 export default function CommissionTemplatesIsland() {
   const { can, loading: loadingPerms, ready } = usePermissoesStore();
@@ -114,6 +126,9 @@ export default function CommissionTemplatesIsland() {
         (x.descricao || "").toLowerCase().includes(t)
     );
   }, [lista, busca]);
+  const resumoLista = busca.trim()
+    ? `${filtrados.length} template(s) encontrados para a busca atual.`
+    : `${lista.length} template(s) cadastrados na biblioteca de comissionamento.`;
 
   // ============================================================
   // FORM CHANGE
@@ -261,407 +276,338 @@ export default function CommissionTemplatesIsland() {
   // ============================================================
 
   if (loadingPerm) return <LoadingUsuarioContext />;
-  if (!podeVer) return <div>Acesso bloqueado ao módulo Parâmetros.</div>;
+  if (!podeVer) {
+    return (
+      <AppPrimerProvider>
+        <AppCard tone="config">
+          <strong>Acesso bloqueado ao modulo Parametros.</strong>
+        </AppCard>
+      </AppPrimerProvider>
+    );
+  }
 
   return (
-    <div className="commission-templates-page">
-      {/* FORMULÁRIO */}
-      <div className="card-base card-blue form-card mb-3">
-        <form onSubmit={salvar}>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Nome *</label>
-              <input
-                className="form-input"
+    <AppPrimerProvider>
+      <div className="commission-templates-page">
+        <AppCard
+          className="mb-3"
+          tone="info"
+          title={editId ? "Editar template de comissao" : "Novo template de comissao"}
+          subtitle="Defina regras fixas ou escalonaveis para acelerar configuracoes comerciais da franquia."
+        >
+          <form onSubmit={salvar}>
+            <div className="vtur-form-grid vtur-form-grid-3">
+              <AppField
+                label="Nome *"
                 value={form.nome}
                 onChange={(e) => handleChange("nome", e.target.value)}
               />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Modo *</label>
-              <select
-                className="form-select"
+              <AppField
+                as="select"
+                label="Modo *"
                 value={form.modo}
-                onChange={(e) =>
-                  handleChange("modo", e.target.value as "FIXO" | "ESCALONAVEL")
-                }
-              >
-                <option value="FIXO">Fixo</option>
-                <option value="ESCALONAVEL">Escalonável</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Ativo</label>
-              <select
-                className="form-select"
+                onChange={(e) => handleChange("modo", e.target.value as "FIXO" | "ESCALONAVEL")}
+                options={[
+                  { value: "FIXO", label: "Fixo" },
+                  { value: "ESCALONAVEL", label: "Escalonavel" },
+                ]}
+              />
+              <AppField
+                as="select"
+                label="Ativo"
                 value={form.ativo ? "true" : "false"}
                 onChange={(e) => handleChange("ativo", e.target.value === "true")}
+                options={[
+                  { value: "true", label: "Sim" },
+                  { value: "false", label: "Nao" },
+                ]}
+              />
+            </div>
+
+            {form.modo === "FIXO" && (
+              <AppCard
+                className="vtur-sales-embedded-card"
+                tone="config"
+                title="Percentuais fixos"
+                subtitle="Defina comissao para meta nao atingida, atingida e super meta."
               >
-                <option value="true">Sim</option>
-                <option value="false">Não</option>
-              </select>
+                <div className="vtur-form-grid vtur-form-grid-3">
+                  <AppField
+                    type="number"
+                    label="% Nao atingida"
+                    value={form.meta_nao_atingida ?? ""}
+                    min={0}
+                    step="0.1"
+                    onChange={(e) => handleChange("meta_nao_atingida", parseNumberOrNull(e.target.value))}
+                  />
+                  <AppField
+                    type="number"
+                    label="% Atingida"
+                    value={form.meta_atingida ?? ""}
+                    min={0}
+                    step="0.1"
+                    onChange={(e) => handleChange("meta_atingida", parseNumberOrNull(e.target.value))}
+                  />
+                  <AppField
+                    type="number"
+                    label="% Super meta"
+                    value={form.super_meta ?? ""}
+                    min={0}
+                    step="0.1"
+                    onChange={(e) => handleChange("super_meta", parseNumberOrNull(e.target.value))}
+                  />
+                </div>
+              </AppCard>
+            )}
+
+            {form.modo === "ESCALONAVEL" && (
+              <>
+                <AppCard
+                  className="vtur-sales-embedded-card"
+                  tone="config"
+                  title="Escalonamento 1"
+                  subtitle="Primeira faixa de progressao entre percentual de meta e percentual de comissao."
+                >
+                  <div className="vtur-form-grid vtur-form-grid-3">
+                    <AppField
+                      as="select"
+                      label="Ativado?"
+                      value={form.esc_ativado ? "true" : "false"}
+                      onChange={(e) => handleChange("esc_ativado", e.target.value === "true")}
+                      options={[
+                        { value: "true", label: "Sim" },
+                        { value: "false", label: "Nao" },
+                      ]}
+                    />
+                    <AppField
+                      type="number"
+                      label="Inicial %"
+                      value={form.esc_inicial_pct ?? ""}
+                      min={0}
+                      step="0.1"
+                      onChange={(e) => handleChange("esc_inicial_pct", parseNumberOrNull(e.target.value))}
+                    />
+                    <AppField
+                      type="number"
+                      label="Final %"
+                      value={form.esc_final_pct ?? ""}
+                      min={0}
+                      step="0.1"
+                      onChange={(e) => handleChange("esc_final_pct", parseNumberOrNull(e.target.value))}
+                    />
+                  </div>
+                  <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 16 }}>
+                    <AppField
+                      type="number"
+                      label="Incremento % Meta"
+                      value={form.esc_incremento_pct_meta ?? ""}
+                      min={0}
+                      step="0.1"
+                      onChange={(e) =>
+                        handleChange("esc_incremento_pct_meta", parseNumberOrNull(e.target.value))
+                      }
+                    />
+                    <AppField
+                      type="number"
+                      label="Incremento % Comissao"
+                      value={form.esc_incremento_pct_comissao ?? ""}
+                      min={0}
+                      step="0.1"
+                      onChange={(e) =>
+                        handleChange("esc_incremento_pct_comissao", parseNumberOrNull(e.target.value))
+                      }
+                    />
+                  </div>
+                </AppCard>
+
+                <AppCard
+                  className="vtur-sales-embedded-card"
+                  tone="config"
+                  title="Escalonamento 2"
+                  subtitle="Faixa adicional para modelos de crescimento comercial mais agressivos."
+                >
+                  <div className="vtur-form-grid vtur-form-grid-3">
+                    <AppField
+                      as="select"
+                      label="Ativado?"
+                      value={form.esc2_ativado ? "true" : "false"}
+                      onChange={(e) => handleChange("esc2_ativado", e.target.value === "true")}
+                      options={[
+                        { value: "true", label: "Sim" },
+                        { value: "false", label: "Nao" },
+                      ]}
+                    />
+                    <AppField
+                      type="number"
+                      label="Inicial %"
+                      value={form.esc2_inicial_pct ?? ""}
+                      min={0}
+                      step="0.1"
+                      onChange={(e) => handleChange("esc2_inicial_pct", parseNumberOrNull(e.target.value))}
+                    />
+                    <AppField
+                      type="number"
+                      label="Final %"
+                      value={form.esc2_final_pct ?? ""}
+                      min={0}
+                      step="0.1"
+                      onChange={(e) => handleChange("esc2_final_pct", parseNumberOrNull(e.target.value))}
+                    />
+                  </div>
+                  <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 16 }}>
+                    <AppField
+                      type="number"
+                      label="Incremento % Meta"
+                      value={form.esc2_incremento_pct_meta ?? ""}
+                      min={0}
+                      step="0.1"
+                      onChange={(e) =>
+                        handleChange("esc2_incremento_pct_meta", parseNumberOrNull(e.target.value))
+                      }
+                    />
+                    <AppField
+                      type="number"
+                      label="Incremento % Comissao"
+                      value={form.esc2_incremento_pct_comissao ?? ""}
+                      min={0}
+                      step="0.1"
+                      onChange={(e) =>
+                        handleChange("esc2_incremento_pct_comissao", parseNumberOrNull(e.target.value))
+                      }
+                    />
+                  </div>
+                </AppCard>
+              </>
+            )}
+
+            <div style={{ marginTop: 16 }}>
+              <AppField
+                as="textarea"
+                label="Descricao"
+                rows={4}
+                value={form.descricao || ""}
+                onChange={(e) => handleChange("descricao", e.target.value)}
+              />
             </div>
-          </div>
 
-          {/* CAMPOS FIXOS */}
-          {form.modo === "FIXO" && (
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">% Não atingida</label>
-                <input
-                  className="form-input"
-                  type="number"
-                  value={form.meta_nao_atingida ?? ""}
-                  min={0}
-                  step="0.1"
-                  onChange={(e) =>
-                    handleChange(
-                      "meta_nao_atingida",
-                      e.target.value ? Number(e.target.value) : null
-                    )
-                  }
-                />
-              </div>
+            {erro && (
+              <AlertMessage variant="error" className="mt-3">
+                <strong>Erro:</strong> {erro}
+              </AlertMessage>
+            )}
+            {sucesso && (
+              <AlertMessage variant="success" className="mt-3">
+                {sucesso}
+              </AlertMessage>
+            )}
 
-              <div className="form-group">
-                <label className="form-label">% Atingida</label>
-                <input
-                  className="form-input"
-                  type="number"
-                  value={form.meta_atingida ?? ""}
-                  min={0}
-                  step="0.1"
-                  onChange={(e) =>
-                    handleChange(
-                      "meta_atingida",
-                      e.target.value ? Number(e.target.value) : null
-                    )
-                  }
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">% Super Meta</label>
-                <input
-                  className="form-input"
-                  type="number"
-                  value={form.super_meta ?? ""}
-                  min={0}
-                  step="0.1"
-                  onChange={(e) =>
-                    handleChange(
-                      "super_meta",
-                      e.target.value ? Number(e.target.value) : null
-                    )
-                  }
-                />
-              </div>
+            <div className="vtur-form-actions">
+              <AppButton type="submit" variant="primary" disabled={salvando} loading={salvando}>
+                {salvando
+                  ? "Salvando..."
+                  : editId
+                    ? "Salvar alteracoes"
+                    : "Criar template"}
+              </AppButton>
+              {editId && (
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  onClick={iniciarNovo}
+                >
+                  Cancelar
+                </AppButton>
+              )}
             </div>
-          )}
+          </form>
+        </AppCard>
 
-          {/* ESCALONÁVEL */}
-          {form.modo === "ESCALONAVEL" && (
-            <>
-              <h3 className="mt-2">Escalonamento 1</h3>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Ativado?</label>
-                  <select
-                    className="form-select"
-                    value={form.esc_ativado ? "true" : "false"}
-                    onChange={(e) =>
-                      handleChange("esc_ativado", e.target.value === "true")
-                    }
-                  >
-                    <option value="true">Sim</option>
-                    <option value="false">Não</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Inicial %</label>
-                  <input
-                    className="form-input"
-                    type="number"
-                  value={form.esc_inicial_pct ?? ""}
-                  min={0}
-                  step="0.1"
-                  onChange={(e) =>
-                    handleChange(
-                      "esc_inicial_pct",
-                      e.target.value ? Number(e.target.value) : null
-                    )
-                    }
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Final %</label>
-                  <input
-                    className="form-input"
-                    type="number"
-                  value={form.esc_final_pct ?? ""}
-                  min={0}
-                  step="0.1"
-                  onChange={(e) =>
-                    handleChange(
-                      "esc_final_pct",
-                      e.target.value ? Number(e.target.value) : null
-                    )
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Incremento % Meta</label>
-                  <input
-                    className="form-input"
-                    type="number"
-                  value={form.esc_incremento_pct_meta ?? ""}
-                  min={0}
-                  step="0.1"
-                  onChange={(e) =>
-                    handleChange(
-                      "esc_incremento_pct_meta",
-                      e.target.value ? Number(e.target.value) : null
-                    )
-                    }
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Incremento % Comissão</label>
-                  <input
-                    className="form-input"
-                    type="number"
-                  value={form.esc_incremento_pct_comissao ?? ""}
-                  min={0}
-                  step="0.1"
-                  onChange={(e) =>
-                    handleChange(
-                      "esc_incremento_pct_comissao",
-                      e.target.value ? Number(e.target.value) : null
-                    )
-                    }
-                  />
-                </div>
-              </div>
-
-              <h3 className="mt-2">Escalonamento 2</h3>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Ativado?</label>
-                  <select
-                    className="form-select"
-                    value={form.esc2_ativado ? "true" : "false"}
-                    onChange={(e) =>
-                      handleChange("esc2_ativado", e.target.value === "true")
-                    }
-                  >
-                    <option value="true">Sim</option>
-                    <option value="false">Não</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Inicial %</label>
-                  <input
-                    className="form-input"
-                    type="number"
-                  value={form.esc2_inicial_pct ?? ""}
-                  min={0}
-                  step="0.1"
-                  onChange={(e) =>
-                    handleChange(
-                      "esc2_inicial_pct",
-                      e.target.value ? Number(e.target.value) : null
-                    )
-                    }
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Final %</label>
-                  <input
-                    className="form-input"
-                    type="number"
-                  value={form.esc2_final_pct ?? ""}
-                  min={0}
-                  step="0.1"
-                  onChange={(e) =>
-                    handleChange(
-                      "esc2_final_pct",
-                      e.target.value ? Number(e.target.value) : null
-                    )
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Incremento % Meta</label>
-                  <input
-                    className="form-input"
-                    type="number"
-                  value={form.esc2_incremento_pct_meta ?? ""}
-                  min={0}
-                  step="0.1"
-                  onChange={(e) =>
-                    handleChange(
-                      "esc2_incremento_pct_meta",
-                      e.target.value ? Number(e.target.value) : null
-                    )
-                    }
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Incremento % Comissão</label>
-                  <input
-                    className="form-input"
-                    type="number"
-                  value={form.esc2_incremento_pct_comissao ?? ""}
-                  min={0}
-                  step="0.1"
-                  onChange={(e) =>
-                    handleChange(
-                      "esc2_incremento_pct_comissao",
-                      e.target.value ? Number(e.target.value) : null
-                    )
-                    }
-                  />
-                </div>
-              </div>
-            </>
-          )}
-
-          <div className="form-group mt-2">
-            <label className="form-label">Descrição</label>
-            <textarea
-              className="form-input"
-              rows={3}
-              value={form.descricao || ""}
-              onChange={(e) => handleChange("descricao", e.target.value)}
+        <AppToolbar
+          sticky
+          tone="config"
+          className="mb-3 list-toolbar-sticky"
+          title="Templates de comissao"
+          subtitle={resumoLista}
+        >
+          <div className="vtur-form-grid vtur-form-grid-2">
+            <AppField
+              label="Buscar template"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Busque por nome ou descricao..."
+              caption="Use a busca para localizar rapidamente modelos fixos e escalonaveis."
             />
           </div>
+        </AppToolbar>
 
-          {erro && (
-            <div className="card-base card-config mb-2">
-              <strong>Erro:</strong> {erro}
-            </div>
-          )}
-          {sucesso && (
-            <div className="card-base card-green mb-2">
-              {sucesso}
-            </div>
-          )}
-
-          <button type="submit" className="btn btn-primary" disabled={salvando}>
-            {salvando
-              ? "Salvando..."
-              : editId
-              ? "Salvar alterações"
-              : "Criar template"}
-          </button>
-
-          {editId && (
-            <button
-              type="button"
-              className="btn btn-light"
-              style={{ marginLeft: 8 }}
-              onClick={iniciarNovo}
-            >
-              Cancelar
-            </button>
-          )}
-        </form>
-      </div>
-
-      {/* BUSCA */}
-      <div className="card-base card-blue form-card mb-3">
-        <div className="form-group">
-          <label className="form-label">Buscar template</label>
-          <input
-            className="form-input"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Busque por nome ou descrição..."
-          />
-        </div>
-      </div>
-
-      {/* TABELA */}
-      <div
-        className="table-container overflow-x-auto"
-        style={{ maxHeight: "65vh", overflowY: "auto" }}
-      >
-        <table className="table-default table-header-blue table-mobile-cards min-w-[820px]">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Modo</th>
-              <th>Ativo</th>
-              <th className="th-actions">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {carregando && (
+        <AppCard
+          tone="config"
+          title="Biblioteca de templates"
+          subtitle="Reutilize configuracoes comerciais padronizadas para metas, faixas e politicas de comissionamento."
+        >
+          <DataTable
+            className="table-mobile-cards min-w-[820px]"
+            containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+            headers={
               <tr>
-                <td colSpan={4}>Carregando templates...</td>
+                <th>Nome</th>
+                <th>Modo</th>
+                <th>Ativo</th>
+                <th className="th-actions">Acoes</th>
               </tr>
-            )}
-
-            {!carregando && filtrados.length === 0 && (
-              <tr>
-                <td colSpan={4}>Nenhum template encontrado.</td>
+            }
+            loading={carregando}
+            loadingMessage="Carregando templates..."
+            empty={!carregando && filtrados.length === 0}
+            emptyMessage={
+              <EmptyState
+                title="Nenhum template encontrado"
+                description={
+                  busca.trim()
+                    ? "Refine o termo pesquisado para localizar templates cadastrados."
+                    : "Crie o primeiro template para padronizar o comissionamento das franquias."
+                }
+              />
+            }
+            colSpan={4}
+          >
+            {filtrados.map((t) => (
+              <tr key={t.id}>
+                <td data-label="Nome">{t.nome}</td>
+                <td data-label="Modo">{t.modo}</td>
+                <td data-label="Ativo">{t.ativo ? "Sim" : "Nao"}</td>
+                <td className="th-actions" data-label="Acoes">
+                  <TableActions
+                    actions={[
+                      {
+                        key: "edit",
+                        label: "Editar",
+                        onClick: () => iniciarEdicao(t),
+                        variant: "ghost",
+                      },
+                      {
+                        key: "delete",
+                        label: "Excluir",
+                        onClick: () => solicitarExclusao(t),
+                        variant: "danger",
+                      },
+                    ]}
+                  />
+                </td>
               </tr>
-            )}
-
-            {!carregando &&
-              filtrados.map((t) => (
-                <tr key={t.id}>
-                  <td data-label="Nome">{t.nome}</td>
-                  <td data-label="Modo">{t.modo}</td>
-                  <td data-label="Ativo">{t.ativo ? "Sim" : "Não"}</td>
-                  <td className="th-actions" data-label="Ações">
-                    <div className="action-buttons">
-                      <button
-                        className="btn-icon"
-                        title="Editar"
-                        onClick={() => iniciarEdicao(t)}
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        className="btn-icon btn-danger"
-                        title="Excluir"
-                        onClick={() => solicitarExclusao(t)}
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
+            ))}
+          </DataTable>
+        </AppCard>
+        <ConfirmDialog
+          open={Boolean(templateParaExcluir)}
+          title="Excluir template"
+          message={`Excluir ${templateParaExcluir?.nome || "este template"}?`}
+          confirmLabel="Excluir"
+          confirmVariant="danger"
+          onCancel={() => setTemplateParaExcluir(null)}
+          onConfirm={confirmarExclusao}
+        />
       </div>
-      <ConfirmDialog
-        open={Boolean(templateParaExcluir)}
-        title="Excluir template"
-        message={`Excluir ${templateParaExcluir?.nome || "este template"}?`}
-        confirmLabel="Excluir"
-        confirmVariant="danger"
-        onCancel={() => setTemplateParaExcluir(null)}
-        onConfirm={confirmarExclusao}
-      />
-    </div>
+    </AppPrimerProvider>
   );
 }

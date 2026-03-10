@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { NavList } from "@primer/react";
 import { logoutUsuario } from "../../lib/logout";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { MAPA_MODULOS, listarModulosComHeranca } from "../../config/modulos";
@@ -22,6 +23,8 @@ import {
   type MenuPrefsV1,
 } from "../../lib/menuPrefs";
 import IslandErrorBoundary from "../ui/IslandErrorBoundary";
+import AppButton from "../ui/primer/AppButton";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
 
 const FornecedoresIcon = () => (
@@ -843,20 +846,21 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       return (
         <div key={sectionKey}>
           <div className="sidebar-section-title">{sectionTitle(sectionKey)}</div>
-          <ul className="sidebar-nav">
+          <NavList className="vtur-sidebar-nav" aria-label={sectionTitle(sectionKey)}>
             {ordered.map((entry) => (
-              <li key={entry.key}>
-                <a
-                  className={`sidebar-link ${activePage === entry.active ? "active" : ""}`}
-                  href={entry.href}
-                  onClick={handleNavClick}
-                >
-                  <span>{entry.icon}</span>
-                  {entry.label}
-                </a>
-              </li>
+              <NavList.Item
+                key={entry.key}
+                href={entry.href}
+                style={liStyle(sectionKey, entry.key, ordered.indexOf(entry), Boolean(entry.locked))}
+                className="vtur-sidebar-nav-item"
+                aria-current={activePage === entry.active ? "page" : undefined}
+                onClick={handleNavClick}
+              >
+                <NavList.LeadingVisual>{entry.icon}</NavList.LeadingVisual>
+                {entry.label}
+              </NavList.Item>
             ))}
-          </ul>
+          </NavList>
         </div>
       );
     });
@@ -1208,6 +1212,38 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
 
   const sidebarId = "app-sidebar";
 
+  const renderSidebarLinks = (
+    title: string,
+    sectionKey: string,
+    items: Array<{
+      key: string;
+      href: string;
+      active?: string;
+      icon: React.ReactNode;
+      label: React.ReactNode;
+      locked?: boolean;
+    }>
+  ) => (
+    <div>
+      <div className="sidebar-section-title">{title}</div>
+      <NavList className="vtur-sidebar-nav" aria-label={title}>
+        {items.map((item, index) => (
+          <NavList.Item
+            key={item.key}
+            href={item.href}
+            className="vtur-sidebar-nav-item"
+            style={liStyle(sectionKey, item.key, index, Boolean(item.locked))}
+            aria-current={activePage === item.active ? "page" : undefined}
+            onClick={handleNavClick}
+          >
+            <NavList.LeadingVisual>{item.icon}</NavList.LeadingVisual>
+            {item.label}
+          </NavList.Item>
+        ))}
+      </NavList>
+    </div>
+  );
+
   const mobileNavItems: MobileNavItem[] = [];
   if (isTodoMobileNav) {
     mobileNavItems.push(
@@ -1297,7 +1333,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
   }
 
   return (
-    <>
+    <AppPrimerProvider>
       <button
         type="button"
         className="sidebar-mobile-trigger"
@@ -1391,107 +1427,59 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
 
         {/* PERFIL */}
         {menuUserId && !menuIsSystemAdmin && (
-          <div>
-            <div className="sidebar-section-title">Conta</div>
-            <ul className="sidebar-nav">
-              <li style={liStyle("conta", "perfil", 0, true)}>
-                <a
-                  className={`sidebar-link ${activePage === "perfil" ? "active" : ""}`}
-                  href="/perfil"
-                  onClick={handleNavClick}
-                >
-                  <span>👤</span>Perfil
-                </a>
-              </li>
-              <li style={liStyle("conta", "perfil-personalizar", 1, true)}>
-                <a
-                  className={`sidebar-link ${activePage === "perfil-personalizar" ? "active" : ""}`}
-                  href="/perfil/personalizar"
-                  onClick={handleNavClick}
-                >
-                  <span>🎛️</span>Personalizar
-                </a>
-              </li>
-            </ul>
-          </div>
+          renderSidebarLinks("Conta", "conta", [
+            { key: "perfil", href: "/perfil", active: "perfil", icon: "👤", label: "Perfil", locked: true },
+            {
+              key: "perfil-personalizar",
+              href: "/perfil/personalizar",
+              active: "perfil-personalizar",
+              icon: "🎛️",
+              label: "Personalizar",
+              locked: true,
+            },
+          ])
         )}
 
         {menuUserId && menuIsSystemAdmin && (
-          <div>
-            <div className="sidebar-section-title">Conta</div>
-            <ul className="sidebar-nav">
-              <li style={liStyle("conta", "perfil", 0, true)}>
-                <a
-                  className={`sidebar-link ${activePage === "perfil" ? "active" : ""}`}
-                  href="/perfil"
-                  onClick={handleNavClick}
-                >
-                  <span>👤</span>Perfil
-                </a>
-              </li>
-              <li style={liStyle("conta", "perfil-personalizar", 1, true)}>
-                <a
-                  className={`sidebar-link ${activePage === "perfil-personalizar" ? "active" : ""}`}
-                  href="/perfil/personalizar"
-                  onClick={handleNavClick}
-                >
-                  <span>🎛️</span>Personalizar
-                </a>
-              </li>
-            </ul>
-          </div>
+          renderSidebarLinks("Conta", "conta", [
+            { key: "perfil", href: "/perfil", active: "perfil", icon: "👤", label: "Perfil", locked: true },
+            {
+              key: "perfil-personalizar",
+              href: "/perfil/personalizar",
+              active: "perfil-personalizar",
+              icon: "🎛️",
+              label: "Personalizar",
+              locked: true,
+            },
+          ])
         )}
 
         {menuUserId && (
           <div>
-            <ul className="sidebar-nav">
-              <li>
-                <button
-                  type="button"
-                  className="sidebar-link"
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    width: "100%",
-                    textAlign: "left",
-                  }}
-                  onClick={handleRefreshPermissionsNow}
-                  disabled={updatingPerms}
-                >
-                  <span>🔄</span>
-                  {updatingPerms ? "Atualizando permissoes..." : "Atualizar permissoes"}
-                </button>
-              </li>
-            </ul>
+            <div className="vtur-sidebar-action-group">
+              <AppButton
+                type="button"
+                variant="secondary"
+                block
+                onClick={handleRefreshPermissionsNow}
+                disabled={updatingPerms}
+              >
+                {updatingPerms ? "🔄 Atualizando permissoes..." : "🔄 Atualizar permissoes"}
+              </AppButton>
+            </div>
             {permSyncMsg && (
-              <small style={{ display: "block", opacity: 0.85, margin: "6px 0 0 12px" }}>
-                {permSyncMsg}
-              </small>
+              <small className="vtur-sidebar-action-note">{permSyncMsg}</small>
             )}
           </div>
         )}
 
         {/* LOGOUT */}
         <div style={{ marginTop: 20 }}>
-          <ul className="sidebar-nav">
-            <li>
-              <button
-                type="button"
-                className="sidebar-link"
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  width: "100%",
-                  textAlign: "left",
-                }}
-                onClick={handleLogout}
-                disabled={saindo}
-              >
-                <span>🚪</span>
-                {saindo ? "Saindo..." : "Sair"}
-              </button>
-            </li>
-          </ul>
+          <div className="vtur-sidebar-action-group">
+            <AppButton type="button" variant="danger" block onClick={handleLogout} disabled={saindo}>
+              {saindo ? "🚪 Saindo..." : "🚪 Sair"}
+            </AppButton>
+          </div>
         </div>
 
       </aside>
@@ -1540,6 +1528,6 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
           </div>
         </div>
       )}
-    </>
+    </AppPrimerProvider>
   );
 }

@@ -8,10 +8,14 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import DataTable from "../ui/DataTable";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import TableActions from "../ui/TableActions";
-import SearchInput from "../ui/SearchInput";
 import EmptyState from "../ui/EmptyState";
 import AlertMessage from "../ui/AlertMessage";
 import { ToastStack, useToastQueue } from "../ui/Toast";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type Pais = {
   id: string;
@@ -97,6 +101,11 @@ export default function PaisesIsland() {
     const termo = normalizeText(busca);
     return paises.filter((p) => normalizeText(p.nome).includes(termo));
   }, [busca, paises]);
+  const resumoLista = busca.trim()
+    ? `${paisesFiltrados.length} pais(es) encontrados para a busca atual.`
+    : carregouTodos
+      ? `${paisesFiltrados.length} pais(es) carregados para consulta completa.`
+      : "Ultimos 5 paises cadastrados. Digite na busca para consultar todos.";
 
   function handleChange(campo: keyof FormState, valor: string) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
@@ -211,184 +220,181 @@ export default function PaisesIsland() {
   }
 
   return (
-    <div className="paises-page">
-      {!mostrarFormulario && (
-        <div
-          className="card-base mb-3 list-toolbar-sticky"
-          style={{ background: "#f5f3ff", borderColor: "#ddd6fe" }}
-        >
-          <div
-            className="form-row mobile-stack"
-            style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
-          >
-            <div style={{ flex: "1 1 320px" }}>
-              <SearchInput
-                label="Buscar país"
-                value={busca}
-                onChange={setBusca}
-                placeholder="Digite parte do nome..."
-              />
-            </div>
-            {!modoSomenteLeitura && (
-              <div className="form-group" style={{ alignItems: "flex-end" }}>
-                <button
+    <AppPrimerProvider>
+      <div className="paises-page">
+        {!mostrarFormulario && (
+          <AppToolbar
+            sticky
+            tone="config"
+            className="mb-3 list-toolbar-sticky"
+            title="Consulta de paises"
+            subtitle={resumoLista}
+            actions={
+              !modoSomenteLeitura ? (
+                <AppButton
                   type="button"
-                  className="btn btn-primary w-full sm:w-auto"
+                  variant="primary"
                   onClick={abrirFormulario}
                   disabled={mostrarFormulario}
                 >
-                  Adicionar país
-                </button>
+                  Adicionar pais
+                </AppButton>
+              ) : null
+            }
+          >
+            <div className="vtur-toolbar-grid">
+              <AppField
+                label="Buscar pais"
+                value={busca}
+                onChange={(event) => setBusca(event.target.value)}
+                placeholder="Digite parte do nome..."
+              />
+            </div>
+          </AppToolbar>
+        )}
+
+        {mostrarFormulario && (
+          <AppCard
+            className="form-card mb-3"
+            title={editandoId ? "Editar pais" : "Novo pais"}
+            subtitle="Mantenha o cadastro de paises padronizado para rotas, destinos e operacoes do CRM."
+            tone="info"
+          >
+            <form onSubmit={salvar}>
+              <div className="vtur-form-grid vtur-form-grid-3">
+                <AppField
+                label="Nome do pais *"
+                value={form.nome}
+                onChange={(e) => handleChange("nome", e.target.value)}
+                onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
+                placeholder="Ex: Brasil, Estados Unidos, Franca..."
+                validation={!form.nome.trim() && erro ? "Nome e obrigatorio." : undefined}
+                />
+                <AppField
+                label="Codigo ISO"
+                value={form.codigo_iso}
+                onChange={(e) => handleChange("codigo_iso", e.target.value)}
+                placeholder="Ex: BR, US, FR..."
+                />
+                <AppField
+                label="Continente"
+                value={form.continente}
+                onChange={(e) => handleChange("continente", e.target.value)}
+                placeholder="Ex: America do Sul, Europa..."
+                />
               </div>
-            )}
+
+              <div className="vtur-form-actions mt-2 mobile-stack-buttons">
+                <AppButton
+                  type="submit"
+                  variant="primary"
+                  disabled={salvando || modoSomenteLeitura}
+                  loading={salvando}
+                >
+                  {salvando ? "Salvando..." : "Salvar pais"}
+                </AppButton>
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  onClick={fecharFormulario}
+                  disabled={salvando}
+                >
+                  Cancelar
+                </AppButton>
+              </div>
+            </form>
+          </AppCard>
+        )}
+
+        {!mostrarFormulario && !carregouTodos && (
+          <AlertMessage variant="info" className="mb-3">
+            Ultimos paises cadastrados (5). Digite na busca para consultar todos.
+          </AlertMessage>
+        )}
+
+        {!mostrarFormulario && erro && (
+          <div className="mb-3">
+            <AlertMessage variant="error">{erro}</AlertMessage>
           </div>
-        </div>
-      )}
+        )}
 
-      {mostrarFormulario && (
-        <div className="card-base card-blue form-card mb-3">
-          <form onSubmit={salvar}>
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Nome do país *</label>
-                <input
-                  className="form-input"
-                  value={form.nome}
-                  onChange={(e) => handleChange("nome", e.target.value)}
-                  onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
-                  placeholder="Ex: Brasil, Estados Unidos, França..."
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Código ISO</label>
-                <input
-                  className="form-input"
-                  value={form.codigo_iso}
-                  onChange={(e) => handleChange("codigo_iso", e.target.value)}
-                  placeholder="Ex: BR, US, FR..."
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Continente</label>
-                <input
-                  className="form-input"
-                  value={form.continente}
-                  onChange={(e) => handleChange("continente", e.target.value)}
-                  placeholder="Ex: América do Sul, Europa..."
-                />
-              </div>
-            </div>
+        {!mostrarFormulario && (
+          <DataTable
+            shellClassName="mb-3"
+            className="table-default table-header-blue table-mobile-cards min-w-[520px]"
+            containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+            headers={
+              <tr>
+                <th>Nome</th>
+                <th>Código ISO</th>
+                <th>Continente</th>
+                <th>Criado em</th>
+                <th className="th-actions">Ações</th>
+              </tr>
+            }
+            loading={loading}
+            loadingMessage="Carregando paises..."
+            empty={!loading && paisesFiltrados.length === 0}
+            emptyMessage={
+              <EmptyState
+                title="Nenhum pais encontrado"
+                description={
+                  busca.trim()
+                    ? "Tente ajustar a busca ou cadastre um novo pais."
+                    : "Cadastre um novo pais para comecar."
+                }
+              />
+            }
+            colSpan={5}
+          >
+            {paisesFiltrados.map((p) => (
+              <tr key={p.id}>
+                <td data-label="Nome">{p.nome}</td>
+                <td data-label="Código ISO">{p.codigo_iso || "-"}</td>
+                <td data-label="Continente">{p.continente || "-"}</td>
+                <td data-label="Criado em">
+                  {p.created_at ? formatDateBR(p.created_at) : "-"}
+                </td>
+                <td className="th-actions" data-label="Ações">
+                  <TableActions
+                    show={!modoSomenteLeitura}
+                    actions={[
+                      {
+                        key: "edit",
+                        label: "Editar",
+                        onClick: () => iniciarEdicao(p),
+                      },
+                      ...(podeExcluir
+                        ? [
+                            {
+                              key: "delete",
+                              label: "Excluir",
+                              onClick: () => solicitarExclusao(p),
+                              variant: "danger" as const,
+                              disabled: excluindoId === p.id,
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
+                </td>
+              </tr>
+            ))}
+          </DataTable>
+        )}
 
-            <div className="mt-2 mobile-stack-buttons" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={salvando || modoSomenteLeitura}
-              >
-                {salvando ? "Salvando..." : "Salvar país"}
-              </button>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={fecharFormulario}
-                disabled={salvando}
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {!mostrarFormulario && !carregouTodos && (
-        <div className="card-base card-config mb-3">
-          Últimos Países Cadastrados (5). Digite na busca para consultar todos.
-        </div>
-      )}
-
-      {!mostrarFormulario && erro && (
-        <div className="mb-3">
-          <AlertMessage variant="error">{erro}</AlertMessage>
-        </div>
-      )}
-
-      {!mostrarFormulario && (
-        <DataTable
-          className="table-default table-header-blue table-mobile-cards min-w-[520px]"
-          containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
-          headers={
-            <tr>
-              <th>Nome</th>
-              <th>Código ISO</th>
-              <th>Continente</th>
-              <th>Criado em</th>
-              <th className="th-actions">Ações</th>
-            </tr>
-          }
-          loading={loading}
-          loadingMessage="Carregando países..."
-          empty={!loading && paisesFiltrados.length === 0}
-          emptyMessage={
-            <EmptyState
-              title="Nenhum país encontrado"
-              description={
-                busca.trim()
-                  ? "Tente ajustar a busca ou cadastre um novo país."
-                  : "Cadastre um novo país para começar."
-              }
-            />
-          }
-          colSpan={5}
-        >
-          {paisesFiltrados.map((p) => (
-            <tr key={p.id}>
-              <td data-label="Nome">{p.nome}</td>
-              <td data-label="Código ISO">{p.codigo_iso || "-"}</td>
-              <td data-label="Continente">{p.continente || "-"}</td>
-              <td data-label="Criado em">
-                {p.created_at ? formatDateBR(p.created_at) : "-"}
-              </td>
-              <td className="th-actions" data-label="Ações">
-                <TableActions
-                  show={!modoSomenteLeitura}
-                  actions={[
-                    {
-                      key: "edit",
-                      label: "Editar",
-                      onClick: () => iniciarEdicao(p),
-                      icon: "✏️",
-                    },
-                    ...(podeExcluir
-                      ? [
-                          {
-                            key: "delete",
-                            label: "Excluir",
-                            onClick: () => solicitarExclusao(p),
-                            icon: excluindoId === p.id ? "..." : "🗑️",
-                            variant: "danger" as const,
-                            disabled: excluindoId === p.id,
-                          },
-                        ]
-                      : []),
-                  ]}
-                />
-              </td>
-            </tr>
-          ))}
-        </DataTable>
-      )}
-
-      <ConfirmDialog
-        open={Boolean(paisParaExcluir)}
-        title="Excluir país"
-        message={`Tem certeza que deseja excluir ${paisParaExcluir?.nome || "este país"}?`}
-        confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
-        confirmVariant="danger"
-        confirmDisabled={Boolean(excluindoId)}
-        onCancel={() => setPaisParaExcluir(null)}
-        onConfirm={confirmarExclusao}
-      />
-      <ToastStack toasts={toasts} onDismiss={dismissToast} />
-    </div>
+        <ConfirmDialog
+          open={Boolean(paisParaExcluir)}
+          title="Excluir país"
+          message={`Tem certeza que deseja excluir ${paisParaExcluir?.nome || "este país"}?`}
+          confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
+          confirmVariant="danger"
+          confirmDisabled={Boolean(excluindoId)}
+          onCancel={() => setPaisParaExcluir(null)}
+          onConfirm={confirmarExclusao}
+        />
+        <ToastStack toasts={toasts} onDismiss={dismissToast} />
+      </div>
+    </AppPrimerProvider>
   );
 }

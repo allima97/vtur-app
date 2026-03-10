@@ -3,7 +3,16 @@ import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { registrarLog } from "../../lib/logs";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import DataTable from "../ui/DataTable";
 import ConfirmDialog from "../ui/ConfirmDialog";
+import AlertMessage from "../ui/AlertMessage";
+import EmptyState from "../ui/EmptyState";
+import TableActions from "../ui/TableActions";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type Rule = {
   id: string;
@@ -37,6 +46,10 @@ const emptyRule = {
   ativo: true,
   tiers: [] as Tier[],
 };
+
+function parseNumberOrZero(value: string) {
+  return value === "" ? 0 : Number(value);
+}
 
 export default function CommissionRulesIsland() {
   const { can, loading: loadingPerms, ready } = usePermissoesStore();
@@ -296,328 +309,358 @@ export default function CommissionRulesIsland() {
   }
 
   if (!podeVer) {
-    return <div className="card-base card-config">Acesso negado ao módulo de Parâmetros.</div>;
+    return (
+      <AppPrimerProvider>
+        <AppCard tone="config">
+          <strong>Acesso negado ao modulo de Parametros.</strong>
+        </AppCard>
+      </AppPrimerProvider>
+    );
   }
 
   const regrasExibidas = rules.slice(0, 5);
+  const resumoLista = `${rules.length} regra(s) cadastrada(s). Exibindo ${regrasExibidas.length} item(ns) na listagem principal.`;
 
   return (
-    <div className="page-content-wrap regras-comissao-page">
-      {!mostrarFormulario && (
-        <div className="card-base mb-4 list-toolbar-sticky">
-          <div
-            className="form-row mobile-stack"
-            style={{
-              gap: 12,
-              gridTemplateColumns: "minmax(240px, 1fr) auto",
-              alignItems: "center",
-            }}
-          >
-            <div>
-              <h3 className="card-title" style={{ margin: 0 }}>
-                Regras cadastradas
-              </h3>
-            </div>
-            {podeEditar && (
-              <div className="form-group" style={{ alignItems: "flex-end" }}>
-                <button
+    <AppPrimerProvider>
+      <div className="page-content-wrap regras-comissao-page">
+        {!mostrarFormulario && (
+          <AppToolbar
+            sticky
+            tone="config"
+            className="mb-4 list-toolbar-sticky"
+            title="Regras de comissao"
+            subtitle={resumoLista}
+            actions={
+              podeEditar ? (
+                <AppButton
                   type="button"
-                  className="btn btn-primary w-full sm:w-auto"
+                  variant="primary"
                   onClick={abrirFormularioRegra}
                   disabled={mostrarFormulario}
                 >
                   Adicionar regra
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {!mostrarFormulario && erro && (
-        <div className="card-base card-config mb-3">
-          <strong>{erro}</strong>
-        </div>
-      )}
-      {mostrarFormulario && erroValidacao && (
-        <div className="card-base card-config mb-3">
-          <strong>{erroValidacao}</strong>
-        </div>
-      )}
-
-      {mostrarFormulario && (
-        <div className="card-base form-card">
-          <form onSubmit={salvar}>
-            <div className="form-row" style={{ marginTop: 12 }}>
-          <div className="form-group">
-            <label className="form-label">Nome *</label>
-            <input
-              className="form-input"
-              value={form.nome}
-              onChange={(e) => handleChange("nome", e.target.value)}
-              required
-              disabled={!podeEditar}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Tipo</label>
-            <select
-              className="form-select"
-              value={form.tipo}
-              onChange={(e) =>
-                handleChange("tipo", e.target.value === "ESCALONAVEL" ? "ESCALONAVEL" : "GERAL")
-              }
-              disabled={!podeEditar}
-            >
-              <option value="GERAL">Geral (percentuais fixos)</option>
-              <option value="ESCALONAVEL">Escalonável (faixas)</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Meta não atingida (%)</label>
-            <input
-              className="form-input"
-              type="number"
-              step="0.01"
-              value={form.meta_nao_atingida}
-              onChange={(e) => handleChange("meta_nao_atingida", Number(e.target.value))}
-              disabled={!podeEditar}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Meta atingida (%)</label>
-            <input
-              className="form-input"
-              type="number"
-              step="0.01"
-              value={form.meta_atingida}
-              onChange={(e) => handleChange("meta_atingida", Number(e.target.value))}
-              disabled={!podeEditar}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Super meta (%)</label>
-            <input
-              className="form-input"
-              type="number"
-              step="0.01"
-              value={form.super_meta}
-              onChange={(e) => handleChange("super_meta", Number(e.target.value))}
-              disabled={!podeEditar}
-            />
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Descrição</label>
-          <textarea
-            className="form-input"
-            rows={2}
-            value={form.descricao || ""}
-            onChange={(e) => handleChange("descricao", e.target.value)}
-            disabled={!podeEditar}
+                </AppButton>
+              ) : undefined
+            }
           />
-        </div>
-
-        {form.tipo === "ESCALONAVEL" && (
-          <div className="card-base card-purple mb-2" style={{ marginTop: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h4 style={{ margin: 0 }}>Faixas (PRE/POS)</h4>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button type="button" className="btn btn-primary" onClick={() => addTier("PRE")} disabled={!podeEditar}>
-                  + Faixa PRE
-                </button>
-                <button type="button" className="btn btn-primary" onClick={() => addTier("POS")} disabled={!podeEditar}>
-                  + Faixa POS
-                </button>
-              </div>
-            </div>
-            <div className="table-container overflow-x-auto">
-              <table className="table-default table-header-blue table-mobile-cards min-w-[800px]">
-                <thead>
-                  <tr>
-                    <th>Faixa</th>
-                    <th>De (%)</th>
-                    <th>Até (%)</th>
-                    <th>Inc. Meta (%)</th>
-                    <th>Inc. Comissão (%)</th>
-                    <th>Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(!form.tiers || form.tiers.length === 0) && (
-                    <tr>
-                      <td colSpan={6}>Nenhuma faixa adicionada.</td>
-                    </tr>
-                  )}
-                  {form.tiers?.map((t, idx) => (
-                    <tr key={idx}>
-                      <td data-label="Faixa">{t.faixa}</td>
-                      <td data-label="De (%)">
-                        <input
-                          className="form-input"
-                          type="number"
-                          step="0.01"
-                          value={t.de_pct}
-                          onChange={(e) => updateTier(idx, "de_pct", Number(e.target.value))}
-                          disabled={!podeEditar}
-                        />
-                      </td>
-                      <td data-label="Até (%)">
-                        <input
-                          className="form-input"
-                          type="number"
-                          step="0.01"
-                          value={t.ate_pct}
-                          onChange={(e) => updateTier(idx, "ate_pct", Number(e.target.value))}
-                          disabled={!podeEditar}
-                        />
-                      </td>
-                      <td data-label="Inc. Meta (%)">
-                        <input
-                          className="form-input"
-                          type="number"
-                          step="0.01"
-                          value={t.inc_pct_meta}
-                          onChange={(e) => updateTier(idx, "inc_pct_meta", Number(e.target.value))}
-                          disabled={!podeEditar}
-                        />
-                      </td>
-                      <td data-label="Inc. Comissão (%)">
-                        <input
-                          className="form-input"
-                          type="number"
-                          step="0.01"
-                          value={t.inc_pct_comissao}
-                          onChange={(e) => updateTier(idx, "inc_pct_comissao", Number(e.target.value))}
-                          disabled={!podeEditar}
-                        />
-                      </td>
-                      <td className="th-actions" data-label="Ações">
-                        <div className="action-buttons">
-                          <button
-                            type="button"
-                            className="btn-icon btn-danger"
-                            onClick={() => removeTier(idx)}
-                            disabled={!podeEditar}
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
         )}
 
-        <div className="mobile-stack-buttons mt-2">
-          <button className="btn btn-primary" type="submit" disabled={!podeEditar || salvando}>
-            {salvando ? "Salvando..." : editId ? "Salvar alterações" : "Salvar regra"}
-          </button>
-          <button
-            type="button"
-            className="btn btn-light"
-            onClick={fecharFormularioRegra}
-            disabled={salvando}
-          >
-            Cancelar
-          </button>
-        </div>
-          </form>
-        </div>
-      )}
+        {!mostrarFormulario && erro && (
+          <AlertMessage variant="error" className="mb-3">
+            <strong>{erro}</strong>
+          </AlertMessage>
+        )}
+        {mostrarFormulario && erro && (
+          <AlertMessage variant="error" className="mb-3">
+            <strong>{erro}</strong>
+          </AlertMessage>
+        )}
+        {mostrarFormulario && erroValidacao && (
+          <AlertMessage variant="error" className="mb-3">
+            <strong>{erroValidacao}</strong>
+          </AlertMessage>
+        )}
 
-      {!mostrarFormulario && (
-        <div
-          className="table-container overflow-x-auto"
-          style={{ maxHeight: "65vh", overflowY: "auto" }}
-        >
-            <table className="table-default table-header-blue table-mobile-cards min-w-[900px]">
-              <thead>
+        {mostrarFormulario && (
+          <AppCard
+            tone="info"
+            title={editId ? "Editar regra de comissao" : "Nova regra de comissao"}
+            subtitle="Defina percentuais fixos ou faixas escalonaveis para padronizar o calculo comercial."
+          >
+            <form onSubmit={salvar}>
+              <div className="vtur-form-grid vtur-form-grid-4" style={{ marginTop: 12 }}>
+                <AppField
+                  label="Nome *"
+                  value={form.nome}
+                  onChange={(e) => handleChange("nome", e.target.value)}
+                  required
+                  disabled={!podeEditar}
+                  wrapperClassName="md:col-span-2"
+                />
+                <AppField
+                  as="select"
+                  label="Tipo"
+                  value={form.tipo}
+                  onChange={(e) =>
+                    handleChange("tipo", e.target.value === "ESCALONAVEL" ? "ESCALONAVEL" : "GERAL")
+                  }
+                  disabled={!podeEditar}
+                  options={[
+                    { value: "GERAL", label: "Geral (percentuais fixos)" },
+                    { value: "ESCALONAVEL", label: "Escalonavel (faixas)" },
+                  ]}
+                />
+                <AppField
+                  type="number"
+                  step="0.01"
+                  label="Meta nao atingida (%)"
+                  value={form.meta_nao_atingida}
+                  onChange={(e) => handleChange("meta_nao_atingida", parseNumberOrZero(e.target.value))}
+                  disabled={!podeEditar}
+                />
+                <AppField
+                  type="number"
+                  step="0.01"
+                  label="Meta atingida (%)"
+                  value={form.meta_atingida}
+                  onChange={(e) => handleChange("meta_atingida", parseNumberOrZero(e.target.value))}
+                  disabled={!podeEditar}
+                />
+                <AppField
+                  type="number"
+                  step="0.01"
+                  label="Super meta (%)"
+                  value={form.super_meta}
+                  onChange={(e) => handleChange("super_meta", parseNumberOrZero(e.target.value))}
+                  disabled={!podeEditar}
+                />
+              </div>
+
+              <div style={{ marginTop: 16 }}>
+                <AppField
+                  as="textarea"
+                  label="Descricao"
+                  rows={3}
+                  value={form.descricao || ""}
+                  onChange={(e) => handleChange("descricao", e.target.value)}
+                  disabled={!podeEditar}
+                />
+              </div>
+
+              {form.tipo === "ESCALONAVEL" && (
+                <AppCard
+                  className="vtur-sales-embedded-card"
+                  tone="config"
+                  title="Faixas escalonaveis"
+                  subtitle="Monte faixas PRE e POS sem sobreposicao de intervalos."
+                  actions={
+                    <div className="vtur-form-actions" style={{ marginTop: 0 }}>
+                      <AppButton
+                        type="button"
+                        variant="primary"
+                        onClick={() => addTier("PRE")}
+                        disabled={!podeEditar}
+                      >
+                        + Faixa PRE
+                      </AppButton>
+                      <AppButton
+                        type="button"
+                        variant="primary"
+                        onClick={() => addTier("POS")}
+                        disabled={!podeEditar}
+                      >
+                        + Faixa POS
+                      </AppButton>
+                    </div>
+                  }
+                >
+                  <DataTable
+                    className="table-mobile-cards min-w-[800px]"
+                    headers={
+                      <tr>
+                        <th>Faixa</th>
+                        <th>De (%)</th>
+                        <th>Ate (%)</th>
+                        <th>Inc. Meta (%)</th>
+                        <th>Inc. Comissao (%)</th>
+                        <th>Acoes</th>
+                      </tr>
+                    }
+                    loading={false}
+                    empty={!form.tiers || form.tiers.length === 0}
+                    emptyMessage={
+                      <EmptyState
+                        title="Nenhuma faixa adicionada"
+                        description="Adicione ao menos uma faixa PRE ou POS para regras escalonaveis."
+                      />
+                    }
+                    colSpan={6}
+                  >
+                    {form.tiers?.map((t, idx) => (
+                      <tr key={idx}>
+                        <td data-label="Faixa">{t.faixa}</td>
+                        <td data-label="De (%)">
+                          <AppField
+                            label="De (%)"
+                            type="number"
+                            step="0.01"
+                            value={t.de_pct}
+                            onChange={(e) => updateTier(idx, "de_pct", parseNumberOrZero(e.target.value))}
+                            disabled={!podeEditar}
+                            wrapperClassName="mb-0"
+                          />
+                        </td>
+                        <td data-label="Ate (%)">
+                          <AppField
+                            label="Ate (%)"
+                            type="number"
+                            step="0.01"
+                            value={t.ate_pct}
+                            onChange={(e) => updateTier(idx, "ate_pct", parseNumberOrZero(e.target.value))}
+                            disabled={!podeEditar}
+                            wrapperClassName="mb-0"
+                          />
+                        </td>
+                        <td data-label="Inc. Meta (%)">
+                          <AppField
+                            label="Inc. Meta (%)"
+                            type="number"
+                            step="0.01"
+                            value={t.inc_pct_meta}
+                            onChange={(e) => updateTier(idx, "inc_pct_meta", parseNumberOrZero(e.target.value))}
+                            disabled={!podeEditar}
+                            wrapperClassName="mb-0"
+                          />
+                        </td>
+                        <td data-label="Inc. Comissao (%)">
+                          <AppField
+                            label="Inc. Comissao (%)"
+                            type="number"
+                            step="0.01"
+                            value={t.inc_pct_comissao}
+                            onChange={(e) => updateTier(idx, "inc_pct_comissao", parseNumberOrZero(e.target.value))}
+                            disabled={!podeEditar}
+                            wrapperClassName="mb-0"
+                          />
+                        </td>
+                        <td className="th-actions" data-label="Acoes">
+                          <TableActions
+                            show={podeEditar}
+                            actions={[
+                              {
+                                key: `remove-${idx}`,
+                                label: "Excluir faixa",
+                                onClick: () => removeTier(idx),
+                                variant: "danger",
+                                disabled: !podeEditar,
+                              },
+                            ]}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </DataTable>
+                </AppCard>
+              )}
+
+              <div className="vtur-form-actions mt-2">
+                <AppButton type="submit" variant="primary" disabled={!podeEditar || salvando}>
+                  {salvando ? "Salvando..." : editId ? "Salvar alteracoes" : "Salvar regra"}
+                </AppButton>
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  onClick={fecharFormularioRegra}
+                  disabled={salvando}
+                >
+                  Cancelar
+                </AppButton>
+              </div>
+            </form>
+          </AppCard>
+        )}
+
+        {!mostrarFormulario && (
+          <AppCard
+            tone="config"
+            title="Regras cadastradas"
+            subtitle="Consulte, revise e mantenha as regras gerais e escalonaveis ativas para a operacao."
+          >
+            <DataTable
+              className="table-mobile-cards min-w-[900px]"
+              containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+              headers={
                 <tr>
                   <th>Nome</th>
                   <th>Tipo</th>
                   <th>Ativo</th>
                   <th>Faixas</th>
-                  <th>Ações</th>
+                  <th>Acoes</th>
                 </tr>
-              </thead>
-              <tbody>
-                {loading && (
-                  <tr>
-                    <td colSpan={5}>Carregando...</td>
-                  </tr>
-                )}
-                {!loading && regrasExibidas.length === 0 && (
-                  <tr>
-                    <td colSpan={5}>Nenhuma regra cadastrada.</td>
-                  </tr>
-                )}
-              {!loading &&
-                regrasExibidas.map((r) => (
-                  <tr key={r.id}>
-                    <td data-label="Nome">{r.nome}</td>
-                    <td data-label="Tipo">{r.tipo}</td>
-                    <td data-label="Ativo">{r.ativo ? "Sim" : "Não"}</td>
-                    <td data-label="Faixas">{r.commission_tier?.length || 0}</td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        <button className="btn-icon" onClick={() => editar(r)} title="Editar">
-                          ✏️
-                        </button>
-                        <button
-                          className="btn-icon btn-danger"
-                          onClick={() => solicitarInativacao(r)}
-                          disabled={!podeEditar}
-                          title="Inativar"
-                        >
-                          ⏸️
-                        </button>
-                        <button
-                          className="btn-icon btn-danger"
-                          onClick={() => solicitarExclusao(r)}
-                          disabled={!podeEditar}
-                          title="Excluir"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-        </div>
-      )}
-      <ConfirmDialog
-        open={Boolean(regraParaInativar)}
-        title="Inativar regra"
-        message={`Inativar ${regraParaInativar?.nome || "esta regra"}?`}
-        confirmLabel="Inativar"
-        confirmVariant="danger"
-        onCancel={() => setRegraParaInativar(null)}
-        onConfirm={async () => {
-          if (!regraParaInativar) return;
-          await inativar(regraParaInativar.id);
-          setRegraParaInativar(null);
-        }}
-      />
-      <ConfirmDialog
-        open={Boolean(regraParaExcluir)}
-        title="Excluir regra"
-        message={`Excluir permanentemente ${regraParaExcluir?.nome || "esta regra"}?`}
-        confirmLabel="Excluir"
-        confirmVariant="danger"
-        onCancel={() => setRegraParaExcluir(null)}
-        onConfirm={async () => {
-          if (!regraParaExcluir) return;
-          await excluirRegra(regraParaExcluir.id);
-          setRegraParaExcluir(null);
-        }}
-      />
-    </div>
+              }
+              loading={loading}
+              loadingMessage="Carregando regras..."
+              empty={!loading && regrasExibidas.length === 0}
+              emptyMessage={
+                <EmptyState
+                  title="Nenhuma regra cadastrada"
+                  description="Crie a primeira regra para estruturar percentuais fixos e faixas escalonaveis."
+                  action={
+                    podeEditar ? (
+                      <AppButton type="button" variant="primary" onClick={abrirFormularioRegra}>
+                        Adicionar regra
+                      </AppButton>
+                    ) : undefined
+                  }
+                />
+              }
+              colSpan={5}
+            >
+              {regrasExibidas.map((r) => (
+                <tr key={r.id}>
+                  <td data-label="Nome">{r.nome}</td>
+                  <td data-label="Tipo">{r.tipo}</td>
+                  <td data-label="Ativo">{r.ativo ? "Sim" : "Nao"}</td>
+                  <td data-label="Faixas">{r.commission_tier?.length || 0}</td>
+                  <td className="th-actions" data-label="Acoes">
+                    <TableActions
+                      actions={[
+                        {
+                          key: `edit-${r.id}`,
+                          label: "Editar",
+                          onClick: () => editar(r),
+                          variant: "ghost",
+                        },
+                        {
+                          key: `pause-${r.id}`,
+                          label: "Inativar",
+                          onClick: () => solicitarInativacao(r),
+                          variant: "danger",
+                          disabled: !podeEditar,
+                        },
+                        {
+                          key: `delete-${r.id}`,
+                          label: "Excluir",
+                          onClick: () => solicitarExclusao(r),
+                          variant: "danger",
+                          disabled: !podeEditar,
+                        },
+                      ]}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </DataTable>
+          </AppCard>
+        )}
+        <ConfirmDialog
+          open={Boolean(regraParaInativar)}
+          title="Inativar regra"
+          message={`Inativar ${regraParaInativar?.nome || "esta regra"}?`}
+          confirmLabel="Inativar"
+          confirmVariant="danger"
+          onCancel={() => setRegraParaInativar(null)}
+          onConfirm={async () => {
+            if (!regraParaInativar) return;
+            await inativar(regraParaInativar.id);
+            setRegraParaInativar(null);
+          }}
+        />
+        <ConfirmDialog
+          open={Boolean(regraParaExcluir)}
+          title="Excluir regra"
+          message={`Excluir permanentemente ${regraParaExcluir?.nome || "esta regra"}?`}
+          confirmLabel="Excluir"
+          confirmVariant="danger"
+          onCancel={() => setRegraParaExcluir(null)}
+          onConfirm={async () => {
+            if (!regraParaExcluir) return;
+            await excluirRegra(regraParaExcluir.id);
+            setRegraParaExcluir(null);
+          }}
+        />
+      </div>
+    </AppPrimerProvider>
   );
 }

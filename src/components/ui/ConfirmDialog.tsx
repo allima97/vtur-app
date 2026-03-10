@@ -1,4 +1,5 @@
 import React from "react";
+import AppDialog from "./primer/AppDialog";
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -29,41 +30,21 @@ export default function ConfirmDialog({
   onCancel,
   children,
 }: ConfirmDialogProps) {
-  if (!open) return null;
-
-  const confirmClass =
-    confirmVariant === "danger" ? "btn btn-danger" : "btn btn-primary";
-
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" onClick={onCancel}>
-      <div
-        className="modal-panel"
-        style={{ maxWidth: 520, width: "92vw" }}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="modal-header">
-          <div className="modal-title" style={titleColor ? { color: titleColor, fontWeight: 800 } : undefined}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-              {icon}
-              {title}
-            </span>
-          </div>
-          <button className="btn-ghost" onClick={onCancel} aria-label="Fechar">
-            x
-          </button>
-        </div>
-        <div className="modal-body">
-          {children ? children : <p>{message}</p>}
-        </div>
-        <div className="modal-footer">
-          <button className="btn btn-light" onClick={onCancel}>
-            {cancelLabel}
-          </button>
-          <button className={confirmClass} onClick={onConfirm} disabled={confirmDisabled}>
-            {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
+    <AppDialog
+      open={open}
+      title={title}
+      message={message}
+      icon={icon}
+      titleColor={titleColor}
+      confirmLabel={confirmLabel}
+      cancelLabel={cancelLabel}
+      confirmVariant={confirmVariant}
+      confirmDisabled={confirmDisabled}
+      onConfirm={onConfirm}
+      onCancel={onCancel}
+    >
+      {children}
+    </AppDialog>
   );
 }

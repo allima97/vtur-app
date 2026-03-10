@@ -1,12 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Dialog } from "@primer/react";
 import { matchesCpfSearch } from "../../lib/searchNormalization";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { useMasterScope } from "../../lib/useMasterScope";
 import { construirLinkWhatsApp } from "../../lib/whatsapp";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import AlertMessage from "../ui/AlertMessage";
+import DataTable from "../ui/DataTable";
+import EmptyState from "../ui/EmptyState";
+import TableActions from "../ui/TableActions";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import PaginationControls from "../ui/PaginationControls";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type Cliente = {
   id: string;
@@ -295,307 +304,350 @@ export default function ClientesConsultaIsland() {
     setLoadingHistorico(false);
   }
 
-  if (loadingPerm) return <div className="clientes-page"><div className="card-base card-config">Carregando contexto...</div></div>;
-  if (!podeVer) return <div className="clientes-page">Você não possui acesso ao módulo de Clientes.</div>;
+  if (loadingPerm) {
+    return (
+      <AppPrimerProvider>
+        <div className="page-content-wrap clientes-page">
+          <AppCard tone="config">Carregando contexto...</AppCard>
+        </div>
+      </AppPrimerProvider>
+    );
+  }
+
+  if (!podeVer) {
+    return (
+      <AppPrimerProvider>
+        <div className="page-content-wrap clientes-page">
+          <AppCard tone="config">Voce nao possui acesso ao modulo de Clientes.</AppCard>
+        </div>
+      </AppPrimerProvider>
+    );
+  }
 
   return (
-    <>
-    <div className={`clientes-page${podeCriar ? " has-mobile-actionbar" : ""}`}>
-      <div className="card-base card-blue mb-3 list-toolbar-sticky">
-        <div className="form-row" style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
-          <div className="form-group flex-1 min-w-0">
-            <label className="form-label">Buscar cliente</label>
-            <input className="form-input" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome, CPF ou e-mail" />
+    <AppPrimerProvider>
+      <div className={`page-content-wrap clientes-page${podeCriar ? " has-mobile-actionbar" : ""}`}>
+        <AppToolbar
+          title="Clientes"
+          subtitle="Consulte contatos, aplique filtros por filial/equipe e acompanhe o historico comercial de cada cliente."
+          tone="info"
+          sticky
+          actions={
+            podeCriar ? (
+              <AppButton as="a" href="/clientes/cadastro?novo=1" variant="primary">
+                Adicionar cliente
+              </AppButton>
+            ) : null
+          }
+        >
+          <div className="vtur-form-grid vtur-form-grid-4">
+            <AppField
+              label="Buscar cliente"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Nome, CPF ou e-mail"
+              caption="Digite para consultar toda a base de clientes."
+              wrapperClassName={isMaster ? "min-w-[220px]" : "md:col-span-2"}
+            />
+            {isMaster && (
+              <>
+                <AppField
+                  as="select"
+                  label="Filial"
+                  value={masterScope.empresaSelecionada}
+                  onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
+                  options={[
+                    { value: "all", label: "Todas" },
+                    ...masterScope.empresasAprovadas.map((empresa) => ({
+                      value: empresa.id,
+                      label: empresa.nome_fantasia,
+                    })),
+                  ]}
+                />
+                <AppField
+                  as="select"
+                  label="Equipe"
+                  value={masterScope.gestorSelecionado}
+                  onChange={(e) => masterScope.setGestorSelecionado(e.target.value)}
+                  options={[
+                    { value: "all", label: "Todas" },
+                    ...masterScope.gestoresDisponiveis.map((gestor) => ({
+                      value: gestor.id,
+                      label: gestor.nome_completo,
+                    })),
+                  ]}
+                />
+                <AppField
+                  as="select"
+                  label="Vendedor"
+                  value={masterScope.vendedorSelecionado}
+                  onChange={(e) => masterScope.setVendedorSelecionado(e.target.value)}
+                  options={[
+                    { value: "all", label: "Todos" },
+                    ...masterScope.vendedoresDisponiveis.map((vendedor) => ({
+                      value: vendedor.id,
+                      label: vendedor.nome_completo,
+                    })),
+                  ]}
+                />
+              </>
+            )}
           </div>
-          {podeCriar && (
-            <div className="hidden sm:flex sm:ml-auto">
-              <div className="form-group">
-                <label className="form-label" style={{ visibility: "hidden" }}>
-                  Ações
-                </label>
-                <a href="/clientes/cadastro?novo=1" className="btn btn-primary">
-                  Adicionar cliente
-                </a>
-              </div>
-            </div>
+        </AppToolbar>
+
+        {erro && <AlertMessage variant="error" className="mb-3">{erro}</AlertMessage>}
+
+        {!carregouTodos && !erro && (
+          <AppCard tone="config" className="mb-3">
+            Use a paginacao para navegar. Digite na busca para filtrar toda a base.
+          </AppCard>
+        )}
+
+        <AppCard
+          title="Base de clientes"
+          subtitle={`${totalClientes} cliente(s) no escopo atual.`}
+          tone="info"
+          actions={
+            <PaginationControls
+              page={paginaAtual}
+              pageSize={pageSize}
+              totalItems={totalClientes}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setPage(1);
+              }}
+            />
+          }
+        >
+          {!loading && clientesExibidos.length === 0 ? (
+            <EmptyState
+              title="Nenhum cliente encontrado"
+              description="Ajuste a busca ou os filtros para localizar clientes dentro do escopo atual."
+              action={
+                podeCriar ? (
+                  <AppButton as="a" href="/clientes/cadastro?novo=1" variant="primary">
+                    Cadastrar cliente
+                  </AppButton>
+                ) : undefined
+              }
+            />
+          ) : (
+            <DataTable
+              containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+              headers={
+                <tr>
+                  <th>Nome</th>
+                  <th>CPF</th>
+                  <th>Telefone</th>
+                  <th>E-mail</th>
+                  <th className="th-actions" style={{ textAlign: "center" }}>Acoes</th>
+                </tr>
+              }
+              loading={loading}
+              loadingMessage="Carregando clientes..."
+              empty={false}
+              colSpan={5}
+              className="clientes-table table-mobile-cards"
+            >
+              {clientesExibidos.map((c) => {
+                const whatsappLink = construirLinkWhatsApp(c.whatsapp || c.telefone || "");
+                const actions = [
+                  {
+                    key: "historico",
+                    label: "Historico",
+                    onClick: () => abrirHistorico(c.id, c.nome),
+                    variant: "ghost" as const,
+                  },
+                ];
+                if (podeEditar) {
+                  actions.push({
+                    key: "editar",
+                    label: "Editar",
+                    onClick: () => editarCliente(c.id),
+                    variant: "ghost" as const,
+                  });
+                }
+                if (podeExcluir) {
+                  actions.push({
+                    key: "excluir",
+                    label: "Excluir",
+                    onClick: () => solicitarExclusao(c),
+                    variant: "danger" as const,
+                  });
+                }
+
+                return (
+                  <tr key={c.id}>
+                    <td data-label="Nome">{c.nome}</td>
+                    <td data-label="CPF">{c.cpf}</td>
+                    <td data-label="Telefone">{c.telefone || "-"}</td>
+                    <td data-label="E-mail">{c.email || "-"}</td>
+                    <td className="th-actions" data-label="Acoes">
+                      <div className="action-buttons vtur-table-actions">
+                        {whatsappLink ? (
+                          <AppButton
+                            as="a"
+                            href={whatsappLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            type="button"
+                            variant="ghost"
+                            className="vtur-table-action"
+                            title="Abrir WhatsApp"
+                            aria-label="Abrir WhatsApp"
+                          >
+                            WhatsApp
+                          </AppButton>
+                        ) : null}
+                        <TableActions actions={actions} />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </DataTable>
           )}
-        </div>
-        {isMaster && (
-          <div className="form-row mobile-stack" style={{ gap: 12, marginTop: 12 }}>
-            <div className="form-group flex-1 min-w-[180px]">
-              <label className="form-label">Filial</label>
-              <select
-                className="form-select"
-                value={masterScope.empresaSelecionada}
-                onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
-              >
-                <option value="all">Todas</option>
-                {masterScope.empresasAprovadas.map((empresa) => (
-                  <option key={empresa.id} value={empresa.id}>
-                    {empresa.nome_fantasia}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group flex-1 min-w-[180px]">
-              <label className="form-label">Equipe</label>
-              <select
-                className="form-select"
-                value={masterScope.gestorSelecionado}
-                onChange={(e) => masterScope.setGestorSelecionado(e.target.value)}
-              >
-                <option value="all">Todas</option>
-                {masterScope.gestoresDisponiveis.map((gestor) => (
-                  <option key={gestor.id} value={gestor.id}>
-                    {gestor.nome_completo}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group flex-1 min-w-[180px]">
-              <label className="form-label">Vendedor</label>
-              <select
-                className="form-select"
-                value={masterScope.vendedorSelecionado}
-                onChange={(e) => masterScope.setVendedorSelecionado(e.target.value)}
-              >
-                <option value="all">Todos</option>
-                {masterScope.vendedoresDisponiveis.map((vendedor) => (
-                  <option key={vendedor.id} value={vendedor.id}>
-                    {vendedor.nome_completo}
-                  </option>
-                ))}
-              </select>
-            </div>
+        </AppCard>
+
+        {podeCriar && (
+          <div className="mobile-actionbar sm:hidden">
+            <AppButton as="a" href="/clientes/cadastro?novo=1" variant="primary" block>
+              Adicionar cliente
+            </AppButton>
           </div>
         )}
       </div>
 
-      {erro && (
-        <div className="mb-3">
-          <AlertMessage variant="error">{erro}</AlertMessage>
-        </div>
-      )}
-
-      {!carregouTodos && !erro && (
-        <div className="card-base card-config mb-3">
-          Use a paginação para navegar. Digite na busca para filtrar todos.
-        </div>
-      )}
-
-      <PaginationControls
-        page={paginaAtual}
-        pageSize={pageSize}
-        totalItems={totalClientes}
-        onPageChange={setPage}
-        onPageSizeChange={(size) => {
-          setPageSize(size);
-          setPage(1);
-        }}
-      />
-
-      <div className="table-container overflow-x-auto" style={{ maxHeight: "65vh", overflowY: "auto" }}>
-        <table className="table-default table-header-blue clientes-table table-mobile-cards">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>CPF</th>
-              <th>Telefone</th>
-              <th>E-mail</th>
-              <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr><td colSpan={4}>Carregando...</td></tr>
-            )}
-            {!loading && clientesExibidos.length === 0 && (
-              <tr><td colSpan={4}>Nenhum cliente encontrado.</td></tr>
-            )}
-            {!loading && clientesExibidos.map((c) => (
-              <tr key={c.id}>
-                <td data-label="Nome">{c.nome}</td>
-                <td data-label="CPF">{c.cpf}</td>
-                <td data-label="Telefone">{c.telefone || "-"}</td>
-                <td data-label="E-mail">{c.email || "-"}</td>
-                <td className="th-actions" data-label="Ações">
-                  <div className="action-buttons">
-                    {(() => {
-                      const whatsappLink = construirLinkWhatsApp(c.whatsapp || c.telefone || "");
-                      if (whatsappLink) {
-                        return (
-                          <a className="btn-icon" href={whatsappLink} title="Abrir WhatsApp" target="_blank" rel="noreferrer">💬</a>
-                        );
-                      }
-                      return null;
-                    })()}
-
-                    <button className="btn-icon" onClick={() => abrirHistorico(c.id, c.nome)} title="Histórico">🗂️</button>
-
-                    {podeEditar && (
-                      <button className="btn-icon" onClick={() => editarCliente(c.id)} title="Editar">✏️</button>
-                    )}
-
-                    {podeExcluir && (
-                      <button className="btn-icon btn-danger" onClick={() => solicitarExclusao(c)} title="Excluir">🗑️</button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {podeCriar && (
-        <div className="mobile-actionbar sm:hidden">
-          <a href="/clientes/cadastro?novo=1" className="btn btn-primary">
-            Adicionar cliente
-          </a>
-        </div>
-      )}
-    </div>
-    {historicoCliente && (
-      <div className="modal-backdrop">
-        <div className="modal-panel historico-viagens-modal" style={{ maxWidth: 1000, width: "95vw" }}>
-          <div className="modal-header">
-            <div className="historico-viagens-header">
-              <div
-                className="modal-title"
-                style={{ color: "#1d4ed8", fontSize: "1.2rem", fontWeight: 800 }}
-              >
-                {historicoCliente.nome}
+      {historicoCliente && (
+        <Dialog
+          title={historicoCliente.nome}
+          width="xlarge"
+          onClose={fecharHistorico}
+          footerButtons={[
+            {
+              content: "Fechar",
+              buttonType: "primary",
+              onClick: fecharHistorico,
+            },
+          ]}
+        >
+          <div className="vtur-modal-body-stack">
+            <AppCard
+              title="Resumo do cliente"
+              subtitle="Contato principal e visao consolidada do historico comercial."
+              tone="info"
+            >
+              <div className="vtur-form-grid vtur-form-grid-4">
+                <AppField label="Nome" value={historicoCliente.nome} readOnly />
+                <AppField label="CPF" value={historicoCliente.cpf || "-"} readOnly />
+                <AppField label="Telefone" value={historicoCliente.telefone || "-"} readOnly />
+                <AppField label="E-mail" value={historicoCliente.email || "-"} readOnly />
               </div>
-              <div className="historico-viagens-subtitle">
-                Histórico de Viagens e Orçamentos
-              </div>
-            </div>
-            <button className="btn-ghost" onClick={fecharHistorico}>✕</button>
-          </div>
+            </AppCard>
 
-          <div className="modal-body">
-            {loadingHistorico && <p>Carregando histórico...</p>}
-
-            {!loadingHistorico && (
+            {loadingHistorico ? (
+              <AppCard tone="info">Carregando historico...</AppCard>
+            ) : (
               <>
-                <div className="mb-2">
-                  <div className="card-base mb-2 historico-viagens-section-title" style={{ padding: "12px 16px" }}>
-                    <h4 style={{ margin: 0 }}>Vendas</h4>
-                  </div>
-                  <div className="table-container overflow-x-auto">
-                    <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
-                      <thead>
-                        <tr>
-                          <th>Data Lançamento</th>
-                          <th>Destino</th>
-                          <th>Embarque</th>
-                          <th>Valor</th>
-                          <th>Taxas</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {historicoVendas.length === 0 && (
-                          <tr>
-                            <td colSpan={5}>Nenhuma venda encontrada.</td>
-                          </tr>
-                        )}
-                        {historicoVendas.map((v) => (
-                          <tr key={v.id}>
-                            <td data-label="Data Lançamento">
-                              {v.data_lancamento
-                                ? new Date(v.data_lancamento).toLocaleDateString("pt-BR")
-                                : "-"}
-                            </td>
-                            <td data-label="Destino">{v.destino_nome || "-"}</td>
-                            <td data-label="Embarque">
-                              {v.data_embarque
-                                ? new Date(v.data_embarque).toLocaleDateString("pt-BR")
-                                : "-"}
-                            </td>
-                            <td data-label="Valor">
-                              {v.valor_total.toLocaleString("pt-BR", {
-                                style: "currency",
-                                currency: "BRL",
-                              })}
-                            </td>
-                            <td data-label="Taxas">
-                              {v.valor_taxas.toLocaleString("pt-BR", {
-                                style: "currency",
-                                currency: "BRL",
-                              })}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                <AppCard title="Vendas" subtitle="Vendas vinculadas a este cliente.">
+                  <DataTable
+                    headers={
+                      <tr>
+                        <th>Data Lancamento</th>
+                        <th>Destino</th>
+                        <th>Embarque</th>
+                        <th>Valor</th>
+                        <th>Taxas</th>
+                      </tr>
+                    }
+                    empty={historicoVendas.length === 0}
+                    emptyMessage="Nenhuma venda encontrada."
+                    colSpan={5}
+                    className="table-mobile-cards"
+                  >
+                    {historicoVendas.map((v) => (
+                      <tr key={v.id}>
+                        <td data-label="Data Lancamento">
+                          {v.data_lancamento
+                            ? new Date(v.data_lancamento).toLocaleDateString("pt-BR")
+                            : "-"}
+                        </td>
+                        <td data-label="Destino">{v.destino_nome || "-"}</td>
+                        <td data-label="Embarque">
+                          {v.data_embarque
+                            ? new Date(v.data_embarque).toLocaleDateString("pt-BR")
+                            : "-"}
+                        </td>
+                        <td data-label="Valor">
+                          {v.valor_total.toLocaleString("pt-BR", {
+                            style: "currency",
+                            currency: "BRL",
+                          })}
+                        </td>
+                        <td data-label="Taxas">
+                          {v.valor_taxas.toLocaleString("pt-BR", {
+                            style: "currency",
+                            currency: "BRL",
+                          })}
+                        </td>
+                      </tr>
+                    ))}
+                  </DataTable>
+                </AppCard>
 
-                <div className="mb-2">
-                  <div className="card-base mb-2 historico-viagens-section-title" style={{ padding: "12px 16px" }}>
-                    <h4 style={{ margin: 0 }}>Orçamentos</h4>
-                  </div>
-                  <div className="table-container overflow-x-auto">
-                    <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
-                      <thead>
-                        <tr>
-                          <th>Data</th>
-                          <th>Status</th>
-                          <th>Produto</th>
-                          <th>Valor</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {historicoOrcamentos.length === 0 && (
-                          <tr>
-                            <td colSpan={4}>Nenhum orçamento encontrado.</td>
-                          </tr>
-                        )}
-                        {historicoOrcamentos.map((o) => (
-                          <tr key={o.id}>
-                            <td data-label="Data">
-                              {o.data_orcamento
-                                ? new Date(o.data_orcamento).toLocaleDateString("pt-BR")
-                                : "-"}
-                            </td>
-                            <td data-label="Status">{o.status || "-"}</td>
-                            <td data-label="Produto">{o.produto_nome || "-"}</td>
-                            <td data-label="Valor">
-                              {o.valor !== null && o.valor !== undefined
-                                ? o.valor.toLocaleString("pt-BR", {
-                                    style: "currency",
-                                    currency: "BRL",
-                                  })
-                                : "-"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                <AppCard title="Orcamentos" subtitle="Orcamentos criados para este cliente.">
+                  <DataTable
+                    headers={
+                      <tr>
+                        <th>Data</th>
+                        <th>Status</th>
+                        <th>Produto</th>
+                        <th>Valor</th>
+                      </tr>
+                    }
+                    empty={historicoOrcamentos.length === 0}
+                    emptyMessage="Nenhum orcamento encontrado."
+                    colSpan={4}
+                    className="table-mobile-cards"
+                  >
+                    {historicoOrcamentos.map((o) => (
+                      <tr key={o.id}>
+                        <td data-label="Data">
+                          {o.data_orcamento
+                            ? new Date(o.data_orcamento).toLocaleDateString("pt-BR")
+                            : "-"}
+                        </td>
+                        <td data-label="Status">{o.status || "-"}</td>
+                        <td data-label="Produto">{o.produto_nome || "-"}</td>
+                        <td data-label="Valor">
+                          {o.valor !== null && o.valor !== undefined
+                            ? o.valor.toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL",
+                              })
+                            : "-"}
+                        </td>
+                      </tr>
+                    ))}
+                  </DataTable>
+                </AppCard>
               </>
             )}
           </div>
+        </Dialog>
+      )}
 
-          <div className="modal-footer mobile-stack-buttons">
-            <button className="btn btn-primary" onClick={fecharHistorico}>
-              Fechar
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-    <ConfirmDialog
-      open={Boolean(clienteParaExcluir)}
-      title="Excluir cliente"
-      message={`Tem certeza que deseja excluir ${clienteParaExcluir?.nome || "este cliente"}?`}
-      confirmLabel="Excluir"
-      confirmVariant="danger"
-      onCancel={() => setClienteParaExcluir(null)}
-      onConfirm={confirmarExclusaoCliente}
-    />
-    <ToastStack toasts={toasts} onDismiss={dismissToast} />
-    </>
+      <ConfirmDialog
+        open={Boolean(clienteParaExcluir)}
+        title="Excluir cliente"
+        message={`Tem certeza que deseja excluir ${clienteParaExcluir?.nome || "este cliente"}?`}
+        confirmLabel="Excluir"
+        confirmVariant="danger"
+        onCancel={() => setClienteParaExcluir(null)}
+        onConfirm={confirmarExclusaoCliente}
+      />
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
+    </AppPrimerProvider>
   );
 }

@@ -6,7 +6,14 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import TableActions from "../ui/TableActions";
 import AlertMessage from "../ui/AlertMessage";
+import DataTable from "../ui/DataTable";
+import EmptyState from "../ui/EmptyState";
 import { ToastStack, useToastQueue } from "../ui/Toast";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type Fornecedor = {
   id: string;
@@ -265,6 +272,9 @@ export default function FornecedoresIsland() {
   const fornecedoresExibidos = useMemo(() => {
     return busca.trim() ? fornecedoresFiltrados : fornecedoresFiltrados.slice(0, 5);
   }, [fornecedoresFiltrados, busca]);
+  const resumoLista = busca.trim()
+    ? `${fornecedoresFiltrados.length} fornecedor(es) encontrados para a busca atual.`
+    : `${fornecedores.length} fornecedor(es) cadastrados. Exibindo ${fornecedoresExibidos.length} item(ns) na listagem inicial.`;
 
   useEffect(() => {
     if (!mostrarSugestoesCidade) return;
@@ -461,338 +471,335 @@ export default function FornecedoresIsland() {
   }
 
   if (!podeVer) {
-    return <div>Você não possui acesso ao módulo de Cadastros.</div>;
+    return (
+      <AppPrimerProvider>
+        <AppCard tone="config">
+          <strong>Voce nao possui acesso ao modulo de Cadastros.</strong>
+        </AppCard>
+      </AppPrimerProvider>
+    );
   }
 
   return (
-    <div className="page-content-wrap fornecedores-page">
-      {!mostrarFormulario && (
-        <div className="card-base mb-3 list-toolbar-sticky">
-          <div
-            className="form-row mobile-stack"
-            style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
-          >
-            <div className="form-group" style={{ flex: "1 1 320px" }}>
-              <label className="form-label">Buscar fornecedor</label>
-              <input
-                className="form-input"
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder="Nome fantasia ou contato..."
-              />
-            </div>
-            {podeSalvar && (
-              <div
-                className="form-group mobile-stack-buttons"
-                style={{ alignItems: "flex-end", justifyContent: "flex-end" }}
-              >
-                <button
+    <AppPrimerProvider>
+      <div className="page-content-wrap fornecedores-page">
+        {!mostrarFormulario && (
+          <AppToolbar
+            sticky
+            tone="config"
+            className="mb-3 list-toolbar-sticky"
+            title="Fornecedores"
+            subtitle={resumoLista}
+            actions={
+              podeSalvar ? (
+                <AppButton
                   type="button"
-                  className="btn btn-primary w-full sm:w-auto"
+                  variant="primary"
                   onClick={abrirFormularioFornecedor}
                   disabled={mostrarFormulario}
                 >
                   Adicionar fornecedor
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {mostrarFormulario && (
-        <div className="card-base card-blue form-card" style={{ marginTop: 12, padding: 16 }}>
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>
-            {editandoId ? "Editar fornecedor" : "Novo fornecedor"}
-          </div>
-          <div className="form-row">
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">Localização</label>
-              <div style={{ display: "flex", gap: 12 }}>
-                {LOCALIZACAO_OPCOES.map((opcao) => (
-                  <label key={opcao.value} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <input
-                      type="radio"
-                      name="localizacao"
-                      value={opcao.value}
-                      checked={form.localizacao === opcao.value}
-                      onChange={(e) => setForm((prev) => ({ ...prev, localizacao: e.target.value as "brasil" | "exterior" }))}
-                      disabled={!podeSalvar}
-                    />
-                    {opcao.label}
-                  </label>
-                ))}
-              </div>
+                </AppButton>
+              ) : undefined
+            }
+          >
+            <div className="vtur-form-grid vtur-form-grid-2">
+              <AppField
+                label="Buscar fornecedor"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Nome fantasia ou contato..."
+                caption="Consulte parceiros comerciais por nome completo, fantasia ou responsavel."
+              />
             </div>
-          </div>
-
-        <div className="form-row" style={{ gap: 12 }}>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Nome completo</label>
-            <input
-              className="form-input"
-              value={form.nome_completo}
-              onChange={(e) => setForm((prev) => ({ ...prev, nome_completo: e.target.value }))}
-              disabled={!podeSalvar}
-              placeholder="Razão social" />
-          </div>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Nome fantasia</label>
-            <input
-              className="form-input"
-              value={form.nome_fantasia}
-              onChange={(e) => setForm((prev) => ({ ...prev, nome_fantasia: e.target.value }))}
-              disabled={!podeSalvar}
-              placeholder="Nome comercial" />
-          </div>
-        </div>
-
-        {form.localizacao === "brasil" && (
-          <div className="form-row" style={{ gap: 12 }}>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">CNPJ</label>
-              <input
-                className="form-input"
-                value={form.cnpj}
-                onChange={(e) => setForm((prev) => ({ ...prev, cnpj: e.target.value }))}
-                disabled={!podeSalvar}
-                placeholder="00.000.000/0000-00" />
-            </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">CEP</label>
-              <input
-                className="form-input"
-                value={form.cep}
-                onChange={(e) => setForm((prev) => ({ ...prev, cep: e.target.value }))}
-                disabled={!podeSalvar}
-                placeholder="00000-000" />
-            </div>
-          </div>
+          </AppToolbar>
         )}
 
-        <div className="form-row" style={{ gap: 12 }}>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Cidade</label>
-            <input
-              className="form-input"
-              value={cidadeBusca}
-              onChange={(e) => handleCidadeChange(e.target.value)}
-              onFocus={() => setMostrarSugestoesCidade(true)}
-              onBlur={handleCidadeBlur}
-              disabled={!podeSalvar}
-              placeholder="Buscar cidade..." />
-            {buscandoCidade && (
-              <div style={{ fontSize: 12, color: "#6b7280" }}>Buscando cidades...</div>
-            )}
-            {erroCidadeBusca && !buscandoCidade && (
-              <div style={{ fontSize: 12, color: "#dc2626" }}>{erroCidadeBusca}</div>
-            )}
-            {mostrarSugestoesCidade && (
-              <div
-                className="card-base"
-                style={{
-                  marginTop: 4,
-                  maxHeight: 180,
-                  overflowY: "auto",
-                  padding: 6,
-                  border: "1px solid #e5e7eb",
-                }}
-              >
-                {resultadosCidade.length === 0 && !buscandoCidade && cidadeBusca.trim().length >= 2 && (
-                  <div style={{ padding: "4px 6px", color: "#6b7280" }}>Nenhuma cidade encontrada.</div>
-                )}
-                {resultadosCidade.map((cidade) => {
-                  const label = formatCidadeLabel(cidade);
-                  return (
-                    <button
-                      key={cidade.id}
-                      type="button"
-                      className="btn btn-light"
-                      style={{
-                        width: "100%",
-                        justifyContent: "flex-start",
-                        marginBottom: 4,
-                        background:
-                          form.cidade === cidade.nome ? "#e0f2fe" : "#fff",
-                        borderColor:
-                          form.cidade === cidade.nome ? "#38bdf8" : "#e5e7eb",
-                      }}
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        selecionarCidade(cidade);
-                      }}
-                    >
-                      {label}
-                      {cidade.pais_nome ? (
-                        <span style={{ color: "#6b7280", marginLeft: 6 }}>- {cidade.pais_nome}</span>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Estado</label>
-            <input
-              className="form-input"
-              value={form.estado}
-              readOnly
-              disabled
-              placeholder="UF / região" />
-          </div>
-        </div>
-
-        <div className="form-row mobile-stack" style={{ gap: 12 }}>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Telefone</label>
-            <input
-              className="form-input"
-              value={form.telefone}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, telefone: formatTelefoneValue(e.target.value) }))
-              }
-              disabled={!podeSalvar}
-              placeholder="(00) 0000-0000" />
-          </div>
-        </div>
-
-        <div className="form-row mobile-stack" style={{ gap: 12 }}>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">WhatsApp</label>
-            <input
-              className="form-input"
-              value={form.whatsapp}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, whatsapp: formatTelefoneValue(e.target.value) }))
-              }
-              disabled={!podeSalvar}
-              placeholder="+55 00 00000-0000" />
-          </div>
-        </div>
-
-        <div className="form-row mobile-stack" style={{ gap: 12 }}>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Telefone emergência</label>
-            <input
-              className="form-input"
-              value={form.telefone_emergencia}
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                  telefone_emergencia: formatTelefoneValue(e.target.value),
-                }))
-              }
-              disabled={!podeSalvar}
-              placeholder="Contato alternativo" />
-          </div>
-        </div>
-
-        <div className="form-row mobile-stack" style={{ gap: 12 }}>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Responsável</label>
-            <input
-              className="form-input"
-              value={form.responsavel}
-              onChange={(e) => setForm((prev) => ({ ...prev, responsavel: e.target.value }))}
-              disabled={!podeSalvar}
-              placeholder="Pessoa de contato" />
-          </div>
-        </div>
-
-        <div className="form-row" style={{ gap: 12 }}>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Tipo de faturamento</label>
-            <select
-              className="form-select"
-              value={form.tipo_faturamento}
-              onChange={(e) => setForm((prev) => ({ ...prev, tipo_faturamento: e.target.value }))}
-              disabled={!podeSalvar}
-            >
-              {TIPO_FATURAMENTO_OPCOES.map((opcao) => (
-                <option key={opcao.value} value={opcao.value}>
-                  {opcao.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Principais serviços</label>
-          <textarea
-            className="form-textarea"
-            value={form.principais_servicos}
-            onChange={(e) => setForm((prev) => ({ ...prev, principais_servicos: e.target.value }))}
-            disabled={!podeSalvar}
-            placeholder="Descreva BR/EX serviços oferecidos"
-            rows={3}
-          />
-        </div>
-
-          <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={salvarFornecedor}
-              disabled={salvando || !podeSalvar}
-            >
-              {salvando ? "Salvando..." : editandoId ? "Salvar alterações" : "Salvar fornecedor"}
-            </button>
-            <button
-              type="button"
-              className="btn btn-light"
-              onClick={fecharFormularioFornecedor}
-              disabled={salvando}
-            >
-              Cancelar
-            </button>
-          </div>
-
-          {formError && <AlertMessage variant="error">{formError}</AlertMessage>}
-        </div>
-      )}
-
-      {!mostrarFormulario && (
-        <>
-          {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
-          <div
-            className="table-container overflow-x-auto"
-            style={{ maxHeight: "65vh", overflowY: "auto" }}
+        {mostrarFormulario && (
+          <AppCard
+            className="mb-3"
+            tone="info"
+            title={editandoId ? "Editar fornecedor" : "Novo fornecedor"}
+            subtitle="Centralize contato, faturamento, localizacao e servicos do parceiro em um unico cadastro."
           >
-            <table className="table-default table-header-teal table-mobile-cards min-w-[720px] fornecedores-table">
-              <thead>
-                <tr>
-                  <th>Nome fantasia</th>
-                  <th>Local</th>
-                  <th>Faturamento</th>
-                  <th>Telefone</th>
-                  <th>WhatsApp</th>
-                  <th>Telefone emergência</th>
-                  <th>Serviços</th>
-                  <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void salvarFornecedor();
+              }}
+            >
+              <div className="vtur-choice-grid">
+                {LOCALIZACAO_OPCOES.map((opcao) => (
+                  <AppButton
+                    key={opcao.value}
+                    type="button"
+                    variant={form.localizacao === opcao.value ? "primary" : "secondary"}
+                    className="vtur-choice-button"
+                    onClick={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        localizacao: opcao.value as "brasil" | "exterior",
+                      }))
+                    }
+                    disabled={!podeSalvar}
+                  >
+                    <span className="vtur-choice-button-content">
+                      <span className="vtur-choice-button-title">{opcao.label}</span>
+                      <span className="vtur-choice-button-caption">
+                        {opcao.value === "brasil"
+                          ? "Usa CNPJ, CEP e cidade vinculada ao cadastro nacional."
+                          : "Permite cadastro internacional sem obrigar documentos brasileiros."}
+                      </span>
+                    </span>
+                  </AppButton>
+                ))}
+              </div>
+
+              <div className="vtur-inline-note">
+                Defina a abrangencia do parceiro para orientar os campos obrigatorios do cadastro.
+              </div>
+
+              <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 16 }}>
+                <AppField
+                  label="Nome completo"
+                  value={form.nome_completo}
+                  onChange={(e) => setForm((prev) => ({ ...prev, nome_completo: e.target.value }))}
+                  disabled={!podeSalvar}
+                  placeholder="Razao social"
+                />
+                <AppField
+                  label="Nome fantasia"
+                  value={form.nome_fantasia}
+                  onChange={(e) => setForm((prev) => ({ ...prev, nome_fantasia: e.target.value }))}
+                  disabled={!podeSalvar}
+                  placeholder="Nome comercial"
+                />
+              </div>
+
+              {form.localizacao === "brasil" && (
+                <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 16 }}>
+                  <AppField
+                    label="CNPJ"
+                    value={form.cnpj}
+                    onChange={(e) => setForm((prev) => ({ ...prev, cnpj: e.target.value }))}
+                    disabled={!podeSalvar}
+                    placeholder="00.000.000/0000-00"
+                  />
+                  <AppField
+                    label="CEP"
+                    value={form.cep}
+                    onChange={(e) => setForm((prev) => ({ ...prev, cep: e.target.value }))}
+                    disabled={!podeSalvar}
+                    placeholder="00000-000"
+                  />
+                </div>
+              )}
+
+              <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 16 }}>
+                <div className="vtur-city-picker">
+                  <AppField
+                    label="Cidade"
+                    value={cidadeBusca}
+                    onChange={(e) => handleCidadeChange(e.target.value)}
+                    onFocus={() => setMostrarSugestoesCidade(true)}
+                    onBlur={handleCidadeBlur}
+                    disabled={!podeSalvar}
+                    placeholder="Buscar cidade..."
+                    caption={
+                      buscandoCidade
+                        ? "Buscando cidades..."
+                        : erroCidadeBusca || "Selecione uma cidade valida para preencher a subdivisao automaticamente."
+                    }
+                    validation={erroCidadeBusca && !buscandoCidade ? erroCidadeBusca : undefined}
+                  />
+                  {mostrarSugestoesCidade && (
+                    <div className="vtur-city-dropdown">
+                      {resultadosCidade.length === 0 && !buscandoCidade && cidadeBusca.trim().length >= 2 && (
+                        <div className="vtur-city-helper">Nenhuma cidade encontrada.</div>
+                      )}
+                      {resultadosCidade.map((cidade) => {
+                        const label = formatCidadeLabel(cidade);
+                        return (
+                          <AppButton
+                            key={cidade.id}
+                            type="button"
+                            variant={form.cidade === cidade.nome ? "primary" : "secondary"}
+                            className="vtur-city-option"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              selecionarCidade(cidade);
+                            }}
+                          >
+                            <span className="vtur-choice-button-content">
+                              <span className="vtur-choice-button-title">{label}</span>
+                              {cidade.pais_nome ? (
+                                <span className="vtur-choice-button-caption">{cidade.pais_nome}</span>
+                              ) : null}
+                            </span>
+                          </AppButton>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                <AppField
+                  label="Estado"
+                  value={form.estado}
+                  readOnly
+                  disabled
+                  placeholder="UF / regiao"
+                  caption="Preenchido automaticamente a partir da cidade selecionada."
+                />
+              </div>
+
+              <div className="vtur-form-grid vtur-form-grid-3" style={{ marginTop: 16 }}>
+                <AppField
+                  label="Telefone"
+                  value={form.telefone}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, telefone: formatTelefoneValue(e.target.value) }))
+                  }
+                  disabled={!podeSalvar}
+                  placeholder="(00) 0000-0000"
+                />
+                <AppField
+                  label="WhatsApp"
+                  value={form.whatsapp}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, whatsapp: formatTelefoneValue(e.target.value) }))
+                  }
+                  disabled={!podeSalvar}
+                  placeholder="+55 00 00000-0000"
+                />
+                <AppField
+                  label="Telefone emergencia"
+                  value={form.telefone_emergencia}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      telefone_emergencia: formatTelefoneValue(e.target.value),
+                    }))
+                  }
+                  disabled={!podeSalvar}
+                  placeholder="Contato alternativo"
+                />
+              </div>
+
+              <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 16 }}>
+                <AppField
+                  label="Responsavel"
+                  value={form.responsavel}
+                  onChange={(e) => setForm((prev) => ({ ...prev, responsavel: e.target.value }))}
+                  disabled={!podeSalvar}
+                  placeholder="Pessoa de contato"
+                />
+                <AppField
+                  as="select"
+                  label="Tipo de faturamento"
+                  value={form.tipo_faturamento}
+                  onChange={(e) => setForm((prev) => ({ ...prev, tipo_faturamento: e.target.value }))}
+                  disabled={!podeSalvar}
+                  options={TIPO_FATURAMENTO_OPCOES}
+                />
+              </div>
+
+              <div style={{ marginTop: 16 }}>
+                <AppField
+                  as="textarea"
+                  label="Principais servicos"
+                  value={form.principais_servicos}
+                  onChange={(e) => setForm((prev) => ({ ...prev, principais_servicos: e.target.value }))}
+                  disabled={!podeSalvar}
+                  placeholder="Descreva servicos, especialidades, janelas de atendimento e observacoes relevantes"
+                  rows={4}
+                />
+              </div>
+
+              {formError && (
+                <AlertMessage variant="error" className="mt-3">
+                  {formError}
+                </AlertMessage>
+              )}
+
+              <div className="vtur-form-actions">
+                <AppButton
+                  type="submit"
+                  variant="primary"
+                  disabled={salvando || !podeSalvar}
+                  loading={salvando}
+                >
+                  {salvando ? "Salvando..." : editandoId ? "Salvar alteracoes" : "Salvar fornecedor"}
+                </AppButton>
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  onClick={fecharFormularioFornecedor}
+                  disabled={salvando}
+                >
+                  Cancelar
+                </AppButton>
+              </div>
+            </form>
+          </AppCard>
+        )}
+
+        {!mostrarFormulario && (
+          <>
+            {erro && (
+              <AlertMessage variant="error" className="mb-3">
+                {erro}
+              </AlertMessage>
+            )}
+            <AppCard
+              tone="config"
+              title="Base de fornecedores"
+              subtitle="Acompanhe parceiros comerciais, contatos e condicoes operacionais com leitura rapida."
+            >
+              <DataTable
+                className="fornecedores-table table-mobile-cards"
+                containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+                headers={
                   <tr>
-                    <td colSpan={8}>Carregando fornecedores...</td>
+                    <th>Nome fantasia</th>
+                    <th>Local</th>
+                    <th>Faturamento</th>
+                    <th>Telefone</th>
+                    <th>WhatsApp</th>
+                    <th>Telefone emergencia</th>
+                    <th>Servicos</th>
+                    <th className="th-actions" style={{ textAlign: "center" }}>Acoes</th>
                   </tr>
-                )}
-                {!loading && fornecedoresExibidos.length === 0 && (
-                  <tr>
-                    <td colSpan={8}>Nenhum fornecedor cadastrado.</td>
-                  </tr>
-                )}
-                {!loading &&
-                  fornecedoresExibidos.map((fornecedor) => (
+                }
+                loading={loading}
+                loadingMessage="Carregando fornecedores..."
+                empty={!loading && fornecedoresExibidos.length === 0}
+                emptyMessage={
+                  <EmptyState
+                    title="Nenhum fornecedor encontrado"
+                    description={
+                      busca.trim()
+                        ? "Ajuste os filtros para localizar parceiros ja cadastrados."
+                        : "Comece adicionando o primeiro fornecedor para organizar a rede operacional."
+                    }
+                    action={
+                      podeSalvar ? (
+                        <AppButton type="button" variant="primary" onClick={abrirFormularioFornecedor}>
+                          Adicionar fornecedor
+                        </AppButton>
+                      ) : undefined
+                    }
+                  />
+                }
+                colSpan={8}
+              >
+                {fornecedoresExibidos.map((fornecedor) => (
                   <tr key={fornecedor.id}>
                     <td data-label="Nome fantasia">
                       {fornecedor.nome_fantasia || fornecedor.nome_completo || "-"}
                     </td>
                     <td data-label="Local">
                       {formatLocalizacao(fornecedor.localizacao)}
-                      {fornecedor.cidade ? `  ${fornecedor.cidade}` : ""}
+                      {fornecedor.cidade ? ` - ${fornecedor.cidade}` : ""}
                       {fornecedor.estado ? `/${fornecedor.estado}` : ""}
                     </td>
                     <td data-label="Faturamento">
@@ -810,33 +817,50 @@ export default function FornecedoresIsland() {
                     </td>
                     <td className="th-actions" data-label="Ações">
                       <TableActions
-                        showEdit={podeSalvar}
-                        onEdit={() => iniciarEdicaoFornecedor(fornecedor)}
-                        showDelete={podeExcluir}
-                        onDelete={() => solicitarExclusao(fornecedor)}
-                        deleteDisabled={excluindoId === fornecedor.id}
-                        deleteIcon={excluindoId === fornecedor.id ? "..." : "???"}
+                        show={podeSalvar || podeExcluir}
+                        actions={[
+                          ...(podeSalvar
+                            ? [
+                                {
+                                  key: "edit",
+                                  label: "Editar",
+                                  onClick: () => iniciarEdicaoFornecedor(fornecedor),
+                                  variant: "ghost" as const,
+                                },
+                              ]
+                            : []),
+                          ...(podeExcluir
+                            ? [
+                                {
+                                  key: "delete",
+                                  label: excluindoId === fornecedor.id ? "Excluindo..." : "Excluir",
+                                  onClick: () => solicitarExclusao(fornecedor),
+                                  variant: "danger" as const,
+                                  disabled: excluindoId === fornecedor.id,
+                                },
+                              ]
+                            : []),
+                        ]}
                       />
                     </td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-      <ConfirmDialog
-        open={Boolean(fornecedorParaExcluir)}
-        title="Excluir fornecedor"
-        message={`Tem certeza que deseja excluir ${fornecedorParaExcluir?.nome_fantasia || fornecedorParaExcluir?.nome_completo || "este fornecedor"}?`}
-        confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
-        confirmVariant="danger"
-        confirmDisabled={Boolean(excluindoId)}
-        onCancel={() => setFornecedorParaExcluir(null)}
-        onConfirm={confirmarExclusaoFornecedor}
-      />
-      <ToastStack toasts={toasts} onDismiss={dismissToast} />
-    </div>
+              </DataTable>
+            </AppCard>
+          </>
+        )}
+        <ConfirmDialog
+          open={Boolean(fornecedorParaExcluir)}
+          title="Excluir fornecedor"
+          message={`Tem certeza que deseja excluir ${fornecedorParaExcluir?.nome_fantasia || fornecedorParaExcluir?.nome_completo || "este fornecedor"}?`}
+          confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
+          confirmVariant="danger"
+          confirmDisabled={Boolean(excluindoId)}
+          onCancel={() => setFornecedorParaExcluir(null)}
+          onConfirm={confirmarExclusaoFornecedor}
+        />
+        <ToastStack toasts={toasts} onDismiss={dismissToast} />
+      </div>
+    </AppPrimerProvider>
   );
 }
-

@@ -10,6 +10,12 @@ import { carregarTermosNaoComissionaveis, isFormaNaoComissionavel } from "../../
 import CalculatorModal from "../ui/CalculatorModal";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { AlertTriangle } from "lucide-react";
+import AlertMessage from "../ui/AlertMessage";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
 const STORAGE_BUCKET = "viagens";
 
@@ -1460,17 +1466,25 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
   // =======================================================
   if (!podeVer) {
     return (
-      <div className="card-base card-config">
-        <strong>Acesso negado ao módulo de Vendas.</strong>
-      </div>
+      <AppPrimerProvider>
+        <div className="page-content-wrap">
+          <AppCard tone="config">
+            <strong>Acesso negado ao módulo de Vendas.</strong>
+          </AppCard>
+        </div>
+      </AppPrimerProvider>
     );
   }
 
   if (!podeCriar && !isAdmin) {
     return (
-      <div className="card-base card-config">
-        <strong>Você não possui permissão para cadastrar vendas.</strong>
-      </div>
+      <AppPrimerProvider>
+        <div className="page-content-wrap">
+          <AppCard tone="config">
+            <strong>Você não possui permissão para cadastrar vendas.</strong>
+          </AppCard>
+        </div>
+      </AppPrimerProvider>
     );
   }
 
@@ -1478,189 +1492,158 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
   // FORM
   // =======================================================
   return (
-    <div className="min-h-screen bg-slate-50 p-2 md:p-6">
+    <AppPrimerProvider>
+      <div className="page-content-wrap">
+        <AppCard
+          title={editId ? "Editar venda" : "Cadastro de venda"}
+          subtitle={
+            editId
+              ? "Modo edicao: altere cliente, cidade de destino, embarque e recibos sem mudar a logica operacional."
+              : "Registre a venda completa no CRM, organize recibos e mantenha o fluxo comercial padronizado."
+          }
+          tone="config"
+        >
+          {erro && (
+            <AlertMessage variant="error" className="mb-3">
+              <strong>{erro}</strong>
+            </AlertMessage>
+          )}
 
-      {/* FORM VENDA */}
-      <div className="card-base card-green form-card mb-3">
-        <h3>{editId ? "Editar venda" : "Cadastro de Venda"}</h3>
-        {editId && (
-          <small style={{ color: "#0f172a" }}>
-            Modo edição — altere cliente, cidade de destino, embarque e recibos.
-          </small>
-        )}
-
-        {erro && (
-          <div className="card-base card-config mb-3">
-            <strong>{erro}</strong>
-          </div>
-        )}
-
-        <form onSubmit={salvarVenda}>
-          <div className="flex flex-col md:flex-row md:flex-wrap gap-4">
-            {isGestorUser && (
-              <div className="form-group flex-1 min-w-[220px]">
-                <label className="form-label">Vendedor *</label>
-                <select
-                  className="form-select"
+          <form onSubmit={salvarVenda}>
+            <div className="vtur-form-grid vtur-form-grid-4">
+              {isGestorUser && (
+                <AppField
+                  as="select"
+                  label="Vendedor *"
+                  wrapperClassName="min-w-[220px]"
                   value={formVenda.vendedor_id}
                   onChange={(e) =>
                     setFormVenda((prev) => ({ ...prev, vendedor_id: e.target.value }))
                   }
                   required
-                >
-                  {vendedoresEquipe.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.nome_completo || "Vendedor"}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            {/* CLIENTE */}
-            <div className="form-group flex-1 min-w-[220px] relative">
-              <label className="form-label">Cliente *</label>
-              <input
-                className="form-input"
-                placeholder="Buscar cliente..."
-                autoComplete="off"
-                value={buscaCliente || clienteSelecionado?.nome || ""}
-                onChange={(e) => handleClienteInputChange(e.target.value)}
-                onFocus={() => setMostrarSugestoesCliente(true)}
-                onBlur={() => {
-                  setTimeout(() => setMostrarSugestoesCliente(false), 150);
-                  if (!buscaCliente.trim()) return;
-                  const texto = normalizeText(buscaCliente);
-                  const cpfTexto = onlyDigits(buscaCliente);
-                  const achado = clientes.find((c) => {
-                    const cpf = onlyDigits(c.cpf || "");
-                    return (
-                      normalizeText(c.nome) === texto ||
-                      (cpfTexto && cpf === cpfTexto)
-                    );
-                  });
-                  if (achado) {
-                    setFormVenda({ ...formVenda, cliente_id: achado.id });
-                    setBuscaCliente("");
-                  }
-                }}
-                required
-              />
-              {mostrarSugestoesCliente && buscaCliente.trim().length >= 1 && (
-                <div
-                  className="card-base card-config"
-                  style={{
-                    position: "absolute",
-                    top: "100%",
-                    left: 0,
-                    right: 0,
-                    maxHeight: 200,
-                    overflowY: "auto",
-                    zIndex: 20,
-                    padding: "4px 0",
+                  options={vendedoresEquipe.map((v) => ({
+                    value: v.id,
+                    label: v.nome_completo || "Vendedor",
+                  }))}
+                />
+              )}
+
+              <div className="form-group min-w-[220px] vtur-city-picker">
+                <label className="form-label">Cliente *</label>
+                <input
+                  className="form-input"
+                  placeholder="Buscar cliente por nome ou CPF..."
+                  autoComplete="off"
+                  value={buscaCliente || clienteSelecionado?.nome || ""}
+                  onChange={(e) => handleClienteInputChange(e.target.value)}
+                  onFocus={() => setMostrarSugestoesCliente(true)}
+                  onBlur={() => {
+                    setTimeout(() => setMostrarSugestoesCliente(false), 150);
+                    if (!buscaCliente.trim()) return;
+                    const texto = normalizeText(buscaCliente);
+                    const cpfTexto = onlyDigits(buscaCliente);
+                    const achado = clientes.find((c) => {
+                      const cpf = onlyDigits(c.cpf || "");
+                      return (
+                        normalizeText(c.nome) === texto ||
+                        (cpfTexto && cpf === cpfTexto)
+                      );
+                    });
+                    if (achado) {
+                      setFormVenda({ ...formVenda, cliente_id: achado.id });
+                      setBuscaCliente("");
+                    }
                   }}
-                >
-                  {clientesFiltrados.length === 0 ? (
-                    <div style={{ padding: "6px 12px", color: "#94a3b8" }}>
-                      Nenhum cliente encontrado.
-                    </div>
-                  ) : (
-                    clientesFiltrados.map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        className="btn btn-ghost w-full text-left"
-                        style={{ padding: "6px 12px" }}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          setFormVenda((prev) => ({ ...prev, cliente_id: c.id }));
-                          setBuscaCliente("");
-                          setMostrarSugestoesCliente(false);
-                        }}
-                      >
-                        {c.nome}
-                        {c.cpf ? (
-                          <span style={{ color: "#6b7280", marginLeft: 6 }}>
-                            • {c.cpf}
+                  required
+                />
+                {mostrarSugestoesCliente && buscaCliente.trim().length >= 1 && (
+                  <div className="vtur-city-dropdown" style={{ maxHeight: 220 }}>
+                    {clientesFiltrados.length === 0 ? (
+                      <div className="vtur-city-helper">Nenhum cliente encontrado.</div>
+                    ) : (
+                      clientesFiltrados.map((c) => (
+                        <AppButton
+                          key={c.id}
+                          type="button"
+                          variant="ghost"
+                          block
+                          className="vtur-city-option"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setFormVenda((prev) => ({ ...prev, cliente_id: c.id }));
+                            setBuscaCliente("");
+                            setMostrarSugestoesCliente(false);
+                          }}
+                        >
+                          <span className="vtur-choice-button-content">
+                            <span className="vtur-choice-button-title">{c.nome}</span>
+                            {c.cpf ? (
+                              <span className="vtur-choice-button-caption">CPF: {c.cpf}</span>
+                            ) : null}
                           </span>
-                        ) : null}
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
+                        </AppButton>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
 
-            {/* CIDADE DE DESTINO */}
-            <div className="form-group flex-1 min-w-[220px] relative">
-              <label className="form-label">Cidade de Destino *</label>
-              <input
-                className="form-input"
-                placeholder="Digite o nome da cidade"
-                value={buscaDestino}
-                onChange={(e) => handleCidadeDestino(e.target.value)}
-                onFocus={() => setMostrarSugestoesCidade(true)}
-                onBlur={() => setTimeout(() => setMostrarSugestoesCidade(false), 150)}
-                required={cidadeObrigatoria}
-                style={{ marginBottom: 6 }}
-              />
-              {mostrarSugestoesCidade && (buscandoCidade || buscaDestino.trim().length >= 2) && (
-                <div
-                  className="card-base card-config"
-                  style={{
-                    position: "absolute",
-                    top: "100%",
-                    left: 0,
-                    right: 0,
-                    maxHeight: 160,
-                    overflowY: "auto",
-                    zIndex: 20,
-                    padding: "4px 0",
-                  }}
-                >
-                  {buscandoCidade && (
-                    <div style={{ padding: "6px 12px", color: "#64748b" }}>
-                      Buscando cidades...
-                    </div>
-                  )}
-                  {!buscandoCidade && erroCidade && (
-                    <div style={{ padding: "6px 12px", color: "#dc2626" }}>{erroCidade}</div>
-                  )}
-                  {!buscandoCidade && !erroCidade && resultadosCidade.length === 0 && (
-                    <div style={{ padding: "6px 12px", color: "#94a3b8" }}>
-                      Nenhuma cidade encontrada.
-                    </div>
-                  )}
-                  {!buscandoCidade && !erroCidade && resultadosCidade.map((c) => {
-                    const label = c.subdivisao_nome ? `${c.nome} (${c.subdivisao_nome})` : c.nome;
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        className="btn btn-ghost w-full text-left"
-                        style={{ padding: "6px 12px" }}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          setFormVenda((prev) => ({ ...prev, destino_id: c.id }));
-                          setBuscaDestino(label);
-                          setBuscaCidadeSelecionada(label);
-                          setMostrarSugestoesCidade(false);
-                          setResultadosCidade([]);
-                        }}
-                      >
-                        {label}
-                        {c.pais_nome ? <span style={{ color: "#6b7280", marginLeft: 6 }}>• {c.pais_nome}</span> : null}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+              <div className="form-group min-w-[220px] vtur-city-picker">
+                <label className="form-label">Cidade de Destino *</label>
+                <input
+                  className="form-input"
+                  placeholder="Digite o nome da cidade"
+                  value={buscaDestino}
+                  onChange={(e) => handleCidadeDestino(e.target.value)}
+                  onFocus={() => setMostrarSugestoesCidade(true)}
+                  onBlur={() => setTimeout(() => setMostrarSugestoesCidade(false), 150)}
+                  required={cidadeObrigatoria}
+                />
+                {mostrarSugestoesCidade && (buscandoCidade || buscaDestino.trim().length >= 2) && (
+                  <div className="vtur-city-dropdown" style={{ maxHeight: 220 }}>
+                    {buscandoCidade && (
+                      <div className="vtur-city-helper">Buscando cidades...</div>
+                    )}
+                    {!buscandoCidade && erroCidade && (
+                      <div className="vtur-city-helper error">{erroCidade}</div>
+                    )}
+                    {!buscandoCidade && !erroCidade && resultadosCidade.length === 0 && (
+                      <div className="vtur-city-helper">Nenhuma cidade encontrada.</div>
+                    )}
+                    {!buscandoCidade && !erroCidade && resultadosCidade.map((c) => {
+                      const label = c.subdivisao_nome ? `${c.nome} (${c.subdivisao_nome})` : c.nome;
+                      return (
+                        <AppButton
+                          key={c.id}
+                          type="button"
+                          variant="ghost"
+                          block
+                          className="vtur-city-option"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setFormVenda((prev) => ({ ...prev, destino_id: c.id }));
+                            setBuscaDestino(label);
+                            setBuscaCidadeSelecionada(label);
+                            setMostrarSugestoesCidade(false);
+                            setResultadosCidade([]);
+                          }}
+                        >
+                          <span className="vtur-choice-button-content">
+                            <span className="vtur-choice-button-title">{label}</span>
+                            {c.pais_nome ? (
+                              <span className="vtur-choice-button-caption">{c.pais_nome}</span>
+                            ) : null}
+                          </span>
+                        </AppButton>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
-            {/* LANÇADA EM */}
-            <div className="form-group flex-1 min-w-[180px]">
-              <label className="form-label">Lançada em</label>
-              <input
-                className="form-input w-full"
+              <AppField
+                label="Lancada em"
+                wrapperClassName="min-w-[180px]"
                 type="date"
                 value={formVenda.data_lancamento}
                 onFocus={selectAllInputOnFocus}
@@ -1668,34 +1651,30 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                   setFormVenda((prev) => ({ ...prev, data_lancamento: e.target.value }))
                 }
               />
-            </div>
 
-            {/* DATA VENDA */}
-            <div className="form-group flex-1 min-w-[180px]">
-              <label className="form-label">
-                Data da venda *
-                <span
-                  title="Informe a data da venda conforme no Systur, usada para emissão de NF."
-                  style={{ marginLeft: 6, color: '#0ea5e9', cursor: 'help' }}
-                >
-                  ?
-                </span>
-              </label>
-              <input
-                className="form-input w-full"
+              <AppField
+                label={
+                  <span>
+                    Data da venda *{" "}
+                    <span
+                      title="Informe a data da venda conforme no Systur, usada para emissao de NF."
+                      style={{ color: "#0ea5e9", cursor: "help" }}
+                    >
+                      ?
+                    </span>
+                  </span>
+                }
+                wrapperClassName="min-w-[180px]"
                 type="date"
                 value={formVenda.data_venda}
                 onFocus={selectAllInputOnFocus}
                 onChange={(e) => setFormVenda((prev) => ({ ...prev, data_venda: e.target.value }))}
                 required
               />
-            </div>
 
-            {/* EMBARQUE */}
-            <div className="form-group flex-1 min-w-[180px]">
-              <label className="form-label">Data de embarque</label>
-              <input
-                className="form-input w-full"
+              <AppField
+                label="Data de embarque"
+                wrapperClassName="min-w-[180px]"
                 type="date"
                 value={formVenda.data_embarque}
                 onFocus={selectAllInputOnFocus}
@@ -1715,11 +1694,10 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                   })
                 }
               />
-            </div>
-            <div className="form-group flex-1 min-w-[180px]">
-              <label className="form-label">Data final</label>
-              <input
-                className="form-input w-full"
+
+              <AppField
+                label="Data final"
+                wrapperClassName="min-w-[180px]"
                 type="date"
                 value={formVenda.data_final}
                 min={formVenda.data_embarque || undefined}
@@ -1735,13 +1713,17 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 }
               />
             </div>
-          </div>
 
-          <div className="form-row" style={{ marginTop: 12 }}>
-            <div className="form-group flex-1 min-w-[180px]">
-              <label className="form-label">Aplicar desconto comercial?</label>
-              <select
-                className="form-select"
+          <AppCard
+            title="Condicoes comerciais"
+            subtitle="Configure o desconto comercial da venda quando houver negociacao aprovada."
+            tone="info"
+            style={{ marginTop: 18 }}
+          >
+            <div className="vtur-form-grid vtur-form-grid-2">
+              <AppField
+                as="select"
+                label="Aplicar desconto comercial?"
                 value={formVenda.desconto_comercial_aplicado ? "sim" : "nao"}
                 onChange={(e) =>
                   setFormVenda((prev) => ({
@@ -1751,16 +1733,14 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                       e.target.value === "sim" ? prev.desconto_comercial_valor : "",
                   }))
                 }
-              >
-                <option value="nao">Não</option>
-                <option value="sim">Sim</option>
-              </select>
-            </div>
-            {formVenda.desconto_comercial_aplicado && (
-              <div className="form-group flex-1 min-w-[180px]">
-                <label className="form-label">Valor do desconto</label>
-                <input
-                  className="form-input"
+                options={[
+                  { value: "nao", label: "Nao" },
+                  { value: "sim", label: "Sim" },
+                ]}
+              />
+              {formVenda.desconto_comercial_aplicado && (
+                <AppField
+                  label="Valor do desconto"
                   type="text"
                   inputMode="decimal"
                   placeholder="0,00"
@@ -1779,24 +1759,22 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                     }))
                   }
                 />
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          </AppCard>
 
-          {/* RECIBOS */}
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <h4 className="font-semibold text-lg">Recibos da Venda</h4>
-            <button
-              type="button"
-              className="btn btn-light w-full sm:w-auto"
-              style={{ marginLeft: "auto" }}
-              onClick={() => setShowCalculator(true)}
-            >
-              Calculadora
-            </button>
-          </div>
-
-          {recibos.map((r, i) => {
+          <AppCard
+            title="Recibos da venda"
+            subtitle="Monte os itens da venda, pagamentos e comprovantes dentro do fluxo principal do CRM."
+            tone="info"
+            style={{ marginTop: 18 }}
+            actions={
+              <AppButton type="button" variant="secondary" onClick={() => setShowCalculator(true)}>
+                Calculadora
+              </AppButton>
+            }
+          >
+            {recibos.map((r, i) => {
             const produtoSelecionado = produtos.find((p) => p.id === r.produto_id);
             const nomeProdutoAtual = produtoSelecionado?.nome || "";
             const produtosFiltrados = filtrarProdutos(buscaProduto, r.tipo_produto_id);
@@ -1809,29 +1787,39 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 ? "Escolha uma cidade ou selecione um produto global..."
                 : "Selecione uma cidade primeiro e busque o produto...";
             return (
-              <div key={i} className="card-base mb-2">
-                <div className="flex flex-col md:flex-row md:flex-wrap gap-4">
-                  {/* TIPO DE PRODUTO */}
-                  <div className="form-group flex-1 min-w-[180px]">
-                    <label className="form-label">Tipo de Produto *</label>
-                    <select
-                      className="form-select"
-                      value={r.tipo_produto_id}
-                      onChange={(e) => handleTipoReciboChange(i, e.target.value)}
-                      required
-                      disabled={tipos.length === 0}
-                    >
-                      <option value="">Selecione</option>
-                      {tipos.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.nome || t.tipo || "Tipo"}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+              <AppCard
+                key={i}
+                title={`Recibo ${i + 1}`}
+                subtitle={
+                  r.principal
+                    ? "Este recibo define o produto principal usado nos relatorios."
+                    : "Configure produto, datas e composicao financeira deste recibo."
+                }
+                className="vtur-sales-embedded-card"
+                actions={
+                  <AppButton type="button" variant="danger" onClick={() => removerRecibo(i)}>
+                    Remover recibo
+                  </AppButton>
+                }
+              >
+                <div className="vtur-form-grid vtur-form-grid-4">
+                  <AppField
+                    as="select"
+                    label="Tipo de Produto *"
+                    value={r.tipo_produto_id}
+                    onChange={(e) => handleTipoReciboChange(i, e.target.value)}
+                    required
+                    disabled={tipos.length === 0}
+                    options={[
+                      { value: "", label: "Selecione" },
+                      ...tipos.map((t) => ({
+                        value: t.id,
+                        label: t.nome || t.tipo || "Tipo",
+                      })),
+                    ]}
+                  />
 
-                  {/* PRODUTO */}
-                  <div className="form-group flex-1 min-w-[180px]">
+                  <div className="form-group min-w-[220px]">
                     <label className="form-label">Produto *</label>
                     <input
                       className="form-input"
@@ -1870,8 +1858,8 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                         <option key={p.id} value={p.nome} />
                       ))}
                     </datalist>
-                    <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
-                      <label className="flex items-center gap-2 cursor-pointer">
+                    <div className="vtur-sales-principal-toggle">
+                      <label className="vtur-sales-principal-label">
                         <input
                           type="radio"
                           name="recibo-principal"
@@ -1879,37 +1867,28 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                           onChange={() => marcarReciboPrincipal(i)}
                           className="form-radio h-4 w-4 text-sky-600"
                         />
-                        <span className="font-semibold text-[11px]">Produto principal</span>
+                        <span>Produto principal</span>
                       </label>
-                      <span>Define o produto principal usado nos relatórios.</span>
+                      <span className="vtur-sales-note">
+                        Define o produto principal usado nos relatorios.
+                      </span>
                     </div>
                   </div>
 
-                  {/* NÚMERO */}
-                  <div className="form-group flex-1 min-w-[120px]">
-                    <label className="form-label">Número recibo *</label>
-                    <input
-                      className="form-input"
-                      value={r.numero_recibo}
-                      onChange={(e) =>
-                        updateRecibo(i, "numero_recibo", e.target.value)
-                      }
-                      required
-                    />
-                  </div>
+                  <AppField
+                    label="Numero recibo *"
+                    value={r.numero_recibo}
+                    onChange={(e) => updateRecibo(i, "numero_recibo", e.target.value)}
+                    required
+                  />
 
-                  {/* RESERVA */}
-                  <div className="form-group flex-1 min-w-[140px]">
-                    <label className="form-label">Reserva</label>
-                    <input
-                      className="form-input"
-                      value={r.numero_reserva || ""}
-                      onChange={(e) => updateRecibo(i, "numero_reserva", e.target.value)}
-                    />
-                  </div>
+                  <AppField
+                    label="Reserva"
+                    value={r.numero_reserva || ""}
+                    onChange={(e) => updateRecibo(i, "numero_reserva", e.target.value)}
+                  />
 
-                  {/* TIPO PACOTE */}
-                  <div className="form-group flex-1 min-w-[180px]">
+                  <div className="form-group min-w-[180px]">
                     <label className="form-label">Tipo de Pacote</label>
                     <select
                       className="form-select"
@@ -1940,7 +1919,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                         !tiposPacote.some(
                           (tipo) => normalizeText(tipo.nome) === normalizeText(r.tipo_pacote || "")
                         ) && (
-                          <option value={r.tipo_pacote}>{`${r.tipo_pacote} (não cadastrado)`}</option>
+                          <option value={r.tipo_pacote}>{`${r.tipo_pacote} (nao cadastrado)`}</option>
                         )}
                     </select>
                     {tiposPacote.length === 0 && (
@@ -1953,122 +1932,82 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                     )}
                   </div>
 
-                  {/* DATA INÍCIO */}
-                  <div className="form-group flex-1 min-w-[160px]">
-                    <label className="form-label">Início *</label>
-                    <input
-                      className="form-input w-full"
-                      type="date"
-                      value={r.data_inicio}
-                      onFocus={selectAllInputOnFocus}
-                      onChange={(e) => updateRecibo(i, "data_inicio", e.target.value)}
-                      required
-                    />
-                  </div>
+                  <AppField
+                    label="Inicio *"
+                    type="date"
+                    value={r.data_inicio}
+                    onFocus={selectAllInputOnFocus}
+                    onChange={(e) => updateRecibo(i, "data_inicio", e.target.value)}
+                    required
+                  />
 
-                  {/* DATA FIM */}
-                  <div className="form-group flex-1 min-w-[160px]">
-                    <label className="form-label">Fim *</label>
-                    <input
-                      className="form-input w-full"
-                      type="date"
-                      value={r.data_fim}
-                      min={r.data_inicio || undefined}
-                      onFocus={selectAllInputOnFocus}
-                      onChange={(e) => updateRecibo(i, "data_fim", e.target.value)}
-                      required
-                    />
-                  </div>
+                  <AppField
+                    label="Fim *"
+                    type="date"
+                    value={r.data_fim}
+                    min={r.data_inicio || undefined}
+                    onFocus={selectAllInputOnFocus}
+                    onChange={(e) => updateRecibo(i, "data_fim", e.target.value)}
+                    required
+                  />
 
-                  {/* VALOR */}
-                  <div className="form-group flex-1 min-w-[120px]">
-                    <label className="form-label">Valor total *</label>
-                    <input
-                      className="form-input"
-                      type="text"
-                      inputMode="decimal"
-                      pattern="[0-9,.]*"
-                      placeholder="0,00"
-                      value={r.valor_total}
-                      onFocus={selectAllInputOnFocus}
-                      onChange={(e) => updateReciboMonetario(i, "valor_total", e.target.value)}
-                      onBlur={() => updateRecibo(i, "valor_total", normalizeMoneyInput(r.valor_total))}
-                      required
-                    />
-                  </div>
+                  <AppField
+                    label="Valor total *"
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9,.]*"
+                    placeholder="0,00"
+                    value={r.valor_total}
+                    onFocus={selectAllInputOnFocus}
+                    onChange={(e) => updateReciboMonetario(i, "valor_total", e.target.value)}
+                    onBlur={() => updateRecibo(i, "valor_total", normalizeMoneyInput(r.valor_total))}
+                    required
+                  />
 
-                  {/* TAXAS */}
-                  <div className="form-group flex-1 min-w-[120px]">
-                    <label className="form-label">Taxas</label>
-                    <input
-                      className="form-input"
-                      type="text"
-                      inputMode="decimal"
-                      pattern="[0-9,.]*"
-                      placeholder="0,00"
-                      value={r.valor_taxas}
-                      onFocus={selectAllInputOnFocus}
-                      onChange={(e) => updateReciboMonetario(i, "valor_taxas", e.target.value)}
-                      onBlur={() => updateRecibo(i, "valor_taxas", normalizeMoneyInput(r.valor_taxas))}
-                    />
-                  </div>
+                  <AppField
+                    label="Taxas"
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9,.]*"
+                    placeholder="0,00"
+                    value={r.valor_taxas}
+                    onFocus={selectAllInputOnFocus}
+                    onChange={(e) => updateReciboMonetario(i, "valor_taxas", e.target.value)}
+                    onBlur={() => updateRecibo(i, "valor_taxas", normalizeMoneyInput(r.valor_taxas))}
+                  />
 
-                  {/* DU */}
-                  <div className="form-group flex-1 min-w-[120px]">
-                    <label className="form-label">DU</label>
-                    <input
-                      className="form-input"
-                      type="text"
-                      inputMode="decimal"
-                      pattern="[0-9,.]*"
-                      placeholder="0,00"
-                      value={r.valor_du}
-                      onFocus={selectAllInputOnFocus}
-                      onChange={(e) => updateReciboMonetario(i, "valor_du", e.target.value)}
-                      onBlur={() => updateRecibo(i, "valor_du", normalizeMoneyInput(r.valor_du))}
-                    />
-                  </div>
+                  <AppField
+                    label="DU"
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9,.]*"
+                    placeholder="0,00"
+                    value={r.valor_du}
+                    onFocus={selectAllInputOnFocus}
+                    onChange={(e) => updateReciboMonetario(i, "valor_du", e.target.value)}
+                    onBlur={() => updateRecibo(i, "valor_du", normalizeMoneyInput(r.valor_du))}
+                  />
 
-                  {/* RAV */}
-                  <div className="form-group flex-1 min-w-[120px]">
-                    <label
-                      className="form-label"
-                      title="Se possui RAV, informe o valor total somado ao RAV. O sistema desconta o RAV nos calculos de meta e comissao."
-                    >
-                      RAV
-                    </label>
-                    <input
-                      className="form-input"
-                      type="text"
-                      inputMode="decimal"
-                      pattern="[0-9,.]*"
-                      placeholder="0,00"
-                      value={r.valor_rav}
-                      onFocus={selectAllInputOnFocus}
-                      onChange={(e) => updateReciboMonetario(i, "valor_rav", e.target.value)}
-                      onBlur={() => updateRecibo(i, "valor_rav", normalizeMoneyInput(r.valor_rav))}
-                    />
-                    {hasRavValue(r.valor_rav) && (
-                      <div style={{ marginTop: 4, fontSize: 12, opacity: 0.75 }}>
-                        Total deve incluir o RAV. O sistema desconta o RAV no calculo de meta/comissao.
-                      </div>
-                    )}
-                  </div>
-
-                  {/* REMOVER */}
-                  <div className="form-group flex-none w-20 flex items-end">
-                    <button
-                      type="button"
-                      className="btn-icon btn-danger mt-2"
-                      onClick={() => removerRecibo(i)}
-                    >
-                      🗑️
-                    </button>
-                  </div>
+                  <AppField
+                    label="RAV"
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9,.]*"
+                    placeholder="0,00"
+                    value={r.valor_rav}
+                    caption={
+                      hasRavValue(r.valor_rav)
+                        ? "Total deve incluir o RAV. O sistema desconta o RAV no calculo de meta/comissao."
+                        : "Se houver RAV, informe o valor total somado ao RAV."
+                    }
+                    onFocus={selectAllInputOnFocus}
+                    onChange={(e) => updateReciboMonetario(i, "valor_rav", e.target.value)}
+                    onBlur={() => updateRecibo(i, "valor_rav", normalizeMoneyInput(r.valor_rav))}
+                  />
                 </div>
 
-                <div className="form-row" style={{ marginTop: 8 }}>
-                  <div className="form-group flex-1 min-w-[220px]">
+                <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 16 }}>
+                  <div className="form-group min-w-[220px]">
                     <label className="form-label">Contrato (PDF)</label>
                     <input
                       type="file"
@@ -2084,7 +2023,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                       }}
                     />
                     {r.contrato_url && (
-                      <div style={{ marginTop: 6 }}>
+                      <div className="vtur-sales-contract-link">
                         <a className="link" href={r.contrato_url} target="_blank" rel="noreferrer">
                           Ver contrato anexado
                         </a>
@@ -2092,339 +2031,222 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                     )}
                   </div>
                 </div>
-              </div>
+              </AppCard>
             );
           })}
 
           {/* PAGAMENTOS */}
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <h4 className="font-semibold text-lg">Formas de Pagamento</h4>
+          <div className="vtur-sales-section-heading">
+            <h4>Formas de Pagamento</h4>
+            <p>Distribua valores, descontos e parcelas por meio de pagamento.</p>
           </div>
 
           {pagamentos.map((p, idx) => {
             const formaSelecionada = formasPagamento.find((f) => f.id === p.forma_id);
             return (
-              <div key={`pag-${idx}`} className="card-base mb-2">
-                <div className="flex flex-col md:flex-row md:flex-wrap gap-4">
-                  <div className="form-group flex-1 min-w-[180px]">
-                    <label className="form-label">Forma *</label>
-                    <select
-                      className="form-select"
-                      value={p.forma_id}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        const match = formasPagamento.find((f) => f.id === value);
-                        setPagamentos((prev) => {
-                          const next = [...prev];
-                          next[idx] = {
-                            ...next[idx],
-                            forma_id: value,
-                            forma_nome: match?.nome || next[idx].forma_nome,
-                          };
-                          return next;
-                        });
-                      }}
-                    >
-                      <option value="">Selecione</option>
-                      {formasPagamento.map((f) => (
-                        <option key={f.id} value={f.id}>{f.nome}</option>
-                      ))}
-                    </select>
-                    {!p.forma_id && (
-                      <input
-                        className="form-input mt-2"
-                        placeholder="Nome da forma"
-                        value={p.forma_nome}
-                        onChange={(e) => updatePagamento(idx, "forma_nome", e.target.value)}
-                      />
-                    )}
-                    {formaSelecionada && (
-                      <small style={{ color: "#64748b" }}>
-                        Comissão: {formaSelecionada.paga_comissao ? "Sim" : "Não"}
-                      </small>
-                    )}
-                  </div>
+              <AppCard
+                key={`pag-${idx}`}
+                title={`Pagamento ${idx + 1}`}
+                subtitle="Defina a forma, os valores e a distribuicao em parcelas."
+                className="vtur-sales-embedded-card"
+                actions={
+                  <AppButton type="button" variant="danger" onClick={() => removerPagamento(idx)}>
+                    Remover pagamento
+                  </AppButton>
+                }
+              >
+                <div className="vtur-form-grid vtur-form-grid-4">
+                  <AppField
+                    as="select"
+                    label="Forma *"
+                    value={p.forma_id}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const match = formasPagamento.find((f) => f.id === value);
+                      setPagamentos((prev) => {
+                        const next = [...prev];
+                        next[idx] = {
+                          ...next[idx],
+                          forma_id: value,
+                          forma_nome: match?.nome || next[idx].forma_nome,
+                        };
+                        return next;
+                      });
+                    }}
+                    caption={
+                      formaSelecionada
+                        ? `Comissao: ${formaSelecionada.paga_comissao ? "Sim" : "Nao"}`
+                        : undefined
+                    }
+                    options={[
+                      { value: "", label: "Selecione" },
+                      ...formasPagamento.map((f) => ({ value: f.id, label: f.nome })),
+                    ]}
+                  />
 
-                  <div className="form-group flex-1 min-w-[160px]">
-                    <label className="form-label">Operação</label>
-                    <input
-                      className="form-input"
-                      value={p.operacao}
-                      onChange={(e) => updatePagamento(idx, "operacao", e.target.value)}
+                  {!p.forma_id && (
+                    <AppField
+                      label="Nome da forma"
+                      value={p.forma_nome}
+                      onChange={(e) => updatePagamento(idx, "forma_nome", e.target.value)}
                     />
-                  </div>
-
-                  <div className="form-group flex-1 min-w-[140px]">
-                    <label className="form-label">Plano</label>
-                    <input
-                      className="form-input"
-                      value={p.plano}
-                      onChange={(e) => updatePagamento(idx, "plano", e.target.value)}
-                    />
-                  </div>
-
-                  <div className="form-group flex-1 min-w-[140px]">
-                    <label className="form-label">Valor</label>
-                    <input
-                      className="form-input"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0,00"
-                      value={p.valor_bruto}
-                      onFocus={selectAllInputOnFocus}
-                      onChange={(e) => updatePagamentoMonetario(idx, "valor_bruto", e.target.value)}
-                      onBlur={() => updatePagamento(idx, "valor_bruto", normalizeMoneyInput(p.valor_bruto))}
-                    />
-                  </div>
-
-                  <div className="form-group flex-1 min-w-[140px]">
-                    <label className="form-label">Desconto</label>
-                    <input
-                      className="form-input"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0,00"
-                      value={p.desconto_valor}
-                      onFocus={selectAllInputOnFocus}
-                      onChange={(e) => updatePagamentoMonetario(idx, "desconto_valor", e.target.value)}
-                      onBlur={() => updatePagamento(idx, "desconto_valor", normalizeMoneyInput(p.desconto_valor))}
-                    />
-                  </div>
-
-                  <div className="form-group flex-1 min-w-[140px]">
-                    <label className="form-label">Total</label>
-                    <input
-                      className="form-input"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0,00"
-                      value={p.valor_total}
-                      onFocus={selectAllInputOnFocus}
-                      onChange={(e) => updatePagamentoMonetario(idx, "valor_total", e.target.value)}
-                      onBlur={() => updatePagamento(idx, "valor_total", normalizeMoneyInput(p.valor_total))}
-                    />
-                  </div>
-
-                  <div className="form-group flex-none w-20 flex items-end">
-                    <button
-                      type="button"
-                      className="btn-icon btn-danger mt-2"
-                      onClick={() => removerPagamento(idx)}
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 8 }}>
-                  <div className="flex items-center gap-2">
-                    <strong>Parcelas</strong>
-                    <button
-                      type="button"
-                      className="btn btn-light btn-sm"
-                      onClick={() => addParcelaPagamento(idx)}
-                    >
-                      + Parcela
-                    </button>
-                  </div>
-                  {(p.parcelas || []).length === 0 ? (
-                    <div style={{ color: "#94a3b8", marginTop: 6 }}>Nenhuma parcela informada.</div>
-                  ) : (
-                    <div className="table-container overflow-x-auto" style={{ marginTop: 8 }}>
-                      <table className="table-default table-compact table-mobile-cards">
-                        <thead>
-                          <tr>
-                            <th>Parcela</th>
-                            <th>Valor</th>
-                            <th>Vencimento</th>
-                            <th className="th-actions">Ações</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {p.parcelas.map((parcela, parcelaIdx) => (
-                            <tr key={`parcela-${idx}-${parcelaIdx}`}>
-                              <td data-label="Parcela">
-                                <input
-                                  className="form-input"
-                                  value={parcela.numero}
-                                  onChange={(e) =>
-                                    updateParcelaPagamento(idx, parcelaIdx, "numero", e.target.value)
-                                  }
-                                />
-                              </td>
-                              <td data-label="Valor">
-                                <input
-                                  className="form-input"
-                                  value={parcela.valor}
-                                  onFocus={selectAllInputOnFocus}
-                                  onChange={(e) =>
-                                    updateParcelaPagamento(
-                                      idx,
-                                      parcelaIdx,
-                                      "valor",
-                                      formatarValorDigitado(e.target.value)
-                                    )
-                                  }
-                                  onBlur={() =>
-                                    updateParcelaPagamento(
-                                      idx,
-                                      parcelaIdx,
-                                      "valor",
-                                      normalizeMoneyInput(parcela.valor)
-                                    )
-                                  }
-                                />
-                              </td>
-                              <td data-label="Vencimento">
-                                <input
-                                  className="form-input"
-                                  type="date"
-                                  value={parcela.vencimento}
-                                  onFocus={selectAllInputOnFocus}
-                                  onChange={(e) =>
-                                    updateParcelaPagamento(idx, parcelaIdx, "vencimento", e.target.value)
-                                  }
-                                />
-                              </td>
-                              <td className="th-actions" data-label="Ações">
-                                <div className="action-buttons">
-                                  <button
-                                    type="button"
-                                    className="btn-icon btn-danger"
-                                    onClick={() => removerParcelaPagamento(idx, parcelaIdx)}
-                                    title="Remover parcela"
-                                    aria-label="Remover parcela"
-                                  >
-                                    🗑️
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
                   )}
+
+                  <AppField
+                    label="Operacao"
+                    value={p.operacao}
+                    onChange={(e) => updatePagamento(idx, "operacao", e.target.value)}
+                  />
+
+                  <AppField
+                    label="Plano"
+                    value={p.plano}
+                    onChange={(e) => updatePagamento(idx, "plano", e.target.value)}
+                  />
+
+                  <AppField
+                    label="Valor"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0,00"
+                    value={p.valor_bruto}
+                    onFocus={selectAllInputOnFocus}
+                    onChange={(e) => updatePagamentoMonetario(idx, "valor_bruto", e.target.value)}
+                    onBlur={() => updatePagamento(idx, "valor_bruto", normalizeMoneyInput(p.valor_bruto))}
+                  />
+
+                  <AppField
+                    label="Desconto"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0,00"
+                    value={p.desconto_valor}
+                    onFocus={selectAllInputOnFocus}
+                    onChange={(e) => updatePagamentoMonetario(idx, "desconto_valor", e.target.value)}
+                    onBlur={() => updatePagamento(idx, "desconto_valor", normalizeMoneyInput(p.desconto_valor))}
+                  />
+
+                  <AppField
+                    label="Total"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0,00"
+                    value={p.valor_total}
+                    onFocus={selectAllInputOnFocus}
+                    onChange={(e) => updatePagamentoMonetario(idx, "valor_total", e.target.value)}
+                    onBlur={() => updatePagamento(idx, "valor_total", normalizeMoneyInput(p.valor_total))}
+                  />
                 </div>
-              </div>
+
+                <div className="vtur-sales-parcelas-head">
+                  <div>
+                    <strong>Parcelas</strong>
+                    <p>Organize vencimento e valor por parcela.</p>
+                  </div>
+                  <AppButton type="button" variant="secondary" onClick={() => addParcelaPagamento(idx)}>
+                    Adicionar parcela
+                  </AppButton>
+                </div>
+                {(p.parcelas || []).length === 0 ? (
+                  <div className="vtur-sales-empty-state">Nenhuma parcela informada.</div>
+                ) : (
+                  <div className="vtur-sales-parcelas-list">
+                    {p.parcelas.map((parcela, parcelaIdx) => (
+                      <div key={`parcela-${idx}-${parcelaIdx}`} className="vtur-sales-parcela-item">
+                        <div className="vtur-form-grid vtur-form-grid-4">
+                          <AppField
+                            label="Parcela"
+                            value={parcela.numero}
+                            onChange={(e) =>
+                              updateParcelaPagamento(idx, parcelaIdx, "numero", e.target.value)
+                            }
+                          />
+                          <AppField
+                            label="Valor"
+                            value={parcela.valor}
+                            onFocus={selectAllInputOnFocus}
+                            onChange={(e) =>
+                              updateParcelaPagamento(
+                                idx,
+                                parcelaIdx,
+                                "valor",
+                                formatarValorDigitado(e.target.value)
+                              )
+                            }
+                            onBlur={() =>
+                              updateParcelaPagamento(
+                                idx,
+                                parcelaIdx,
+                                "valor",
+                                normalizeMoneyInput(parcela.valor)
+                              )
+                            }
+                          />
+                          <AppField
+                            label="Vencimento"
+                            type="date"
+                            value={parcela.vencimento}
+                            onFocus={selectAllInputOnFocus}
+                            onChange={(e) =>
+                              updateParcelaPagamento(idx, parcelaIdx, "vencimento", e.target.value)
+                            }
+                          />
+                          <div className="vtur-sales-parcela-action">
+                            <AppButton
+                              type="button"
+                              variant="danger"
+                              onClick={() => removerParcelaPagamento(idx, parcelaIdx)}
+                              title="Remover parcela"
+                              aria-label="Remover parcela"
+                            >
+                              Remover parcela
+                            </AppButton>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </AppCard>
             );
           })}
-          <div className="mt-3">
-            <button
-              type="button"
-              className="btn btn-light w-full sm:w-auto"
-              onClick={addPagamento}
-            >
-              ➕ Adicionar pagamento
-            </button>
-          </div>
-
-          <div className="mt-3 mobile-stack-buttons">
-            <button
-              type="button"
-              className="btn btn-primary w-full sm:w-auto"
-              onClick={addRecibo}
-            >
-              ➕ Adicionar recibo
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary w-full sm:w-auto"
-              disabled={salvando}
-            >
-              {salvando ? "Salvando..." : "Salvar venda"}
-            </button>
-            <button
-              type="button"
-              className="btn btn-light w-full sm:w-auto"
-              onClick={cancelarCadastro}
-            >
-              Cancelar
-            </button>
-          </div>
+            <div className="vtur-form-actions">
+              <AppButton type="button" variant="secondary" onClick={addPagamento}>
+                Adicionar pagamento
+              </AppButton>
+              <AppButton type="button" variant="secondary" onClick={addRecibo}>
+                Adicionar recibo
+              </AppButton>
+              <AppButton type="submit" variant="primary" disabled={salvando}>
+                {salvando ? "Salvando..." : "Salvar venda"}
+              </AppButton>
+              <AppButton type="button" variant="ghost" onClick={cancelarCadastro}>
+                Cancelar
+              </AppButton>
+            </div>
+          </AppCard>
         </form>
-      </div>
-      {duplicadoModal && (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Duplicidade de recibo"
-        >
-          <div className="modal-panel" style={{ maxWidth: 520, width: "95vw" }}>
-            <div className="modal-header">
-              <div
-                className="modal-title"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  color: "#b45309",
-                  fontWeight: 700,
-                }}
-              >
-                <AlertTriangle size={20} strokeWidth={2} />
-                ATENÇÃO!
-              </div>
-            </div>
-            <div className="modal-body" style={{ display: "grid", gap: 10 }}>
-              <p style={{ margin: 0 }}>{duplicadoModal.mensagem}</p>
-            </div>
-            <div className="modal-footer mobile-stack-buttons">
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => setDuplicadoModal(null)}
-              >
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {tipoPacoteModal && (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Tipo de pacote obrigatório"
-        >
-          <div className="modal-panel" style={{ maxWidth: 520, width: "95vw" }}>
-            <div className="modal-header">
-              <div
-                className="modal-title"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  color: "#b45309",
-                  fontWeight: 700,
-                }}
-              >
-                <AlertTriangle size={20} strokeWidth={2} />
-                ATENÇÃO!
-              </div>
-            </div>
-            <div className="modal-body" style={{ display: "grid", gap: 10 }}>
-              <p style={{ margin: 0 }}>{tipoPacoteModal.mensagem}</p>
-            </div>
-            <div className="modal-footer mobile-stack-buttons">
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => setTipoPacoteModal(null)}
-              >
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </AppCard>
+      <AppNoticeDialog
+        open={Boolean(duplicadoModal)}
+        title="ATENCAO!"
+        message={duplicadoModal?.mensagem}
+        icon={<AlertTriangle size={20} strokeWidth={2} />}
+        onClose={() => setDuplicadoModal(null)}
+      />
+      <AppNoticeDialog
+        open={Boolean(tipoPacoteModal)}
+        title="ATENCAO!"
+        message={tipoPacoteModal?.mensagem}
+        icon={<AlertTriangle size={20} strokeWidth={2} />}
+        onClose={() => setTipoPacoteModal(null)}
+      />
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
       <CalculatorModal
         open={showCalculator}
         onClose={() => setShowCalculator(false)}
       />
     </div>
+  </AppPrimerProvider>
   );
 }

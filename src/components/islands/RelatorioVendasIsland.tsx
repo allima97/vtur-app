@@ -1,3 +1,4 @@
+import { Dialog } from "@primer/react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { exportTableToPDF } from "../../lib/pdf";
@@ -16,11 +17,18 @@ import {
 } from "../../lib/comissaoUtils";
 import { carregarTermosNaoComissionaveis, calcularNaoComissionavelPorVenda } from "../../lib/pagamentoUtils";
 import AlertMessage from "../ui/AlertMessage";
+import DataTable from "../ui/DataTable";
+import EmptyState from "../ui/EmptyState";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import PaginationControls from "../ui/PaginationControls";
 import { useMasterScope } from "../../lib/useMasterScope";
 import { fetchGestorEquipeIdsComGestor } from "../../lib/gestorEquipe";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type Cliente = {
   id: string;
@@ -155,16 +163,15 @@ function getLiquidoComissionavel(r: {
 }
 
 type StatusFiltro = "todos" | "aberto" | "confirmado" | "cancelado";
-type MobileFiltroTipo = "cliente" | "cidade" | "tipo_produto" | "produto" | "data" | "vendedor";
-type MobilePeriodoPreset =
+type PeriodoPreset =
   | "hoje"
   | "7"
   | "30"
   | "mes_atual"
   | "mes_anterior"
-  | "personalizado";
-
-type PeriodoPreset = MobilePeriodoPreset | "limpar" | "";
+  | "personalizado"
+  | "limpar"
+  | "";
 
 type Papel = "ADMIN" | "MASTER" | "GESTOR" | "VENDEDOR" | "OUTRO";
 
@@ -378,10 +385,6 @@ export default function RelatorioVendasIsland() {
   const [exportFlags, setExportFlags] = useState<ExportFlags>({ pdf: true, excel: true });
   const [showFilters, setShowFilters] = useState(false);
   const [showExport, setShowExport] = useState(false);
-  const [mobileFiltroTipo, setMobileFiltroTipo] =
-    useState<MobileFiltroTipo>("data");
-  const [mobilePeriodoPreset, setMobilePeriodoPreset] =
-    useState<MobilePeriodoPreset>("personalizado");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [totalVendasDb, setTotalVendasDb] = useState(0);
@@ -1615,922 +1618,534 @@ export default function RelatorioVendasIsland() {
     (exportTipo === "excel" && !exportFlags.excel) ||
     (exportTipo === "pdf" && !exportFlags.pdf);
   const todosValue = userCtx?.papel === "MASTER" ? "all" : "todos";
+  if (loadingUser) return <LoadingUsuarioContext />;
 
-  return (
-    <div className="relatorio-vendas-page">
-      {loadingUser && (
-        <div className="card-base card-orange mb-3">Carregando contexto do usuário...</div>
-      )}
-      {userCtx && userCtx.papel !== "ADMIN" && (
-        <div className="card-base card-config mb-3" style={{ color: "#334155" }}>
-          Relatório limitado a{" "}
-          {userCtx.papel === "GESTOR"
+  const aplicarFiltrosRelatorio = () => {
+    setPage(1);
+    carregarVendas(1);
+    setShowFilters(false);
+  };
+
+  const periodoResumo =
+    dataInicio && dataFim
+      ? `${formatarDataParaExibicao(dataInicio)} ate ${formatarDataParaExibicao(dataFim)}`
+      : dataInicio
+      ? `A partir de ${formatarDataParaExibicao(dataInicio)}`
+      : dataFim
+      ? `Ate ${formatarDataParaExibicao(dataFim)}`
+      : "Sem recorte de data";
+
+  const escopoResumo =
+    userCtx && userCtx.papel !== "ADMIN"
+      ? `Relatorio limitado a ${
+          userCtx.papel === "GESTOR"
             ? "sua equipe"
             : userCtx.papel === "MASTER"
-            ? "seu portfólio"
-            : "suas vendas"}
-          .
-        </div>
-      )}
-      <div className="card-base card-purple form-card mb-3">
-        <div className="flex flex-col gap-2 sm:hidden">
-          <button type="button" className="btn btn-light" onClick={() => setShowFilters(true)}>
-            Filtros
-          </button>
-          <button type="button" className="btn btn-light" onClick={() => setShowExport(true)}>
-            Exportar
-          </button>
-        </div>
-        <div className="hidden sm:block">
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Data início</label>
-            <input
-              type="date"
-              className="form-input"
-              value={dataInicio}
-              onFocus={selectAllInputOnFocus}
-              onChange={(e) => {
-                const nextInicio = e.target.value;
-                setPeriodoPreset("");
-                setDataInicio(nextInicio);
-                if (dataFim && nextInicio && dataFim < nextInicio) {
-                  setDataFim(nextInicio);
-                }
-              }}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Data fim</label>
-            <input
-              type="date"
-              className="form-input"
-              value={dataFim}
-              min={dataInicio || undefined}
-              onFocus={selectAllInputOnFocus}
-              onChange={(e) => {
-                const nextFim = e.target.value;
-                setPeriodoPreset("");
-                const boundedFim = dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
-                setDataFim(boundedFim);
-              }}
-            />
-          </div>
-          {userCtx?.papel === "MASTER" && (
-            <>
-              <div className="form-group">
-                <label className="form-label">Filial</label>
-                <select
-                  className="form-select"
-                  value={masterScope.empresaSelecionada}
-                  onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
-                >
-                  <option value="all">Todas</option>
-                  {masterScope.empresasAprovadas.map((empresa) => (
-                    <option key={empresa.id} value={empresa.id}>
-                      {empresa.nome_fantasia}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Equipe</label>
-                <select
-                  className="form-select"
-                  value={masterScope.gestorSelecionado}
-                  onChange={(e) => masterScope.setGestorSelecionado(e.target.value)}
-                >
-                  <option value="all">Todas</option>
-                  {masterScope.gestoresDisponiveis.map((gestor) => (
-                    <option key={gestor.id} value={gestor.id}>
-                      {gestor.nome_completo}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </>
-          )}
-          {(userCtx?.papel === "GESTOR" || userCtx?.papel === "MASTER") && (
-            <div className="form-group">
-              <label className="form-label">Vendedor</label>
-              <select
-                className="form-select"
-                value={vendedorFiltro || todosValue}
-                onChange={(e) => setVendedorFiltro(e.target.value)}
-              >
-                <option value={todosValue}>Todos</option>
-                {vendedoresEquipe.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.nome_completo}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          <div className="form-group">
-            <label className="form-label">Status</label>
-            <select
-              className="form-select"
-              value={statusFiltro}
-              onChange={(e) => setStatusFiltro(e.target.value as StatusFiltro)}
-            >
-              <option value="todos">Todos</option>
-              <option value="aberto">Aberto</option>
-              <option value="confirmado">Confirmado</option>
-              <option value="cancelado">Cancelado</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Valor mínimo</label>
-            <input
-              className="form-input"
-              value={valorMin}
-              onChange={(e) => setValorMin(e.target.value)}
-              placeholder="0,00"
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Valor máximo</label>
-            <input
-              className="form-input"
-              value={valorMax}
-              onChange={(e) => setValorMax(e.target.value)}
-              placeholder="0,00"
-            />
-          </div>
-        </div>
+            ? "seu portfolio"
+            : "suas vendas"
+        }.`
+      : null;
 
-        <div className="form-row" style={{ marginTop: 8 }}>
-          <div className="form-group">
-            <label className="form-label">Cliente</label>
-            <input
-              className="form-input"
-              value={clienteBusca}
-              onChange={(e) => {
-                setClienteBusca(e.target.value);
-                setClienteSelecionado(null);
-              }}
-              placeholder="Nome ou CPF..."
-            />
-            {clienteBusca && !clienteSelecionado && (
-              <div className="card-base" style={{ marginTop: 4, maxHeight: 180, overflowY: "auto" }}>
-                {clientesFiltrados.length === 0 && (
-                  <div style={{ fontSize: "0.85rem" }}>Nenhum cliente encontrado.</div>
-                )}
-                {clientesFiltrados.map((c) => (
-                  <div
-                    key={c.id}
-                    style={{ padding: "4px 6px", cursor: "pointer" }}
-                    onClick={() => {
-                      setClienteSelecionado(c);
-                      setClienteBusca(c.nome);
-                    }}
-                  >
-                    <div style={{ fontWeight: 600 }}>{c.nome}</div>
-                    <div style={{ fontSize: "0.8rem", opacity: 0.7 }}>
-                      {c.cpf || "Sem CPF"}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {clienteSelecionado && (
-              <div style={{ fontSize: "0.8rem", marginTop: 4 }}>
-                Selecionado: <strong>{clienteSelecionado.nome}</strong>
-              </div>
-            )}
-          </div>
-
-          <div className="form-group relative">
-            <label className="form-label">Cidade</label>
-            <input
-              className="form-input"
-              placeholder="Digite a cidade"
-              value={cidadeNomeInput}
-              onChange={(e) => {
-                const value = e.target.value;
-                setCidadeNomeInput(value);
-                setCidadeFiltro("");
-                if (value.trim().length > 0) {
-                  setMostrarSugestoesCidade(true);
-                }
-              }}
-              onFocus={() => {
-                if (cidadeNomeInput.trim().length >= 2) {
-                  setMostrarSugestoesCidade(true);
-                }
-              }}
-              onBlur={() => {
-                setTimeout(() => setMostrarSugestoesCidade(false), 150);
-                if (!cidadeNomeInput.trim()) {
-                  setCidadeFiltro("");
-                  return;
-                }
-                const match = cidades.find((cidade) =>
-                  normalizeText(cidade.nome) === normalizeText(cidadeNomeInput)
-                );
-                if (match) {
-                  setCidadeFiltro(match.id);
-                  setCidadeNomeInput(match.nome);
-                }
-              }}
-            />
-            {mostrarSugestoesCidade && cidadeNomeInput.trim().length >= 1 && (
-              <div
-                className="card-base card-config"
-                style={{
-                  position: "absolute",
-                  top: "100%",
-                  left: 0,
-                  right: 0,
-                  maxHeight: 180,
-                  overflowY: "auto",
-                  zIndex: 20,
-                  padding: "4px 0",
+  const renderClienteField = () => (
+    <div className="vtur-city-picker">
+      <AppField
+        label="Cliente"
+        value={clienteBusca}
+        onChange={(e) => {
+          setClienteBusca(e.target.value);
+          setClienteSelecionado(null);
+        }}
+        placeholder="Nome ou CPF..."
+      />
+      {clienteBusca && !clienteSelecionado ? (
+        <div className="vtur-city-dropdown vtur-quote-client-dropdown">
+          {clientesFiltrados.length === 0 ? (
+            <div className="vtur-subdivisao-helper">Nenhum cliente encontrado.</div>
+          ) : (
+            clientesFiltrados.slice(0, 12).map((cliente) => (
+              <AppButton
+                key={cliente.id}
+                type="button"
+                variant="ghost"
+                className="vtur-city-option"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setClienteSelecionado(cliente);
+                  setClienteBusca(cliente.nome);
                 }}
               >
-                {buscandoCidade && (
-                  <div style={{ padding: "6px 12px", color: "#64748b" }}>
-                    Buscando cidades...
-                  </div>
-                )}
-                {!buscandoCidade && erroCidade && (
-                  <div style={{ padding: "6px 12px", color: "#dc2626" }}>
-                    {erroCidade}
-                  </div>
-                )}
-                {!buscandoCidade && !erroCidade && cidadeSugestoes.length === 0 && (
-                  <div style={{ padding: "6px 12px", color: "#94a3b8" }}>
-                    Nenhuma cidade encontrada.
-                  </div>
-                )}
-                {!buscandoCidade &&
-                  !erroCidade &&
-                  cidadeSugestoes.map((cidade) => (
-                    <button
-                      key={cidade.id}
-                      type="button"
-                      className="btn btn-ghost w-full text-left"
-                      style={{ padding: "6px 12px" }}
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        setCidadeFiltro(cidade.id);
-                        setCidadeNomeInput(cidade.nome);
-                        setMostrarSugestoesCidade(false);
-                      }}
-                    >
-                      {cidade.nome}
-                    </button>
-                  ))}
-              </div>
-            )}
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Tipo Produto</label>
-            <select
-              className="form-select"
-              value={tipoSelecionadoId}
-              onChange={(e) => setTipoSelecionadoId(e.target.value)}
-            >
-              <option value="">Todos os tipos</option>
-              {tiposProdutos.map((tipo) => (
-                <option key={tipo.id} value={tipo.id}>
-                  {tipo.nome || tipo.tipo || `(ID: ${tipo.id})`}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Produto</label>
-            <input
-              className="form-input"
-              value={destinoBusca}
-              onChange={(e) => setDestinoBusca(e.target.value)}
-              placeholder="Nome do produto..."
-            />
-          </div>
+                <span className="vtur-choice-button-content">
+                  <span className="vtur-choice-button-title">{cliente.nome}</span>
+                  <span>{cliente.cpf || "Sem CPF"}</span>
+                </span>
+              </AppButton>
+            ))
+          )}
         </div>
+      ) : null}
+      {clienteSelecionado ? (
+        <p className="vtur-report-selection-note">
+          Selecionado: <strong>{clienteSelecionado.nome}</strong>
+        </p>
+      ) : null}
+    </div>
+  );
 
-        <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button
-            type="button"
-            className={`btn btn-light ${periodoPreset === "hoje" ? "preset-active" : ""}`}
-            onClick={() => aplicarPeriodoPreset("hoje")}
-          >
-            Hoje
-          </button>
-          <button
-            type="button"
-            className={`btn btn-light ${periodoPreset === "7" ? "preset-active" : ""}`}
-            onClick={() => aplicarPeriodoPreset("7")}
-          >
-            Últimos 7 dias
-          </button>
-          <button
-            type="button"
-            className={`btn btn-light ${periodoPreset === "30" ? "preset-active" : ""}`}
-            onClick={() => aplicarPeriodoPreset("30")}
-          >
-            Últimos 30 dias
-          </button>
-          <button
-            type="button"
-            className={`btn btn-light ${periodoPreset === "mes_atual" ? "preset-active" : ""}`}
-            onClick={() => aplicarPeriodoPreset("mes_atual")}
-          >
-            Este mês
-          </button>
-          <button
-            type="button"
-            className={`btn btn-light ${periodoPreset === "mes_anterior" ? "preset-active" : ""}`}
-            onClick={() => aplicarPeriodoPreset("mes_anterior")}
-          >
-            Mês anterior
-          </button>
-          <button
-            type="button"
-            className={`btn btn-light ${periodoPreset === "limpar" ? "preset-active" : ""}`}
-            onClick={() => aplicarPeriodoPreset("limpar")}
-          >
-            Limpar datas
-          </button>
-
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => {
-              setPage(1);
-              carregarVendas(1);
-            }}
-          >
-            Aplicar filtros
-          </button>
-
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button
-              type="button"
-              className="btn btn-purple"
-              onClick={exportarCSV}
-            >
-              Exportar CSV
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={exportarExcel}
-              disabled={!exportFlags.excel}
-              title={!exportFlags.excel ? "Exportação Excel desabilitada nos parâmetros" : ""}
-            >
-              Exportar Excel
-            </button>
-            <button
-              type="button"
-              className="btn btn-light"
-              onClick={exportarPDF}
-              disabled={!exportFlags.pdf}
-              title={!exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : ""}
-            >
-              Exportar PDF
-            </button>
-          </div>
-        </div>
-        </div>
-      </div>
-
-      {showFilters && (
-        <div className="mobile-drawer-backdrop" onClick={() => setShowFilters(false)}>
-          <div
-            className="mobile-drawer-panel"
-            role="dialog"
-            aria-modal="true"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <strong>Filtros</strong>
-              <button type="button" className="btn-ghost" onClick={() => setShowFilters(false)}>
-                ✕
-              </button>
-            </div>
-
-            {userCtx?.papel === "MASTER" && (
-              <>
-                <div className="form-group" style={{ marginTop: 12 }}>
-                  <label className="form-label">Filial</label>
-                  <select
-                    className="form-select"
-                    value={masterScope.empresaSelecionada}
-                    onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
-                  >
-                    <option value="all">Todas</option>
-                    {masterScope.empresasAprovadas.map((empresa) => (
-                      <option key={empresa.id} value={empresa.id}>
-                        {empresa.nome_fantasia}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group" style={{ marginTop: 12 }}>
-                  <label className="form-label">Equipe</label>
-                  <select
-                    className="form-select"
-                    value={masterScope.gestorSelecionado}
-                    onChange={(e) => masterScope.setGestorSelecionado(e.target.value)}
-                  >
-                    <option value="all">Todas</option>
-                    {masterScope.gestoresDisponiveis.map((gestor) => (
-                      <option key={gestor.id} value={gestor.id}>
-                        {gestor.nome_completo}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </>
-            )}
-
-            <div className="form-group" style={{ marginTop: 12 }}>
-              <label className="form-label">Filtrar por</label>
-              <select
-                className="form-select"
-                value={mobileFiltroTipo}
-                onChange={(e) => setMobileFiltroTipo(e.target.value as MobileFiltroTipo)}
-                style={{ width: "100%" }}
-              >
-                <option value="cliente">Por Cliente</option>
-                {(userCtx?.papel === "GESTOR" || userCtx?.papel === "MASTER") && (
-                  <option value="vendedor">Por Vendedor</option>
-                )}
-                <option value="cidade">Por Cidade</option>
-                <option value="tipo_produto">Por Tipo Produto</option>
-                <option value="produto">Por Produto</option>
-                <option value="data">Por Data</option>
-              </select>
-            </div>
-
-            {mobileFiltroTipo === "vendedor" &&
-              (userCtx?.papel === "GESTOR" || userCtx?.papel === "MASTER") && (
-              <div className="form-group">
-                <label className="form-label">Vendedor</label>
-                <select
-                  className="form-select"
-                  value={vendedorFiltro || todosValue}
-                  onChange={(e) => setVendedorFiltro(e.target.value)}
-                >
-                  <option value={todosValue}>Todos</option>
-                  {vendedoresEquipe.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.nome_completo}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {mobileFiltroTipo === "cliente" && (
-              <div className="form-group">
-                <label className="form-label">Cliente</label>
-                <input
-                  className="form-input"
-                  value={clienteBusca}
-                  onChange={(e) => {
-                    setClienteBusca(e.target.value);
-                    setClienteSelecionado(null);
-                  }}
-                  placeholder="Nome ou CPF..."
-                />
-                {clienteBusca && !clienteSelecionado && (
-                  <div
-                    className="card-base"
-                    style={{ marginTop: 4, maxHeight: 180, overflowY: "auto" }}
-                  >
-                    {clientesFiltrados.length === 0 && (
-                      <div style={{ fontSize: "0.85rem" }}>Nenhum cliente encontrado.</div>
-                    )}
-                    {clientesFiltrados.map((c) => (
-                      <div
-                        key={c.id}
-                        style={{ padding: "4px 6px", cursor: "pointer" }}
-                        onClick={() => {
-                          setClienteSelecionado(c);
-                          setClienteBusca(c.nome);
-                        }}
-                      >
-                        <div style={{ fontWeight: 600 }}>{c.nome}</div>
-                        <div style={{ fontSize: "0.8rem", opacity: 0.7 }}>
-                          {c.cpf || "Sem CPF"}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {clienteSelecionado && (
-                  <div style={{ fontSize: "0.8rem", marginTop: 4 }}>
-                    Selecionado: <strong>{clienteSelecionado.nome}</strong>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {mobileFiltroTipo === "cidade" && (
-              <div className="form-group" style={{ position: "relative" }}>
-                <label className="form-label">Cidade</label>
-                <input
-                  className="form-input"
-                  placeholder="Digite a cidade"
-                  value={cidadeNomeInput}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setCidadeNomeInput(value);
-                    setCidadeFiltro("");
-                    if (value.trim().length > 0) {
-                      setMostrarSugestoesCidade(true);
-                    }
-                  }}
-                  onFocus={() => {
-                    if (cidadeNomeInput.trim().length >= 2) {
-                      setMostrarSugestoesCidade(true);
-                    }
-                  }}
-                  onBlur={() => {
-                    setTimeout(() => setMostrarSugestoesCidade(false), 150);
-                    if (!cidadeNomeInput.trim()) {
-                      setCidadeFiltro("");
-                      return;
-                    }
-                    const match = cidades.find((cidade) =>
-                      normalizeText(cidade.nome) === normalizeText(cidadeNomeInput)
-                    );
-                    if (match) {
-                      setCidadeFiltro(match.id);
-                      setCidadeNomeInput(match.nome);
-                    }
-                  }}
-                />
-                {mostrarSugestoesCidade && cidadeNomeInput.trim().length >= 1 && (
-                  <div
-                    className="card-base card-config"
-                    style={{
-                      position: "absolute",
-                      top: "100%",
-                      left: 0,
-                      right: 0,
-                      maxHeight: 180,
-                      overflowY: "auto",
-                      zIndex: 20,
-                      padding: "4px 0",
-                    }}
-                  >
-                    {buscandoCidade && (
-                      <div style={{ padding: "6px 12px", color: "#64748b" }}>
-                        Buscando cidades...
-                      </div>
-                    )}
-                    {!buscandoCidade && erroCidade && (
-                      <div style={{ padding: "6px 12px", color: "#dc2626" }}>
-                        {erroCidade}
-                      </div>
-                    )}
-                    {!buscandoCidade && !erroCidade && cidadeSugestoes.length === 0 && (
-                      <div style={{ padding: "6px 12px", color: "#94a3b8" }}>
-                        Nenhuma cidade encontrada.
-                      </div>
-                    )}
-                    {!buscandoCidade &&
-                      !erroCidade &&
-                      cidadeSugestoes.map((cidade) => (
-                        <button
-                          key={cidade.id}
-                          type="button"
-                          className="btn btn-ghost w-full text-left"
-                          style={{ padding: "6px 12px" }}
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            setCidadeFiltro(cidade.id);
-                            setCidadeNomeInput(cidade.nome);
-                            setMostrarSugestoesCidade(false);
-                          }}
-                        >
-                          {cidade.nome}
-                        </button>
-                      ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {mobileFiltroTipo === "tipo_produto" && (
-              <div className="form-group">
-                <label className="form-label">Tipo Produto</label>
-                <select
-                  className="form-select"
-                  value={tipoSelecionadoId}
-                  onChange={(e) => setTipoSelecionadoId(e.target.value)}
-                  style={{ width: "100%" }}
-                >
-                  <option value="">Todos os tipos</option>
-                  {tiposProdutos.map((tipo) => (
-                    <option key={tipo.id} value={tipo.id}>
-                      {tipo.nome || tipo.tipo || `(ID: ${tipo.id})`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {mobileFiltroTipo === "produto" && (
-              <div className="form-group">
-                <label className="form-label">Produto</label>
-                <input
-                  className="form-input"
-                  value={destinoBusca}
-                  onChange={(e) => setDestinoBusca(e.target.value)}
-                  placeholder="Nome do produto..."
-                />
-              </div>
-            )}
-
-            {mobileFiltroTipo === "data" && (
-              <>
-                <div className="form-group">
-                  <label className="form-label">Período</label>
-                    <select
-                      className="form-select"
-                      value={mobilePeriodoPreset}
-                      onChange={(e) => {
-                        const nextPreset = e.target.value as MobilePeriodoPreset;
-                        setMobilePeriodoPreset(nextPreset);
-                        if (nextPreset === "personalizado") {
-                          setPeriodoPreset("");
-                        } else {
-                          aplicarPeriodoPreset(nextPreset);
-                        }
-                      }}
-                      style={{ width: "100%" }}
-                    >
-                    <option value="hoje">Hoje</option>
-                    <option value="7">Últimos 7 dias</option>
-                    <option value="30">Últimos 30 dias</option>
-                    <option value="mes_atual">Este mês</option>
-                    <option value="mes_anterior">Mês anterior</option>
-                    <option value="personalizado">Personalizado</option>
-                  </select>
-                </div>
-
-                {mobilePeriodoPreset === "personalizado" && (
-                  <>
-                    <div className="form-group" style={{ marginTop: 12 }}>
-                      <label className="form-label">Data início</label>
-                      <input
-                        type="date"
-                        className="form-input"
-                        style={{ width: "100%" }}
-                        value={dataInicio}
-                        onFocus={selectAllInputOnFocus}
-                        onChange={(e) => {
-                          const nextInicio = e.target.value;
-                          setMobilePeriodoPreset("personalizado");
-                          setPeriodoPreset("");
-                          setDataInicio(nextInicio);
-                          if (dataFim && nextInicio && dataFim < nextInicio) {
-                            setDataFim(nextInicio);
-                          }
-                        }}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Data fim</label>
-                      <input
-                        type="date"
-                        className="form-input"
-                        style={{ width: "100%" }}
-                        value={dataFim}
-                        min={dataInicio || undefined}
-                        onFocus={selectAllInputOnFocus}
-                        onChange={(e) => {
-                          setMobilePeriodoPreset("personalizado");
-                          setPeriodoPreset("");
-                          const nextFim = e.target.value;
-                          const boundedFim =
-                            dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
-                          setDataFim(boundedFim);
-                        }}
-                      />
-                    </div>
-                  </>
-                )}
-              </>
-            )}
-
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{ marginTop: 12, width: "100%" }}
-              onClick={() => {
-                setPage(1);
-                carregarVendas(1);
-                setShowFilters(false);
-              }}
-            >
-              Aplicar filtros
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showExport && (
-        <div className="mobile-drawer-backdrop" onClick={() => setShowExport(false)}>
-          <div
-            className="mobile-drawer-panel"
-            role="dialog"
-            aria-modal="true"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <strong>Exportar</strong>
-              <button type="button" className="btn-ghost" onClick={() => setShowExport(false)}>
-                ✕
-              </button>
-            </div>
-            <div className="form-group" style={{ marginTop: 12 }}>
-              <label className="form-label">Formato</label>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button
-                  type="button"
-                  className={`btn ${exportTipo === "csv" ? "btn-primary" : "btn-light"}`}
-                  onClick={() => setExportTipo("csv")}
-                >
-                  CSV
-                </button>
-                <button
-                  type="button"
-                  className={`btn ${exportTipo === "excel" ? "btn-primary" : "btn-light"}`}
-                  onClick={() => setExportTipo("excel")}
-                  disabled={!exportFlags.excel}
-                  title={
-                    !exportFlags.excel
-                      ? "Exportação Excel desabilitada nos parâmetros"
-                      : ""
-                  }
-                >
-                  Excel
-                </button>
-                <button
-                  type="button"
-                  className={`btn ${exportTipo === "pdf" ? "btn-primary" : "btn-light"}`}
-                  onClick={() => setExportTipo("pdf")}
-                  disabled={!exportFlags.pdf}
-                  title={
-                    !exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : ""
-                  }
-                >
-                  PDF
-                </button>
-              </div>
-            </div>
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{ marginTop: 12, width: "100%" }}
-              onClick={() => {
-                exportarSelecionado();
-                setShowExport(false);
-              }}
-              disabled={exportDisabled}
-            >
-              Exportar
-            </button>
-          </div>
-        </div>
-      )}
-
-      {erro && (
-        <div className="mb-3">
-          <AlertMessage variant="error">{erro}</AlertMessage>
-        </div>
-      )}
-
-      <div className="card-base mb-3">
-        <div className="form-row">
-          <div className="form-group">
-            <span style={{ fontSize: "0.9rem" }}>
-              <strong>{totalRecibos}</strong> recibo(s) encontrado(s)
-            </span>
-          </div>
-          <div className="form-group">
-            <span style={{ fontSize: "0.9rem" }}>
-              Faturamento:{" "}
-              <strong>
-                {formatCurrency(somaValores)}
-              </strong>
-            </span>
-          </div>
-          <div className="form-group">
-            <span style={{ fontSize: "0.9rem" }}>
-              Ticket médio:{" "}
-              <strong>
-                {formatCurrency(ticketMedio)}
-              </strong>
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {usaPaginacaoServidor && (
-        <div className="card-base card-config mb-3">
-          Totais e tabela refletem a página atual. Use filtros de texto para carregar todos os recibos.
-        </div>
-      )}
-
-      <PaginationControls
-        page={paginaAtual}
-        pageSize={pageSize}
-        totalItems={totalItems}
-        onPageChange={setPage}
-        onPageSizeChange={(size) => {
-          setPageSize(size);
-          setPage(1);
+  const renderCidadeField = () => (
+    <div className="vtur-city-picker">
+      <AppField
+        label="Cidade"
+        placeholder="Digite a cidade"
+        value={cidadeNomeInput}
+        onChange={(e) => {
+          const value = e.target.value;
+          setCidadeNomeInput(value);
+          setCidadeFiltro("");
+          if (value.trim().length > 0) {
+            setMostrarSugestoesCidade(true);
+          }
+        }}
+        onFocus={() => {
+          if (cidadeNomeInput.trim().length >= 2) {
+            setMostrarSugestoesCidade(true);
+          }
+        }}
+        onBlur={() => {
+          setTimeout(() => setMostrarSugestoesCidade(false), 150);
+          if (!cidadeNomeInput.trim()) {
+            setCidadeFiltro("");
+            return;
+          }
+          const match = cidades.find(
+            (cidade) => normalizeText(cidade.nome) === normalizeText(cidadeNomeInput)
+          );
+          if (match) {
+            setCidadeFiltro(match.id);
+            setCidadeNomeInput(match.nome);
+          }
         }}
       />
-
-      <div className="table-container overflow-x-auto">
-        <table className="table-default table-header-purple table-mobile-cards min-w-[1100px]">
-	          <thead>
-	            <tr>
-	              <th>Data venda</th>
-	              <th>Nº Recibo</th>
-	              <th>Cliente</th>
-	              <th>CPF</th>
-              <th>Tipo produto</th>
-              <th>Cidade</th>
-              <th>Produto</th>
-              <th>Data embarque</th>
-              <th>Valor total</th>
-              <th>Taxas</th>
-              <th>Valor líquido</th>
-              <th>Comissão</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={12}>Carregando vendas...</td>
-              </tr>
-            )}
-
-            {!loading && recibosExibidos.length === 0 && (
-              <tr>
-                <td colSpan={12}>Nenhum recibo encontrado com os filtros atuais.</td>
-              </tr>
-            )}
-
-            {!loading &&
-              recibosExibidos.map((r) => {
-	                const comissao = comissaoPorRecibo.get(r.id) ?? 0;
-	                return (
-	                  <tr key={r.id}>
-	                    <td data-label="Data venda">
-	                      {r.data_venda
-	                        ? formatDateBR(r.data_venda)
-	                        : "-"}
-	                    </td>
-                    <td data-label="Nº Recibo">{r.numero_recibo || "-"}</td>
-                    <td data-label="Cliente">{r.cliente_nome}</td>
-                    <td data-label="CPF">{r.cliente_cpf}</td>
-                    <td data-label="Tipo produto">{r.produto_tipo}</td>
-                    <td data-label="Cidade">{r.cidade_nome || "-"}</td>
-                    <td data-label="Produto">{r.produto_nome}</td>
-                    <td data-label="Data embarque">
-                      {r.data_embarque
-                        ? formatDateBR(r.data_embarque)
-                        : "-"}
-                    </td>
-                    <td data-label="Valor total">
-            {formatCurrency(getBrutoRecibo(r))}
-                    </td>
-                    <td data-label="Taxas">
-            {formatCurrency(getTaxasEfetivas(r))}
-                    </td>
-                    <td data-label="Valor líquido">
-            {formatCurrency(getLiquidoComissionavel(r))}
-                    </td>
-                    <td data-label="Comissão">{formatCurrency(comissao)}</td>
-                  </tr>
-                );
-              })}
-          </tbody>
-          <tfoot>
-            <tr>
-              <th colSpan={8}>Totais</th>
-              <th>{formatCurrency(somaValores)}</th>
-              <th>{formatCurrency(somaTaxas)}</th>
-              <th>{formatCurrency(somaLiquido)}</th>
-              <th>{formatCurrency(somaComissao)}</th>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-      <ToastStack toasts={toasts} onDismiss={dismissToast} />
+      {mostrarSugestoesCidade && cidadeNomeInput.trim().length >= 1 ? (
+        <div className="vtur-city-dropdown vtur-quote-client-dropdown">
+          {buscandoCidade ? <div className="vtur-subdivisao-helper">Buscando cidades...</div> : null}
+          {!buscandoCidade && erroCidade ? (
+            <div className="vtur-subdivisao-helper">{erroCidade}</div>
+          ) : null}
+          {!buscandoCidade && !erroCidade && cidadeSugestoes.length === 0 ? (
+            <div className="vtur-subdivisao-helper">Nenhuma cidade encontrada.</div>
+          ) : null}
+          {!buscandoCidade &&
+            !erroCidade &&
+            cidadeSugestoes.map((cidade) => (
+              <AppButton
+                key={cidade.id}
+                type="button"
+                variant="ghost"
+                className="vtur-city-option"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setCidadeFiltro(cidade.id);
+                  setCidadeNomeInput(cidade.nome);
+                  setMostrarSugestoesCidade(false);
+                }}
+              >
+                {cidade.nome}
+              </AppButton>
+            ))}
+        </div>
+      ) : null}
     </div>
+  );
+
+  const renderPeriodButtons = () => (
+    <div className="vtur-quote-top-actions">
+      {[
+        { id: "hoje", label: "Hoje" },
+        { id: "7", label: "Ultimos 7 dias" },
+        { id: "30", label: "Ultimos 30 dias" },
+        { id: "mes_atual", label: "Este mes" },
+        { id: "mes_anterior", label: "Mes anterior" },
+        { id: "limpar", label: "Limpar datas" },
+      ].map((periodo) => (
+        <AppButton
+          key={periodo.id}
+          type="button"
+          variant={periodoPreset === periodo.id ? "primary" : "secondary"}
+          onClick={() => aplicarPeriodoPreset(periodo.id as Exclude<PeriodoPreset, "">)}
+        >
+          {periodo.label}
+        </AppButton>
+      ))}
+    </div>
+  );
+
+  const renderFiltersGrid = () => (
+    <>
+      <div className="vtur-commission-filters-grid">
+        <AppField
+          label="Data inicio"
+          type="date"
+          value={dataInicio}
+          onFocus={selectAllInputOnFocus}
+          onChange={(e) => {
+            const nextInicio = e.target.value;
+            setPeriodoPreset("");
+            setDataInicio(nextInicio);
+            if (dataFim && nextInicio && dataFim < nextInicio) {
+              setDataFim(nextInicio);
+            }
+          }}
+        />
+        <AppField
+          label="Data fim"
+          type="date"
+          value={dataFim}
+          min={dataInicio || undefined}
+          onFocus={selectAllInputOnFocus}
+          onChange={(e) => {
+            const nextFim = e.target.value;
+            setPeriodoPreset("");
+            const boundedFim = dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
+            setDataFim(boundedFim);
+          }}
+        />
+        {userCtx?.papel === "MASTER" ? (
+          <>
+            <AppField
+              as="select"
+              label="Filial"
+              value={masterScope.empresaSelecionada}
+              onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
+              options={[
+                { label: "Todas", value: "all" },
+                ...masterScope.empresasAprovadas.map((empresa) => ({
+                  label: empresa.nome_fantasia,
+                  value: empresa.id,
+                })),
+              ]}
+            />
+            <AppField
+              as="select"
+              label="Equipe"
+              value={masterScope.gestorSelecionado}
+              onChange={(e) => masterScope.setGestorSelecionado(e.target.value)}
+              options={[
+                { label: "Todas", value: "all" },
+                ...masterScope.gestoresDisponiveis.map((gestor) => ({
+                  label: gestor.nome_completo,
+                  value: gestor.id,
+                })),
+              ]}
+            />
+          </>
+        ) : null}
+        {userCtx?.papel === "GESTOR" || userCtx?.papel === "MASTER" ? (
+          <AppField
+            as="select"
+            label="Vendedor"
+            value={vendedorFiltro || todosValue}
+            onChange={(e) => setVendedorFiltro(e.target.value)}
+            options={[
+              { label: "Todos", value: todosValue },
+              ...vendedoresEquipe.map((vendedor) => ({
+                label: vendedor.nome_completo,
+                value: vendedor.id,
+              })),
+            ]}
+          />
+        ) : null}
+        <AppField
+          as="select"
+          label="Status"
+          value={statusFiltro}
+          onChange={(e) => setStatusFiltro(e.target.value as StatusFiltro)}
+          options={[
+            { label: "Todos", value: "todos" },
+            { label: "Aberto", value: "aberto" },
+            { label: "Confirmado", value: "confirmado" },
+            { label: "Cancelado", value: "cancelado" },
+          ]}
+        />
+        <AppField
+          label="Valor minimo"
+          value={valorMin}
+          onChange={(e) => setValorMin(e.target.value)}
+          placeholder="0,00"
+        />
+        <AppField
+          label="Valor maximo"
+          value={valorMax}
+          onChange={(e) => setValorMax(e.target.value)}
+          placeholder="0,00"
+        />
+        {renderClienteField()}
+        {renderCidadeField()}
+        <AppField
+          as="select"
+          label="Tipo produto"
+          value={tipoSelecionadoId}
+          onChange={(e) => setTipoSelecionadoId(e.target.value)}
+          options={[
+            { label: "Todos os tipos", value: "" },
+            ...tiposProdutos.map((tipo) => ({
+              label: tipo.nome || tipo.tipo || `(ID: ${tipo.id})`,
+              value: tipo.id,
+            })),
+          ]}
+        />
+        <AppField
+          label="Produto"
+          value={destinoBusca}
+          onChange={(e) => setDestinoBusca(e.target.value)}
+          placeholder="Nome do produto..."
+        />
+      </div>
+      <div style={{ marginTop: 16 }}>{renderPeriodButtons()}</div>
+    </>
+  );
+
+  return (
+    <AppPrimerProvider>
+      <div className="relatorio-vendas-page">
+        <ToastStack toasts={toasts} onDismiss={dismissToast} />
+
+        <AppToolbar
+          sticky
+          tone="config"
+          className="mb-3 list-toolbar-sticky"
+          title="Relatorio de vendas"
+          subtitle={`Periodo: ${periodoResumo}. ${filtrosLocaisAtivos ? "Filtros locais ativos." : "Sem filtros locais de cliente, cidade ou produto."}`}
+          actions={
+            <div className="vtur-quote-top-actions">
+              <AppButton type="button" variant="secondary" className="sm:hidden" onClick={() => setShowFilters(true)}>
+                Filtros
+              </AppButton>
+              <AppButton type="button" variant="primary" onClick={aplicarFiltrosRelatorio}>
+                Aplicar filtros
+              </AppButton>
+              <AppButton type="button" variant="secondary" onClick={() => setShowExport(true)}>
+                Exportar
+              </AppButton>
+            </div>
+          }
+        >
+          <div className="hidden sm:block">{renderFiltersGrid()}</div>
+        </AppToolbar>
+
+        {showFilters ? (
+          <Dialog
+            title="Filtros do relatorio"
+            width="xlarge"
+            onClose={() => setShowFilters(false)}
+            footerButtons={[
+              {
+                content: "Cancelar",
+                buttonType: "default",
+                onClick: () => setShowFilters(false),
+              },
+              {
+                content: "Aplicar filtros",
+                buttonType: "primary",
+                onClick: aplicarFiltrosRelatorio,
+              },
+            ]}
+          >
+            <div className="vtur-modal-body-stack">
+              <AppCard
+                title="Refine o recorte comercial"
+                subtitle="Ajuste datas, escopo, cliente, cidade, tipo de produto e faixas de valor."
+              >
+                {renderFiltersGrid()}
+              </AppCard>
+            </div>
+          </Dialog>
+        ) : null}
+
+        {showExport ? (
+          <Dialog
+            title="Exportar relatorio"
+            width="large"
+            onClose={() => setShowExport(false)}
+            footerButtons={[
+              {
+                content: "Cancelar",
+                buttonType: "default",
+                onClick: () => setShowExport(false),
+              },
+              {
+                content: exportando ? "Preparando..." : "Exportar",
+                buttonType: "primary",
+                onClick: () => {
+                  exportarSelecionado();
+                  setShowExport(false);
+                },
+                disabled: exportDisabled || exportando,
+              },
+            ]}
+          >
+            <div className="vtur-modal-body-stack">
+              <AppCard
+                title="Formato da exportacao"
+                subtitle="Escolha o formato final respeitando as permissoes definidas nos parametros da empresa."
+              >
+                <div className="vtur-quote-top-actions">
+                  <AppButton
+                    type="button"
+                    variant={exportTipo === "csv" ? "primary" : "secondary"}
+                    onClick={() => setExportTipo("csv")}
+                  >
+                    CSV
+                  </AppButton>
+                  <AppButton
+                    type="button"
+                    variant={exportTipo === "excel" ? "primary" : "secondary"}
+                    onClick={() => setExportTipo("excel")}
+                    disabled={!exportFlags.excel}
+                  >
+                    Excel
+                  </AppButton>
+                  <AppButton
+                    type="button"
+                    variant={exportTipo === "pdf" ? "primary" : "secondary"}
+                    onClick={() => setExportTipo("pdf")}
+                    disabled={!exportFlags.pdf}
+                  >
+                    PDF
+                  </AppButton>
+                </div>
+                {exportDisabled ? (
+                  <div style={{ marginTop: 16 }}>
+                    <AlertMessage variant="warning">
+                      O formato selecionado esta desabilitado nos parametros da empresa.
+                    </AlertMessage>
+                  </div>
+                ) : null}
+              </AppCard>
+            </div>
+          </Dialog>
+        ) : null}
+
+        {escopoResumo ? (
+          <AlertMessage variant="info" className="mb-3">
+            {escopoResumo}
+          </AlertMessage>
+        ) : null}
+
+        {erro ? (
+          <AlertMessage variant="error" className="mb-3">
+            {erro}
+          </AlertMessage>
+        ) : null}
+
+        <AppCard
+          className="mb-3"
+          title="Resumo do relatorio"
+          subtitle="Volume de recibos, faturamento, taxas, liquido, ticket medio e comissao do recorte atual."
+        >
+          <div className="vtur-quote-summary-grid">
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Recibos</span>
+              <strong>{totalRecibos}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Faturamento</span>
+              <strong>{formatCurrency(somaValores)}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Taxas</span>
+              <strong>{formatCurrency(somaTaxas)}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Liquido</span>
+              <strong>{formatCurrency(somaLiquido)}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Ticket medio</span>
+              <strong>{formatCurrency(ticketMedio)}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Comissao</span>
+              <strong>{formatCurrency(somaComissao)}</strong>
+            </div>
+          </div>
+        </AppCard>
+
+        {usaPaginacaoServidor ? (
+          <AlertMessage variant="warning" className="mb-3">
+            Totais e tabela refletem a pagina atual. Use filtros de texto para carregar todos os recibos.
+          </AlertMessage>
+        ) : null}
+
+        <AppCard
+          title="Recibos encontrados"
+          subtitle="Listagem consolidada com produto, cidade, embarque, valores, taxas e comissao por recibo."
+        >
+          <div className="mb-3">
+            <PaginationControls
+              page={paginaAtual}
+              pageSize={pageSize}
+              totalItems={totalItems}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setPage(1);
+              }}
+            />
+          </div>
+
+          <DataTable
+            headers={
+              <tr>
+                <th>Data venda</th>
+                <th>Nº Recibo</th>
+                <th>Cliente</th>
+                <th>CPF</th>
+                <th>Tipo produto</th>
+                <th>Cidade</th>
+                <th>Produto</th>
+                <th>Data embarque</th>
+                <th>Valor total</th>
+                <th>Taxas</th>
+                <th>Valor liquido</th>
+                <th>Comissao</th>
+              </tr>
+            }
+            loading={loading}
+            loadingMessage="Carregando vendas..."
+            empty={!loading && recibosExibidos.length === 0}
+            emptyMessage={
+              <EmptyState
+                title="Nenhum recibo encontrado"
+                description="Ajuste datas, escopo ou filtros locais para ampliar o recorte do relatorio."
+              />
+            }
+            colSpan={12}
+            className="table-header-purple table-mobile-cards min-w-[1100px]"
+          >
+            {recibosExibidos.map((recibo) => {
+              const comissao = comissaoPorRecibo.get(recibo.id) ?? 0;
+              return (
+                <tr key={recibo.id}>
+                  <td data-label="Data venda">{recibo.data_venda ? formatDateBR(recibo.data_venda) : "-"}</td>
+                  <td data-label="Nº Recibo">{recibo.numero_recibo || "-"}</td>
+                  <td data-label="Cliente">{recibo.cliente_nome}</td>
+                  <td data-label="CPF">{recibo.cliente_cpf}</td>
+                  <td data-label="Tipo produto">{recibo.produto_tipo}</td>
+                  <td data-label="Cidade">{recibo.cidade_nome || "-"}</td>
+                  <td data-label="Produto">{recibo.produto_nome}</td>
+                  <td data-label="Data embarque">
+                    {recibo.data_embarque ? formatDateBR(recibo.data_embarque) : "-"}
+                  </td>
+                  <td data-label="Valor total">{formatCurrency(getBrutoRecibo(recibo))}</td>
+                  <td data-label="Taxas">{formatCurrency(getTaxasEfetivas(recibo))}</td>
+                  <td data-label="Valor liquido">{formatCurrency(getLiquidoComissionavel(recibo))}</td>
+                  <td data-label="Comissao">{formatCurrency(comissao)}</td>
+                </tr>
+              );
+            })}
+          </DataTable>
+        </AppCard>
+      </div>
+    </AppPrimerProvider>
   );
 }

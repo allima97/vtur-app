@@ -4,6 +4,13 @@ import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import FlightDetailsModal, { FlightDetails } from "../ui/FlightDetailsModal";
 import CalculatorModal from "../ui/CalculatorModal";
 import ConfirmDialog from "../ui/ConfirmDialog";
+import AlertMessage from "../ui/AlertMessage";
+import TableActions from "../ui/TableActions";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type QuoteRecord = {
   id: string;
@@ -167,6 +174,7 @@ export default function QuoteDetailIsland(props: {
     [items]
   );
   const totalAtual = useMemo(() => subtotalAtual, [subtotalAtual]);
+  const totalGeralAtual = useMemo(() => subtotalAtual + taxesAtual, [subtotalAtual, taxesAtual]);
   const descontoAtual = useMemo(() => normalizeNumber(exportDiscount), [exportDiscount]);
   const [cidadeInputValues, setCidadeInputValues] = useState<Record<string, string>>({});
   const [cidadeSuggestions, setCidadeSuggestions] = useState<
@@ -286,6 +294,23 @@ export default function QuoteDetailIsland(props: {
     if (!items.length) return false;
     return items.every(validateItem);
   }, [items]);
+  const itensPendentesRevisao = useMemo(
+    () => items.filter((item) => !validateItem(item)).length,
+    [items]
+  );
+  const clienteAssociado = useMemo(
+    () => clientes.find((cliente) => cliente.id === clienteId) || null,
+    [clientes, clienteId]
+  );
+  const contextoCliente = useMemo(() => {
+    const nome = clienteAssociado?.nome || clienteBusca || props.quote.cliente?.nome || "Cliente nao selecionado";
+    const cpf = props.quote.cliente?.cpf ? `CPF ${props.quote.cliente.cpf}` : null;
+    const detalhes = [cpf, isFechado ? "Orcamento fechado" : isEditing ? "Edicao liberada" : "Modo leitura"]
+      .filter(Boolean)
+      .join(" · ");
+    return detalhes ? `${nome} · ${detalhes}` : nome;
+  }, [clienteAssociado?.nome, clienteBusca, props.quote.cliente?.nome, props.quote.cliente?.cpf, isFechado, isEditing]);
+  const statusNegociacao = props.quote.status_negociacao || "Enviado";
 
   function updateItem(index: number, updates: Partial<QuoteItemRecord>) {
     setItems((prev) => {
@@ -571,184 +596,257 @@ export default function QuoteDetailIsland(props: {
   }, [handleExport]);
 
   return (
-    <div className="page-content-wrap orcamentos-detalhe-page">
-      <div className="card-base" style={{ marginBottom: 16 }}>
-        <h1 className="page-title">Quote</h1>
-        <div style={{ fontSize: 14 }}>
-          Status: {props.quote.status_negociacao || "Enviado"} | Total: R$ {formatCurrency(totalAtual)}
-        </div>
-        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
-          <label className="form-label sm:mb-0">Cliente</label>
-          <input
-            className="form-input w-full sm:w-auto"
-            list={QUOTE_CLIENTES_DATALIST_ID}
-            value={clienteBusca}
-            onChange={(e) => handleClienteInputChange(e.target.value)}
-            disabled={!isEditing}
-            placeholder="Selecione um cliente"
-            style={{ minWidth: 220 }}
-          />
-        </div>
-        <datalist id={QUOTE_CLIENTES_DATALIST_ID}>
-          {clientes.map((cliente) => (
-            <option key={cliente.id} value={cliente.nome} />
-          ))}
-        </datalist>
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-          <button
-            type="button"
-            className="btn btn-primary w-full sm:w-auto"
-            onClick={() => handleExport(true)}
-            disabled={exporting}
+    <AppPrimerProvider>
+      <div className="page-content-wrap orcamentos-detalhe-page">
+        <AppToolbar
+          sticky
+          tone="info"
+          className="mb-3 list-toolbar-sticky"
+          title="Detalhe do orcamento"
+          subtitle={`Quote ${props.quote.id} · Status operacional ${status} · Negociacao ${statusNegociacao}`}
+          actions={
+            <div className="vtur-quote-top-actions">
+              <AppButton
+                type="button"
+                variant="primary"
+                onClick={() => handleExport(true)}
+                disabled={exporting}
+                loading={exporting}
+              >
+                {exporting ? "Gerando..." : "PDF com valores"}
+              </AppButton>
+              <AppButton
+                type="button"
+                variant="secondary"
+                onClick={() => handleExport(false)}
+                disabled={exporting}
+              >
+                PDF somente total
+              </AppButton>
+              <AppButton
+                type="button"
+                variant="secondary"
+                onClick={() => setShowCalculator(true)}
+              >
+                Calculadora
+              </AppButton>
+            </div>
+          }
+        >
+          <div className="vtur-quote-summary-grid">
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Cliente</span>
+              <strong>{clienteAssociado?.nome || clienteBusca || "Nao selecionado"}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Itens</span>
+              <strong>{items.length}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Taxas</span>
+              <strong>R$ {formatCurrency(taxesAtual)}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Total geral</span>
+              <strong>R$ {formatCurrency(totalGeralAtual)}</strong>
+            </div>
+          </div>
+        </AppToolbar>
+
+        {exportError && (
+          <AlertMessage variant="error" className="mb-3">
+            {exportError}
+          </AlertMessage>
+        )}
+        {!canConfirm && (
+          <AlertMessage variant="warning" className="mb-3">
+            Alguns itens precisam de ajuste antes de confirmar ou exportar a versao final.
+          </AlertMessage>
+        )}
+        {isFechado && (
+          <AlertMessage variant="info" className="mb-3">
+            Orcamento fechado: edicao bloqueada.
+          </AlertMessage>
+        )}
+        {error && (
+          <AlertMessage variant="error" className="mb-3">
+            {error}
+          </AlertMessage>
+        )}
+        {success && (
+          <AlertMessage variant="success" className="mb-3">
+            {success}
+          </AlertMessage>
+        )}
+
+        <AppCard
+          className="mb-3"
+          tone="info"
+          title="Cliente e exportacao"
+          subtitle={contextoCliente}
+        >
+          <div className="vtur-form-grid vtur-form-grid-2">
+            <AppField
+              label="Cliente"
+              list={QUOTE_CLIENTES_DATALIST_ID}
+              value={clienteBusca}
+              onChange={(e) => handleClienteInputChange(e.target.value)}
+              disabled={!isEditing}
+              placeholder="Selecione um cliente"
+              caption={
+                isEditing
+                  ? "Voce pode reatribuir o orcamento para outro cliente antes de salvar."
+                  : "Ative a edicao para alterar o cliente associado."
+              }
+            />
+            <AppField
+              label="Desconto"
+              value={exportDiscount}
+              onChange={(e) => setExportDiscount(e.target.value)}
+              placeholder="0,00"
+              caption="Aplicado somente no PDF exportado."
+            />
+          </div>
+
+          <datalist id={QUOTE_CLIENTES_DATALIST_ID}>
+            {clientes.map((cliente) => (
+              <option key={cliente.id} value={cliente.nome} />
+            ))}
+          </datalist>
+
+          <label
+            className={`vtur-modal-checkbox-card${showSummary ? " is-selected" : ""}`}
+            style={{ marginTop: 16 }}
           >
-            {exporting ? "Gerando..." : "Exportar PDF (com valores)"}
-          </button>
-          <button
-            type="button"
-            className="btn btn-light w-full sm:w-auto"
-            onClick={() => handleExport(false)}
-            disabled={exporting}
-          >
-            Exportar PDF (somente total)
-          </button>
-          <label className="flex items-center gap-2 w-full sm:w-auto sm:ml-2">
             <input
               type="checkbox"
               checked={showSummary}
               onChange={(e) => setShowSummary(e.target.checked)}
             />
-            Mostrar resumo de servicos
+            <span className="vtur-choice-button-content">
+              <span className="vtur-choice-button-title">Mostrar resumo de servicos</span>
+              <span className="vtur-choice-button-caption">
+                Inclui o resumo apenas no PDF com valores.
+              </span>
+            </span>
           </label>
-          <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:items-center">
-            <label className="form-label sm:mb-0">Desconto</label>
-            <input
-              className="form-input w-full sm:w-[120px]"
-              value={exportDiscount}
-              onChange={(e) => setExportDiscount(e.target.value)}
-              placeholder="0,00"
-            />
+        </AppCard>
+
+        <AppCard
+          tone="config"
+          title="Itens do orcamento"
+          subtitle={`${items.length} linhas · ${itensPendentesRevisao} em revisao · Subtotal R$ ${formatCurrency(totalAtual)}`}
+        >
+          <div className="vtur-inline-note">
+            Revise tipo, cidade, datas, quantidades e totais antes de salvar os ajustes.
           </div>
-          <button
-            type="button"
-            className="btn btn-light w-full sm:w-auto sm:ml-auto"
-            onClick={() => setShowCalculator(true)}
-          >
-            Calculadora
-          </button>
-        </div>
-        {exportError && <div style={{ marginTop: 8, color: "#b91c1c" }}>{exportError}</div>}
-      </div>
 
-      <div className="mb-3">
-        <div className="card-base mb-2" style={{ padding: "12px 16px" }}>
-          <h3 style={{ margin: 0 }}>Itens</h3>
-        </div>
-        <div className="table-container overflow-x-auto">
-          <table className="table-default table-compact quote-items-table table-mobile-cards table-header-purple">
-            <thead>
-              <tr>
-                <th className="order-cell">Ordem</th>
-                <th>Tipo</th>
-                <th>Produto</th>
-                <th>Cidade</th>
-                <th>Destino</th>
-                <th>Inicio</th>
-                <th>Fim</th>
-                <th>Qtd</th>
-                <th>Total</th>
-                <th>Taxas</th>
-                <th>Detalhes</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, index) => {
-                const circuitMeta = getCircuitMeta(item);
-                const circuitDays = (item.segments || [])
-                  .filter((seg) => seg.segment_type === "circuit_day")
-                  .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
-                const rowKey = getQuoteItemRowKey(item, index);
-                const flightDetails = isFlightItem(item) ? getFlightDetails(item) : null;
+          <div className="table-container overflow-x-auto" style={{ marginTop: 16 }}>
+            <table className="table-default table-compact quote-items-table table-mobile-cards table-header-purple">
+              <thead>
+                <tr>
+                  <th className="order-cell">Ordem</th>
+                  <th>Tipo</th>
+                  <th>Produto</th>
+                  <th>Cidade</th>
+                  <th>Destino</th>
+                  <th>Inicio</th>
+                  <th>Fim</th>
+                  <th>Qtd</th>
+                  <th>Total</th>
+                  <th>Taxas</th>
+                  <th>Detalhes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, index) => {
+                  const circuitMeta = getCircuitMeta(item);
+                  const circuitDays = (item.segments || [])
+                    .filter((seg) => seg.segment_type === "circuit_day")
+                    .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+                  const rowKey = getQuoteItemRowKey(item, index);
+                  const flightDetails = isFlightItem(item) ? getFlightDetails(item) : null;
 
-                return (
-                  <React.Fragment key={rowKey}>
-                    <tr>
-                      <td className="order-cell" data-label="">
-                        <div className="order-cell-head">
-                          <span className="order-label">Ordem</span>
-                          <div className="icon-action-group">
-                            <button
-                              type="button"
-                              className="icon-action-btn"
-                              title="Mover para cima"
-                              onClick={() => moveItem(index, "up")}
-                              disabled={index === 0 || !isEditing}
-                            >
-                              ⬆️
-                            </button>
-                            <button
-                              type="button"
-                              className="icon-action-btn"
-                              title="Mover para baixo"
-                              onClick={() => moveItem(index, "down")}
-                              disabled={index === items.length - 1 || !isEditing}
-                            >
-                              ⬇️
-                            </button>
-                            <button
-                              type="button"
-                              className="icon-action-btn danger"
-                              title="Remover item"
-                              onClick={() => solicitarRemocaoItem(index)}
-                              disabled={!isEditing}
-                            >
-                              🗑️
-                            </button>
+                  return (
+                    <React.Fragment key={rowKey}>
+                      <tr className={!validateItem(item) ? "vtur-quote-review-row" : undefined}>
+                        <td className="order-cell" data-label="">
+                          <div className="order-cell-head">
+                            <span className="order-label">Ordem</span>
+                            <TableActions
+                              className="vtur-quote-order-actions"
+                              actions={[
+                                {
+                                  key: "up",
+                                  label: "Mover para cima",
+                                  icon: "↑",
+                                  variant: "ghost",
+                                  onClick: () => moveItem(index, "up"),
+                                  disabled: index === 0 || !isEditing,
+                                },
+                                {
+                                  key: "down",
+                                  label: "Mover para baixo",
+                                  icon: "↓",
+                                  variant: "ghost",
+                                  onClick: () => moveItem(index, "down"),
+                                  disabled: index === items.length - 1 || !isEditing,
+                                },
+                                {
+                                  key: "delete",
+                                  label: "Excluir item",
+                                  icon: "×",
+                                  variant: "danger",
+                                  onClick: () => solicitarRemocaoItem(index),
+                                  disabled: !isEditing,
+                                },
+                              ]}
+                            />
                           </div>
-                        </div>
-                        <div className="order-value">#{index + 1}</div>
-                      </td>
-                      <td data-label="Tipo">
-                        <input
-                          className="form-input"
-                          list={TIPO_DATALIST_ID}
-                          value={item.item_type || ""}
-                          onChange={(e) => updateItem(index, { item_type: e.target.value })}
-                          disabled={!isEditing}
-                          placeholder="Selecione um tipo"
-                        />
-                      </td>
-                      <td data-label="Produto">
-                        <input
-                          className="form-input"
-                          value={item.title || ""}
-                          onChange={(e) =>
-                            updateItem(index, { title: e.target.value, product_name: e.target.value })
-                          }
-                          disabled={!isEditing}
-                        />
-                      </td>
-                      <td data-label="Cidade">
-                        <input
-                          className="form-input"
-                          list={`quote-item-cidades-${rowKey}`}
-                          value={getCidadeInputValue(item, rowKey)}
-                          onChange={(e) => handleCidadeInputChange(index, e.target.value, rowKey)}
-                          onFocus={() =>
-                            scheduleCidadeFetch(rowKey, getCidadeInputValue(item, rowKey))
-                          }
-                          placeholder="Selecione uma cidade"
-                          disabled={!isEditing}
-                        />
-                      </td>
-                      <td data-label="Destino">
+                          <div className="order-value">#{index + 1}</div>
+                        </td>
+                        <td data-label="Tipo">
+                          <input
+                            className="form-input"
+                            list={TIPO_DATALIST_ID}
+                            value={item.item_type || ""}
+                            onChange={(e) => updateItem(index, { item_type: e.target.value })}
+                            disabled={!isEditing}
+                            placeholder="Selecione um tipo"
+                          />
+                        </td>
+                        <td data-label="Produto">
+                          <input
+                            className="form-input"
+                            value={item.title || ""}
+                            onChange={(e) =>
+                              updateItem(index, { title: e.target.value, product_name: e.target.value })
+                            }
+                            disabled={!isEditing}
+                          />
+                        </td>
+                        <td data-label="Cidade">
+                          <input
+                            className="form-input"
+                            list={`quote-item-cidades-${rowKey}`}
+                            value={getCidadeInputValue(item, rowKey)}
+                            onChange={(e) => handleCidadeInputChange(index, e.target.value, rowKey)}
+                            onFocus={() =>
+                              scheduleCidadeFetch(rowKey, getCidadeInputValue(item, rowKey))
+                            }
+                            placeholder="Selecione uma cidade"
+                            disabled={!isEditing}
+                          />
+                        </td>
+                        <td data-label="Destino">
                           <input
                             className="form-input"
                             value={item.city_name || ""}
                             onChange={(e) => updateItem(index, { city_name: e.target.value })}
                             disabled={!isEditing}
                           />
-                      </td>
-                      <td data-label="Inicio">
+                        </td>
+                        <td data-label="Inicio">
                           <input
                             className="form-input"
                             type="date"
@@ -764,8 +862,8 @@ export default function QuoteDetailIsland(props: {
                             }}
                             disabled={!isEditing}
                           />
-                      </td>
-                      <td data-label="Fim">
+                        </td>
+                        <td data-label="Fim">
                           <input
                             className="form-input"
                             type="date"
@@ -782,8 +880,8 @@ export default function QuoteDetailIsland(props: {
                             }}
                             disabled={!isEditing}
                           />
-                      </td>
-                      <td data-label="Qtd">
+                        </td>
+                        <td data-label="Qtd">
                           <input
                             className="form-input"
                             type="number"
@@ -792,8 +890,8 @@ export default function QuoteDetailIsland(props: {
                             onChange={(e) => updateItem(index, { quantity: Number(e.target.value) || 1 })}
                             disabled={!isEditing}
                           />
-                      </td>
-                      <td data-label="Total">
+                        </td>
+                        <td data-label="Total">
                           <input
                             className="form-input"
                             value={formatCurrency(item.total_amount)}
@@ -802,8 +900,8 @@ export default function QuoteDetailIsland(props: {
                             }
                             disabled={!isEditing}
                           />
-                      </td>
-                      <td data-label="Taxas">
+                        </td>
+                        <td data-label="Taxas">
                           <input
                             className="form-input"
                             value={formatCurrency(Number(item.taxes_amount || 0))}
@@ -812,89 +910,105 @@ export default function QuoteDetailIsland(props: {
                             }
                             disabled={!isEditing}
                           />
-                      </td>
-                      <td data-label="Detalhes">
-                        {flightDetails ? (
-                          <button
-                            type="button"
-                            className="btn btn-light"
-                            onClick={() =>
-                              setFlightModal({
-                                details: flightDetails,
-                                title: item.title || item.product_name || item.item_type,
-                              })
-                            }
-                          >
-                            Ver detalhes
-                          </button>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-                    </tr>
-                    {isCircuitItem(item) && (
-                      <tr>
-                        <td colSpan={11}>
-                          <div style={{ padding: "8px 4px 16px", borderTop: "1px solid #e2e8f0" }}>
-                                <div className="form-row mobile-stack">
-                                  <div className="form-group">
-                                    <label className="form-label">Codigo</label>
-                                    <input
-                                      className="form-input"
-                                      value={circuitMeta.codigo || ""}
-                                      onChange={(e) => updateCircuitMeta(index, { codigo: e.target.value })}
-                                      disabled={!isEditing}
-                                    />
-                                  </div>
-                                  <div className="form-group">
-                                    <label className="form-label">Serie</label>
-                                    <input
-                                      className="form-input"
-                                      value={circuitMeta.serie || ""}
-                                      onChange={(e) => updateCircuitMeta(index, { serie: e.target.value })}
-                                      disabled={!isEditing}
-                                    />
-                                  </div>
-                                  <div className="form-group" style={{ flex: 1 }}>
-                                    <label className="form-label">Tags (uma por linha)</label>
-                                    <textarea
-                                      className="form-input"
-                                      rows={2}
-                                      value={(circuitMeta.tags || []).join("\n")}
-                                      onChange={(e) =>
-                                        updateCircuitMeta(index, {
-                                          tags: e.target.value
-                                            .split(/\r?\n/)
-                                            .map((val) => val.trim())
-                                            .filter(Boolean),
-                                        })
-                                      }
-                                      disabled={!isEditing}
-                                    />
-                                  </div>
+                        </td>
+                        <td data-label="Detalhes">
+                          {flightDetails ? (
+                            <AppButton
+                              type="button"
+                              variant="secondary"
+                              onClick={() =>
+                                setFlightModal({
+                                  details: flightDetails,
+                                  title: item.title || item.product_name || item.item_type,
+                                })
+                              }
+                            >
+                              Ver detalhes
+                            </AppButton>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
+                      </tr>
+                      {isCircuitItem(item) && (
+                        <tr>
+                          <td colSpan={11}>
+                            <div className="vtur-quote-circuit-panel">
+                              <div className="vtur-form-grid vtur-form-grid-3">
+                                <AppField
+                                  label="Codigo"
+                                  value={circuitMeta.codigo || ""}
+                                  onChange={(e) => updateCircuitMeta(index, { codigo: e.target.value })}
+                                  disabled={!isEditing}
+                                />
+                                <AppField
+                                  label="Serie"
+                                  value={circuitMeta.serie || ""}
+                                  onChange={(e) => updateCircuitMeta(index, { serie: e.target.value })}
+                                  disabled={!isEditing}
+                                />
+                                <AppField
+                                  as="textarea"
+                                  label="Tags"
+                                  rows={2}
+                                  value={(circuitMeta.tags || []).join("\n")}
+                                  caption="Uma tag por linha."
+                                  onChange={(e) =>
+                                    updateCircuitMeta(index, {
+                                      tags: e.target.value
+                                        .split(/\r?\n/)
+                                        .map((val) => val.trim())
+                                        .filter(Boolean),
+                                    })
+                                  }
+                                  disabled={!isEditing}
+                                />
+                              </div>
+
+                              <div style={{ marginTop: 16 }}>
+                                <AppField
+                                  as="textarea"
+                                  label="Itinerario"
+                                  rows={3}
+                                  caption="Uma cidade por linha para compor o circuito."
+                                  value={(circuitMeta.itinerario || []).join("\n")}
+                                  onChange={(e) =>
+                                    updateCircuitMeta(index, {
+                                      itinerario: e.target.value
+                                        .split(/\r?\n/)
+                                        .map((val) => val.trim())
+                                        .filter(Boolean),
+                                    })
+                                  }
+                                  disabled={!isEditing}
+                                />
+                              </div>
+
+                              <div className="vtur-quote-circuit-days-head">
+                                <div>
+                                  <strong>Dia a dia</strong>
+                                  <p>Estruture a sequencia do circuito com titulo e descricao de cada etapa.</p>
                                 </div>
+                                <AppButton
+                                  type="button"
+                                  variant="secondary"
+                                  onClick={() =>
+                                    updateCircuitSegments(index, (segments) => [
+                                      ...segments,
+                                      {
+                                        segment_type: "circuit_day",
+                                        order_index: segments.length,
+                                        data: { dia: segments.length + 1, titulo: "", descricao: "" },
+                                      },
+                                    ])
+                                  }
+                                  disabled={!isEditing}
+                                >
+                                  Adicionar dia
+                                </AppButton>
+                              </div>
 
-                            <div className="form-group" style={{ marginTop: 8 }}>
-                              <label className="form-label">Itinerario (uma cidade por linha)</label>
-                              <textarea
-                                className="form-input"
-                                rows={3}
-                                value={(circuitMeta.itinerario || []).join("\n")}
-                                onChange={(e) =>
-                                  updateCircuitMeta(index, {
-                                    itinerario: e.target.value
-                                      .split(/\r?\n/)
-                                      .map((val) => val.trim())
-                                      .filter(Boolean),
-                                  })
-                                }
-                                disabled={!isEditing}
-                              />
-                            </div>
-
-                            <div style={{ marginTop: 12 }}>
-                              <div style={{ fontWeight: 600, marginBottom: 8 }}>Dia a dia</div>
-                              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                              <div className="vtur-quote-circuit-days-list">
                                 {circuitDays.map((seg, segIndex) => {
                                   const data = (seg.data || {}) as {
                                     dia?: number;
@@ -903,119 +1017,105 @@ export default function QuoteDetailIsland(props: {
                                   };
                                   return (
                                     <div
-                                      key={`circuit-${item.id}-${segIndex}`}
-                                      style={{
-                                        border: "1px solid #e2e8f0",
-                                        borderRadius: 8,
-                                        padding: 10,
-                                        background: "#f8fafc",
-                                      }}
+                                      key={`circuit-${rowKey}-${segIndex}`}
+                                      className="vtur-quote-circuit-day"
                                     >
-                                      <div className="form-row mobile-stack">
-                                        <div className="form-group" style={{ maxWidth: 140 }}>
-                                          <div className="form-label-row">
-                                            <label className="form-label">Dia</label>
-                                            <div className="icon-action-group">
-                                              <button
-                                                type="button"
-                                                className="icon-action-btn"
-                                                title="Mover para cima"
-                                                onClick={() =>
+                                      <div className="vtur-form-grid vtur-form-grid-3">
+                                        <AppField
+                                          label="Dia"
+                                          type="number"
+                                          min={1}
+                                          value={String(data.dia ?? segIndex + 1)}
+                                          onChange={(e) =>
+                                            updateCircuitSegments(index, (segments) =>
+                                              segments.map((segmento, i) =>
+                                                i === segIndex
+                                                  ? {
+                                                      ...segmento,
+                                                      data: {
+                                                        ...(segmento.data || {}),
+                                                        dia: Number(e.target.value) || segIndex + 1,
+                                                      },
+                                                    }
+                                                  : segmento
+                                              )
+                                            )
+                                          }
+                                          disabled={!isEditing}
+                                        />
+                                        <AppField
+                                          label="Cidade / Titulo"
+                                          value={data.titulo || ""}
+                                          onChange={(e) =>
+                                            updateCircuitSegments(index, (segments) =>
+                                              segments.map((segmento, i) =>
+                                                i === segIndex
+                                                  ? {
+                                                      ...segmento,
+                                                      data: {
+                                                        ...(segmento.data || {}),
+                                                        titulo: e.target.value,
+                                                      },
+                                                    }
+                                                  : segmento
+                                              )
+                                            )
+                                          }
+                                          disabled={!isEditing}
+                                        />
+                                        <div className="vtur-quote-circuit-day-actions">
+                                          <TableActions
+                                            actions={[
+                                              {
+                                                key: "up",
+                                                label: "Subir dia",
+                                                icon: "↑",
+                                                variant: "ghost",
+                                                onClick: () =>
                                                   updateCircuitSegments(index, (segments) => {
                                                     if (!isEditing || segIndex === 0) return segments;
                                                     const next = [...segments];
                                                     const [removed] = next.splice(segIndex, 1);
                                                     next.splice(segIndex - 1, 0, removed);
                                                     return next;
-                                                  })
-                                                }
-                                                disabled={!isEditing || segIndex === 0}
-                                              >
-                                                ⬆️
-                                              </button>
-                                              <button
-                                                type="button"
-                                                className="icon-action-btn"
-                                                title="Mover para baixo"
-                                                onClick={() =>
+                                                  }),
+                                                disabled: !isEditing || segIndex === 0,
+                                              },
+                                              {
+                                                key: "down",
+                                                label: "Descer dia",
+                                                icon: "↓",
+                                                variant: "ghost",
+                                                onClick: () =>
                                                   updateCircuitSegments(index, (segments) => {
                                                     if (!isEditing || segIndex >= segments.length - 1) return segments;
                                                     const next = [...segments];
                                                     const [removed] = next.splice(segIndex, 1);
                                                     next.splice(segIndex + 1, 0, removed);
                                                     return next;
-                                                  })
-                                                }
-                                                disabled={!isEditing || segIndex >= circuitDays.length - 1}
-                                              >
-                                                ⬇️
-                                              </button>
-                                              <button
-                                                type="button"
-                                                className="icon-action-btn danger"
-                                                title="Remover dia"
-                                                onClick={() =>
+                                                  }),
+                                                disabled: !isEditing || segIndex >= circuitDays.length - 1,
+                                              },
+                                              {
+                                                key: "delete",
+                                                label: "Remover dia",
+                                                icon: "×",
+                                                variant: "danger",
+                                                onClick: () =>
                                                   updateCircuitSegments(index, (segments) =>
                                                     segments.filter((_, i) => i !== segIndex)
-                                                  )
-                                                }
-                                                disabled={!isEditing}
-                                              >
-                                                🗑️
-                                              </button>
-                                            </div>
-                                          </div>
-                                          <input
-                                            className="form-input"
-                                            type="number"
-                                            min={1}
-                                            value={data.dia ?? segIndex + 1}
-                                            onChange={(e) =>
-                                              updateCircuitSegments(index, (segments) =>
-                                                segments.map((segmento, i) =>
-                                                  i === segIndex
-                                                    ? {
-                                                        ...segmento,
-                                                        data: {
-                                                          ...(segmento.data || {}),
-                                                          dia: Number(e.target.value) || segIndex + 1,
-                                                        },
-                                                      }
-                                                    : segmento
-                                                )
-                                              )
-                                            }
-                                            disabled={!isEditing}
-                                          />
-                                        </div>
-                                        <div className="form-group" style={{ flex: 1 }}>
-                                          <label className="form-label">Cidade / Titulo</label>
-                                          <input
-                                            className="form-input"
-                                            value={data.titulo || ""}
-                                            onChange={(e) =>
-                                              updateCircuitSegments(index, (segments) =>
-                                                segments.map((segmento, i) =>
-                                                  i === segIndex
-                                                    ? {
-                                                        ...segmento,
-                                                        data: {
-                                                          ...(segmento.data || {}),
-                                                          titulo: e.target.value,
-                                                        },
-                                                      }
-                                                    : segmento
-                                                )
-                                              )
-                                            }
-                                            disabled={!isEditing}
+                                                  ),
+                                                disabled: !isEditing,
+                                              },
+                                            ]}
                                           />
                                         </div>
                                       </div>
-                                      <div className="form-group">
-                                        <label className="form-label">Descricao</label>
-                                        <textarea
-                                          className="form-input"
+
+                                      <div style={{ marginTop: 16 }}>
+                                        <AppField
+                                          as="textarea"
+                                          label="Descricao"
                                           rows={3}
                                           value={data.descricao || ""}
                                           onChange={(e) =>
@@ -1040,75 +1140,58 @@ export default function QuoteDetailIsland(props: {
                                   );
                                 })}
                               </div>
-                              <button
-                                type="button"
-                                className="btn btn-light w-full sm:w-auto"
-                                style={{ marginTop: 8 }}
-                                onClick={() =>
-                                  updateCircuitSegments(index, (segments) => [
-                                    ...segments,
-                                    {
-                                      segment_type: "circuit_day",
-                                      order_index: segments.length,
-                                      data: { dia: segments.length + 1, titulo: "", descricao: "" },
-                                    },
-                                  ])
-                                }
-                                disabled={!isEditing}
-                              >
-                                Adicionar dia
-                              </button>
                             </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-          </tbody>
-        </table>
-        {items.map((item, index) => {
-          const rowKey = getQuoteItemRowKey(item, index);
-          return (
-            <datalist key={rowKey} id={`quote-item-cidades-${rowKey}`}>
-              {(cidadeSuggestions[rowKey] || []).map((cidade) => (
-                <option key={cidade.id} value={cidade.nome} />
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+            {items.map((item, index) => {
+              const rowKey = getQuoteItemRowKey(item, index);
+              return (
+                <datalist key={rowKey} id={`quote-item-cidades-${rowKey}`}>
+                  {(cidadeSuggestions[rowKey] || []).map((cidade) => (
+                    <option key={cidade.id} value={cidade.nome} />
+                  ))}
+                </datalist>
+              );
+            })}
+            <datalist id={TIPO_DATALIST_ID}>
+              {tipoOptions.map((tipo) => (
+                <option key={tipo.id} value={tipo.label} />
               ))}
             </datalist>
-          );
-        })}
-        <datalist id={TIPO_DATALIST_ID}>
-          {tipoOptions.map((tipo) => (
-            <option key={tipo.id} value={tipo.label} />
-          ))}
-        </datalist>
-      </div>
+          </div>
+        </AppCard>
 
-        <div
-          className="mt-4 mobile-stack-buttons"
-          style={{ display: "flex", gap: 12, alignItems: "center" }}
-        >
-          <button
-            type="button"
-            className="btn btn-primary w-full sm:w-auto"
-            onClick={handleSave}
-            disabled={saving || !isEditing}
-          >
-            {saving ? "Salvando..." : "Salvar ajustes"}
-          </button>
-          <button
-            type="button"
-            className="btn btn-light w-full sm:w-auto"
-            onClick={handleCancelEdit}
-            disabled={saving}
-          >
-            Cancelar
-          </button>
-          {!isEditing && !isFechado && (
-            <button
+        <div className="vtur-form-actions">
+          {isEditing ? (
+            <>
+              <AppButton
+                type="button"
+                variant="primary"
+                onClick={handleSave}
+                disabled={saving || !isEditing}
+                loading={saving}
+              >
+                {saving ? "Salvando..." : "Salvar ajustes"}
+              </AppButton>
+              <AppButton
+                type="button"
+                variant="secondary"
+                onClick={handleCancelEdit}
+                disabled={saving}
+              >
+                Cancelar
+              </AppButton>
+            </>
+          ) : !isFechado ? (
+            <AppButton
               type="button"
-              className="btn btn-light w-full sm:w-auto"
+              variant="secondary"
               onClick={() => {
                 setIsEditing(true);
                 setSuccess(null);
@@ -1116,43 +1199,32 @@ export default function QuoteDetailIsland(props: {
                 setShowSummary(false);
               }}
             >
-              Editar orçamento
-            </button>
-          )}
-          {isFechado && (
-            <span style={{ fontSize: 13, color: "#64748b" }}>
-              Orcamento fechado: edicao bloqueada.
-            </span>
-          )}
+              Editar orcamento
+            </AppButton>
+          ) : null}
         </div>
-        {!canConfirm && (
-          <div style={{ marginTop: 4, fontSize: 13 }}>Alguns itens precisam de ajuste.</div>
+
+        {flightModal && (
+          <FlightDetailsModal
+            details={flightModal.details}
+            title={flightModal.title || "Detalhes do voo"}
+            onClose={() => setFlightModal(null)}
+          />
         )}
-
-        {error && <div style={{ marginTop: 12, color: "#b91c1c" }}>{error}</div>}
-        {success && <div style={{ marginTop: 12, color: "#16a34a" }}>{success}</div>}
-      </div>
-
-      {flightModal && (
-        <FlightDetailsModal
-          details={flightModal.details}
-          title={flightModal.title || "Detalhes do voo"}
-          onClose={() => setFlightModal(null)}
+        <ConfirmDialog
+          open={Boolean(itemParaExcluir)}
+          title="Excluir item"
+          message={`Confirma a exclusao de ${itemParaExcluir?.label || "este item"}?`}
+          confirmLabel="Excluir"
+          confirmVariant="danger"
+          onCancel={() => setItemParaExcluir(null)}
+          onConfirm={confirmarRemocaoItem}
         />
-      )}
-      <ConfirmDialog
-        open={Boolean(itemParaExcluir)}
-        title="Excluir item"
-        message={`Confirma a exclusão de ${itemParaExcluir?.label || "este item"}?`}
-        confirmLabel="Excluir"
-        confirmVariant="danger"
-        onCancel={() => setItemParaExcluir(null)}
-        onConfirm={confirmarRemocaoItem}
-      />
-      <CalculatorModal
-        open={showCalculator}
-        onClose={() => setShowCalculator(false)}
-      />
-    </div>
+        <CalculatorModal
+          open={showCalculator}
+          onClose={() => setShowCalculator(false)}
+        />
+      </div>
+    </AppPrimerProvider>
   );
 }

@@ -1,14 +1,21 @@
+import { Dialog } from "@primer/react";
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { useMasterScope } from "../../lib/useMasterScope";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import CalculatorModal from "../ui/CalculatorModal";
+import AlertMessage from "../ui/AlertMessage";
 import { formatCurrencyBRL, formatNumberBR } from "../../lib/format";
 import { calcularDescontoAplicado, calcularPctFixoProduto, regraProdutoTemFixo } from "../../lib/comissaoUtils";
 import { carregarTermosNaoComissionaveis, calcularNaoComissionavelPorVenda } from "../../lib/pagamentoUtils";
 import { normalizeText } from "../../lib/normalizeText";
 import { fetchGestorEquipeIdsComGestor } from "../../lib/gestorEquipe";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type Parametros = {
   usar_taxas_na_meta: boolean;
@@ -1010,7 +1017,15 @@ export default function ComissionamentoIsland() {
   ]);
 
   if (loadingPerm) return <LoadingUsuarioContext />;
-  if (!podeVer) return <div>Você não possui acesso ao módulo de Vendas.</div>;
+  if (!podeVer) {
+    return (
+      <AppPrimerProvider>
+        <AppCard title="Acesso ao modulo de vendas" subtitle="Seu perfil nao possui permissao para consultar comissionamento.">
+          <p>Solicite ao gestor ou ao master a liberacao do acesso ao modulo.</p>
+        </AppCard>
+      </AppPrimerProvider>
+    );
+  }
 
   const labelComissao = resumo
     ? buildKpiLabel("Comissão", resumo.pctComissaoGeral || [])
@@ -1027,337 +1042,243 @@ export default function ComissionamentoIsland() {
   const exibeFiltroVendedor = Boolean(userCtx?.isGestor || userCtx?.isAdmin || userCtx?.isMaster);
   const exibeValoresReceber = !!resumo;
   const periodoEditavel = preset === "personalizado";
+  const periodoResumo = `${formatPeriodoLabel(periodo.inicio)} a ${formatPeriodoLabel(periodo.fim)}`;
+  const periodoSubtitulo = periodoEditavel
+    ? "Periodo personalizado em analise."
+    : `Periodo consolidado: ${periodoResumo}.`;
+
+  const filtrosFields = (
+    <>
+      {userCtx?.isMaster ? (
+        <>
+          <AppField
+            as="select"
+            label="Filial"
+            value={masterScope.empresaSelecionada}
+            onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
+            options={[
+              { label: "Todas", value: "all" },
+              ...masterScope.empresasAprovadas.map((empresa) => ({
+                label: empresa.nome_fantasia,
+                value: empresa.id,
+              })),
+            ]}
+          />
+          <AppField
+            as="select"
+            label="Equipe"
+            value={masterScope.gestorSelecionado}
+            onChange={(e) => masterScope.setGestorSelecionado(e.target.value)}
+            options={[
+              { label: "Todas", value: "all" },
+              ...masterScope.gestoresDisponiveis.map((gestor) => ({
+                label: gestor.nome_completo,
+                value: gestor.id,
+              })),
+            ]}
+          />
+        </>
+      ) : null}
+
+      {exibeFiltroVendedor ? (
+        <AppField
+          as="select"
+          label="Vendedor"
+          value={vendedorSelectValue}
+          onChange={(e) => setVendedorFiltroSelecionado(e.target.value)}
+          options={[
+            { label: "Todos", value: todosValue },
+            ...vendedoresDisponiveis.map((vendedor) => ({
+              label: vendedor.nome || "Vendedor",
+              value: vendedor.id,
+            })),
+          ]}
+        />
+      ) : null}
+
+      <AppField
+        as="select"
+        label="Periodo"
+        value={preset}
+        onChange={(e) => setPreset(e.target.value)}
+        options={PERIODO_OPCOES.map((opcao) => ({
+          label: opcao.label,
+          value: opcao.id,
+        }))}
+      />
+
+      <AppField
+        label="Inicio"
+        type={periodoEditavel ? "date" : "text"}
+        value={periodoEditavel ? periodo.inicio : formatPeriodoLabel(periodo.inicio)}
+        readOnly={!periodoEditavel}
+        onChange={(e) => {
+          if (!periodoEditavel) return;
+          setPeriodo((prev) => ({ ...prev, inicio: e.target.value }));
+        }}
+      />
+
+      <AppField
+        label="Fim"
+        type={periodoEditavel ? "date" : "text"}
+        value={periodoEditavel ? periodo.fim : formatPeriodoLabel(periodo.fim)}
+        readOnly={!periodoEditavel}
+        onChange={(e) => {
+          if (!periodoEditavel) return;
+          setPeriodo((prev) => ({ ...prev, fim: e.target.value }));
+        }}
+      />
+    </>
+  );
 
   return (
-    <div className="card-base bg-transparent shadow-none p-0 comissionamento-page">
-      <div className="card-base mb-3">
-        <div className="mobile-stack-buttons sm:hidden">
-          <button type="button" className="btn btn-light" onClick={() => setShowFilters(true)}>
-            Filtros
-          </button>
-          <button type="button" className="btn btn-light" onClick={() => setShowCalculator(true)}>
-            Calculadora
-          </button>
-        </div>
-        <div className="hidden sm:block">
-          <div className="form-row mb-0">
-            {userCtx?.isMaster && (
-              <>
-                <div className="form-group">
-                  <label className="form-label">Filial</label>
-                  <select
-                    className="form-select"
-                    value={masterScope.empresaSelecionada}
-                    onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
-                  >
-                    <option value="all">Todas</option>
-                    {masterScope.empresasAprovadas.map((empresa) => (
-                      <option key={empresa.id} value={empresa.id}>
-                        {empresa.nome_fantasia}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Equipe</label>
-                  <select
-                    className="form-select"
-                    value={masterScope.gestorSelecionado}
-                    onChange={(e) => masterScope.setGestorSelecionado(e.target.value)}
-                  >
-                    <option value="all">Todas</option>
-                    {masterScope.gestoresDisponiveis.map((gestor) => (
-                      <option key={gestor.id} value={gestor.id}>
-                        {gestor.nome_completo}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </>
-            )}
-            {exibeFiltroVendedor && (
-              <div className="form-group">
-                <label className="form-label">Vendedor</label>
-                <select
-                  className="form-select"
-                  value={vendedorSelectValue}
-                  onChange={(e) => setVendedorFiltroSelecionado(e.target.value)}
-                >
-                  <option value={todosValue}>Todos</option>
-                  {vendedoresDisponiveis.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.nome || "Vendedor"}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <div className="form-group">
-              <label className="form-label">Período</label>
-              <select className="form-select" value={preset} onChange={(e) => setPreset(e.target.value)}>
-                {PERIODO_OPCOES.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
+    <AppPrimerProvider>
+      <div className="comissionamento-page">
+        <AppToolbar
+          sticky
+          tone="info"
+          className="mb-3 list-toolbar-sticky"
+          title="Comissionamento"
+          subtitle={`Resumo de meta, faturamento e comissao. ${periodoSubtitulo}`}
+          actions={
+            <div className="vtur-quote-top-actions">
+              <AppButton type="button" variant="secondary" className="sm:hidden" onClick={() => setShowFilters(true)}>
+                Filtros
+              </AppButton>
+              <AppButton type="button" variant="secondary" onClick={() => setShowCalculator(true)}>
+                Calculadora
+              </AppButton>
             </div>
-              <div className="form-group">
-                <label className="form-label">Início</label>
-                <input
-                  className="form-input"
-                  type={periodoEditavel ? "date" : "text"}
-                  value={periodoEditavel ? periodo.inicio : formatPeriodoLabel(periodo.inicio)}
-                  readOnly={!periodoEditavel}
-                  onChange={(e) => {
-                    if (!periodoEditavel) return;
-                    const value = e.target.value;
-                    setPeriodo((prev) => ({ ...prev, inicio: value }));
-                  }}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Fim</label>
-                <input
-                  className="form-input"
-                  type={periodoEditavel ? "date" : "text"}
-                  value={periodoEditavel ? periodo.fim : formatPeriodoLabel(periodo.fim)}
-                  readOnly={!periodoEditavel}
-                  onChange={(e) => {
-                    if (!periodoEditavel) return;
-                    const value = e.target.value;
-                    setPeriodo((prev) => ({ ...prev, fim: value }));
-                  }}
-                />
-              </div>
-              <div
-                className="form-group"
-                style={{ justifyContent: "flex-end", alignItems: "flex-end" }}
-              >
-                <label className="form-label" style={{ visibility: "hidden" }}>
-                  Calculadora
-                </label>
-                <button
-                  type="button"
-                  className="btn btn-light"
-                  onClick={() => setShowCalculator(true)}
-                >
-                  Calculadora
-                </button>
-              </div>
+          }
+        >
+          <div className="hidden sm:block">
+            <div className="vtur-commission-filters-grid">{filtrosFields}</div>
           </div>
-        </div>
-      </div>
+        </AppToolbar>
 
-      {showFilters && (
-        <div className="mobile-drawer-backdrop" onClick={() => setShowFilters(false)}>
-          <div
-            className="mobile-drawer-panel"
-            role="dialog"
-            aria-modal="true"
-            onClick={(e) => e.stopPropagation()}
+        {showFilters ? (
+          <Dialog
+            title="Filtros de comissionamento"
+            width="large"
+            onClose={() => setShowFilters(false)}
+            footerButtons={[
+              {
+                content: "Fechar",
+                buttonType: "default",
+                onClick: () => setShowFilters(false),
+              },
+            ]}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <strong>Filtros</strong>
-              <button type="button" className="btn-ghost" onClick={() => setShowFilters(false)}>
-                ✕
-              </button>
-            </div>
-
-            {userCtx?.isMaster && (
-              <>
-                <div className="form-group" style={{ marginTop: 12 }}>
-                  <label className="form-label">Filial</label>
-                  <select
-                    className="form-select"
-                    value={masterScope.empresaSelecionada}
-                    onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
-                  >
-                    <option value="all">Todas</option>
-                    {masterScope.empresasAprovadas.map((empresa) => (
-                      <option key={empresa.id} value={empresa.id}>
-                        {empresa.nome_fantasia}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group" style={{ marginTop: 12 }}>
-                  <label className="form-label">Equipe</label>
-                  <select
-                    className="form-select"
-                    value={masterScope.gestorSelecionado}
-                    onChange={(e) => masterScope.setGestorSelecionado(e.target.value)}
-                  >
-                    <option value="all">Todas</option>
-                    {masterScope.gestoresDisponiveis.map((gestor) => (
-                      <option key={gestor.id} value={gestor.id}>
-                        {gestor.nome_completo}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </>
-            )}
-            {exibeFiltroVendedor && (
-              <div className="form-group" style={{ marginTop: 12 }}>
-                <label className="form-label">Vendedor</label>
-                <select
-                  className="form-select"
-                  value={vendedorSelectValue}
-                  onChange={(e) => setVendedorFiltroSelecionado(e.target.value)}
-                >
-                  <option value={todosValue}>Todos</option>
-                  {vendedoresDisponiveis.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.nome || "Vendedor"}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <div className="form-group" style={{ marginTop: 12 }}>
-              <label className="form-label">Período</label>
-              <select className="form-select" value={preset} onChange={(e) => setPreset(e.target.value)}>
-                {PERIODO_OPCOES.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Início</label>
-              <input
-                className="form-input"
-                type={periodoEditavel ? "date" : "text"}
-                value={periodoEditavel ? periodo.inicio : formatPeriodoLabel(periodo.inicio)}
-                readOnly={!periodoEditavel}
-                onChange={(e) => {
-                  if (!periodoEditavel) return;
-                  const value = e.target.value;
-                  setPeriodo((prev) => ({ ...prev, inicio: value }));
-                }}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Fim</label>
-              <input
-                className="form-input"
-                type={periodoEditavel ? "date" : "text"}
-                value={periodoEditavel ? periodo.fim : formatPeriodoLabel(periodo.fim)}
-                readOnly={!periodoEditavel}
-                onChange={(e) => {
-                  if (!periodoEditavel) return;
-                  const value = e.target.value;
-                  setPeriodo((prev) => ({ ...prev, fim: value }));
-                }}
-              />
-            </div>
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{ marginTop: 12, width: "100%" }}
-              onClick={() => setShowFilters(false)}
-            >
-              Aplicar filtros
-            </button>
-          </div>
-        </div>
-      )}
-
-      {erro && (
-        <div className="card-base card-config mb-3">
-          <strong>{erro}</strong>
-        </div>
-      )}
-
-      {loading && <div>Carregando dados...</div>}
-
-      {!loading && resumo && (
-        <>
-          <div className="card-base mb-3">
-            <div className="text-center font-bold text-lg mb-4">Como está seu Progresso</div>
-            <div className="grid gap-3 mb-1" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))' }}>
-              <div className="kpi-card flex flex-col items-center text-center" style={{ color: '#16a34a' }}>
-                <div className="kpi-label">Meta do mês</div>
-                <div className="kpi-value">
-                  {formatCurrencyBRL(metaGeral?.meta_geral || 0)}
-                </div>
-              </div>
-              <div className="kpi-card flex flex-col items-center text-center" style={{ color: '#ca8a04' }}>
-                <div className="kpi-label">{`Total Bruto (${resumo.pctMetaGeral.toFixed(2).replace(".", ",")}%)`}</div>
-                <div className="kpi-value">
-                  {formatCurrencyBRL(resumo.totalBruto)}
-                </div>
-              </div>
-              <div className="kpi-card flex flex-col items-center text-center" style={{ color: '#0ea5e9' }}>
-                <div className="kpi-label">Taxas</div>
-                <div className="kpi-value">
-                  {formatCurrencyBRL(resumo.totalTaxas)}
-                </div>
-              </div>
-              <div className="kpi-card flex flex-col items-center text-center" style={{ color: '#c2410c' }}>
-                <div className="kpi-label">Total Líquido</div>
-                <div className="kpi-value">
-                  {formatCurrencyBRL(resumo.totalLiquido)}
-                </div>
-              </div>
-              <div className="kpi-card flex flex-col items-center text-center" style={{ color: '#2563eb' }}>
-                <div className="kpi-label">Vendas</div>
-                <div className="kpi-value">{resumo.totalVendas}</div>
-              </div>
-            </div>
-          </div>
-
-          {exibeValoresReceber && (
-            <div className="card-base">
-              <div style={{ textAlign: "center", fontWeight: 700, fontSize: 18, margin: "0 0 16px" }}>
-                Seus Valores a Receber
-              </div>
-              <div
-                className="kpi-grid"
-                style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}
+            <div className="vtur-modal-body-stack">
+              <AppCard
+                title="Refine a leitura do periodo"
+                subtitle="Ajuste filial, equipe, vendedor e recorte de datas para recalcular a comissao."
               >
-                <div className="kpi-card flex flex-col items-center text-center">
-                  <div className="kpi-label">{labelComissao}</div>
-                  <div className="kpi-value">
-                    {formatCurrencyBRL(resumo.comissaoGeral)}
-                  </div>
+                <div className="vtur-commission-filters-grid">{filtrosFields}</div>
+                <div className="vtur-form-actions" style={{ marginTop: 16 }}>
+                  <AppButton type="button" variant="primary" onClick={() => setShowFilters(false)}>
+                    Aplicar filtros
+                  </AppButton>
                 </div>
-                <div className="kpi-card flex flex-col items-center text-center">
-                  <div className="kpi-label">{labelPassagemFacial}</div>
-                  <div className="kpi-value">
-                    {formatCurrencyBRL(resumo.comissaoPassagemFacial)}
-                  </div>
+              </AppCard>
+            </div>
+          </Dialog>
+        ) : null}
+
+        {erro ? (
+          <AlertMessage variant="error" className="mb-3">
+            {erro}
+          </AlertMessage>
+        ) : null}
+
+        {loading ? (
+          <AppCard
+            className="mb-3"
+            title="Carregando dados de comissionamento"
+            subtitle="O CRM esta consolidando metas, vendas, taxas e regras do periodo selecionado."
+          >
+            <p className="vtur-commission-loading">
+              Aguarde alguns instantes. Assim que o calculo terminar, os indicadores e valores a receber serao exibidos.
+            </p>
+          </AppCard>
+        ) : null}
+
+        {!loading && resumo ? (
+          <>
+            <AppCard
+              className="mb-3"
+              title="Como esta seu progresso"
+              subtitle="Evolucao de meta, faturamento bruto, taxas, liquido e volume comercial."
+            >
+              <div className="vtur-commission-kpi-grid">
+                <div className="vtur-commission-kpi-card vtur-commission-kpi-positive">
+                  <span className="vtur-commission-kpi-label">Meta do mes</span>
+                  <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(metaGeral?.meta_geral || 0)}</strong>
                 </div>
-                <div className="kpi-card flex flex-col items-center text-center">
-                  <div className="kpi-label">Comissão total</div>
-                  <div className="kpi-value">
-                    {formatCurrencyBRL(resumo.totalComissaoKpi)}
-                  </div>
+                <div className="vtur-commission-kpi-card vtur-commission-kpi-warning">
+                  <span className="vtur-commission-kpi-label">{`Total bruto (${resumo.pctMetaGeral.toFixed(2).replace(".", ",")}%)`}</span>
+                  <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(resumo.totalBruto)}</strong>
                 </div>
-                <div className="kpi-card flex flex-col items-center text-center">
-                  <div className="kpi-label">{labelSeguro}</div>
-                  <div className="kpi-value">
-                    {formatCurrencyBRL(resumo.comissaoSeguroViagem)}
-                  </div>
+                <div className="vtur-commission-kpi-card vtur-commission-kpi-info">
+                  <span className="vtur-commission-kpi-label">Taxas</span>
+                  <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(resumo.totalTaxas)}</strong>
                 </div>
-                <div className="kpi-card kpi-highlight flex flex-col items-center text-center">
-                  <div className="kpi-label">Comissão + Seguro</div>
-                  <div className="kpi-value">
-                    {formatCurrencyBRL(resumo.totalComissaoKpiSeguro)}
-                  </div>
+                <div className="vtur-commission-kpi-card vtur-commission-kpi-accent">
+                  <span className="vtur-commission-kpi-label">Total liquido</span>
+                  <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(resumo.totalLiquido)}</strong>
+                </div>
+                <div className="vtur-commission-kpi-card vtur-commission-kpi-neutral">
+                  <span className="vtur-commission-kpi-label">Vendas</span>
+                  <strong className="vtur-commission-kpi-value">{resumo.totalVendas}</strong>
                 </div>
               </div>
-            </div>
-          )}
-        </>
-      )}
-      <CalculatorModal
-        open={showCalculator}
-        onClose={() => setShowCalculator(false)}
-      />
-    </div>
+            </AppCard>
+
+            {exibeValoresReceber ? (
+              <AppCard
+                title="Seus valores a receber"
+                subtitle="Consolidado da comissao geral, produtos especiais e total previsto para o periodo."
+              >
+                <div className="vtur-commission-kpi-grid">
+                  <div className="vtur-commission-kpi-card">
+                    <span className="vtur-commission-kpi-label">{labelComissao}</span>
+                    <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(resumo.comissaoGeral)}</strong>
+                  </div>
+                  <div className="vtur-commission-kpi-card">
+                    <span className="vtur-commission-kpi-label">{labelPassagemFacial}</span>
+                    <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(resumo.comissaoPassagemFacial)}</strong>
+                  </div>
+                  <div className="vtur-commission-kpi-card">
+                    <span className="vtur-commission-kpi-label">Comissao total</span>
+                    <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(resumo.totalComissaoKpi)}</strong>
+                  </div>
+                  <div className="vtur-commission-kpi-card">
+                    <span className="vtur-commission-kpi-label">{labelSeguro}</span>
+                    <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(resumo.comissaoSeguroViagem)}</strong>
+                  </div>
+                  <div className="vtur-commission-kpi-card vtur-commission-kpi-highlight">
+                    <span className="vtur-commission-kpi-label">Comissao + seguro</span>
+                    <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(resumo.totalComissaoKpiSeguro)}</strong>
+                  </div>
+                </div>
+              </AppCard>
+            ) : null}
+          </>
+        ) : null}
+
+        {!loading && !resumo ? (
+          <AppCard
+            title="Sem dados para o periodo"
+            subtitle="Nao houve dados suficientes para consolidar o comissionamento no recorte atual."
+          >
+            <p className="vtur-commission-loading">
+              Ajuste filial, vendedor ou periodo para revisar outra janela de desempenho.
+            </p>
+          </AppCard>
+        ) : null}
+
+        <CalculatorModal open={showCalculator} onClose={() => setShowCalculator(false)} />
+      </div>
+    </AppPrimerProvider>
   );
 }

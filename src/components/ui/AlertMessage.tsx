@@ -1,4 +1,5 @@
 import React from "react";
+import { Flash } from "@primer/react";
 
 type AlertVariant = "success" | "error" | "warning" | "info";
 
@@ -8,11 +9,11 @@ type AlertMessageProps = {
   children: React.ReactNode;
 };
 
-const variantClass: Record<AlertVariant, string> = {
-  success: "auth-success",
-  error: "auth-error",
-  warning: "card-base card-config",
-  info: "card-base card-config",
+const variantMap: Record<AlertVariant, "success" | "danger" | "warning" | "default"> = {
+  success: "success",
+  error: "danger",
+  warning: "warning",
+  info: "default",
 };
 
 export default function AlertMessage({
@@ -21,6 +22,9 @@ export default function AlertMessage({
   children,
 }: AlertMessageProps) {
   if (!children) return null;
-  const baseClass = variantClass[variant] || variantClass.info;
-  return <div className={`${baseClass} ${className}`.trim()}>{children}</div>;
+  return (
+    <Flash variant={variantMap[variant] || "default"} className={`vtur-alert ${className}`.trim()}>
+      {children}
+    </Flash>
+  );
 }

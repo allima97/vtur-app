@@ -9,10 +9,14 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import DataTable from "../ui/DataTable";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import TableActions from "../ui/TableActions";
-import SearchInput from "../ui/SearchInput";
 import EmptyState from "../ui/EmptyState";
 import AlertMessage from "../ui/AlertMessage";
 import { ToastStack, useToastQueue } from "../ui/Toast";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type Pais = {
   id: string;
@@ -153,6 +157,11 @@ export default function SubdivisoesIsland() {
         normalizeText(s.codigo_admin1).includes(termo)
     );
   }, [busca, subdivisoesEnriquecidas]);
+  const resumoLista = busca.trim()
+    ? `${filtrados.length} subdivisao(oes) encontradas para a busca atual.`
+    : carregouTodos
+      ? `${filtrados.length} subdivisao(oes) carregadas para consulta completa.`
+      : "Ultimas 5 subdivisoes cadastradas. Digite na busca para consultar todas.";
 
   function handleChange<K extends keyof FormState>(campo: K, valor: FormState[K]) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
@@ -256,110 +265,106 @@ export default function SubdivisoesIsland() {
   if (!podeVer) return <div className="paises-page">Voce nao possui acesso ao modulo de Cadastros.</div>;
 
   return (
-    <div className="paises-page">
+    <AppPrimerProvider>
+      <div className="paises-page">
       {!mostrarFormulario && (
-        <div
-          className="card-base mb-3 list-toolbar-sticky"
-          style={{ background: "#f5f3ff", borderColor: "#ddd6fe" }}
+        <AppToolbar
+          sticky
+          tone="config"
+          className="mb-3 list-toolbar-sticky"
+          title="Consulta de estados e provincias"
+          subtitle={resumoLista}
+          actions={
+            !modoSomenteLeitura ? (
+              <AppButton
+                type="button"
+                variant="primary"
+                onClick={abrirFormulario}
+                disabled={mostrarFormulario}
+              >
+                Adicionar estado/provincia
+              </AppButton>
+            ) : null
+          }
         >
-          <div
-            className="form-row mobile-stack"
-            style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
-          >
-            <div style={{ flex: "1 1 320px" }}>
-              <SearchInput
-                label="Buscar subdivisão"
-                value={busca}
-                onChange={setBusca}
-                placeholder="Nome, país ou código..."
-              />
-            </div>
-            {!modoSomenteLeitura && (
-              <div className="form-group" style={{ alignItems: "flex-end" }}>
-                <button
-                  type="button"
-                  className="btn btn-primary w-full sm:w-auto"
-                  onClick={abrirFormulario}
-                  disabled={mostrarFormulario}
-                >
-                  Adicionar Estado/Província
-                </button>
-              </div>
-            )}
+          <div className="vtur-toolbar-grid">
+            <AppField
+              label="Buscar subdivisao"
+              value={busca}
+              onChange={(event) => setBusca(event.target.value)}
+              placeholder="Nome, pais ou codigo..."
+            />
           </div>
-        </div>
+        </AppToolbar>
       )}
 
       {mostrarFormulario && (
-        <div className="card-base card-blue form-card mb-3">
+        <AppCard
+          className="form-card mb-3"
+          title={editandoId ? "Editar subdivisao" : "Nova subdivisao"}
+          subtitle="Padronize estados e provincias usados em cidades, destinos e operacoes do CRM."
+          tone="info"
+        >
           <form onSubmit={salvar}>
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Nome da subdivisão *</label>
-                <input
-                  className="form-input"
-                  value={form.nome}
-                  onChange={(e) => handleChange("nome", e.target.value)}
-                  onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
-                  placeholder="Ex: Sao Paulo, California..."
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Código admin1 *</label>
-                <input
-                  className="form-input"
-                  value={form.codigo_admin1}
-                  onChange={(e) => handleChange("codigo_admin1", e.target.value)}
-                  placeholder="Ex: SP, CA, NY..."
-                />
-              </div>
+            <div className="vtur-form-grid vtur-form-grid-2">
+              <AppField
+                label="Nome da subdivisao *"
+                value={form.nome}
+                onChange={(e) => handleChange("nome", e.target.value)}
+                onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
+                placeholder="Ex: Sao Paulo, California..."
+                validation={!form.nome.trim() && erro ? "Preencha o nome." : undefined}
+              />
+              <AppField
+                label="Codigo admin1 *"
+                value={form.codigo_admin1}
+                onChange={(e) => handleChange("codigo_admin1", e.target.value)}
+                placeholder="Ex: SP, CA, NY..."
+                validation={!form.codigo_admin1.trim() && erro ? "Preencha o codigo." : undefined}
+              />
             </div>
 
-            <div className="form-row" style={{ marginTop: 12 }}>
-              <div className="form-group">
-                <label className="form-label">Tipo</label>
-                <input
-                  className="form-input"
-                  value={form.tipo}
-                  onChange={(e) => handleChange("tipo", e.target.value)}
-                  placeholder="Ex: Estado, Provincia, Regiao..."
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Pais *</label>
-                <select
-                  className="form-select"
-                  value={form.pais_id}
-                  onChange={(e) => handleChange("pais_id", e.target.value)}
-                >
-                  <option value="">Selecione</option>
-                  {paises.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 12 }}>
+              <AppField
+                label="Tipo"
+                value={form.tipo}
+                onChange={(e) => handleChange("tipo", e.target.value)}
+                placeholder="Ex: Estado, Provincia, Regiao..."
+              />
+              <AppField
+                as="select"
+                label="Pais *"
+                value={form.pais_id}
+                onChange={(e) => handleChange("pais_id", e.target.value)}
+                validation={!form.pais_id && erro ? "Selecione o pais." : undefined}
+                options={[
+                  { value: "", label: "Selecione" },
+                  ...paises.map((p) => ({ value: p.id, label: p.nome })),
+                ]}
+              />
             </div>
 
-            <div className="mobile-stack-buttons" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
-              <button type="submit" className="btn btn-primary" disabled={salvando || modoSomenteLeitura}>
-                {salvando ? "Salvando..." : "Salvar estado/província"}
-              </button>
-              <button type="button" className="btn btn-light" onClick={fecharFormulario} disabled={salvando}>
+            <div className="vtur-form-actions mobile-stack-buttons" style={{ marginTop: 12 }}>
+              <AppButton
+                type="submit"
+                variant="primary"
+                disabled={salvando || modoSomenteLeitura}
+                loading={salvando}
+              >
+                {salvando ? "Salvando..." : "Salvar estado/provincia"}
+              </AppButton>
+              <AppButton type="button" variant="secondary" onClick={fecharFormulario} disabled={salvando}>
                 Cancelar
-              </button>
+              </AppButton>
             </div>
           </form>
-        </div>
+        </AppCard>
       )}
 
       {!mostrarFormulario && !carregouTodos && (
-        <div className="card-base card-config mb-3">
-          Ultimas Subdivisoes Cadastradas (5). Digite na busca para consultar todas.
-        </div>
+        <AlertMessage variant="info" className="mb-3">
+          Ultimas subdivisoes cadastradas (5). Digite na busca para consultar todas.
+        </AlertMessage>
       )}
 
       {!mostrarFormulario && erro && (
@@ -370,6 +375,7 @@ export default function SubdivisoesIsland() {
 
       {!mostrarFormulario && (
         <DataTable
+          shellClassName="mb-3"
           className="table-default table-header-blue table-mobile-cards min-w-[720px]"
           containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
           headers={
@@ -390,8 +396,8 @@ export default function SubdivisoesIsland() {
               title="Nenhuma subdivisão encontrada"
               description={
                 busca.trim()
-                  ? "Tente ajustar a busca ou cadastre uma subdivisão."
-                  : "Cadastre uma subdivisão para começar."
+                  ? "Tente ajustar a busca ou cadastre uma subdivisao."
+                  : "Cadastre uma subdivisao para comecar."
               }
             />
           }
@@ -414,7 +420,6 @@ export default function SubdivisoesIsland() {
                       key: "edit",
                       label: "Editar",
                       onClick: () => iniciarEdicao(s),
-                      icon: "✏️",
                     },
                     ...(podeExcluir
                       ? [
@@ -422,7 +427,6 @@ export default function SubdivisoesIsland() {
                             key: "delete",
                             label: "Excluir",
                             onClick: () => solicitarExclusao(s),
-                            icon: excluindoId === s.id ? "..." : "🗑️",
                             variant: "danger" as const,
                             disabled: excluindoId === s.id,
                           },
@@ -447,6 +451,7 @@ export default function SubdivisoesIsland() {
         onConfirm={confirmarExclusao}
       />
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
-    </div>
+      </div>
+    </AppPrimerProvider>
   );
 }

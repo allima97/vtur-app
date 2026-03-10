@@ -1,0 +1,1338 @@
+:root {
+  --vtur-primer-accent: #8e28e2;
+  --vtur-primer-accent-strong: #7c1fd4;
+  --vtur-primer-ink: #0f172a;
+  --vtur-primer-muted: #475569;
+  --vtur-primer-surface: #ffffff;
+  --vtur-primer-surface-alt: #f8fafc;
+  --vtur-primer-border: rgba(148, 163, 184, 0.24);
+  --vtur-primer-sidebar-hover: rgba(255, 255, 255, 0.08);
+}
+
+.vtur-primer-scope {
+  font-family: inherit;
+  color: inherit;
+}
+
+.vtur-page-header {
+  margin: 0 0 20px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.88);
+}
+
+.vtur-page-header-blue h1,
+.vtur-page-header-blue [data-component="PH_Title"] {
+  color: var(--color-blue-title);
+}
+
+.vtur-page-header-teal h1,
+.vtur-page-header-teal [data-component="PH_Title"] {
+  color: var(--color-teal-title);
+}
+
+.vtur-page-header-green h1,
+.vtur-page-header-green [data-component="PH_Title"] {
+  color: var(--color-green-title);
+}
+
+.vtur-page-header-config h1,
+.vtur-page-header-config [data-component="PH_Title"] {
+  color: var(--color-config-title);
+}
+
+.vtur-page-header [data-component="PH_Title"] {
+  font-size: clamp(1.35rem, 2vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.vtur-page-header [data-component="PH_Description"] {
+  color: var(--vtur-primer-muted);
+  font-size: 0.96rem;
+  line-height: 1.45;
+}
+
+.vtur-page-header-stack [data-component="PH_Actions"] {
+  width: 100%;
+}
+
+.vtur-app-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+  border: 1px solid var(--vtur-primer-border);
+  border-radius: 18px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  padding: 20px;
+}
+
+.vtur-app-card + .vtur-app-card {
+  margin-top: 18px;
+}
+
+.vtur-app-card-info {
+  border-color: rgba(59, 130, 246, 0.22);
+}
+
+.vtur-app-card-config {
+  border-color: rgba(142, 40, 226, 0.22);
+}
+
+.vtur-app-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.vtur-app-card-copy {
+  min-width: 0;
+}
+
+.vtur-app-card-title {
+  margin: 0;
+  color: var(--vtur-primer-ink);
+  font-size: 1.08rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.vtur-app-card-subtitle {
+  margin: 6px 0 0;
+  color: var(--vtur-primer-muted);
+  font-size: 0.94rem;
+}
+
+.vtur-app-card-body {
+  min-width: 0;
+}
+
+.vtur-app-toolbar {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+  border: 1px solid var(--vtur-primer-border);
+  border-radius: 18px;
+  padding: 18px 20px;
+  box-shadow: 0 16px 38px rgba(15, 23, 42, 0.08);
+}
+
+.vtur-app-toolbar-default {
+  border-color: rgba(148, 163, 184, 0.24);
+}
+
+.vtur-app-toolbar-info {
+  border-color: rgba(59, 130, 246, 0.24);
+}
+
+.vtur-app-toolbar-config {
+  border-color: rgba(142, 40, 226, 0.24);
+  background: linear-gradient(180deg, rgba(250, 245, 255, 0.95), rgba(255, 255, 255, 0.98));
+}
+
+.vtur-app-toolbar-sticky {
+  backdrop-filter: blur(12px);
+}
+
+.vtur-app-toolbar-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.vtur-app-toolbar-copy {
+  min-width: 0;
+}
+
+.vtur-app-toolbar-title {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--vtur-primer-ink);
+}
+
+.vtur-app-toolbar-subtitle {
+  margin: 6px 0 0;
+  color: var(--vtur-primer-muted);
+  font-size: 0.93rem;
+}
+
+.vtur-app-toolbar-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.vtur-app-toolbar-body {
+  margin-top: 16px;
+}
+
+.vtur-app-button {
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.vtur-app-button-primary {
+  background: linear-gradient(135deg, var(--vtur-primer-accent) 0%, var(--vtur-primer-accent-strong) 100%);
+}
+
+.vtur-app-field {
+  gap: 8px;
+}
+
+.vtur-app-field [data-component="FormControlLabel"] {
+  color: var(--vtur-primer-ink);
+  font-weight: 700;
+}
+
+.vtur-app-field input,
+.vtur-app-field select,
+.vtur-app-field textarea {
+  border-radius: 14px;
+}
+
+.vtur-form-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.vtur-form-grid-2 {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.vtur-form-grid-4 {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.vtur-form-grid-3 {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.vtur-form-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.vtur-sales-embedded-card {
+  margin-top: 16px;
+}
+
+.vtur-sales-principal-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 8px;
+}
+
+.vtur-sales-principal-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--vtur-primer-ink);
+  cursor: pointer;
+}
+
+.vtur-sales-note {
+  color: var(--vtur-primer-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.vtur-sales-contract-link {
+  margin-top: 8px;
+}
+
+.vtur-sales-section-heading {
+  display: grid;
+  gap: 4px;
+  margin: 22px 0 8px;
+}
+
+.vtur-sales-section-heading h4 {
+  margin: 0;
+  color: var(--vtur-primer-ink);
+  font-size: 1.04rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.vtur-sales-section-heading p {
+  margin: 0;
+  color: var(--vtur-primer-muted);
+  font-size: 0.92rem;
+}
+
+.vtur-sales-parcelas-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.vtur-sales-parcelas-head p {
+  margin: 4px 0 0;
+  color: var(--vtur-primer-muted);
+  font-size: 0.84rem;
+}
+
+.vtur-sales-empty-state {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border: 1px dashed rgba(148, 163, 184, 0.38);
+  border-radius: 16px;
+  color: var(--vtur-primer-muted);
+  background: rgba(248, 250, 252, 0.84);
+}
+
+.vtur-sales-parcelas-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.vtur-sales-parcela-item {
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.vtur-sales-parcela-action {
+  display: flex;
+  align-items: flex-end;
+}
+
+.vtur-inline-feedback {
+  margin-top: 14px;
+  color: #b91c1c;
+  font-size: 0.93rem;
+  font-weight: 600;
+}
+
+.vtur-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.vtur-sidebar-nav .vtur-sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 16px;
+  color: #e2e8f0;
+  text-decoration: none;
+  background: transparent;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.vtur-sidebar-nav .vtur-sidebar-nav-item:hover {
+  background: var(--vtur-primer-sidebar-hover);
+  color: #f8fafc;
+}
+
+.vtur-sidebar-nav .vtur-sidebar-nav-item[aria-current="page"] {
+  background: linear-gradient(135deg, rgba(142, 40, 226, 0.22), rgba(96, 165, 250, 0.18));
+  color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.vtur-sidebar-nav .vtur-sidebar-nav-item [data-component="ActionList.LeadingVisual"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: currentColor;
+}
+
+.vtur-sidebar-nav .vtur-sidebar-nav-item [data-component="ActionList.LeadingVisual"] > * {
+  width: 20px;
+  height: 20px;
+}
+
+.vtur-sidebar-action-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vtur-sidebar-action-group .vtur-app-button {
+  justify-content: flex-start;
+}
+
+.vtur-sidebar-action-note {
+  display: block;
+  margin-left: 4px;
+  color: rgba(226, 232, 240, 0.74);
+  font-size: 0.82rem;
+}
+
+.vtur-app-dialog-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+}
+
+.vtur-app-dialog-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vtur-app-dialog-body {
+  color: var(--vtur-primer-ink);
+  line-height: 1.55;
+}
+
+.vtur-table-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.vtur-table-action {
+  min-height: 34px;
+  padding-inline: 10px;
+}
+
+.vtur-toolbar-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(240px, 1fr);
+}
+
+.vtur-subdivisao-picker {
+  position: relative;
+}
+
+.vtur-subdivisao-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.vtur-subdivisao-helper {
+  padding: 6px 8px;
+  color: var(--vtur-primer-muted);
+  font-size: 0.92rem;
+}
+
+.vtur-subdivisao-option {
+  width: 100%;
+  justify-content: flex-start;
+  margin-bottom: 6px;
+}
+
+.vtur-subdivisao-option:last-child {
+  margin-bottom: 0;
+}
+
+.vtur-choice-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.vtur-choice-button {
+  width: 100%;
+  min-height: 72px;
+  justify-content: flex-start;
+  text-align: left;
+  white-space: normal;
+}
+
+.vtur-choice-button-content {
+  display: grid;
+  gap: 4px;
+}
+
+.vtur-choice-button-title {
+  font-weight: 700;
+}
+
+.vtur-choice-button-caption {
+  font-size: 0.84rem;
+  opacity: 0.82;
+}
+
+.vtur-inline-note {
+  margin-top: 8px;
+  color: var(--vtur-primer-muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.vtur-quote-top-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vtur-quote-summary-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.vtur-quote-summary-item {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.vtur-quote-summary-item strong {
+  color: var(--vtur-primer-ink);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.vtur-quote-summary-label {
+  color: var(--vtur-primer-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.vtur-quote-inline-card {
+  margin-top: 18px;
+}
+
+.vtur-quote-client-dropdown {
+  max-height: 260px;
+}
+
+.vtur-quote-order-actions {
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+.vtur-quote-order-actions .vtur-table-action {
+  min-width: 34px;
+  min-height: 34px;
+  padding-inline: 0;
+  font-size: 1rem;
+}
+
+.vtur-quote-review-row {
+  background: rgba(254, 243, 199, 0.72);
+}
+
+.vtur-quote-circuit-panel {
+  display: grid;
+  gap: 16px;
+  padding: 12px 4px 18px;
+  border-top: 1px solid rgba(148, 163, 184, 0.24);
+}
+
+.vtur-quote-circuit-days-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.vtur-quote-circuit-days-head p {
+  margin: 4px 0 0;
+  color: var(--vtur-primer-muted);
+  font-size: 0.84rem;
+}
+
+.vtur-quote-circuit-days-list {
+  display: grid;
+  gap: 12px;
+}
+
+.vtur-quote-circuit-day {
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.92);
+}
+
+.vtur-quote-circuit-day-actions {
+  display: flex;
+  align-items: flex-end;
+}
+
+.vtur-city-picker {
+  position: relative;
+}
+
+.vtur-city-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: grid;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid var(--vtur-primer-border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.14);
+  backdrop-filter: blur(8px);
+}
+
+.vtur-city-option {
+  width: 100%;
+  min-height: 64px;
+  justify-content: flex-start;
+  text-align: left;
+  white-space: normal;
+}
+
+.vtur-city-helper {
+  margin-top: 6px;
+  color: var(--vtur-primer-muted);
+  font-size: 0.85rem;
+}
+
+.vtur-city-helper.error {
+  color: #b91c1c;
+}
+
+.vtur-products-info-toggle {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.vtur-modal-panel-shell {
+  background: linear-gradient(180deg, rgba(250, 250, 252, 0.98), rgba(255, 255, 255, 0.98));
+}
+
+.vtur-modal-header {
+  align-items: center;
+}
+
+.vtur-modal-body-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.vtur-modal-section-card {
+  box-shadow: none;
+}
+
+.vtur-modal-detail-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.vtur-modal-subgrid {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.vtur-modal-list {
+  display: grid;
+  gap: 10px;
+}
+
+.vtur-modal-list-item {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--vtur-primer-border);
+  border-radius: 16px;
+  background: rgba(248, 250, 252, 0.92);
+}
+
+.vtur-modal-list-button {
+  width: 100%;
+  min-height: 72px;
+  justify-content: space-between;
+  text-align: left;
+  white-space: normal;
+}
+
+.vtur-modal-action-tag {
+  color: var(--vtur-primer-accent-strong);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.vtur-modal-checkbox-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--vtur-primer-border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.98);
+  cursor: pointer;
+}
+
+.vtur-modal-checkbox-card.is-selected {
+  border-color: rgba(142, 40, 226, 0.32);
+  background: rgba(250, 245, 255, 0.94);
+}
+
+.vtur-modal-checkbox-card input {
+  margin-top: 3px;
+}
+
+.vtur-data-table-shell {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+  border: 1px solid var(--vtur-primer-border);
+  border-radius: 20px;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+.vtur-data-table-container {
+  background: transparent;
+}
+
+.vtur-data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.vtur-data-table thead th {
+  background: rgba(248, 250, 252, 0.96);
+}
+
+.vtur-data-table tbody tr:hover {
+  background: rgba(248, 250, 252, 0.85);
+}
+
+.vtur-data-table-message-cell {
+  padding: 28px 18px;
+}
+
+.vtur-data-table-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 120px;
+  color: var(--vtur-primer-muted);
+  text-align: center;
+}
+
+.vtur-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 12px 0;
+  text-align: center;
+}
+
+.vtur-empty-state-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--vtur-primer-ink);
+}
+
+.vtur-empty-state-description {
+  margin: 0;
+  color: var(--vtur-primer-muted);
+}
+
+.vtur-empty-state-actions {
+  margin-top: 6px;
+}
+
+.vtur-campaign-list {
+  display: grid;
+  gap: 14px;
+}
+
+.vtur-campaign-card {
+  display: grid;
+  grid-template-columns: minmax(110px, 132px) minmax(0, 1fr);
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.vtur-campaign-card.is-archived {
+  opacity: 0.78;
+  background: rgba(248, 250, 252, 0.92);
+}
+
+.vtur-campaign-media {
+  min-height: 96px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(226, 232, 240, 0.9), rgba(241, 245, 249, 0.95));
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.vtur-campaign-media-button {
+  width: 100%;
+  min-height: 100%;
+  border: none;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.vtur-campaign-media-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.vtur-campaign-media-file {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  padding: 12px;
+  text-align: center;
+  color: var(--vtur-primer-ink);
+}
+
+.vtur-campaign-file-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  min-height: 56px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.08);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.vtur-campaign-file-name {
+  font-size: 0.82rem;
+  color: var(--vtur-primer-muted);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.vtur-campaign-media-empty {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  color: var(--vtur-primer-muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.vtur-campaign-content {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.vtur-campaign-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.vtur-campaign-title-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.vtur-campaign-title {
+  color: var(--vtur-primer-ink);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.vtur-campaign-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.vtur-campaign-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: var(--vtur-primer-muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.vtur-campaign-rules {
+  white-space: pre-wrap;
+  color: var(--vtur-primer-ink);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.vtur-campaign-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vtur-campaign-actions {
+  justify-content: flex-end;
+}
+
+.vtur-campaign-upload-block {
+  margin-top: 18px;
+}
+
+.vtur-campaign-file-input {
+  margin-top: 8px;
+}
+
+.vtur-campaign-preview-frame {
+  width: 100%;
+  min-height: 360px;
+  max-height: 72vh;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.96));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vtur-campaign-preview-image {
+  width: 100%;
+  max-height: 72vh;
+  object-fit: contain;
+  display: block;
+}
+
+.vtur-campaign-preview-pdf {
+  width: 100%;
+  height: 72vh;
+  border: none;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.vtur-import-upload-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.vtur-import-upload-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.vtur-import-upload-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.98);
+  color: var(--vtur-primer-ink);
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.vtur-import-file-name {
+  color: var(--vtur-primer-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.vtur-import-contract-list {
+  display: grid;
+  gap: 16px;
+}
+
+.vtur-import-contract-card {
+  border-radius: 20px;
+}
+
+.vtur-import-contract-summary {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.vtur-import-contract-summary-item {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.86);
+  color: var(--vtur-primer-muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.vtur-import-contract-summary-item strong {
+  color: var(--vtur-primer-ink);
+  font-size: 0.98rem;
+  font-weight: 800;
+}
+
+.vtur-import-accordion {
+  padding: 14px 16px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.92);
+}
+
+.vtur-import-accordion summary {
+  cursor: pointer;
+  font-weight: 800;
+  color: var(--vtur-primer-ink);
+}
+
+.vtur-import-accordion-grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  color: var(--vtur-primer-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.vtur-import-accordion-box {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.vtur-import-accordion-box strong {
+  color: var(--vtur-primer-ink);
+}
+
+.vtur-table-field {
+  gap: 6px;
+}
+
+.vtur-table-field [data-component="FormControlLabel"] {
+  font-size: 0.74rem;
+  color: var(--vtur-primer-muted);
+}
+
+.vtur-circuit-day-card {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.vtur-circuit-day-card.is-drag-over {
+  border-color: rgba(37, 99, 235, 0.45);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+.vtur-circuit-day-card.is-dragging {
+  opacity: 0.76;
+}
+
+.vtur-import-city-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vtur-import-city-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(248, 250, 252, 0.9);
+  color: var(--vtur-primer-ink);
+  font-size: 0.82rem;
+  line-height: 1.2;
+}
+
+.vtur-import-city-tag-remove {
+  border: none;
+  background: transparent;
+  color: var(--vtur-primer-muted);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.vtur-alert {
+  border-radius: 16px;
+  font-weight: 600;
+}
+
+.vtur-commission-filters-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: end;
+}
+
+.vtur-commission-kpi-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.vtur-commission-kpi-card {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(244, 247, 251, 0.94)),
+    var(--vtur-primer-surface);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+}
+
+.vtur-commission-kpi-label {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--vtur-primer-muted);
+}
+
+.vtur-commission-kpi-value {
+  font-size: clamp(1.2rem, 1rem + 0.7vw, 1.85rem);
+  line-height: 1.15;
+  color: var(--vtur-primer-ink);
+}
+
+.vtur-commission-kpi-positive {
+  border-color: rgba(22, 163, 74, 0.18);
+}
+
+.vtur-commission-kpi-positive .vtur-commission-kpi-value {
+  color: #15803d;
+}
+
+.vtur-commission-kpi-warning {
+  border-color: rgba(202, 138, 4, 0.18);
+}
+
+.vtur-commission-kpi-warning .vtur-commission-kpi-value {
+  color: #b45309;
+}
+
+.vtur-commission-kpi-info {
+  border-color: rgba(14, 165, 233, 0.18);
+}
+
+.vtur-commission-kpi-info .vtur-commission-kpi-value {
+  color: #0284c7;
+}
+
+.vtur-commission-kpi-accent {
+  border-color: rgba(194, 65, 12, 0.18);
+}
+
+.vtur-commission-kpi-accent .vtur-commission-kpi-value {
+  color: #c2410c;
+}
+
+.vtur-commission-kpi-neutral {
+  border-color: rgba(37, 99, 235, 0.18);
+}
+
+.vtur-commission-kpi-neutral .vtur-commission-kpi-value {
+  color: #1d4ed8;
+}
+
+.vtur-commission-kpi-highlight {
+  background:
+    linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.1)),
+    var(--vtur-primer-surface);
+  border-color: rgba(124, 58, 237, 0.22);
+}
+
+.vtur-commission-kpi-highlight .vtur-commission-kpi-value {
+  color: #6d28d9;
+}
+
+.vtur-commission-loading {
+  margin: 0;
+  color: var(--vtur-primer-muted);
+  line-height: 1.6;
+}
+
+@media (max-width: 1023px) {
+  .vtur-page-header {
+    margin-bottom: 16px;
+  }
+
+  .vtur-page-header [data-component="PH_Actions"] {
+    width: 100%;
+  }
+
+  .vtur-page-header-stack [data-component="PH_Actions"],
+  .vtur-page-header [data-component="PH_Actions"] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .vtur-app-card {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .vtur-app-card-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vtur-app-toolbar {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .vtur-app-toolbar-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vtur-products-info-toggle {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vtur-modal-list-button {
+    min-height: 64px;
+  }
+
+  .vtur-campaign-card {
+    grid-template-columns: 1fr;
+  }
+
+  .vtur-campaign-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vtur-import-upload-row {
+    align-items: stretch;
+  }
+
+  .vtur-commission-filters-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .vtur-form-actions {
+    flex-direction: column;
+  }
+
+  .vtur-form-actions .vtur-app-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .vtur-sales-parcelas-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vtur-sales-parcela-action .vtur-app-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .vtur-app-toolbar-actions .vtur-app-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .vtur-quote-top-actions {
+    flex-direction: column;
+  }
+
+  .vtur-quote-top-actions .vtur-app-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .vtur-quote-circuit-days-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vtur-quote-circuit-day-actions .vtur-table-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .vtur-campaign-links .vtur-app-button,
+  .vtur-campaign-actions .vtur-app-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .vtur-import-upload-trigger {
+    width: 100%;
+  }
+
+  .vtur-commission-kpi-grid,
+  .vtur-commission-filters-grid {
+    grid-template-columns: 1fr;
+  }
+}

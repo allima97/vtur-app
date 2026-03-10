@@ -10,7 +10,14 @@ import DataTable from "../ui/DataTable";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import TableActions from "../ui/TableActions";
 import AlertMessage from "../ui/AlertMessage";
+import EmptyState from "../ui/EmptyState";
 import { ToastStack, useToastQueue } from "../ui/Toast";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type TipoProduto = {
   id: string;
@@ -71,6 +78,7 @@ export default function TipoProdutosIsland() {
   const {
     items: tipos,
     loading: loadingTipos,
+    saving: salvando,
     deletingId: excluindoId,
     error: erro,
     setError: setErro,
@@ -86,7 +94,6 @@ export default function TipoProdutosIsland() {
   const [loadingExtras, setLoadingExtras] = useState(true);
   const loading = loadingTipos || loadingExtras;
   const [busca, setBusca] = useState("");
-
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [tipoParaExcluir, setTipoParaExcluir] = useState<TipoProduto | null>(null);
   const [regras, setRegras] = useState<Regra[]>([]);
@@ -104,7 +111,6 @@ export default function TipoProdutosIsland() {
   const [descontarMetaGeral, setDescontarMetaGeral] = useState(true);
   const [exibeKpiComissao, setExibeKpiComissao] = useState(true);
   const [suportaExibeKpi, setSuportaExibeKpi] = useState(true);
-
   const [form, setForm] = useState({
     nome: "",
     tipo: "",
@@ -116,7 +122,7 @@ export default function TipoProdutosIsland() {
   const [modalDuplicado, setModalDuplicado] = useState<{ entity: "Tipo de Produto" } | null>(null);
   const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
-  function handleChange(campo: string, valor: any) {
+  function handleChange(campo: string, valor: string | boolean) {
     setForm((prev) => {
       if (campo === "nome") {
         const nomeVal = String(valor);
@@ -126,9 +132,10 @@ export default function TipoProdutosIsland() {
     });
   }
 
-  function handleTipoPacoteSelection(event: React.ChangeEvent<HTMLSelectElement>) {
-    const selected = Array.from(event.target.selectedOptions, (option) => option.value);
-    setTiposPacoteSelecionados(Array.from(new Set(selected)));
+  function toggleTipoPacoteSelection(id: string) {
+    setTiposPacoteSelecionados((prev) =>
+      prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]
+    );
   }
 
   async function carregar() {
@@ -141,11 +148,7 @@ export default function TipoProdutosIsland() {
           order: { column: "nome", ascending: true },
           errorMessage: "Erro ao carregar tipos de produto.",
         }),
-        supabase
-          .from("commission_rule")
-          .select("id, nome, tipo")
-          .eq("ativo", true)
-          .order("nome"),
+        supabase.from("commission_rule").select("id, nome, tipo").eq("ativo", true).order("nome"),
         supabase
           .from("product_commission_rule")
           .select("produto_id, rule_id, fix_meta_nao_atingida, fix_meta_atingida, fix_super_meta"),
@@ -163,55 +166,53 @@ export default function TipoProdutosIsland() {
 
       if (tiposResult.error) return;
 
-      const suporta = !colExibeKpi.error;
-      setSuportaExibeKpi(suporta);
-      setRegras((regrasData.data as any) || []);
+      setSuportaExibeKpi(!colExibeKpi.error);
+      setRegras((regrasData.data as Regra[]) || []);
+
       const map: Record<string, ComissaoProduto> = {};
-      (mapData.data as any)?.forEach((r: any) => {
-        map[r.produto_id] = {
-          rule_id: r.rule_id || "",
-          fix_meta_nao_atingida: r.fix_meta_nao_atingida,
-          fix_meta_atingida: r.fix_meta_atingida,
-          fix_super_meta: r.fix_super_meta,
+      ((mapData.data as any[]) || []).forEach((item: any) => {
+        map[item.produto_id] = {
+          rule_id: item.rule_id || "",
+          fix_meta_nao_atingida: item.fix_meta_nao_atingida,
+          fix_meta_atingida: item.fix_meta_atingida,
+          fix_super_meta: item.fix_super_meta,
         };
       });
       setProdutoRegraMap(map);
 
-      const tiposPacoteLista = (tiposPacoteData.data as any[] | undefined) || [];
-      setTiposPacote(
-        tiposPacoteLista.map((p) => ({
-          id: p.id,
-          nome: p.nome || "",
-          rule_id: p.rule_id || null,
-          fix_meta_nao_atingida: p.fix_meta_nao_atingida,
-          fix_meta_atingida: p.fix_meta_atingida,
-          fix_super_meta: p.fix_super_meta,
-          ativo: p.ativo,
-        }))
-      );
+      const tiposPacoteLista = ((tiposPacoteData.data as any[]) || []).map((item) => ({
+        id: item.id,
+        nome: item.nome || "",
+        rule_id: item.rule_id || null,
+        fix_meta_nao_atingida: item.fix_meta_nao_atingida,
+        fix_meta_atingida: item.fix_meta_atingida,
+        fix_super_meta: item.fix_super_meta,
+        ativo: item.ativo,
+      })) as TipoPacote[];
+      setTiposPacote(tiposPacoteLista);
 
       const pacotesMap: Record<string, ComissaoPacote[]> = {};
-      (pacotesData.data as any)?.forEach((r: any) => {
-        if (!r.produto_id) return;
+      ((pacotesData.data as any[]) || []).forEach((item: any) => {
+        if (!item.produto_id) return;
         const tipoPacoteId = tiposPacoteLista.find(
-          (p) =>
-            normalizeText(p.nome || "") ===
-            normalizeText(r.tipo_pacote || "", { trim: true, collapseWhitespace: true })
+          (tipo) =>
+            normalizeText(tipo.nome || "") ===
+            normalizeText(item.tipo_pacote || "", { trim: true, collapseWhitespace: true })
         )?.id;
         const entry: ComissaoPacote = {
-          tipo_pacote: r.tipo_pacote || "",
+          tipo_pacote: item.tipo_pacote || "",
           tipo_pacote_id: tipoPacoteId || "",
-          rule_id: r.rule_id || "",
-          fix_meta_nao_atingida: r.fix_meta_nao_atingida,
-          fix_meta_atingida: r.fix_meta_atingida,
-          fix_super_meta: r.fix_super_meta,
+          rule_id: item.rule_id || "",
+          fix_meta_nao_atingida: item.fix_meta_nao_atingida,
+          fix_meta_atingida: item.fix_meta_atingida,
+          fix_super_meta: item.fix_super_meta,
         };
-        if (!pacotesMap[r.produto_id]) pacotesMap[r.produto_id] = [];
-        pacotesMap[r.produto_id].push(entry);
+        if (!pacotesMap[item.produto_id]) pacotesMap[item.produto_id] = [];
+        pacotesMap[item.produto_id].push(entry);
       });
       setPacotesPorProduto(pacotesMap);
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
       setErro("Erro ao carregar tipos de produto.");
     } finally {
       setLoadingExtras(false);
@@ -266,7 +267,7 @@ export default function TipoProdutosIsland() {
       soma_na_meta: tipoProd.soma_na_meta,
       ativo: tipoProd.ativo,
     });
-    setUsaMetaProduto(!!tipoProd.usa_meta_produto);
+    setUsaMetaProduto(Boolean(tipoProd.usa_meta_produto));
     setMetaProdutoValor(
       tipoProd.meta_produto_valor !== null && tipoProd.meta_produto_valor !== undefined
         ? String(tipoProd.meta_produto_valor)
@@ -279,14 +280,15 @@ export default function TipoProdutosIsland() {
     );
     setDescontarMetaGeral(
       tipoProd.descontar_meta_geral !== null && tipoProd.descontar_meta_geral !== undefined
-        ? !!tipoProd.descontar_meta_geral
+        ? Boolean(tipoProd.descontar_meta_geral)
         : true
     );
     setExibeKpiComissao(
       tipoProd.exibe_kpi_comissao !== null && tipoProd.exibe_kpi_comissao !== undefined
-        ? !!tipoProd.exibe_kpi_comissao
+        ? Boolean(tipoProd.exibe_kpi_comissao)
         : true
     );
+
     const comissao = produtoRegraMap[tipoProd.id] || {};
     setRegraSelecionada(comissao.rule_id || "");
     setFixMetaNao(
@@ -304,14 +306,15 @@ export default function TipoProdutosIsland() {
         ? String(comissao.fix_super_meta)
         : ""
     );
+
     const tipoPacotesAtual = pacotesPorProduto[tipoProd.id] || [];
     const selecionados = tipoPacotesAtual
-      .map((p) => {
-        if (!p.tipo_pacote) return null;
+      .map((item) => {
+        if (!item.tipo_pacote) return null;
         const encontrado = tiposPacote.find(
           (tipo) =>
             normalizeText(tipo.nome || "") ===
-            normalizeText(p.tipo_pacote || "", { trim: true, collapseWhitespace: true })
+            normalizeText(item.tipo_pacote || "", { trim: true, collapseWhitespace: true })
         );
         return encontrado?.id || null;
       })
@@ -321,51 +324,52 @@ export default function TipoProdutosIsland() {
     setErro(null);
   }
 
-  async function salvar(e: React.FormEvent) {
-    e.preventDefault();
+  async function salvar(event: React.FormEvent) {
+    event.preventDefault();
 
     if (modoSomenteLeitura) {
-      setErro("Você não tem permissão para salvar tipos de produto.");
+      setErro("Voce nao tem permissao para salvar tipos de produto.");
       return;
     }
+
     const nome = titleCaseWithExceptions(form.nome);
     const tipo = titleCaseWithExceptions(form.tipo || nome);
     if (!nome) {
-      setErro("Nome é obrigatório.");
+      setErro("Nome e obrigatorio.");
       return;
     }
+
     const normalizedNome = normalizeText(nome).trim();
     const existeDuplicado = tipos.some(
-      (p) =>
-        p.id !== editandoId &&
-        normalizeText(p.nome || p.tipo || "").trim() === normalizedNome
+      (item) => item.id !== editandoId && normalizeText(item.nome || item.tipo || "").trim() === normalizedNome
     );
     if (existeDuplicado) {
       setModalDuplicado({ entity: "Tipo de Produto" });
       return;
     }
+
     if (form.regra_comissionamento === "geral" && !regraSelecionada) {
-      setErro("Selecione uma regra de comissão para produtos do tipo 'geral'.");
+      setErro("Selecione uma regra de comissao para produtos do tipo geral.");
       return;
     }
-    const toNumberOrNull = (v: string) => (v.trim() === "" ? null : Number(v));
+
+    const toNumberOrNull = (value: string) => (value.trim() === "" ? null : Number(value));
     const metaProdValor = toNumberOrNull(metaProdutoValor);
     const comissaoMetaPct = toNumberOrNull(comissaoProdutoMetaPct);
+
     if (form.regra_comissionamento === "diferenciado") {
       const fixNaoNum = toNumberOrNull(fixMetaNao);
       const fixAtNum = toNumberOrNull(fixMetaAtingida);
       const fixSupNum = toNumberOrNull(fixSuperMeta);
       const algumInvalido =
         fixNaoNum === null ||
-        isNaN(fixNaoNum) ||
+        Number.isNaN(fixNaoNum) ||
         fixAtNum === null ||
-        isNaN(fixAtNum) ||
+        Number.isNaN(fixAtNum) ||
         fixSupNum === null ||
-        isNaN(fixSupNum);
+        Number.isNaN(fixSupNum);
       if (algumInvalido) {
-        setErro(
-          "Preencha os percentuais fixos para meta não atingida, atingida e super meta (apenas números)."
-        );
+        setErro("Preencha os percentuais fixos para meta nao atingida, meta e super meta.");
         return;
       }
     }
@@ -403,9 +407,8 @@ export default function TipoProdutosIsland() {
       }
 
       if (tipoId) {
-        // garante uma regra para respeitar o NOT NULL de rule_id quando diferenciado
         async function garantirRegraFixa(): Promise<string> {
-          const nomeRegra = "Comissão Fixa (auto)";
+          const nomeRegra = "Comissao Fixa (auto)";
           const { data: regraExistente } = await supabase
             .from("commission_rule")
             .select("id")
@@ -430,18 +433,11 @@ export default function TipoProdutosIsland() {
           return (regraNova as any)?.id;
         }
 
-        const fixNao =
-          form.regra_comissionamento === "diferenciado"
-            ? toNumberOrNull(fixMetaNao)
-            : null;
+        const fixNao = form.regra_comissionamento === "diferenciado" ? toNumberOrNull(fixMetaNao) : null;
         const fixAt =
-          form.regra_comissionamento === "diferenciado"
-            ? toNumberOrNull(fixMetaAtingida)
-            : null;
+          form.regra_comissionamento === "diferenciado" ? toNumberOrNull(fixMetaAtingida) : null;
         const fixSup =
-          form.regra_comissionamento === "diferenciado"
-            ? toNumberOrNull(fixSuperMeta)
-            : null;
+          form.regra_comissionamento === "diferenciado" ? toNumberOrNull(fixSuperMeta) : null;
 
         let ruleIdToUse = regraSelecionada || produtoRegraMap[tipoId]?.rule_id || null;
         if (form.regra_comissionamento === "diferenciado" && !ruleIdToUse) {
@@ -449,19 +445,17 @@ export default function TipoProdutosIsland() {
         }
 
         if (regraSelecionada || form.regra_comissionamento === "diferenciado") {
-          const { error: upsertErr } = await supabase
-            .from("product_commission_rule")
-            .upsert(
-              {
-                produto_id: tipoId,
-                rule_id: ruleIdToUse,
-                ativo: true,
-                fix_meta_nao_atingida: fixNao,
-                fix_meta_atingida: fixAt,
-                fix_super_meta: fixSup,
-              },
-              { onConflict: "produto_id" }
-            );
+          const { error: upsertErr } = await supabase.from("product_commission_rule").upsert(
+            {
+              produto_id: tipoId,
+              rule_id: ruleIdToUse,
+              ativo: true,
+              fix_meta_nao_atingida: fixNao,
+              fix_meta_atingida: fixAt,
+              fix_super_meta: fixSup,
+            },
+            { onConflict: "produto_id" }
+          );
           if (upsertErr) throw upsertErr;
         } else {
           await supabase.from("product_commission_rule").delete().eq("produto_id", tipoId);
@@ -470,13 +464,13 @@ export default function TipoProdutosIsland() {
 
       if (tipoId) {
         await supabase.from("product_commission_rule_pacote").delete().eq("produto_id", tipoId);
-        const payloads = tiposPacoteSelecionadosInfo.map((tipo) => ({
+        const payloads = tiposPacoteSelecionadosInfo.map((tipoPacote) => ({
           produto_id: tipoId,
-          tipo_pacote: tipo.nome,
-          rule_id: tipo.rule_id || null,
-          fix_meta_nao_atingida: tipo.fix_meta_nao_atingida ?? null,
-          fix_meta_atingida: tipo.fix_meta_atingida ?? null,
-          fix_super_meta: tipo.fix_super_meta ?? null,
+          tipo_pacote: tipoPacote.nome,
+          rule_id: tipoPacote.rule_id || null,
+          fix_meta_nao_atingida: tipoPacote.fix_meta_nao_atingida ?? null,
+          fix_meta_atingida: tipoPacote.fix_meta_atingida ?? null,
+          fix_super_meta: tipoPacote.fix_super_meta ?? null,
           ativo: true,
         }));
         if (payloads.length > 0) {
@@ -488,11 +482,13 @@ export default function TipoProdutosIsland() {
       }
 
       iniciarNovo();
+      setMostrarFormulario(false);
       await carregar();
-    } catch (e) {
-      console.error(e);
+      showToast("Tipo de produto salvo.", "success");
+    } catch (error) {
+      console.error(error);
       setErro(
-        e instanceof Error ? `Erro ao salvar tipo de produto: ${e.message}` : "Erro ao salvar tipo de produto."
+        error instanceof Error ? `Erro ao salvar tipo de produto: ${error.message}` : "Erro ao salvar tipo de produto."
       );
     }
   }
@@ -510,8 +506,9 @@ export default function TipoProdutosIsland() {
       if (result.error) return;
 
       await carregar();
-    } catch (e) {
-      console.error(e);
+      showToast("Tipo de produto excluido.", "success");
+    } catch (error) {
+      console.error(error);
       setErro("Erro ao excluir tipo de produto. Talvez esteja vinculado a vendas/recibos.");
     }
   }
@@ -552,396 +549,422 @@ export default function TipoProdutosIsland() {
   const tiposFiltrados = useMemo(() => {
     if (!busca.trim()) return tipos;
     const termo = normalizeText(busca);
-    return tipos.filter((p) => normalizeText(p.nome || p.tipo || "").includes(termo));
+    return tipos.filter((item) => normalizeText(item.nome || item.tipo || "").includes(termo));
   }, [busca, tipos]);
+
+  const resumoLista = busca.trim()
+    ? `${tiposFiltrados.length} tipo(s) encontrados para a busca atual.`
+    : `${tiposFiltrados.length} tipo(s) de produto cadastrados.`;
+
   if (loadingPerm) return <LoadingUsuarioContext />;
-  if (!podeVer) return <div>Você não possui acesso ao módulo de Parâmetros.</div>;
+
+  if (!podeVer) {
+    return (
+      <AppPrimerProvider>
+        <AppCard tone="config">
+          <strong>Voce nao possui acesso ao modulo de Parametros.</strong>
+        </AppCard>
+      </AppPrimerProvider>
+    );
+  }
 
   return (
-    <div className="produtos-page">
-      {mostrarFormulario && (
-        <div className="card-base card-blue form-card mb-3">
-          <form onSubmit={salvar}>
-            <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Nome *</label>
-              <input
-                className="form-input"
-                value={form.nome}
-                onChange={(e) => handleChange("nome", e.target.value)}
-                onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
-                disabled={modoSomenteLeitura}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Modelo de comissão</label>
-              <select
-                className="form-input"
-                value={form.regra_comissionamento}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  handleChange("regra_comissionamento", val);
-                  if (val === "diferenciado") {
-                    setRegraSelecionada("");
-                  }
-                }}
-                disabled={modoSomenteLeitura}
-              >
-                <option value="geral">Geral (usa regra cadastrada)</option>
-                <option value="diferenciado">Diferenciado (percentual fixo)</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="form-row" style={{ marginTop: 12 }}>
-            <div className="form-group">
-              <label className="form-label">Soma na meta?</label>
-              <select
-                className="form-input"
-                value={form.soma_na_meta ? "1" : "0"}
-                onChange={(e) => handleChange("soma_na_meta", e.target.value === "1")}
-                disabled={modoSomenteLeitura}
-              >
-                <option value="1">Sim</option>
-                <option value="0">Não</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Ativo?</label>
-              <select
-                className="form-input"
-                value={form.ativo ? "1" : "0"}
-                onChange={(e) => handleChange("ativo", e.target.value === "1")}
-                disabled={modoSomenteLeitura}
-              >
-                <option value="1">Sim</option>
-                <option value="0">Não</option>
-              </select>
-            </div>
-          </div>
-
-          {form.regra_comissionamento === "geral" && (
-            <div className="form-group" style={{ marginTop: 8 }}>
-              <label className="form-label">Regra de Comissão *</label>
-              <select
-                className="form-input"
-                value={regraSelecionada}
-                onChange={(e) => setRegraSelecionada(e.target.value)}
-                disabled={modoSomenteLeitura}
-                required
-              >
-                <option value="">Selecione</option>
-                {regras.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.nome} ({r.tipo})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {form.regra_comissionamento === "diferenciado" && (
-            <div className="form-row" style={{ marginTop: 12 }}>
-              <div className="form-group">
-                <label className="form-label">Comissão fixa (meta não atingida) %</label>
-                <input
-                  className="form-input"
-                  type="number"
-                  step="0.01"
-                  value={fixMetaNao}
-                  onChange={(e) => setFixMetaNao(e.target.value)}
+    <AppPrimerProvider>
+      <div className="produtos-page">
+        {mostrarFormulario && (
+          <AppCard
+            className="form-card mb-3"
+            title={editandoId ? "Editar tipo de produto" : "Novo tipo de produto"}
+            subtitle="Configure comissao, meta e vinculos por pacote para o CRM comercial."
+            tone="info"
+          >
+            <form onSubmit={salvar}>
+              <div className="vtur-form-grid vtur-form-grid-2">
+                <AppField
+                  label="Nome *"
+                  value={form.nome}
+                  onChange={(e) => handleChange("nome", e.target.value)}
+                  onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
                   disabled={modoSomenteLeitura}
+                  validation={!form.nome.trim() && erro ? "Nome e obrigatorio." : undefined}
                 />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Comissão fixa (meta atingida) %</label>
-                <input
-                  className="form-input"
-                  type="number"
-                  step="0.01"
-                  value={fixMetaAtingida}
-                  onChange={(e) => setFixMetaAtingida(e.target.value)}
-                  disabled={modoSomenteLeitura}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Comissão fixa (super meta) %</label>
-                <input
-                  className="form-input"
-                  type="number"
-                  step="0.01"
-                  value={fixSuperMeta}
-                  onChange={(e) => setFixSuperMeta(e.target.value)}
-                  disabled={modoSomenteLeitura}
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="card-base" style={{ marginTop: 12 }}>
-            <div className="form-group">
-              <label className="form-label">Tipos de Pacote</label>
-              <select
-                className="form-input"
-                multiple
-                size={Math.min(6, Math.max(3, tiposPacote.length || 3))}
-                value={tiposPacoteSelecionados}
-                onChange={handleTipoPacoteSelection}
-                disabled={modoSomenteLeitura || tiposPacote.length === 0}
-                aria-label="Selecione os tipos de pacote vinculados"
-              >
-                {tiposPacote.map((tipo) => {
-                  const regra = tipo.rule_id ? regrasMap.get(tipo.rule_id) : null;
-                  const descricaoRegra = regra
-                    ? `${regra.nome} (${regra.tipo})`
-                    : tipo.fix_meta_nao_atingida != null ||
-                      tipo.fix_meta_atingida != null ||
-                      tipo.fix_super_meta != null
-                      ? "Comissão fixa"
-                      : "Sem regra definida";
-                  return (
-                    <option key={tipo.id} value={tipo.id}>
-                      {tipo.nome} — {descricaoRegra}
-                    </option>
-                  );
-                })}
-              </select>
-              <div style={{ marginTop: 6, fontSize: 12, color: "#64748b" }}>
-                Selecione um ou mais tipos de pacote. O sistema usa as regras cadastradas em Parâmetros &gt; Tipo de Pacote.
-              </div>
-            </div>
-
-            {tiposPacote.length === 0 && (
-              <div style={{ marginTop: 8, fontSize: 12, color: "#94a3b8" }}>
-                Cadastre tipos de pacote antes de vincular regras específicas a este produto.
-              </div>
-            )}
-
-            {tiposPacoteSelecionadosInfo.length > 0 && (
-              <div style={{ marginTop: 12 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Regras aplicadas</div>
-                <ul
-                  style={{
-                    margin: 0,
-                    paddingLeft: 18,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 4,
+                <AppField
+                  as="select"
+                  label="Modelo de comissao"
+                  value={form.regra_comissionamento}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    handleChange("regra_comissionamento", value);
+                    if (value === "diferenciado") {
+                      setRegraSelecionada("");
+                    }
                   }}
-                >
-                  {tiposPacoteSelecionadosInfo.map((tipo) => {
-                    const regra = tipo.rule_id ? regrasMap.get(tipo.rule_id) : null;
-                    const fixPartes = [];
-                    if (tipo.fix_meta_nao_atingida != null) {
-                      fixPartes.push(`Meta não: ${tipo.fix_meta_nao_atingida}%`);
-                    }
-                    if (tipo.fix_meta_atingida != null) {
-                      fixPartes.push(`Meta: ${tipo.fix_meta_atingida}%`);
-                    }
-                    if (tipo.fix_super_meta != null) {
-                      fixPartes.push(`Super meta: ${tipo.fix_super_meta}%`);
-                    }
-                    return (
-                      <li key={tipo.id} style={{ fontSize: 13, color: "#0f172a" }}>
-                        <strong>{tipo.nome}</strong> — {regra ? `${regra.nome} (${regra.tipo})` : "Comissão fixa"}
-                        {fixPartes.length > 0 && (
-                          <span style={{ marginLeft: 8, fontSize: 12, color: "#475569" }}>
-                            ({fixPartes.join(" • ")})
-                          </span>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
+                  disabled={modoSomenteLeitura}
+                  options={[
+                    { value: "geral", label: "Geral (usa regra cadastrada)" },
+                    { value: "diferenciado", label: "Diferenciado (percentual fixo)" },
+                  ]}
+                />
               </div>
-            )}
-          </div>
 
-          {!modoSomenteLeitura && (
-            <div className="mobile-stack-buttons" style={{ marginTop: 8 }}>
-              <button className="btn btn-primary w-full sm:w-auto" type="submit">
-                {editandoId ? "Salvar alterações" : "Salvar tipo"}
-              </button>
-              <button type="button" className="btn btn-light w-full sm:w-auto" onClick={fecharFormularioTipo}>
-                Cancelar
-              </button>
-            </div>
-          )}
-          </form>
-        </div>
-      )}
+              <div className="vtur-form-grid vtur-form-grid-3" style={{ marginTop: 12 }}>
+                <AppField
+                  as="select"
+                  label="Soma na meta?"
+                  value={form.soma_na_meta ? "1" : "0"}
+                  onChange={(e) => handleChange("soma_na_meta", e.target.value === "1")}
+                  disabled={modoSomenteLeitura}
+                  options={[
+                    { value: "1", label: "Sim" },
+                    { value: "0", label: "Nao" },
+                  ]}
+                />
+                <AppField
+                  as="select"
+                  label="Ativo?"
+                  value={form.ativo ? "1" : "0"}
+                  onChange={(e) => handleChange("ativo", e.target.value === "1")}
+                  disabled={modoSomenteLeitura}
+                  options={[
+                    { value: "1", label: "Sim" },
+                    { value: "0", label: "Nao" },
+                  ]}
+                />
+                <AppField
+                  as="select"
+                  label="Usa meta por produto?"
+                  value={usaMetaProduto ? "1" : "0"}
+                  onChange={(e) => setUsaMetaProduto(e.target.value === "1")}
+                  disabled={modoSomenteLeitura}
+                  options={[
+                    { value: "1", label: "Sim" },
+                    { value: "0", label: "Nao" },
+                  ]}
+                />
+              </div>
 
-      {!mostrarFormulario && (
-        <>
-          {/* BUSCA */}
-          <div className="card-base card-blue mb-3">
-            <div
-              className="form-row mobile-stack"
-              style={{
-                marginTop: 8,
-                gap: 8,
-                gridTemplateColumns: "minmax(220px, 1fr) auto",
-                alignItems: "end",
-              }}
+              {form.regra_comissionamento === "geral" && (
+                <div style={{ marginTop: 12 }}>
+                  <AppField
+                    as="select"
+                    label="Regra de Comissao *"
+                    value={regraSelecionada}
+                    onChange={(e) => setRegraSelecionada(e.target.value)}
+                    disabled={modoSomenteLeitura}
+                    required
+                    validation={!regraSelecionada && erro ? "Selecione uma regra de comissao." : undefined}
+                    options={[
+                      { value: "", label: "Selecione" },
+                      ...regras.map((regra) => ({
+                        value: regra.id,
+                        label: `${regra.nome} (${regra.tipo})`,
+                      })),
+                    ]}
+                  />
+                </div>
+              )}
+
+              {form.regra_comissionamento === "diferenciado" && (
+                <div className="vtur-form-grid vtur-form-grid-3" style={{ marginTop: 12 }}>
+                  <AppField
+                    label="Comissao fixa (meta nao atingida) %"
+                    type="number"
+                    step="0.01"
+                    value={fixMetaNao}
+                    onChange={(e) => setFixMetaNao(e.target.value)}
+                    disabled={modoSomenteLeitura}
+                  />
+                  <AppField
+                    label="Comissao fixa (meta atingida) %"
+                    type="number"
+                    step="0.01"
+                    value={fixMetaAtingida}
+                    onChange={(e) => setFixMetaAtingida(e.target.value)}
+                    disabled={modoSomenteLeitura}
+                  />
+                  <AppField
+                    label="Comissao fixa (super meta) %"
+                    type="number"
+                    step="0.01"
+                    value={fixSuperMeta}
+                    onChange={(e) => setFixSuperMeta(e.target.value)}
+                    disabled={modoSomenteLeitura}
+                  />
+                </div>
+              )}
+
+              {usaMetaProduto && (
+                <div className="vtur-form-grid vtur-form-grid-3" style={{ marginTop: 12 }}>
+                  <AppField
+                    label="Meta do produto"
+                    type="number"
+                    step="0.01"
+                    value={metaProdutoValor}
+                    onChange={(e) => setMetaProdutoValor(e.target.value)}
+                    disabled={modoSomenteLeitura}
+                  />
+                  <AppField
+                    label="Comissao por meta (%)"
+                    type="number"
+                    step="0.01"
+                    value={comissaoProdutoMetaPct}
+                    onChange={(e) => setComissaoProdutoMetaPct(e.target.value)}
+                    disabled={modoSomenteLeitura}
+                  />
+                  <AppField
+                    as="select"
+                    label="Descontar da meta geral?"
+                    value={descontarMetaGeral ? "1" : "0"}
+                    onChange={(e) => setDescontarMetaGeral(e.target.value === "1")}
+                    disabled={modoSomenteLeitura}
+                    options={[
+                      { value: "1", label: "Sim" },
+                      { value: "0", label: "Nao" },
+                    ]}
+                  />
+                </div>
+              )}
+
+              {suportaExibeKpi && (
+                <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 12 }}>
+                  <AppField
+                    as="select"
+                    label="Exibir KPI de comissao?"
+                    value={exibeKpiComissao ? "1" : "0"}
+                    onChange={(e) => setExibeKpiComissao(e.target.value === "1")}
+                    disabled={modoSomenteLeitura}
+                    options={[
+                      { value: "1", label: "Sim" },
+                      { value: "0", label: "Nao" },
+                    ]}
+                  />
+                </div>
+              )}
+
+              <div className="vtur-app-card" style={{ marginTop: 12 }}>
+                <div className="vtur-app-card-header">
+                  <div className="vtur-app-card-copy">
+                    <h3 className="vtur-app-card-title">Tipos de pacote vinculados</h3>
+                    <p className="vtur-app-card-subtitle">
+                      Selecione um ou mais tipos de pacote. O sistema aplica as regras cadastradas em parametros.
+                    </p>
+                  </div>
+                </div>
+                {tiposPacote.length === 0 ? (
+                  <AlertMessage variant="info">
+                    Cadastre tipos de pacote antes de vincular regras especificas a este produto.
+                  </AlertMessage>
+                ) : (
+                  <div className="vtur-choice-grid">
+                    {tiposPacote.map((tipoPacote) => {
+                      const selected = tiposPacoteSelecionadosUnicos.includes(tipoPacote.id);
+                      const regra = tipoPacote.rule_id ? regrasMap.get(tipoPacote.rule_id) : null;
+                      const descricaoRegra = regra
+                        ? `${regra.nome} (${regra.tipo})`
+                        : tipoPacote.fix_meta_nao_atingida != null ||
+                            tipoPacote.fix_meta_atingida != null ||
+                            tipoPacote.fix_super_meta != null
+                          ? "Comissao fixa"
+                          : "Sem regra definida";
+                      return (
+                        <AppButton
+                          key={tipoPacote.id}
+                          type="button"
+                          variant={selected ? "primary" : "secondary"}
+                          className="vtur-choice-button"
+                          onClick={() => toggleTipoPacoteSelection(tipoPacote.id)}
+                          disabled={modoSomenteLeitura}
+                        >
+                          <span className="vtur-choice-button-content">
+                            <span className="vtur-choice-button-title">{tipoPacote.nome}</span>
+                            <span className="vtur-choice-button-caption">{descricaoRegra}</span>
+                          </span>
+                        </AppButton>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {tiposPacoteSelecionadosInfo.length > 0 && (
+                  <div className="vtur-inline-note">
+                    <strong>Regras aplicadas:</strong>
+                    <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
+                      {tiposPacoteSelecionadosInfo.map((tipoPacote) => {
+                        const regra = tipoPacote.rule_id ? regrasMap.get(tipoPacote.rule_id) : null;
+                        const fixPartes: string[] = [];
+                        if (tipoPacote.fix_meta_nao_atingida != null) {
+                          fixPartes.push(`Meta nao: ${tipoPacote.fix_meta_nao_atingida}%`);
+                        }
+                        if (tipoPacote.fix_meta_atingida != null) {
+                          fixPartes.push(`Meta: ${tipoPacote.fix_meta_atingida}%`);
+                        }
+                        if (tipoPacote.fix_super_meta != null) {
+                          fixPartes.push(`Super meta: ${tipoPacote.fix_super_meta}%`);
+                        }
+                        return (
+                          <li key={tipoPacote.id}>
+                            <strong>{tipoPacote.nome}</strong> -{" "}
+                            {regra ? `${regra.nome} (${regra.tipo})` : "Comissao fixa"}
+                            {fixPartes.length > 0 ? ` (${fixPartes.join(" | ")})` : ""}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {!modoSomenteLeitura && (
+                <div className="vtur-form-actions mobile-stack-buttons" style={{ marginTop: 12 }}>
+                  <AppButton type="submit" variant="primary" loading={salvando}>
+                    {editandoId ? "Salvar alteracoes" : "Salvar tipo"}
+                  </AppButton>
+                  <AppButton type="button" variant="secondary" onClick={fecharFormularioTipo}>
+                    Cancelar
+                  </AppButton>
+                </div>
+              )}
+            </form>
+          </AppCard>
+        )}
+
+        {!mostrarFormulario && (
+          <>
+            <AppToolbar
+              sticky
+              tone="config"
+              className="mb-3 list-toolbar-sticky"
+              title="Tipos de produto"
+              subtitle={resumoLista}
+              actions={
+                !modoSomenteLeitura ? (
+                  <AppButton type="button" variant="primary" onClick={abrirFormularioTipo}>
+                    Novo produto
+                  </AppButton>
+                ) : null
+              }
             >
-              <div className="form-group" style={{ minWidth: 220 }}>
-                <label className="form-label">Buscar tipo de produto</label>
-                <input
-                  className="form-input"
+              <div className="vtur-toolbar-grid">
+                <AppField
+                  label="Buscar tipo de produto"
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                   placeholder="Digite parte do nome..."
-                  style={{ width: "100%" }}
                 />
               </div>
-              {!modoSomenteLeitura && (
-                <div className="form-group" style={{ alignItems: "flex-end" }}>
-                  <span style={{ visibility: "hidden" }}>botão</span>
-                  <button
-                    className="btn btn-primary w-full sm:w-auto"
-                    type="button"
-                    onClick={abrirFormularioTipo}
-                    disabled={mostrarFormulario}
-                  >
-                    Novo produto
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+            </AppToolbar>
 
-          {erro && (
-            <div className="mb-3">
-              <AlertMessage variant="error">{erro}</AlertMessage>
-            </div>
-          )}
-
-          {/* TABELA */}
-          <DataTable
-            className="table-default table-header-blue table-mobile-cards min-w-[720px]"
-            containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
-            headers={
-              <tr>
-                <th>Nome</th>
-                <th>Regra</th>
-                <th>Regra vinculada</th>
-                <th>Soma meta</th>
-                <th>Ativo</th>
-                <th>Criado em</th>
-                <th className="th-actions">Ações</th>
-              </tr>
-            }
-            loading={loading}
-            loadingMessage="Carregando tipos de produto..."
-            empty={!loading && tiposFiltrados.length === 0}
-            emptyMessage="Nenhum tipo encontrado."
-            colSpan={7}
-          >
-            {tiposFiltrados.map((p) => (
-              <tr key={p.id}>
-                <td data-label="Nome">{p.nome || p.tipo}</td>
-                <td data-label="Regra">{p.regra_comissionamento}</td>
-                <td data-label="Regra vinculada">
-                  {produtoRegraMap[p.id]?.rule_id
-                    ? regras.find((r) => r.id === produtoRegraMap[p.id]?.rule_id)?.nome || "-"
-                    : produtoRegraMap[p.id]?.fix_meta_atingida
-                      ? "Comissão fixa"
-                      : "-"}
-                </td>
-                <td data-label="Soma meta">{p.soma_na_meta ? "Sim" : "Não"}</td>
-                <td data-label="Ativo" style={{ color: p.ativo ? "#22c55e" : "#ef4444" }}>
-                  {p.ativo ? "Ativo" : "Inativo"}
-                </td>
-                <td data-label="Criado em">
-                  {p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "-"}
-                </td>
-
-                <td className="th-actions" data-label="Ações">
-                  <TableActions
-                    show={!modoSomenteLeitura}
-                    actions={[
-                      ...(!modoSomenteLeitura
-                        ? [
-                            {
-                              key: "edit",
-                              label: "Editar",
-                              onClick: () => iniciarEdicao(p),
-                              icon: "✏️",
-                            },
-                          ]
-                        : []),
-                      ...(podeExcluir
-                        ? [
-                            {
-                              key: "delete",
-                              label: "Excluir",
-                              onClick: () => solicitarExclusao(p),
-                              icon: excluindoId === p.id ? "..." : "🗑️",
-                              variant: "danger" as const,
-                              disabled: excluindoId === p.id,
-                            },
-                          ]
-                        : []),
-                    ]}
-                  />
-                </td>
-              </tr>
-            ))}
-          </DataTable>
-        </>
-      )}
-
-      <ConfirmDialog
-        open={Boolean(tipoParaExcluir)}
-        title="Excluir tipo de produto"
-        message={`Tem certeza que deseja excluir ${tipoParaExcluir?.nome || "este tipo"}?`}
-        confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
-        confirmVariant="danger"
-        confirmDisabled={Boolean(excluindoId)}
-        onCancel={() => setTipoParaExcluir(null)}
-        onConfirm={confirmarExclusao}
-      />
-      {modalDuplicado && (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-label={`Aviso: ${modalDuplicado.entity}`}
-        >
-          <div className="modal-panel" style={{ maxWidth: 520, width: "95vw" }}>
-            <div className="modal-header" style={{ alignItems: "center", gap: 10 }}>
-              <div
-                className="modal-title"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  color: "#b45309",
-                  fontWeight: 700,
-                }}
-              >
-                <AlertTriangle size={20} strokeWidth={2} />
-                ATENÇÃO!
+            {erro && (
+              <div className="mb-3">
+                <AlertMessage variant="error">{erro}</AlertMessage>
               </div>
-            </div>
-            <div className="modal-body" style={{ display: "grid", gap: 12 }}>
-              <p style={{ margin: 0 }}>{modalDuplicado.entity} já cadastrado.</p>
-            </div>
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => setModalDuplicado(null)}
-              >
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      <ToastStack toasts={toasts} onDismiss={dismissToast} />
-    </div>
+            )}
+
+            <DataTable
+              shellClassName="mb-3"
+              className="table-default table-header-blue table-mobile-cards min-w-[720px]"
+              containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+              headers={
+                <tr>
+                  <th>Nome</th>
+                  <th>Modelo</th>
+                  <th>Regra vinculada</th>
+                  <th>Soma meta</th>
+                  <th>Ativo</th>
+                  <th>Criado em</th>
+                  <th className="th-actions">Acoes</th>
+                </tr>
+              }
+              loading={loading}
+              loadingMessage="Carregando tipos de produto..."
+              empty={!loading && tiposFiltrados.length === 0}
+              emptyMessage={
+                <EmptyState
+                  title="Nenhum tipo encontrado"
+                  description={
+                    busca.trim()
+                      ? "Tente ajustar a busca ou cadastre um novo tipo de produto."
+                      : "Cadastre um tipo de produto para comecar."
+                  }
+                />
+              }
+              colSpan={7}
+            >
+              {tiposFiltrados.map((tipoProduto) => {
+                const comissao = produtoRegraMap[tipoProduto.id];
+                const regra = comissao?.rule_id ? regrasMap.get(comissao.rule_id) : null;
+                const possuiFixa =
+                  comissao &&
+                  [comissao.fix_meta_nao_atingida, comissao.fix_meta_atingida, comissao.fix_super_meta].some(
+                    (value) => value !== null && value !== undefined
+                  );
+                return (
+                  <tr key={tipoProduto.id}>
+                    <td data-label="Nome">{tipoProduto.nome || tipoProduto.tipo}</td>
+                    <td data-label="Modelo">{tipoProduto.regra_comissionamento}</td>
+                    <td data-label="Regra vinculada">
+                      {regra ? regra.nome : possuiFixa ? "Comissao fixa" : "-"}
+                    </td>
+                    <td data-label="Soma meta">{tipoProduto.soma_na_meta ? "Sim" : "Nao"}</td>
+                    <td data-label="Ativo">{tipoProduto.ativo ? "Ativo" : "Inativo"}</td>
+                    <td data-label="Criado em">
+                      {tipoProduto.created_at
+                        ? new Date(tipoProduto.created_at).toLocaleDateString("pt-BR")
+                        : "-"}
+                    </td>
+                    <td className="th-actions" data-label="Acoes">
+                      <TableActions
+                        show={!modoSomenteLeitura}
+                        actions={[
+                          ...(!modoSomenteLeitura
+                            ? [
+                                {
+                                  key: "edit",
+                                  label: "Editar",
+                                  onClick: () => iniciarEdicao(tipoProduto),
+                                },
+                              ]
+                            : []),
+                          ...(podeExcluir
+                            ? [
+                                {
+                                  key: "delete",
+                                  label: "Excluir",
+                                  onClick: () => solicitarExclusao(tipoProduto),
+                                  variant: "danger" as const,
+                                  disabled: excluindoId === tipoProduto.id,
+                                },
+                              ]
+                            : []),
+                        ]}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </DataTable>
+          </>
+        )}
+
+        <ConfirmDialog
+          open={Boolean(tipoParaExcluir)}
+          title="Excluir tipo de produto"
+          message={`Tem certeza que deseja excluir ${tipoParaExcluir?.nome || "este tipo"}?`}
+          confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
+          confirmVariant="danger"
+          confirmDisabled={Boolean(excluindoId)}
+          onCancel={() => setTipoParaExcluir(null)}
+          onConfirm={confirmarExclusao}
+        />
+        <AppNoticeDialog
+          open={Boolean(modalDuplicado)}
+          title="ATENCAO"
+          icon={<AlertTriangle size={20} strokeWidth={2} />}
+          message={modalDuplicado ? `${modalDuplicado.entity} ja cadastrado.` : ""}
+          onClose={() => setModalDuplicado(null)}
+        />
+        <ToastStack toasts={toasts} onDismiss={dismissToast} />
+      </div>
+    </AppPrimerProvider>
   );
 }

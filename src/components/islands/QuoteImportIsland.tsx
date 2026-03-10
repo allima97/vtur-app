@@ -9,6 +9,13 @@ import { matchesCpfSearch, onlyDigits } from "../../lib/searchNormalization";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import type { ImportResult, QuoteDraft, QuoteItemDraft } from "../../lib/quote/types";
 import FlightDetailsModal, { FlightDetails } from "../ui/FlightDetailsModal";
+import AlertMessage from "../ui/AlertMessage";
+import TableActions from "../ui/TableActions";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type ClienteOption = {
   id: string;
@@ -385,6 +392,34 @@ export default function QuoteImportIsland() {
     () => clientes.find((c) => c.id === clienteId) || null,
     [clientes, clienteId]
   );
+  const itensImportados = draft?.items.length || 0;
+  const itensPendentesRevisao = useMemo(
+    () => (draft?.items || []).filter((item) => item.confidence < 0.7 || !validateItem(item)).length,
+    [draft]
+  );
+  const circuitosImportados = useMemo(
+    () => (draft?.items || []).filter((item) => isCircuitItem(item)).length,
+    [draft]
+  );
+  const contextoCliente = useMemo(() => {
+    if (!clienteSelecionado) {
+      return "Selecione o cliente correto antes de confirmar o orcamento importado.";
+    }
+
+    const detalhes = [
+      clienteSelecionado.cpf ? `CPF ${clienteSelecionado.cpf}` : null,
+      clienteSelecionado.whatsapp || null,
+      clienteSelecionado.email || null,
+    ].filter(Boolean);
+
+    return detalhes.length > 0
+      ? `${clienteSelecionado.nome} · ${detalhes.join(" · ")}`
+      : clienteSelecionado.nome;
+  }, [clienteSelecionado]);
+  const modoImportacaoLabel = useMemo(
+    () => IMPORT_MODE_OPTIONS.find((option) => option.value === importMode)?.label || "Produtos",
+    [importMode]
+  );
 
   function handleClienteInputChange(value: string) {
     setClienteBusca(value);
@@ -446,7 +481,7 @@ export default function QuoteImportIsland() {
       let result: ImportResult | null = null;
       const rawText = textInput.trim();
       if (!rawText) {
-        setError("Cole o texto do orçamento para importar.");
+        setError("Cole o texto do orcamento para importar.");
         setExtracting(false);
         return;
       }
@@ -594,323 +629,383 @@ export default function QuoteImportIsland() {
   }
 
   return (
-    <div className="page-content-wrap">
-      <div className="card-base" style={{ marginBottom: 16 }}>
-        <h2 className="page-title">Importacao de orcamentos (CVC)</h2>
-        <p className="page-subtitle">
-          Cole o texto do orcamento. Revise e confirme para salvar.
-        </p>
-        <div className="form-row" style={{ marginTop: 12 }}>
-          <div className="form-group" style={{ flex: 2, minWidth: 220, position: "relative" }}>
-            <label className="form-label">Cliente *</label>
-            <input
-              className="form-input"
-              placeholder="Buscar cliente..."
-              autoComplete="off"
-              value={clienteSelecionado?.nome || clienteBusca}
-              onChange={(e) => handleClienteInputChange(e.target.value)}
-              onFocus={() => setMostrarSugestoesCliente(true)}
-              onBlur={handleClienteBlur}
-              required
-            />
-            {mostrarSugestoesCliente && clienteBusca.trim().length >= 1 && (
-              <div
-                className="card-base card-config"
-                style={{
-                  position: "absolute",
-                  top: "100%",
-                  left: 0,
-                  right: 0,
-                  maxHeight: 200,
-                  overflowY: "auto",
-                  zIndex: 20,
-                  padding: "4px 0",
-                }}
+    <AppPrimerProvider>
+      <div className="page-content-wrap">
+        <AppToolbar
+          sticky
+          tone="info"
+          className="mb-3 list-toolbar-sticky"
+          title="Importacao de orcamentos CVC"
+          subtitle="Cole o texto do orcamento, revise os itens extraidos e confirme antes de salvar no CRM."
+          actions={
+            <div className="vtur-quote-top-actions">
+              <AppButton type="button" variant="secondary" onClick={handleCancel} disabled={extracting}>
+                Cancelar
+              </AppButton>
+              <AppButton
+                type="button"
+                variant="primary"
+                onClick={handleExtract}
+                disabled={!canExtractInput || extracting}
+                loading={extracting}
               >
-                {clientesFiltrados.length === 0 ? (
-                  <div style={{ padding: "6px 12px", color: "#94a3b8" }}>
-                    Nenhum cliente encontrado.
-                  </div>
-                ) : (
-                  clientesFiltrados.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      className="btn btn-ghost w-full text-left"
-                      style={{ padding: "6px 12px" }}
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        setClienteId(c.id);
-                        setClienteBusca("");
-                        setMostrarSugestoesCliente(false);
-                      }}
-                    >
-                      {c.nome}
-                      {c.cpf ? (
-                        <span style={{ color: "#6b7280", marginLeft: 6 }}>
-                          • {c.cpf}
-                        </span>
-                      ) : null}
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
-            {carregandoClientes && (
-              <small style={{ color: "#64748b" }}>Carregando clientes...</small>
-            )}
-            {clientesErro && <small style={{ color: "#b91c1c" }}>{clientesErro}</small>}
+                {extracting ? "Extraindo..." : "Extrair itens"}
+              </AppButton>
+            </div>
+          }
+        >
+          <div className="vtur-quote-summary-grid">
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Cliente</span>
+              <strong>{clienteSelecionado ? clienteSelecionado.nome : "Nao selecionado"}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Modo</span>
+              <strong>{modoImportacaoLabel}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Itens importados</span>
+              <strong>{itensImportados}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Pendentes de revisao</span>
+              <strong>{itensPendentesRevisao}</strong>
+            </div>
           </div>
-          <div className="form-group" style={{ flex: 1, minWidth: 220 }}>
-            <label className="form-label">Tipo de importacao</label>
-            <select
-              className="form-select"
+        </AppToolbar>
+
+        {status && (
+          <AlertMessage variant="info" className="mb-3">
+            {status}
+          </AlertMessage>
+        )}
+        {error && (
+          <AlertMessage variant="error" className="mb-3">
+            {error}
+          </AlertMessage>
+        )}
+        {successId && (
+          <AlertMessage variant="success" className="mb-3">
+            Salvo com sucesso. <a href={`/orcamentos/${successId}`}>Abrir quote</a>
+          </AlertMessage>
+        )}
+
+        <AppCard
+          className="mb-3"
+          tone="info"
+          title="Fonte da importacao"
+          subtitle={contextoCliente}
+        >
+          <div className="vtur-form-grid vtur-form-grid-2">
+            <div className="vtur-city-picker">
+              <AppField
+                label="Cliente *"
+                placeholder="Buscar cliente por nome ou CPF..."
+                autoComplete="off"
+                value={clienteSelecionado?.nome || clienteBusca}
+                onChange={(e) => handleClienteInputChange(e.target.value)}
+                onFocus={() => setMostrarSugestoesCliente(true)}
+                onBlur={handleClienteBlur}
+                required
+                caption={
+                  carregandoClientes
+                    ? "Carregando clientes..."
+                    : "Selecione o cliente final antes de salvar o orcamento importado."
+                }
+                validation={!carregandoClientes ? clientesErro ?? undefined : undefined}
+              />
+              {mostrarSugestoesCliente && clienteBusca.trim().length >= 1 && (
+                <div className="vtur-city-dropdown vtur-quote-client-dropdown">
+                  {clientesFiltrados.length === 0 ? (
+                    <div className="vtur-city-helper">Nenhum cliente encontrado.</div>
+                  ) : (
+                    clientesFiltrados.map((c) => (
+                      <AppButton
+                        key={c.id}
+                        type="button"
+                        variant={clienteId === c.id ? "primary" : "secondary"}
+                        className="vtur-city-option"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setClienteId(c.id);
+                          setClienteBusca("");
+                          setMostrarSugestoesCliente(false);
+                        }}
+                      >
+                        <span className="vtur-choice-button-content">
+                          <span className="vtur-choice-button-title">{c.nome}</span>
+                          {c.cpf ? (
+                            <span className="vtur-choice-button-caption">CPF {c.cpf}</span>
+                          ) : null}
+                        </span>
+                      </AppButton>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            <AppField
+              as="select"
+              label="Tipo de importacao"
               value={importMode}
               onChange={(e) => setImportMode(e.target.value as ImportMode)}
-            >
-              {IMPORT_MODE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              options={IMPORT_MODE_OPTIONS.map((option) => ({
+                value: option.value,
+                label: option.label,
+              }))}
+              caption="Escolha se a leitura deve considerar somente produtos, somente circuitos ou ambos."
+            />
           </div>
-        </div>
-        <div className="form-row" style={{ marginTop: 12 }}>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Texto do orcamento</label>
-            <textarea
-              className="form-input"
-              rows={8}
+
+          <div style={{ marginTop: 16 }}>
+            <AppField
+              as="textarea"
+              label="Texto do orcamento"
+              rows={10}
               placeholder="Cole aqui o texto do orcamento"
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
+              caption="A importacao monta um rascunho revisavel. Voce pode ajustar tipo, cidade, datas, quantidades e valores antes de confirmar."
             />
           </div>
-          <div className="form-group" style={{ alignSelf: "flex-end" }}>
-            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-              <button
+
+          <div className="vtur-form-actions">
+            <AppButton
+              type="button"
+              variant="primary"
+              onClick={handleExtract}
+              disabled={!canExtractInput || extracting}
+              loading={extracting}
+            >
+              {extracting ? "Extraindo..." : "Extrair itens"}
+            </AppButton>
+            <AppButton type="button" variant="secondary" onClick={handleCancel} disabled={extracting}>
+              Cancelar
+            </AppButton>
+          </div>
+        </AppCard>
+
+        {draft && (
+          <AppCard
+            tone="config"
+            title="Preview dos itens"
+            subtitle={`Total estimado R$ ${formatCurrency(draft.total)} · ${circuitosImportados} circuitos · ${itensPendentesRevisao} linhas em revisao`}
+            actions={
+              <AppButton
                 type="button"
-                className="btn btn-primary"
-                onClick={handleExtract}
-                disabled={!canExtractInput || extracting}
+                variant="primary"
+                onClick={handleSave}
+                disabled={saving || !draft.items.length || !file}
+                loading={saving}
               >
-                {extracting ? "Extraindo..." : "Extrair"}
-              </button>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={handleCancel}
-                disabled={extracting}
-              >
-                Cancelar
-              </button>
+                {saving ? "Salvando..." : "Confirmar e salvar"}
+              </AppButton>
+            }
+          >
+            <div className="vtur-inline-note">
+              Linhas destacadas precisam de revisao. Ajuste datas, cidade, destino, produto e valores antes de confirmar.
             </div>
-          </div>
-        </div>
-        {status && <div style={{ marginTop: 12, fontSize: 14 }}>{status}</div>}
-        {error && <div style={{ marginTop: 12, color: "#b91c1c" }}>{error}</div>}
-      </div>
 
-      {draft && (
-        <div className="card-base" style={{ overflow: "hidden", maxWidth: "100%", boxSizing: "border-box" }}>
-          <h3 className="card-title">Preview dos itens</h3>
-          <div style={{ marginBottom: 12, fontSize: 14 }}>
-            Total estimado: R$ {formatCurrency(draft.total)}
-          </div>
-          <div className="table-container overflow-x-auto">
-            <table className="table-default table-compact table-mobile-cards quote-items-table">
-              <thead>
-                <tr>
-                  <th className="order-cell">Ordem</th>
-                  <th>Tipo</th>
-                  <th>Produto</th>
-                  <th>Cidade</th>
-                  <th>Destino</th>
-                  <th>Inicio</th>
-                  <th>Fim</th>
-                  <th>Qtd</th>
-                  <th>Total</th>
-                  <th>Taxas</th>
-                  <th>Detalhes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {draft.items.map((item, index) => {
-                  const needsReview = item.confidence < 0.7 || !validateItem(item);
-                  const circuitMeta = getCircuitMeta(item);
-                  const circuitDays = (item.segments || [])
-                    .filter((seg) => seg.segment_type === "circuit_day")
-                    .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
-                  const rowKey = item.temp_id || `row-${index}`;
-                  const flightDetails = isFlightItem(item) ? getFlightDetails(item) : null;
+            <div className="table-container overflow-x-auto" style={{ marginTop: 16 }}>
+              <table className="table-default table-compact table-mobile-cards quote-items-table">
+                <thead>
+                  <tr>
+                    <th className="order-cell">Ordem</th>
+                    <th>Tipo</th>
+                    <th>Produto</th>
+                    <th>Cidade</th>
+                    <th>Destino</th>
+                    <th>Inicio</th>
+                    <th>Fim</th>
+                    <th>Qtd</th>
+                    <th>Total</th>
+                    <th>Taxas</th>
+                    <th>Detalhes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {draft.items.map((item, index) => {
+                    const needsReview = item.confidence < 0.7 || !validateItem(item);
+                    const circuitMeta = getCircuitMeta(item);
+                    const circuitDays = (item.segments || [])
+                      .filter((seg) => seg.segment_type === "circuit_day")
+                      .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+                    const rowKey = item.temp_id || `row-${index}`;
+                    const flightDetails = isFlightItem(item) ? getFlightDetails(item) : null;
 
-                  return (
-                    <React.Fragment key={item.temp_id}>
-                      <tr style={needsReview ? { background: "#fef3c7" } : undefined}>
-                        <td className="order-cell" data-label="">
-                          <div className="order-cell-head">
-                            <span className="order-label">Ordem</span>
-                            <div className="icon-action-group">
-                              <button
-                                type="button"
-                                className="icon-action-btn"
-                                title="Mover para cima"
-                                onClick={() => moveItem(index, "up")}
-                                disabled={index === 0}
-                              >
-                                ⬆️
-                              </button>
-                              <button
-                                type="button"
-                                className="icon-action-btn"
-                                title="Mover para baixo"
-                                onClick={() => moveItem(index, "down")}
-                                disabled={index === draft.items.length - 1}
-                              >
-                                ⬇️
-                              </button>
+                    return (
+                      <React.Fragment key={item.temp_id}>
+                        <tr className={needsReview ? "vtur-quote-review-row" : undefined}>
+                          <td className="order-cell" data-label="">
+                            <div className="order-cell-head">
+                              <span className="order-label">Ordem</span>
+                              <TableActions
+                                className="vtur-quote-order-actions"
+                                actions={[
+                                  {
+                                    key: "up",
+                                    label: "Mover para cima",
+                                    icon: "↑",
+                                    variant: "ghost",
+                                    onClick: () => moveItem(index, "up"),
+                                    disabled: index === 0,
+                                  },
+                                  {
+                                    key: "down",
+                                    label: "Mover para baixo",
+                                    icon: "↓",
+                                    variant: "ghost",
+                                    onClick: () => moveItem(index, "down"),
+                                    disabled: index === draft.items.length - 1,
+                                  },
+                                ]}
+                              />
                             </div>
-                          </div>
-                          <div className="order-value">#{index + 1}</div>
-                        </td>
-                        <td data-label="Tipo">
-                          <input
-                            className="form-input"
-                            list={IMPORT_TIPO_DATALIST_ID}
-                            value={item.item_type}
-                            placeholder="Selecione um tipo"
-                            onChange={(e) => updateItem(index, { item_type: e.target.value })}
-                          />
-                        </td>
-                        <td data-label="Produto">
-                          <input
-                            className="form-input"
-                            value={item.title}
-                            onChange={(e) =>
-                              updateItem(index, { title: e.target.value, product_name: e.target.value })
-                            }
-                          />
-                        </td>
-                        <td data-label="Cidade">
-                          <input
-                            className="form-input"
-                            list={`quote-import-cidades-${rowKey}`}
-                            value={getCidadeInputValue(item, rowKey)}
-                            placeholder="Buscar cidade..."
-                            onChange={(e) => handleCidadeInputChange(index, e.target.value, rowKey)}
-                            onFocus={() => scheduleCidadeFetch(rowKey, getCidadeInputValue(item, rowKey))}
-                          />
-                        </td>
-                        <td data-label="Destino">
-                          <input
-                            className="form-input"
-                            value={item.city_name}
-                            onChange={(e) => updateItem(index, { city_name: e.target.value })}
-                          />
-                        </td>
-                        <td data-label="Inicio">
-                          <input
-                            className="form-input"
-                            type="date"
-                            value={item.start_date || ""}
-                            onFocus={selectAllInputOnFocus}
-                            onChange={(e) => {
-                              const nextStart = e.target.value;
-                              const updates: Partial<QuoteItemDraft> = { start_date: nextStart };
-                              if (item.end_date && nextStart && item.end_date < nextStart) {
-                                updates.end_date = nextStart;
-                              }
-                              updateItem(index, updates);
-                            }}
-                          />
-                        </td>
-                        <td data-label="Fim">
-                          <input
-                            className="form-input"
-                            type="date"
-                            value={item.end_date || ""}
-                            min={item.start_date || undefined}
-                            onFocus={selectAllInputOnFocus}
-                            onChange={(e) => {
-                              const nextEnd = e.target.value;
-                              const boundedEnd =
-                                item.start_date && nextEnd && nextEnd < item.start_date
-                                  ? item.start_date
-                                  : nextEnd;
-                              updateItem(index, { end_date: boundedEnd });
-                            }}
-                          />
-                        </td>
-                        <td data-label="Qtd">
-                          <input
-                            className="form-input"
-                            type="number"
-                            min={1}
-                            value={item.quantity}
-                            onChange={(e) => updateItem(index, { quantity: Number(e.target.value) || 1 })}
-                          />
-                        </td>
-                        <td data-label="Total">
-                          <input
-                            className="form-input"
-                            value={formatCurrency(item.total_amount)}
-                            onChange={(e) => updateItem(index, { total_amount: normalizeNumber(e.target.value) })}
-                          />
-                        </td>
-                        <td data-label="Taxas">
-                          <input
-                            className="form-input"
-                            value={formatCurrency(item.taxes_amount || 0)}
-                            onChange={(e) => updateItem(index, { taxes_amount: normalizeNumber(e.target.value) })}
-                          />
-                        </td>
-                        <td data-label="Detalhes">
-                          {flightDetails ? (
-                            <button
-                              type="button"
-                              className="btn btn-light"
-                              onClick={() =>
-                                setFlightModal({
-                                  details: flightDetails,
-                                  title: item.title || item.product_name || item.item_type,
+                            <div className="order-value">#{index + 1}</div>
+                          </td>
+                          <td data-label="Tipo">
+                            <input
+                              className="form-input"
+                              list={IMPORT_TIPO_DATALIST_ID}
+                              value={item.item_type}
+                              placeholder="Selecione um tipo"
+                              onChange={(e) => updateItem(index, { item_type: e.target.value })}
+                            />
+                          </td>
+                          <td data-label="Produto">
+                            <input
+                              className="form-input"
+                              value={item.title}
+                              onChange={(e) =>
+                                updateItem(index, {
+                                  title: e.target.value,
+                                  product_name: e.target.value,
                                 })
                               }
-                            >
-                              Ver detalhes
-                            </button>
-                          ) : (
-                            "-"
-                          )}
-                        </td>
-                      </tr>
-                      {isCircuitItem(item) && (
-                        <tr>
-                          <td colSpan={11}>
-                            <div style={{ padding: "8px 4px 16px", borderTop: "1px solid #e2e8f0" }}>
-                              <div className="form-row">
-                                <div className="form-group">
-                                  <label className="form-label">Codigo</label>
-                                  <input
-                                    className="form-input"
+                            />
+                          </td>
+                          <td data-label="Cidade">
+                            <input
+                              className="form-input"
+                              list={`quote-import-cidades-${rowKey}`}
+                              value={getCidadeInputValue(item, rowKey)}
+                              placeholder="Buscar cidade..."
+                              onChange={(e) => handleCidadeInputChange(index, e.target.value, rowKey)}
+                              onFocus={() =>
+                                scheduleCidadeFetch(rowKey, getCidadeInputValue(item, rowKey))
+                              }
+                            />
+                          </td>
+                          <td data-label="Destino">
+                            <input
+                              className="form-input"
+                              value={item.city_name}
+                              onChange={(e) => updateItem(index, { city_name: e.target.value })}
+                            />
+                          </td>
+                          <td data-label="Inicio">
+                            <input
+                              className="form-input"
+                              type="date"
+                              value={item.start_date || ""}
+                              onFocus={selectAllInputOnFocus}
+                              onChange={(e) => {
+                                const nextStart = e.target.value;
+                                const updates: Partial<QuoteItemDraft> = { start_date: nextStart };
+                                if (item.end_date && nextStart && item.end_date < nextStart) {
+                                  updates.end_date = nextStart;
+                                }
+                                updateItem(index, updates);
+                              }}
+                            />
+                          </td>
+                          <td data-label="Fim">
+                            <input
+                              className="form-input"
+                              type="date"
+                              value={item.end_date || ""}
+                              min={item.start_date || undefined}
+                              onFocus={selectAllInputOnFocus}
+                              onChange={(e) => {
+                                const nextEnd = e.target.value;
+                                const boundedEnd =
+                                  item.start_date && nextEnd && nextEnd < item.start_date
+                                    ? item.start_date
+                                    : nextEnd;
+                                updateItem(index, { end_date: boundedEnd });
+                              }}
+                            />
+                          </td>
+                          <td data-label="Qtd">
+                            <input
+                              className="form-input"
+                              type="number"
+                              min={1}
+                              value={item.quantity}
+                              onChange={(e) =>
+                                updateItem(index, { quantity: Number(e.target.value) || 1 })
+                              }
+                            />
+                          </td>
+                          <td data-label="Total">
+                            <input
+                              className="form-input"
+                              value={formatCurrency(item.total_amount)}
+                              onChange={(e) =>
+                                updateItem(index, { total_amount: normalizeNumber(e.target.value) })
+                              }
+                            />
+                          </td>
+                          <td data-label="Taxas">
+                            <input
+                              className="form-input"
+                              value={formatCurrency(item.taxes_amount || 0)}
+                              onChange={(e) =>
+                                updateItem(index, { taxes_amount: normalizeNumber(e.target.value) })
+                              }
+                            />
+                          </td>
+                          <td data-label="Detalhes">
+                            {flightDetails ? (
+                              <AppButton
+                                type="button"
+                                variant="secondary"
+                                onClick={() =>
+                                  setFlightModal({
+                                    details: flightDetails,
+                                    title: item.title || item.product_name || item.item_type,
+                                  })
+                                }
+                              >
+                                Ver detalhes
+                              </AppButton>
+                            ) : (
+                              "-"
+                            )}
+                          </td>
+                        </tr>
+                        {isCircuitItem(item) && (
+                          <tr>
+                            <td colSpan={11}>
+                              <div className="vtur-quote-circuit-panel">
+                                <div className="vtur-form-grid vtur-form-grid-3">
+                                  <AppField
+                                    label="Codigo"
                                     value={circuitMeta.codigo || ""}
                                     onChange={(e) => updateCircuitMeta(index, { codigo: e.target.value })}
                                   />
-                                </div>
-                                <div className="form-group">
-                                  <label className="form-label">Serie</label>
-                                  <input
-                                    className="form-input"
+                                  <AppField
+                                    label="Serie"
                                     value={circuitMeta.serie || ""}
                                     onChange={(e) => updateCircuitMeta(index, { serie: e.target.value })}
                                   />
-                                </div>
-                                <div className="form-group" style={{ flex: 1 }}>
-                                  <label className="form-label">Tags (uma por linha)</label>
-                                  <textarea
-                                    className="form-input"
+                                  <AppField
+                                    as="textarea"
+                                    label="Tags"
                                     rows={2}
                                     value={(circuitMeta.tags || []).join("\n")}
+                                    caption="Uma tag por linha."
                                     onChange={(e) =>
                                       updateCircuitMeta(index, {
                                         tags: e.target.value
@@ -921,28 +1016,49 @@ export default function QuoteImportIsland() {
                                     }
                                   />
                                 </div>
-                              </div>
 
-                              <div className="form-group" style={{ marginTop: 8 }}>
-                                <label className="form-label">Itinerario (uma cidade por linha)</label>
-                                <textarea
-                                  className="form-input"
-                                  rows={3}
-                                  value={(circuitMeta.itinerario || []).join("\n")}
-                                  onChange={(e) =>
-                                    updateCircuitMeta(index, {
-                                      itinerario: e.target.value
-                                        .split(/\r?\n/)
-                                        .map((val) => val.trim())
-                                        .filter(Boolean),
-                                    })
-                                  }
-                                />
-                              </div>
+                                <div style={{ marginTop: 16 }}>
+                                  <AppField
+                                    as="textarea"
+                                    label="Itinerario"
+                                    rows={3}
+                                    caption="Uma cidade por linha para compor o circuito."
+                                    value={(circuitMeta.itinerario || []).join("\n")}
+                                    onChange={(e) =>
+                                      updateCircuitMeta(index, {
+                                        itinerario: e.target.value
+                                          .split(/\r?\n/)
+                                          .map((val) => val.trim())
+                                          .filter(Boolean),
+                                      })
+                                    }
+                                  />
+                                </div>
 
-                              <div style={{ marginTop: 12 }}>
-                                <div style={{ fontWeight: 600, marginBottom: 8 }}>Dia a dia</div>
-                                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                <div className="vtur-quote-circuit-days-head">
+                                  <div>
+                                    <strong>Dia a dia</strong>
+                                    <p>Estruture a sequencia do circuito com titulo e descricao de cada etapa.</p>
+                                  </div>
+                                  <AppButton
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={() =>
+                                      updateCircuitSegments(index, (segments) => [
+                                        ...segments,
+                                        {
+                                          segment_type: "circuit_day",
+                                          order_index: segments.length,
+                                          data: { dia: segments.length + 1, titulo: "", descricao: "" },
+                                        },
+                                      ])
+                                    }
+                                  >
+                                    Adicionar dia
+                                  </AppButton>
+                                </div>
+
+                                <div className="vtur-quote-circuit-days-list">
                                   {circuitDays.map((seg, segIndex) => {
                                     const data = (seg.data || {}) as {
                                       dia?: number;
@@ -952,113 +1068,101 @@ export default function QuoteImportIsland() {
                                     return (
                                       <div
                                         key={`circuit-${item.temp_id}-${segIndex}`}
-                                        style={{
-                                          border: "1px solid #e2e8f0",
-                                          borderRadius: 8,
-                                          padding: 10,
-                                          background: "#f8fafc",
-                                        }}
+                                        className="vtur-quote-circuit-day"
                                       >
-                                        <div className="form-row">
-                                          <div className="form-group">
-                                            <label className="form-label">Dia</label>
-                                            <input
-                                              className="form-input"
-                                              type="number"
-                                              min={1}
-                                              value={data.dia ?? segIndex + 1}
-                                              onChange={(e) =>
-                                                updateCircuitSegments(index, (segments) =>
-                                                  segments.map((segmento, i) =>
-                                                    i === segIndex
-                                                      ? {
-                                                          ...segmento,
-                                                          data: {
-                                                            ...(segmento.data || {}),
-                                                            dia: Number(e.target.value) || segIndex + 1,
-                                                          },
-                                                        }
-                                                      : segmento
-                                                  )
+                                        <div className="vtur-form-grid vtur-form-grid-3">
+                                          <AppField
+                                            label="Dia"
+                                            type="number"
+                                            min={1}
+                                            value={String(data.dia ?? segIndex + 1)}
+                                            onChange={(e) =>
+                                              updateCircuitSegments(index, (segments) =>
+                                                segments.map((segmento, i) =>
+                                                  i === segIndex
+                                                    ? {
+                                                        ...segmento,
+                                                        data: {
+                                                          ...(segmento.data || {}),
+                                                          dia: Number(e.target.value) || segIndex + 1,
+                                                        },
+                                                      }
+                                                    : segmento
                                                 )
-                                              }
+                                              )
+                                            }
+                                          />
+                                          <AppField
+                                            label="Cidade / Titulo"
+                                            value={data.titulo || ""}
+                                            onChange={(e) =>
+                                              updateCircuitSegments(index, (segments) =>
+                                                segments.map((segmento, i) =>
+                                                  i === segIndex
+                                                    ? {
+                                                        ...segmento,
+                                                        data: {
+                                                          ...(segmento.data || {}),
+                                                          titulo: e.target.value,
+                                                        },
+                                                      }
+                                                    : segmento
+                                                )
+                                              )
+                                            }
+                                          />
+                                          <div className="vtur-quote-circuit-day-actions">
+                                            <TableActions
+                                              actions={[
+                                                {
+                                                  key: "up",
+                                                  label: "Subir dia",
+                                                  icon: "↑",
+                                                  variant: "ghost",
+                                                  onClick: () =>
+                                                    updateCircuitSegments(index, (segments) => {
+                                                      if (segIndex === 0) return segments;
+                                                      const next = [...segments];
+                                                      const [removed] = next.splice(segIndex, 1);
+                                                      next.splice(segIndex - 1, 0, removed);
+                                                      return next;
+                                                    }),
+                                                  disabled: segIndex === 0,
+                                                },
+                                                {
+                                                  key: "down",
+                                                  label: "Descer dia",
+                                                  icon: "↓",
+                                                  variant: "ghost",
+                                                  onClick: () =>
+                                                    updateCircuitSegments(index, (segments) => {
+                                                      if (segIndex >= segments.length - 1) return segments;
+                                                      const next = [...segments];
+                                                      const [removed] = next.splice(segIndex, 1);
+                                                      next.splice(segIndex + 1, 0, removed);
+                                                      return next;
+                                                    }),
+                                                  disabled: segIndex >= circuitDays.length - 1,
+                                                },
+                                                {
+                                                  key: "remove",
+                                                  label: "Remover dia",
+                                                  icon: "×",
+                                                  variant: "danger",
+                                                  onClick: () =>
+                                                    updateCircuitSegments(index, (segments) =>
+                                                      segments.filter((_, i) => i !== segIndex)
+                                                    ),
+                                                },
+                                              ]}
                                             />
-                                          </div>
-                                          <div className="form-group" style={{ flex: 1 }}>
-                                            <label className="form-label">Cidade / Titulo</label>
-                                            <input
-                                              className="form-input"
-                                              value={data.titulo || ""}
-                                              onChange={(e) =>
-                                                updateCircuitSegments(index, (segments) =>
-                                                  segments.map((segmento, i) =>
-                                                    i === segIndex
-                                                      ? {
-                                                          ...segmento,
-                                                          data: {
-                                                            ...(segmento.data || {}),
-                                                            titulo: e.target.value,
-                                                          },
-                                                        }
-                                                      : segmento
-                                                  )
-                                                )
-                                              }
-                                            />
-                                          </div>
-                                          <div
-                                            className="form-group"
-                                            style={{ alignSelf: "flex-end", display: "flex", gap: 6 }}
-                                          >
-                                            <button
-                                              type="button"
-                                              className="btn btn-light"
-                                              onClick={() =>
-                                                updateCircuitSegments(index, (segments) => {
-                                                  if (segIndex === 0) return segments;
-                                                  const next = [...segments];
-                                                  const [removed] = next.splice(segIndex, 1);
-                                                  next.splice(segIndex - 1, 0, removed);
-                                                  return next;
-                                                })
-                                              }
-                                              disabled={segIndex === 0}
-                                            >
-                                              ⬆️
-                                            </button>
-                                            <button
-                                              type="button"
-                                              className="btn btn-light"
-                                              onClick={() =>
-                                                updateCircuitSegments(index, (segments) => {
-                                                  if (segIndex >= segments.length - 1) return segments;
-                                                  const next = [...segments];
-                                                  const [removed] = next.splice(segIndex, 1);
-                                                  next.splice(segIndex + 1, 0, removed);
-                                                  return next;
-                                                })
-                                              }
-                                              disabled={segIndex >= circuitDays.length - 1}
-                                            >
-                                              ⬇️
-                                            </button>
-                                            <button
-                                              type="button"
-                                              className="btn btn-light"
-                                              onClick={() =>
-                                                updateCircuitSegments(index, (segments) =>
-                                                  segments.filter((_, i) => i !== segIndex)
-                                                )
-                                              }
-                                            >
-                                              Remover
-                                            </button>
                                           </div>
                                         </div>
-                                        <div className="form-group">
-                                          <label className="form-label">Descricao</label>
-                                          <textarea
-                                            className="form-input"
+
+                                        <div style={{ marginTop: 16 }}>
+                                          <AppField
+                                            as="textarea"
+                                            label="Descricao"
                                             rows={3}
                                             value={data.descricao || ""}
                                             onChange={(e) =>
@@ -1082,77 +1186,55 @@ export default function QuoteImportIsland() {
                                     );
                                   })}
                                 </div>
-                                <button
-                                  type="button"
-                                  className="btn btn-light"
-                                  style={{ marginTop: 8 }}
-                                  onClick={() =>
-                                    updateCircuitSegments(index, (segments) => [
-                                      ...segments,
-                                      {
-                                        segment_type: "circuit_day",
-                                        order_index: segments.length,
-                                        data: { dia: segments.length + 1, titulo: "", descricao: "" },
-                                      },
-                                    ])
-                                  }
-                                >
-                                  Adicionar dia
-                                </button>
                               </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-            {draft.items.map((item, index) => {
-              const rowKey = item.temp_id || `row-${index}`;
-              return (
-                <datalist key={rowKey} id={`quote-import-cidades-${rowKey}`}>
-                  {(cidadeSuggestions[rowKey] || []).map((cidade) => {
-                    const label = formatCidadeLabel(cidade);
-                    return <option key={cidade.id} value={label} />;
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
                   })}
-                </datalist>
-              );
-            })}
-            <datalist id={IMPORT_TIPO_DATALIST_ID}>
-              {tipoOptions.map((tipo) => (
-                <option key={tipo.id} value={tipo.label} />
-              ))}
-            </datalist>
-          </div>
-
-          <div style={{ marginTop: 16, display: "flex", gap: 12, alignItems: "center" }}>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleSave}
-              disabled={saving || !draft.items.length || !file}
-            >
-              {saving ? "Salvando..." : "Confirmar e salvar"}
-            </button>
-          </div>
-
-          {successId && (
-            <div style={{ marginTop: 12 }}>
-              Salvo com sucesso. <a href={`/orcamentos/${successId}`}>Abrir quote</a>
+                </tbody>
+              </table>
+              {draft.items.map((item, index) => {
+                const rowKey = item.temp_id || `row-${index}`;
+                return (
+                  <datalist key={rowKey} id={`quote-import-cidades-${rowKey}`}>
+                    {(cidadeSuggestions[rowKey] || []).map((cidade) => {
+                      const label = formatCidadeLabel(cidade);
+                      return <option key={cidade.id} value={label} />;
+                    })}
+                  </datalist>
+                );
+              })}
+              <datalist id={IMPORT_TIPO_DATALIST_ID}>
+                {tipoOptions.map((tipo) => (
+                  <option key={tipo.id} value={tipo.label} />
+                ))}
+              </datalist>
             </div>
-          )}
-        </div>
-      )}
 
-      {flightModal && (
-        <FlightDetailsModal
-          details={flightModal.details}
-          title={flightModal.title || "Detalhes do voo"}
-          onClose={() => setFlightModal(null)}
-        />
-      )}
-    </div>
+            <div className="vtur-form-actions">
+              <AppButton
+                type="button"
+                variant="primary"
+                onClick={handleSave}
+                disabled={saving || !draft.items.length || !file}
+                loading={saving}
+              >
+                {saving ? "Salvando..." : "Confirmar e salvar"}
+              </AppButton>
+            </div>
+          </AppCard>
+        )}
+
+        {flightModal && (
+          <FlightDetailsModal
+            details={flightModal.details}
+            title={flightModal.title || "Detalhes do voo"}
+            onClose={() => setFlightModal(null)}
+          />
+        )}
+      </div>
+    </AppPrimerProvider>
   );
 }

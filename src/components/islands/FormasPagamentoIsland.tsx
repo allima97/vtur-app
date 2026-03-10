@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import ConfirmDialog from "../ui/ConfirmDialog";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { formatNumberBR } from "../../lib/format";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
 type FormaPagamento = {
   id: string;
@@ -40,6 +45,7 @@ export default function FormasPagamentoIsland() {
   const [form, setForm] = useState(initialForm);
   const [salvando, setSalvando] = useState(false);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<FormaPagamento | null>(null);
   const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
   async function fetchFormas(noCache = false) {
@@ -153,101 +159,98 @@ export default function FormasPagamentoIsland() {
 
   if (!podeVer) {
     return (
-      <div className="card-base card-config">
-        <strong>Acesso negado ao módulo de Formas de Pagamento.</strong>
-      </div>
+      <AppPrimerProvider>
+        <AppCard tone="config">
+          <strong>Acesso negado ao módulo de Formas de Pagamento.</strong>
+        </AppCard>
+      </AppPrimerProvider>
     );
   }
 
   return (
-    <div className="page-content-wrap">
-      <div className="card-base mb-3">
-        <h3 style={{ marginTop: 0 }}>Cadastro</h3>
+    <AppPrimerProvider>
+      <div className="page-content-wrap">
+        <AppCard
+          title={editId ? "Editar forma de pagamento" : "Cadastro"}
+          subtitle="Estruture comissão, desconto e disponibilidade da forma de pagamento com o padrão visual novo do VTUR."
+          tone="config"
+        >
         <form onSubmit={salvar}>
-          <div className="form-row">
-            <div className="form-group" style={{ flex: 2, minWidth: 220 }}>
-              <label className="form-label">Nome *</label>
-              <input
-                className="form-input"
-                value={form.nome}
-                onChange={(e) => setForm((prev) => ({ ...prev, nome: e.target.value }))}
-                required
-              />
-            </div>
-            <div className="form-group" style={{ flex: 2, minWidth: 220 }}>
-              <label className="form-label">Descrição</label>
-              <input
-                className="form-input"
-                value={form.descricao}
-                onChange={(e) => setForm((prev) => ({ ...prev, descricao: e.target.value }))}
-              />
-            </div>
+          <div className="vtur-form-grid vtur-form-grid-2">
+            <AppField
+              label="Nome *"
+              value={form.nome}
+              onChange={(e) => setForm((prev) => ({ ...prev, nome: e.target.value }))}
+              required
+              validation={!form.nome.trim() && erro ? "Informe o nome da forma de pagamento." : undefined}
+            />
+            <AppField
+              label="Descricao"
+              value={form.descricao}
+              onChange={(e) => setForm((prev) => ({ ...prev, descricao: e.target.value }))}
+            />
           </div>
-          <div className="form-row">
-            <div className="form-group" style={{ minWidth: 180 }}>
-              <label className="form-label">Paga comissão</label>
-              <select
-                className="form-select"
-                value={form.paga_comissao ? "sim" : "nao"}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, paga_comissao: e.target.value === "sim" }))
-                }
-              >
-                <option value="sim">Sim</option>
-                <option value="nao">Não</option>
-              </select>
-            </div>
-            <div className="form-group" style={{ minWidth: 180 }}>
-              <label className="form-label">Permite desconto</label>
-              <select
-                className="form-select"
-                value={form.permite_desconto ? "sim" : "nao"}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, permite_desconto: e.target.value === "sim" }))
-                }
-              >
-                <option value="sim">Sim</option>
-                <option value="nao">Não</option>
-              </select>
-            </div>
-            <div className="form-group" style={{ minWidth: 180 }}>
-              <label className="form-label">Desconto padrão (%)</label>
-              <input
-                className="form-input"
-                inputMode="decimal"
-                placeholder="0"
-                value={form.desconto_padrao_pct}
-                onChange={(e) => setForm((prev) => ({ ...prev, desconto_padrao_pct: e.target.value }))}
-              />
-            </div>
-            <div className="form-group" style={{ minWidth: 160 }}>
-              <label className="form-label">Ativo</label>
-              <select
-                className="form-select"
-                value={form.ativo ? "sim" : "nao"}
-                onChange={(e) => setForm((prev) => ({ ...prev, ativo: e.target.value === "sim" }))}
-              >
-                <option value="sim">Sim</option>
-                <option value="nao">Não</option>
-              </select>
-            </div>
+          <div className="vtur-form-grid vtur-form-grid-4">
+            <AppField
+              as="select"
+              label="Paga comissao"
+              value={form.paga_comissao ? "sim" : "nao"}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, paga_comissao: e.target.value === "sim" }))
+              }
+              options={[
+                { value: "sim", label: "Sim" },
+                { value: "nao", label: "Nao" },
+              ]}
+            />
+            <AppField
+              as="select"
+              label="Permite desconto"
+              value={form.permite_desconto ? "sim" : "nao"}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, permite_desconto: e.target.value === "sim" }))
+              }
+              options={[
+                { value: "sim", label: "Sim" },
+                { value: "nao", label: "Nao" },
+              ]}
+            />
+            <AppField
+              label="Desconto padrao (%)"
+              inputMode="decimal"
+              placeholder="0"
+              value={form.desconto_padrao_pct}
+              onChange={(e) => setForm((prev) => ({ ...prev, desconto_padrao_pct: e.target.value }))}
+            />
+            <AppField
+              as="select"
+              label="Ativo"
+              value={form.ativo ? "sim" : "nao"}
+              onChange={(e) => setForm((prev) => ({ ...prev, ativo: e.target.value === "sim" }))}
+              options={[
+                { value: "sim", label: "Sim" },
+                { value: "nao", label: "Nao" },
+              ]}
+            />
           </div>
-          {erro && <div style={{ color: "#b91c1c", marginTop: 8 }}>{erro}</div>}
-          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-            <button className="btn btn-primary" type="submit" disabled={salvando}>
+          {erro && <div className="vtur-inline-feedback">{erro}</div>}
+          <div className="vtur-form-actions">
+            <AppButton variant="primary" type="submit" disabled={salvando} loading={salvando}>
               {salvando ? "Salvando..." : editId ? "Atualizar" : "Salvar"}
-            </button>
+            </AppButton>
             {editId && (
-              <button className="btn btn-light" type="button" onClick={resetForm}>
+              <AppButton variant="secondary" type="button" onClick={resetForm}>
                 Cancelar
-              </button>
+              </AppButton>
             )}
           </div>
         </form>
-      </div>
+        </AppCard>
 
-      <div className="card-base">
-        <h3 style={{ marginTop: 0 }}>Formas cadastradas</h3>
+        <AppCard
+          title="Formas cadastradas"
+          subtitle="Consulte, edite e revise rapidamente as configuracoes financeiras disponiveis para a franquia."
+        >
         {loading ? (
           <p>Carregando...</p>
         ) : formas.length === 0 ? (
@@ -278,12 +281,11 @@ export default function FormasPagamentoIsland() {
                     </td>
                     <td data-label="Ativo">{f.ativo ? "Sim" : "Não"}</td>
                     <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
+                      <div className="vtur-table-actions">
                         {(podeEditar || podeCriar) && (
-                          <button
+                          <AppButton
                             type="button"
-                            className="btn-icon"
-                            title="Editar"
+                            variant="ghost"
                             onClick={() => {
                               setEditId(f.id);
                               setForm({
@@ -296,18 +298,18 @@ export default function FormasPagamentoIsland() {
                               });
                             }}
                           >
-                            ✏️
-                          </button>
+                            Editar
+                          </AppButton>
                         )}
                         {podeExcluir && (
-                          <button
+                          <AppButton
                             type="button"
-                            className="btn-icon btn-danger"
+                            variant="danger"
                             disabled={excluindoId === f.id}
-                            onClick={() => excluir(f.id)}
+                            onClick={() => setDeleteTarget(f)}
                           >
-                            {excluindoId === f.id ? "…" : "🗑️"}
-                          </button>
+                            {excluindoId === f.id ? "Excluindo..." : "Excluir"}
+                          </AppButton>
                         )}
                       </div>
                     </td>
@@ -317,8 +319,30 @@ export default function FormasPagamentoIsland() {
             </table>
           </div>
         )}
+        </AppCard>
+        <ConfirmDialog
+          open={Boolean(deleteTarget)}
+          title="Excluir forma de pagamento"
+          message={
+            deleteTarget
+              ? `Voce esta prestes a excluir "${deleteTarget.nome}". Esta acao nao pode ser desfeita.`
+              : undefined
+          }
+          confirmLabel={excluindoId === deleteTarget?.id ? "Excluindo..." : "Excluir"}
+          cancelLabel="Cancelar"
+          confirmVariant="danger"
+          confirmDisabled={Boolean(excluindoId)}
+          onCancel={() => {
+            if (!excluindoId) setDeleteTarget(null);
+          }}
+          onConfirm={async () => {
+            if (!deleteTarget) return;
+            await excluir(deleteTarget.id);
+            setDeleteTarget(null);
+          }}
+        />
+        <ToastStack toasts={toasts} onDismiss={dismissToast} />
       </div>
-      <ToastStack toasts={toasts} onDismiss={dismissToast} />
-    </div>
+    </AppPrimerProvider>
   );
 }

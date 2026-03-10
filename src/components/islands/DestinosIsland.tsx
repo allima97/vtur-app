@@ -10,7 +10,13 @@ import DataTable from "../ui/DataTable";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import TableActions from "../ui/TableActions";
 import AlertMessage from "../ui/AlertMessage";
+import EmptyState from "../ui/EmptyState";
 import { ToastStack, useToastQueue } from "../ui/Toast";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type Pais = {
   id: string;
@@ -189,6 +195,9 @@ export default function DestinosIsland() {
   const destinosExibidos = useMemo(() => {
     return busca.trim() ? destinosFiltrados : destinosFiltrados.slice(0, 5);
   }, [destinosFiltrados, busca]);
+  const resumoLista = busca.trim()
+    ? `${destinosFiltrados.length} destino(s) encontrados para a busca atual.`
+    : `${destinos.length} destino(s) cadastrados. Exibindo ${destinosExibidos.length} item(ns) na listagem inicial.`;
 
   function handleChange<K extends keyof FormState>(campo: K, valor: FormState[K]) {
     setForm((prev) => ({
@@ -306,281 +315,267 @@ export default function DestinosIsland() {
   if (loadingPerm) {
     return <LoadingUsuarioContext />;
   }
-  if (!podeVer) return <div>Voce nao possui acesso ao modulo de Cadastros.</div>;
+  if (!podeVer) {
+    return (
+      <AppPrimerProvider>
+        <AppCard tone="config">
+          <strong>Voce nao possui acesso ao modulo de Cadastros.</strong>
+        </AppCard>
+      </AppPrimerProvider>
+    );
+  }
 
   return (
-    <div className="destinos-page">
-      {/* Formulario */}
-      <div className="card-base card-blue form-card mb-3">
-        <form onSubmit={salvar}>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Nome do destino *</label>
-              <input
-                className="form-input"
+    <AppPrimerProvider>
+      <div className="destinos-page">
+        <AppCard
+          className="mb-3"
+          tone="info"
+          title={editandoId ? "Editar destino" : "Novo destino"}
+          subtitle="Centralize cidade, pais, atributos comerciais e notas operacionais do destino em um unico cadastro."
+        >
+          <form onSubmit={salvar}>
+            <div className="vtur-form-grid vtur-form-grid-3">
+              <AppField
+                label="Nome do destino *"
                 value={form.nome}
                 onChange={(e) => handleChange("nome", e.target.value)}
                 onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
                 placeholder="Ex: Orlando, Paris, Gramado..."
                 disabled={modoSomenteLeitura}
               />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Pais *</label>
-              <select
-                className="form-select"
+              <AppField
+                as="select"
+                label="Pais *"
                 value={form.pais_id}
                 onChange={(e) => handleChange("pais_id", e.target.value)}
                 disabled={modoSomenteLeitura}
-              >
-                <option value="">Selecione um pais</option>
-                {paises.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Cidade *</label>
-              <select
-                className="form-select"
+                options={[
+                  { value: "", label: "Selecione um pais" },
+                  ...paises.map((p) => ({ value: p.id, label: p.nome })),
+                ]}
+              />
+              <AppField
+                as="select"
+                label="Cidade *"
                 value={form.cidade_id}
                 onChange={(e) => handleChange("cidade_id", e.target.value)}
                 disabled={modoSomenteLeitura}
-              >
-                <option value="">Selecione uma cidade</option>
-                {cidadesFiltradas.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: "", label: form.pais_id ? "Selecione uma cidade" : "Selecione um pais primeiro" },
+                  ...cidadesFiltradas.map((c) => ({ value: c.id, label: c.nome })),
+                ]}
+              />
             </div>
-          </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Tipo</label>
-              <input
-                className="form-input"
+            <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 16 }}>
+              <AppField
+                label="Tipo"
                 value={form.tipo}
                 onChange={(e) => handleChange("tipo", e.target.value)}
                 placeholder="Ex: Cidade, Praia, Parque, Serra..."
                 disabled={modoSomenteLeitura}
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Atracao principal</label>
-              <input
-                className="form-input"
+              <AppField
+                label="Atracao principal"
                 value={form.atracao_principal}
                 onChange={(e) => handleChange("atracao_principal", e.target.value)}
                 placeholder="Ex: Disney, Torre Eiffel, Centro Historico..."
                 disabled={modoSomenteLeitura}
               />
             </div>
-          </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Melhor epoca</label>
-              <input
-                className="form-input"
+            <div className="vtur-form-grid vtur-form-grid-3" style={{ marginTop: 16 }}>
+              <AppField
+                label="Melhor epoca"
                 value={form.melhor_epoca}
                 onChange={(e) => handleChange("melhor_epoca", e.target.value)}
                 placeholder="Ex: Dezembro a Marco"
                 disabled={modoSomenteLeitura}
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Duracao sugerida</label>
-              <input
-                className="form-input"
+              <AppField
+                label="Duracao sugerida"
                 value={form.duracao_sugerida}
                 onChange={(e) => handleChange("duracao_sugerida", e.target.value)}
                 placeholder="Ex: 7 dias"
                 disabled={modoSomenteLeitura}
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Nivel de preco</label>
-              <input
-                className="form-input"
+              <AppField
+                label="Nivel de preco"
                 value={form.nivel_preco}
                 onChange={(e) => handleChange("nivel_preco", e.target.value)}
                 placeholder="Ex: Economico, Intermediario, Premium"
                 disabled={modoSomenteLeitura}
               />
             </div>
-          </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Imagem (URL)</label>
-              <input
-                className="form-input"
+            <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 16 }}>
+              <AppField
+                label="Imagem (URL)"
                 value={form.imagem_url}
                 onChange={(e) => handleChange("imagem_url", e.target.value)}
                 placeholder="URL de uma imagem do destino"
                 disabled={modoSomenteLeitura}
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Ativo</label>
-              <select
-                className="form-select"
+              <AppField
+                as="select"
+                label="Ativo"
                 value={form.ativo ? "true" : "false"}
                 onChange={(e) => handleChange("ativo", e.target.value === "true")}
                 disabled={modoSomenteLeitura}
-              >
-                <option value="true">Sim</option>
-                <option value="false">Nao</option>
-              </select>
+                options={[
+                  { value: "true", label: "Sim" },
+                  { value: "false", label: "Nao" },
+                ]}
+              />
             </div>
-          </div>
 
-          <div className="form-group">
-            <label className="form-label">Informacoes importantes</label>
-            <textarea
-              className="form-input"
-              rows={3}
-              value={form.informacoes_importantes}
-              onChange={(e) => handleChange("informacoes_importantes", e.target.value)}
-              placeholder="Observacoes gerais, dicas, documentacao necessaria, etc."
-              disabled={modoSomenteLeitura}
-            />
-          </div>
+            <div style={{ marginTop: 16 }}>
+              <AppField
+                as="textarea"
+                label="Informacoes importantes"
+                rows={4}
+                value={form.informacoes_importantes}
+                onChange={(e) => handleChange("informacoes_importantes", e.target.value)}
+                placeholder="Observacoes gerais, dicas, documentacao necessaria, etc."
+                disabled={modoSomenteLeitura}
+              />
+            </div>
 
-          <div className="mt-2">
-            {!modoSomenteLeitura && (
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={salvando}
-              >
-                {salvando
-                  ? "Salvando..."
-                  : editandoId
-                  ? "Salvar alteracoes"
-                  : "Adicionar destino"}
-              </button>
-            )}
+            <div className="vtur-form-actions">
+              {!modoSomenteLeitura && (
+                <AppButton type="submit" variant="primary" disabled={salvando} loading={salvando}>
+                  {salvando
+                    ? "Salvando..."
+                    : editandoId
+                      ? "Salvar alteracoes"
+                      : "Adicionar destino"}
+                </AppButton>
+              )}
+              {editandoId && !modoSomenteLeitura && (
+                <AppButton type="button" variant="secondary" onClick={iniciarNovo}>
+                  Cancelar edicao
+                </AppButton>
+              )}
+            </div>
+          </form>
+        </AppCard>
 
-            {editandoId && !modoSomenteLeitura && (
-              <button
-                type="button"
-                className="btn btn-light"
-                style={{ marginLeft: 8 }}
-                onClick={iniciarNovo}
-              >
-                Cancelar edicao
-              </button>
-            )}
-          </div>
-        </form>
-      </div>
-
-      {/* Filtro */}
-      <div className="card-base mb-3">
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Buscar destino</label>
-            <input
-              className="form-input"
+        <AppToolbar
+          sticky
+          tone="config"
+          className="mb-3 list-toolbar-sticky"
+          title="Destinos"
+          subtitle={resumoLista}
+        >
+          <div className="vtur-form-grid vtur-form-grid-2">
+            <AppField
+              label="Buscar destino"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Busque por nome, cidade ou pais..."
+              caption="Use a busca para localizar rapidamente destinos por geografia ou categoria."
             />
           </div>
-        </div>
-      </div>
+        </AppToolbar>
 
-      {erro && (
-        <div className="mb-3">
-          <AlertMessage variant="error">{erro}</AlertMessage>
-        </div>
-      )}
+        {erro && (
+          <AlertMessage variant="error" className="mb-3">
+            {erro}
+          </AlertMessage>
+        )}
 
-      {/* Tabela */}
-      <DataTable
-        className="table-default table-header-blue table-mobile-cards min-w-[960px]"
-        containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
-        headers={
-          <tr>
-            <th>Destino</th>
-            <th>Cidade</th>
-            <th>Pais</th>
-            <th>Tipo</th>
-            <th>Nivel de preco</th>
-            <th>Ativo</th>
-            <th>Criado em</th>
-            <th className="th-actions">Acoes</th>
-          </tr>
-        }
-        loading={loading}
-        loadingMessage="Carregando destinos..."
-        empty={!loading && destinosExibidos.length === 0}
-        emptyMessage="Nenhum destino encontrado."
-        colSpan={8}
-      >
-        {destinosExibidos.map((d) => (
-          <tr key={d.id}>
-            <td data-label="Destino">{d.nome}</td>
-            <td data-label="Cidade">{(d as any).cidade_nome || "-"}</td>
-            <td data-label="Pais">{(d as any).pais_nome || "-"}</td>
-            <td data-label="Tipo">{d.tipo || "-"}</td>
-            <td data-label="Nivel de preco">{d.nivel_preco || "-"}</td>
-            <td data-label="Ativo">{d.ativo ? "Sim" : "Nao"}</td>
-            <td data-label="Criado em">
-              {d.created_at ? formatDateBR(d.created_at) : "-"}
-            </td>
-            <td className="th-actions" data-label="Acoes">
-              <TableActions
-                show={!modoSomenteLeitura}
-                actions={[
-                  ...(!modoSomenteLeitura
-                    ? [
-                        {
-                          key: "edit",
-                          label: "Editar",
-                          onClick: () => iniciarEdicao(d),
-                          icon: "??",
-                        },
-                      ]
-                    : []),
-                  ...(podeExcluir
-                    ? [
-                        {
-                          key: "delete",
-                          label: "Excluir",
-                          onClick: () => solicitarExclusao(d),
-                          icon: excluindoId === d.id ? "..." : "???",
-                          variant: "danger" as const,
-                          disabled: excluindoId === d.id,
-                        },
-                      ]
-                    : []),
-                ]}
+        <AppCard
+          tone="config"
+          title="Base de destinos"
+          subtitle="Visualize o portifolio geográfico com cidade, pais, faixa comercial e status operacional."
+        >
+          <DataTable
+            className="table-mobile-cards min-w-[960px]"
+            containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+            headers={
+              <tr>
+                <th>Destino</th>
+                <th>Cidade</th>
+                <th>Pais</th>
+                <th>Tipo</th>
+                <th>Nivel de preco</th>
+                <th>Ativo</th>
+                <th>Criado em</th>
+                <th className="th-actions">Acoes</th>
+              </tr>
+            }
+            loading={loading}
+            loadingMessage="Carregando destinos..."
+            empty={!loading && destinosExibidos.length === 0}
+            emptyMessage={
+              <EmptyState
+                title="Nenhum destino encontrado"
+                description={
+                  busca.trim()
+                    ? "Ajuste o termo pesquisado para localizar destinos ja cadastrados."
+                    : "Cadastre o primeiro destino para estruturar consultas, produtos e vendas com geografia consistente."
+                }
               />
-            </td>
-          </tr>
-        ))}
-      </DataTable>
+            }
+            colSpan={8}
+          >
+            {destinosExibidos.map((d) => (
+              <tr key={d.id}>
+                <td data-label="Destino">{d.nome}</td>
+                <td data-label="Cidade">{(d as any).cidade_nome || "-"}</td>
+                <td data-label="Pais">{(d as any).pais_nome || "-"}</td>
+                <td data-label="Tipo">{d.tipo || "-"}</td>
+                <td data-label="Nivel de preco">{d.nivel_preco || "-"}</td>
+                <td data-label="Ativo">{d.ativo ? "Sim" : "Nao"}</td>
+                <td data-label="Criado em">
+                  {d.created_at ? formatDateBR(d.created_at) : "-"}
+                </td>
+                <td className="th-actions" data-label="Acoes">
+                  <TableActions
+                    show={!modoSomenteLeitura || podeExcluir}
+                    actions={[
+                      ...(!modoSomenteLeitura
+                        ? [
+                            {
+                              key: "edit",
+                              label: "Editar",
+                              onClick: () => iniciarEdicao(d),
+                              variant: "ghost" as const,
+                            },
+                          ]
+                        : []),
+                      ...(podeExcluir
+                        ? [
+                            {
+                              key: "delete",
+                              label: excluindoId === d.id ? "Excluindo..." : "Excluir",
+                              onClick: () => solicitarExclusao(d),
+                              variant: "danger" as const,
+                              disabled: excluindoId === d.id,
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
+                </td>
+              </tr>
+            ))}
+          </DataTable>
+        </AppCard>
 
-      <ConfirmDialog
-        open={Boolean(destinoParaExcluir)}
-        title="Excluir destino"
-        message={`Tem certeza que deseja excluir ${destinoParaExcluir?.nome || "este destino"}?`}
-        confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
-        confirmVariant="danger"
-        confirmDisabled={Boolean(excluindoId)}
-        onCancel={() => setDestinoParaExcluir(null)}
-        onConfirm={confirmarExclusao}
-      />
-      <ToastStack toasts={toasts} onDismiss={dismissToast} />
-    </div>
+        <ConfirmDialog
+          open={Boolean(destinoParaExcluir)}
+          title="Excluir destino"
+          message={`Tem certeza que deseja excluir ${destinoParaExcluir?.nome || "este destino"}?`}
+          confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
+          confirmVariant="danger"
+          confirmDisabled={Boolean(excluindoId)}
+          onCancel={() => setDestinoParaExcluir(null)}
+          onConfirm={confirmarExclusao}
+        />
+        <ToastStack toasts={toasts} onDismiss={dismissToast} />
+      </div>
+    </AppPrimerProvider>
   );
 }

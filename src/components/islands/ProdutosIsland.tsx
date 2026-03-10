@@ -9,8 +9,14 @@ import DataTable from "../ui/DataTable";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import TableActions from "../ui/TableActions";
 import AlertMessage from "../ui/AlertMessage";
+import EmptyState from "../ui/EmptyState";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import PaginationControls from "../ui/PaginationControls";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 function dedupeSugestoes(valores: string[]) {
   const vistos = new Set<string>();
@@ -292,6 +298,7 @@ export default function ProdutosIsland() {
   }
 
   useEffect(() => {
+    if (loadingPerm || !podeVer) return;
     const buscaAtiva = busca.trim();
     if (buscaAtiva) {
       if (!carregouTodos) {
@@ -300,7 +307,7 @@ export default function ProdutosIsland() {
       return;
     }
     carregarDados(false, page);
-  }, [busca, page, pageSize]);
+  }, [loadingPerm, podeVer, busca, page, pageSize]);
 
   useEffect(() => {
     setPage(1);
@@ -612,6 +619,7 @@ export default function ProdutosIsland() {
     }
 
     try {
+      const estavaEditando = Boolean(editandoId);
       setSalvando(true);
       setErro(null);
 
@@ -667,6 +675,7 @@ export default function ProdutosIsland() {
       iniciarNovo();
       setMostrarFormulario(false);
       await carregarDados(carregouTodos, page);
+      showToast(estavaEditando ? "Produto atualizado." : "Produto cadastrado.", "success");
     } catch (e: any) {
       console.error(e);
       const msg = e?.message || e?.error?.message || "";
@@ -692,6 +701,7 @@ export default function ProdutosIsland() {
       if (result.error) throw result.error;
 
       await carregarDados(carregouTodos, page);
+      showToast("Produto excluido.", "success");
     } catch (e) {
       console.error(e);
       setErro("Nao foi possivel excluir o produto. Verifique vinculos com vendas/orcamentos.");
@@ -714,483 +724,480 @@ export default function ProdutosIsland() {
     setProdutoParaExcluir(null);
   }
 
+  const resumoLista = busca.trim()
+    ? `${produtosFiltrados.length} produto(s) encontrados para a busca atual.`
+    : usaPaginacaoServidor
+      ? `${totalProdutosDb} produto(s) cadastrados. Exibindo ${produtosExibidos.length} item(ns) na pagina ${paginaAtual}.`
+      : `${produtosFiltrados.length} produto(s) cadastrados.`;
+
   if (loadingPerm) return <LoadingUsuarioContext />;
-  if (!podeVer) return <div>Voce nao possui acesso ao modulo de Cadastros.</div>;
+  if (!podeVer) {
+    return (
+      <AppPrimerProvider>
+        <AppCard tone="config">
+          <strong>Voce nao possui acesso ao modulo de Cadastros.</strong>
+        </AppCard>
+      </AppPrimerProvider>
+    );
+  }
 
   return (
-    <div className="destinos-page produtos-page">
-      {!mostrarFormulario && (
-        <div className="card-base mb-3 list-toolbar-sticky">
-          <div className="mobile-stack-buttons gap-3 items-end">
-            <div className="form-group flex-1 min-w-[220px]">
-              <label className="form-label">Buscar produto</label>
-              <input
-                className="form-input"
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder="Busque por nome, tipo, destino, cidade, estado/província ou país"
-              />
-            </div>
-            {!modoSomenteLeitura && (
-              <div className="form-group" style={{ alignItems: "flex-end" }}>
-                <button
+    <AppPrimerProvider>
+      <div className="destinos-page produtos-page">
+        {!mostrarFormulario && (
+          <AppToolbar
+            sticky
+            tone="config"
+            className="mb-3 list-toolbar-sticky"
+            title="Produtos"
+            subtitle={resumoLista}
+            actions={
+              !modoSomenteLeitura ? (
+                <AppButton
                   type="button"
-                  className="btn btn-primary w-full sm:w-auto"
+                  variant="primary"
                   onClick={abrirFormularioProduto}
                   disabled={mostrarFormulario}
                 >
                   Adicionar produto
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {mostrarFormulario && formLayout === "selection" && (
-        <div className="card-base card-blue mb-3">
-          <div className="form-row mobile-stack">
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">Todas as cidades</label>
-              <div className="mobile-stack-buttons">
-                <button type="button" className="btn btn-light" onClick={() => selecionarAbrangencia(false)}>
-                  Nao
-                </button>
-                <button type="button" className="btn btn-primary" onClick={() => selecionarAbrangencia(true)}>
-                  Sim
-                </button>
-              </div>
-              <small style={{ color: "#64748b" }}>
-                Escolha "Sim" para cadastrar um produto global; "Nao" abre o formulario completo.
-              </small>
+                </AppButton>
+              ) : null
+            }
+          >
+            <div className="vtur-toolbar-grid">
+              <AppField
+                label="Buscar produto"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Busque por nome, tipo, destino, cidade, estado/provincia ou pais"
+              />
             </div>
-          </div>
-          <div className="mt-2 mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-            <button type="button" className="btn btn-light" onClick={fecharFormularioProduto}>
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
+          </AppToolbar>
+        )}
 
-      {mostrarFormulario && formLayout !== "selection" && (
+        {mostrarFormulario && formLayout === "selection" && (
+          <AppCard
+            className="mb-3"
+            tone="info"
+            title="Abrangencia do produto"
+            subtitle="Escolha se o produto sera cadastrado para uma cidade especifica ou se vale para qualquer cidade."
+          >
+            <div className="vtur-choice-grid">
+              <AppButton type="button" variant="secondary" className="vtur-choice-button" onClick={() => selecionarAbrangencia(false)}>
+                <span className="vtur-choice-button-content">
+                  <span className="vtur-choice-button-title">Produto por cidade</span>
+                  <span className="vtur-choice-button-caption">
+                    Abre o formulario completo com cidade vinculada.
+                  </span>
+                </span>
+              </AppButton>
+              <AppButton type="button" variant="primary" className="vtur-choice-button" onClick={() => selecionarAbrangencia(true)}>
+                <span className="vtur-choice-button-content">
+                  <span className="vtur-choice-button-title">Produto global</span>
+                  <span className="vtur-choice-button-caption">
+                    Disponivel para qualquer cidade e com destino padrao Global.
+                  </span>
+                </span>
+              </AppButton>
+            </div>
 
-        <div className="card-base card-blue mb-3">
+            <div className="vtur-form-actions mobile-stack-buttons">
+              <AppButton type="button" variant="secondary" onClick={fecharFormularioProduto}>
+                Cancelar
+              </AppButton>
+            </div>
+          </AppCard>
+        )}
 
-          <form onSubmit={salvar}>
-
-            <div className="flex flex-col md:flex-row md:flex-wrap gap-3" style={{ marginTop: 12 }}>
-              <div className="form-group" style={{ flex: "0 1 220px", minWidth: 180 }}>
-                <label className="form-label">Tipo *</label>
-                <select
-                  className="form-select"
+        {mostrarFormulario && formLayout !== "selection" && (
+          <AppCard
+            className="mb-3"
+            tone="info"
+            title={editandoId ? "Editar produto" : "Novo produto"}
+            subtitle="Centralize dados comerciais, destino, cidade, fornecedor e atributos do CRM em um unico cadastro."
+          >
+            <form onSubmit={salvar}>
+              <div className="vtur-form-grid vtur-form-grid-3">
+                <AppField
+                  as="select"
+                  label="Tipo *"
                   value={form.tipo_produto}
                   onChange={(e) => handleChange("tipo_produto", e.target.value)}
                   disabled={modoSomenteLeitura}
-                >
-                  <option value="">Selecione o tipo</option>
-                  {tipos.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {tipoLabel(t) || "(sem nome)"}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {!isGlobalMode && (
-                <div className="form-group" style={{ flex: "1 1 260px", minWidth: 220 }}>
-                  <label className="form-label">Cidade *</label>
-                  <input
-                    className="form-input"
-                    placeholder="Digite o nome da cidade"
-                    value={cidadeBusca}
-                    onChange={(e) => handleCidadeBusca(e.target.value)}
-                    onFocus={() => setMostrarSugestoes(true)}
-                    onBlur={() => setTimeout(() => setMostrarSugestoes(false), 150)}
-                    disabled={modoSomenteLeitura || form.todas_as_cidades}
-                    style={{ marginBottom: 6 }}
-                    title="Cidade selecionada pode ajudar a preencher o destino automaticamente."
-                  />
-                  {buscandoCidade && <div style={{ fontSize: 12, color: "#6b7280" }}>Buscando...</div>}
-                  {erroCidadeBusca && !buscandoCidade && (
-                    <div style={{ fontSize: 12, color: "#dc2626" }}>{erroCidadeBusca}</div>
-                  )}
-                  {mostrarSugestoes && (
-                    <div
-                      className="card-base"
-                      style={{
-                        marginTop: 4,
-                        maxHeight: 180,
-                        overflowY: "auto",
-                        padding: 6,
-                        border: "1px solid #e5e7eb",
-                      }}
-                    >
-                      {resultadosCidade.length === 0 && !buscandoCidade && (
-                        <div style={{ padding: "4px 6px", color: "#6b7280" }}>Nenhuma cidade encontrada.</div>
-                      )}
-                      {resultadosCidade.map((c) => {
-                        const label = c.subdivisao_nome ? `${c.nome} (${c.subdivisao_nome})` : c.nome;
-                        return (
-                          <button
-                            key={c.id}
-                            type="button"
-                            className="btn btn-light"
-                            style={{
-                              width: "100%",
-                              justifyContent: "flex-start",
-                              marginBottom: 4,
-                              background: form.cidade_id === c.id ? "#e0f2fe" : "#fff",
-                              borderColor: form.cidade_id === c.id ? "#38bdf8" : "#e5e7eb",
-                            }}
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              handleChange("cidade_id", c.id);
-                              setCidadeBusca(label);
-                              setMostrarSugestoes(false);
-                              setResultadosCidade([]);
-                            }}
-                          >
-                            {label}
-                            {c.pais_nome ? <span style={{ color: "#6b7280", marginLeft: 6 }}>- {c.pais_nome}</span> : null}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-              </div>
-              )}
-              <div className="form-group" style={{ flex: "1 1 320px", minWidth: 260 }}>
-                <label className="form-label">Nome do produto *</label>
-                <input
-                  className="form-input"
+                  validation={!form.tipo_produto && erro ? "Tipo de produto e obrigatorio." : undefined}
+                  options={[
+                    { value: "", label: "Selecione o tipo" },
+                    ...tipos.map((tipo) => ({
+                      value: tipo.id,
+                      label: tipoLabel(tipo) || "(sem nome)",
+                    })),
+                  ]}
+                />
+
+                {!isGlobalMode && (
+                  <div className="vtur-city-picker">
+                    <AppField
+                      label="Cidade *"
+                      value={cidadeBusca}
+                      onChange={(e) => handleCidadeBusca(e.target.value)}
+                      onFocus={() => setMostrarSugestoes(true)}
+                      onBlur={() => setTimeout(() => setMostrarSugestoes(false), 150)}
+                      disabled={modoSomenteLeitura || form.todas_as_cidades}
+                      placeholder="Digite o nome da cidade"
+                      title="Cidade selecionada pode ajudar a preencher o destino automaticamente."
+                      validation={!form.todas_as_cidades && !form.cidade_id && erro ? "Cidade e obrigatoria." : undefined}
+                    />
+
+                    {buscandoCidade && <div className="vtur-city-helper">Buscando...</div>}
+                    {erroCidadeBusca && !buscandoCidade && <div className="vtur-city-helper error">{erroCidadeBusca}</div>}
+
+                    {mostrarSugestoes && (
+                      <div className="vtur-city-dropdown">
+                        {resultadosCidade.length === 0 && !buscandoCidade && (
+                          <div className="vtur-city-helper">Nenhuma cidade encontrada.</div>
+                        )}
+                        {resultadosCidade.map((cidade) => {
+                          const label = cidade.subdivisao_nome ? `${cidade.nome} (${cidade.subdivisao_nome})` : cidade.nome;
+                          return (
+                            <AppButton
+                              key={cidade.id}
+                              type="button"
+                              variant={form.cidade_id === cidade.id ? "primary" : "secondary"}
+                              className="vtur-city-option"
+                              onMouseDown={(event) => {
+                                event.preventDefault();
+                                handleChange("cidade_id", cidade.id);
+                                setCidadeBusca(label);
+                                setMostrarSugestoes(false);
+                                setResultadosCidade([]);
+                              }}
+                            >
+                              <span className="vtur-choice-button-content">
+                                <span className="vtur-choice-button-title">{label}</span>
+                                <span className="vtur-choice-button-caption">
+                                  {cidade.pais_nome || "Cidade cadastrada"}
+                                </span>
+                              </span>
+                            </AppButton>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <AppField
+                  label="Nome do produto *"
                   value={form.nome}
                   onChange={(e) => handleChange("nome", e.target.value)}
                   onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
-                  placeholder="Ex: Passeio em Gramado, Pacote Paris..."
+                  placeholder="Ex: Passeio em Gramado, Pacote Paris"
                   disabled={modoSomenteLeitura}
+                  validation={!form.nome.trim() && erro ? "Nome e obrigatorio." : undefined}
                 />
+
+                <div>
+                  <AppField
+                    label="Fornecedor (opcional)"
+                    list="fornecedores-list"
+                    placeholder="Escolha um fornecedor"
+                    value={form.fornecedor_label}
+                    onChange={(e) => handleFornecedorInput(e.target.value)}
+                    disabled={modoSomenteLeitura}
+                  />
+                  <datalist id="fornecedores-list">
+                    {fornecedoresLista.map((fornecedor) => (
+                      <option key={fornecedor.id} value={formatFornecedorLabel(fornecedor)} />
+                    ))}
+                  </datalist>
+                </div>
+
+                <div>
+                  <AppField
+                    label="Destino *"
+                    list="destinos-list"
+                    value={form.destino}
+                    onChange={(e) => handleChange("destino", e.target.value)}
+                    onBlur={(e) => handleChange("destino", titleCaseWithExceptions(e.target.value))}
+                    placeholder={isGlobalMode ? "Global" : "Ex: Disney, Porto de Galinhas"}
+                    disabled={modoSomenteLeitura || isGlobalMode}
+                    title="Cidade escolhida sera aplicada quando o destino estiver vazio."
+                    validation={!form.destino.trim() && erro ? "Destino e obrigatorio." : undefined}
+                  />
+                  <datalist id="destinos-list">
+                    {destinosSugestoes.map((nome) => (
+                      <option key={nome} value={nome} />
+                    ))}
+                  </datalist>
+                </div>
               </div>
-              <div className="form-group" style={{ flex: "1 1 240px", minWidth: 220 }}>
-                <label className="form-label">Fornecedor (opcional)</label>
-                <input
-                  className="form-input"
-                  list="fornecedores-list"
-                  placeholder="Escolha um fornecedor"
-                  value={form.fornecedor_label}
-                  onChange={(e) => handleFornecedorInput(e.target.value)}
-                  disabled={modoSomenteLeitura}
-                />
-                <datalist id="fornecedores-list">
-                  {fornecedoresLista.map((fornecedor) => (
-                    <option key={fornecedor.id} value={formatFornecedorLabel(fornecedor)} />
-                  ))}
-                </datalist>
-              </div>
-              <div className="form-group" style={{ flex: "1 1 320px", minWidth: 260 }}>
-                <label className="form-label">Destino *</label>
-                <input
-                  className="form-input"
-                  list="destinos-list"
-                  value={form.destino}
-                  onChange={(e) => handleChange("destino", e.target.value)}
-                  onBlur={(e) => handleChange("destino", titleCaseWithExceptions(e.target.value))}
-                  placeholder={isGlobalMode ? "Global" : "Ex: Disney, Porto de Galinhas"}
-                  disabled={modoSomenteLeitura || isGlobalMode}
-                  title="Cidade escolhida será aplicada quando o destino estiver vazio."
-                />
-                <datalist id="destinos-list">
-                  {destinosSugestoes.map((nome) => (
-                    <option key={nome} value={nome} />
-                  ))}
-                </datalist>
-              </div>
-            </div>
-            {!isGlobalMode && form.todas_as_cidades && (
-              <div className="flex flex-col md:flex-row md:flex-wrap gap-3" style={{ marginTop: 12 }}>
-                <div className="form-group" style={{ width: 220 }}>
-                  <label className="form-label">Todas as cidades</label>
-                  <select
-                    className="form-select"
+
+              {!isGlobalMode && form.todas_as_cidades && (
+                <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 12 }}>
+                  <AppField
+                    as="select"
+                    label="Todas as cidades"
                     value={form.todas_as_cidades ? "true" : "false"}
                     onChange={(e) => handleToggleTodasAsCidades(e.target.value === "true")}
                     disabled={modoSomenteLeitura}
-                  >
-                    <option value="false">Nao</option>
-                    <option value="true">Sim</option>
-                  </select>
-                  <small style={{ color: "#64748b" }}>
-                    Produtos globais ficam disponiveis para qualquer cidade e nao salvam cidade especifica.
-                  </small>
-                </div>
-              </div>
-            )}
-            {isHospedagem && (
-              <div className="flex flex-col md:flex-row md:flex-wrap gap-3" style={{ marginTop: 12 }}>
-                <div className="form-group">
-                  <label className="form-label">Atracao principal</label>
-                  <input
-
-                    className="form-input"
-
-                    list="atracoes-list"
-                    value={form.atracao_principal}
-
-                    onChange={(e) => handleChange("atracao_principal", e.target.value)}
-
-                    placeholder="Ex: Disney, Torre Eiffel..."
-
-                    disabled={modoSomenteLeitura}
-
+                    caption="Produtos globais ficam disponiveis para qualquer cidade e nao salvam cidade especifica."
+                    options={[
+                      { value: "false", label: "Nao" },
+                      { value: "true", label: "Sim" },
+                    ]}
                   />
-                  <datalist id="atracoes-list">
-                    {atracoesSugestoes.map((nome) => (
-                      <option key={nome} value={nome} />
-                    ))}
-                  </datalist>
-
                 </div>
+              )}
 
-                <div className="form-group">
+              {isHospedagem && (
+                <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 12 }}>
+                  <div>
+                    <AppField
+                      label="Atracao principal"
+                      list="atracoes-list"
+                      value={form.atracao_principal}
+                      onChange={(e) => handleChange("atracao_principal", e.target.value)}
+                      placeholder="Ex: Disney, Torre Eiffel"
+                      disabled={modoSomenteLeitura}
+                    />
+                    <datalist id="atracoes-list">
+                      {atracoesSugestoes.map((nome) => (
+                        <option key={nome} value={nome} />
+                      ))}
+                    </datalist>
+                  </div>
 
-                  <label className="form-label">Melhor epoca</label>
-
-                  <input
-
-                    className="form-input"
-
-                    list="melhor-epoca-list"
-                    value={form.melhor_epoca}
-
-                    onChange={(e) => handleChange("melhor_epoca", e.target.value)}
-
-                    placeholder="Ex: Dezembro a Marco"
-
-                    disabled={modoSomenteLeitura}
-
-                  />
-                  <datalist id="melhor-epoca-list">
-                    {melhoresEpocasSugestoes.map((nome) => (
-                      <option key={nome} value={nome} />
-                    ))}
-                  </datalist>
-
+                  <div>
+                    <AppField
+                      label="Melhor epoca"
+                      list="melhor-epoca-list"
+                      value={form.melhor_epoca}
+                      onChange={(e) => handleChange("melhor_epoca", e.target.value)}
+                      placeholder="Ex: Dezembro a Marco"
+                      disabled={modoSomenteLeitura}
+                    />
+                    <datalist id="melhor-epoca-list">
+                      {melhoresEpocasSugestoes.map((nome) => (
+                        <option key={nome} value={nome} />
+                      ))}
+                    </datalist>
+                  </div>
                 </div>
+              )}
 
-              </div>
-
-            )}
-
-            {isHospedagem && (
-              <div className="flex flex-col md:flex-row md:flex-wrap gap-3" style={{ marginTop: 12 }}>
-                <div className="form-group">
-                  <label className="form-label">Duracao sugerida</label>
-                  <select
-                    className="form-select"
+              {isHospedagem && (
+                <div className="vtur-form-grid vtur-form-grid-3" style={{ marginTop: 12 }}>
+                  <AppField
+                    as="select"
+                    label="Duracao sugerida"
                     value={form.duracao_sugerida}
                     onChange={(e) => handleChange("duracao_sugerida", e.target.value)}
                     disabled={modoSomenteLeitura}
-                  >
-                    <option value="">Selecione</option>
-                    <option value="De 1 a 3 dias">De 1 a 3 dias</option>
-                    <option value="De 3 a 5 dias">De 3 a 5 dias</option>
-                    <option value="De 5 a 7 dias">De 5 a 7 dias</option>
-                    <option value="De 7 a 10 dias">De 7 a 10 dias</option>
-                    <option value="10 dias ou mais">10 dias ou mais</option>
-                  </select>
-                </div>
-                <div className="form-group" style={{ flex: 1 }}>
-                  <label className="form-label">Nivel de preco</label>
-                  <select
-                    className="form-select"
+                    options={[
+                      { value: "", label: "Selecione" },
+                      { value: "De 1 a 3 dias", label: "De 1 a 3 dias" },
+                      { value: "De 3 a 5 dias", label: "De 3 a 5 dias" },
+                      { value: "De 5 a 7 dias", label: "De 5 a 7 dias" },
+                      { value: "De 7 a 10 dias", label: "De 7 a 10 dias" },
+                      { value: "10 dias ou mais", label: "10 dias ou mais" },
+                    ]}
+                  />
+                  <AppField
+                    as="select"
+                    label="Nivel de preco"
                     value={form.nivel_preco}
                     onChange={(e) => handleChange("nivel_preco", e.target.value)}
                     disabled={modoSomenteLeitura}
-                  >
-                    <option value="">Selecione</option>
-                    {nivelPrecosOptions.map((nivel) => (
-                      <option key={nivel.value} value={nivel.value}>
-                        {nivel.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Imagem (URL)</label>
-                  <input
-                    className="form-input"
+                    options={[
+                      { value: "", label: "Selecione" },
+                      ...nivelPrecosOptions.map((nivel) => ({
+                        value: nivel.value,
+                        label: nivel.label,
+                      })),
+                    ]}
+                  />
+                  <AppField
+                    label="Imagem (URL)"
                     value={form.imagem_url}
                     onChange={(e) => handleChange("imagem_url", e.target.value)}
                     placeholder="URL de uma imagem do destino"
                     disabled={modoSomenteLeitura}
                   />
                 </div>
+              )}
+
+              <div style={{ marginTop: 12 }}>
+                <div className="vtur-products-info-toggle">
+                  <div>
+                    <strong>Informacoes importantes</strong>
+                    <div className="vtur-inline-note">
+                      Use este campo para observacoes, dicas comerciais e documentacao necessaria.
+                    </div>
+                  </div>
+                  <AppButton type="button" variant="secondary" onClick={() => setMostrarInfo((prev) => !prev)}>
+                    {mostrarInfo ? "Ocultar" : "Mostrar"}
+                  </AppButton>
+                </div>
+                {mostrarInfo && (
+                  <div style={{ marginTop: 12 }}>
+                    <AppField
+                      as="textarea"
+                      label="Observacoes"
+                      rows={3}
+                      value={form.informacoes_importantes}
+                      onChange={(e) => handleChange("informacoes_importantes", e.target.value)}
+                      placeholder="Observacoes gerais, dicas e documentacao necessaria."
+                      disabled={modoSomenteLeitura}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 12 }}>
+                <AppField
+                  as="select"
+                  label="Ativo"
+                  value={form.ativo ? "true" : "false"}
+                  onChange={(e) => handleChange("ativo", e.target.value === "true")}
+                  disabled={modoSomenteLeitura}
+                  options={[
+                    { value: "true", label: "Sim" },
+                    { value: "false", label: "Nao" },
+                  ]}
+                />
+              </div>
+
+              <div className="vtur-form-actions mobile-stack-buttons">
+                <AppButton type="submit" variant="primary" loading={salvando}>
+                  {editandoId ? "Salvar alteracoes" : "Salvar produto"}
+                </AppButton>
+                <AppButton type="button" variant="secondary" onClick={fecharFormularioProduto} disabled={salvando}>
+                  Cancelar
+                </AppButton>
+              </div>
+            </form>
+          </AppCard>
+        )}
+
+        {!mostrarFormulario && (
+          <>
+            {erro && (
+              <div className="mb-3">
+                <AlertMessage variant="error">{erro}</AlertMessage>
               </div>
             )}
-            <div className="form-group" style={{ marginTop: 12 }}>
-              <div className="flex items-center justify-between">
-                <label className="form-label" style={{ marginBottom: 0 }}>
-                  Informacoes importantes
-                </label>
-                <button
-                  type="button"
-                  className="btn btn-light"
-                  onClick={() => setMostrarInfo((prev) => !prev)}
-                >
-                  {mostrarInfo ? "-" : "+"}
-                </button>
-              </div>
-              {mostrarInfo && (
-                <textarea
-                  className="form-input"
-                  rows={3}
-                  value={form.informacoes_importantes}
-                  onChange={(e) => handleChange("informacoes_importantes", e.target.value)}
-                  placeholder="Observacoes gerais, dicas, documentacao necessaria, etc."
-                  disabled={modoSomenteLeitura}
-                />
-              )}
-            </div>
 
-            <div className="form-group" style={{ marginTop: 12 }}>
+            {!carregouTodos && !erro && (
+              <AppCard className="mb-3" tone="config">
+                Use a paginacao para navegar. Digite na busca para filtrar todos os produtos do sistema.
+              </AppCard>
+            )}
 
-              <label className="form-label">Ativo</label>
-
-              <select
-
-                className="form-select"
-
-                value={form.ativo ? "true" : "false"}
-
-                onChange={(e) => handleChange("ativo", e.target.value === "true")}
-
-                disabled={modoSomenteLeitura}
-
-              >
-
-                <option value="true">Sim</option>
-
-                <option value="false">Nao</option>
-
-              </select>
-
-            </div>
-
-            <div className="mt-2 mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-              <button type="submit" className="btn btn-primary" disabled={salvando}>
-                {salvando ? "Salvando..." : editandoId ? "Salvar alteracoes" : "Salvar produto"}
-              </button>
-              <button type="button" className="btn btn-light" onClick={fecharFormularioProduto} disabled={salvando}>
-                Cancelar
-              </button>
-            </div>
-          </form>
-        </div>
-
-      )}
-
-      {!mostrarFormulario && (
-        <>
-          {erro && (
             <div className="mb-3">
-              <AlertMessage variant="error">{erro}</AlertMessage>
+              <PaginationControls
+                page={paginaAtual}
+                pageSize={pageSize}
+                totalItems={totalProdutos}
+                onPageChange={setPage}
+                onPageSizeChange={(size) => {
+                  setPageSize(size);
+                  setPage(1);
+                }}
+              />
             </div>
-          )}
-          {!carregouTodos && !erro && (
-            <div className="card-base card-config mb-3">
-              Use a paginação para navegar. Digite na busca para filtrar todos que estão no sistema.
-            </div>
-          )}
 
-          <PaginationControls
-            page={paginaAtual}
-            pageSize={pageSize}
-            totalItems={totalProdutos}
-            onPageChange={setPage}
-            onPageSizeChange={(size) => {
-              setPageSize(size);
-              setPage(1);
-            }}
-          />
+            <DataTable
+              shellClassName="mb-3"
+              className="table-default table-header-blue table-mobile-cards min-w-[1080px]"
+              containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+              headers={
+                <tr>
+                  <th>Tipo</th>
+                  <th>Produto</th>
+                  <th>Destino</th>
+                  <th>Cidade</th>
+                  <th>Nivel de preco</th>
+                  <th>Ativo</th>
+                  <th>Criado em</th>
+                  <th className="th-actions">Acoes</th>
+                </tr>
+              }
+              loading={loading}
+              loadingMessage="Carregando produtos..."
+              empty={!loading && produtosFiltrados.length === 0}
+              emptyMessage={
+                <EmptyState
+                  title="Nenhum produto encontrado"
+                  description={
+                    busca.trim()
+                      ? "Tente ajustar a busca ou cadastre um novo produto."
+                      : "Cadastre o primeiro produto para iniciar o catalogo comercial."
+                  }
+                  action={
+                    !modoSomenteLeitura ? (
+                      <AppButton type="button" variant="primary" onClick={abrirFormularioProduto}>
+                        Adicionar produto
+                      </AppButton>
+                    ) : null
+                  }
+                />
+              }
+              colSpan={8}
+            >
+              {produtosExibidos.map((produto) => (
+                <tr key={produto.id}>
+                  <td data-label="Tipo">{produto.tipo_nome || "-"}</td>
+                  <td data-label="Produto">{produto.nome}</td>
+                  <td data-label="Destino">{produto.destino || "-"}</td>
+                  <td data-label="Cidade">{(produto as any).cidade_nome || "-"}</td>
+                  <td data-label="Nivel de preco">{nivelPrecoLabel(produto.nivel_preco) || "-"}</td>
+                  <td data-label="Ativo">{produto.ativo ? "Sim" : "Nao"}</td>
+                  <td data-label="Criado em">{produto.created_at ? formatDateBR(produto.created_at) : "-"}</td>
+                  <td className="th-actions" data-label="Acoes">
+                    <TableActions
+                      show={!modoSomenteLeitura || podeExcluir}
+                      actions={[
+                        ...(!modoSomenteLeitura
+                          ? [
+                              {
+                                key: "edit",
+                                label: "Editar",
+                                onClick: () => iniciarEdicao(produto),
+                              },
+                            ]
+                          : []),
+                        ...(podeExcluir
+                          ? [
+                              {
+                                key: "delete",
+                                label: excluindoId === produto.id ? "Excluindo..." : "Excluir",
+                                onClick: () => solicitarExclusao(produto),
+                                variant: "danger" as const,
+                                disabled: excluindoId === produto.id,
+                              },
+                            ]
+                          : []),
+                      ]}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </DataTable>
+          </>
+        )}
 
-          {/* Tabela */}
-          <DataTable
-            className="table-default table-header-blue table-mobile-cards min-w-[1080px]"
-            containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
-            headers={
-              <tr>
-                <th>Tipo</th>
-                <th>Produto</th>
-                <th>Destino</th>
-                <th>Cidade</th>
-                <th>Nivel de preco</th>
-                <th>Ativo</th>
-                <th>Criado em</th>
-                <th className="th-actions">Acoes</th>
-              </tr>
-            }
-            loading={loading}
-            loadingMessage="Carregando produtos..."
-            empty={!loading && produtosFiltrados.length === 0}
-            emptyMessage="Nenhum produto encontrado."
-            colSpan={8}
-          >
-            {produtosExibidos.map((p) => (
-              <tr key={p.id}>
-                <td data-label="Tipo">{p.tipo_nome || "-"}</td>
-                <td data-label="Produto">{p.nome}</td>
-                <td data-label="Destino">{p.destino || "-"}</td>
-                <td data-label="Cidade">{(p as any).cidade_nome || "-"}</td>
-                <td data-label="Nivel de preco">{nivelPrecoLabel(p.nivel_preco) || "-"}</td>
-                <td data-label="Ativo">{p.ativo ? "Sim" : "Nao"}</td>
-                <td data-label="Criado em">
-                  {p.created_at ? formatDateBR(p.created_at) : "-"}
-                </td>
-                <td className="th-actions" data-label="Acoes">
-                  <TableActions
-                    show={!modoSomenteLeitura}
-                    actions={[
-                      ...(!modoSomenteLeitura
-                        ? [
-                            {
-                              key: "edit",
-                              label: "Editar",
-                              onClick: () => iniciarEdicao(p),
-                              icon: "✏️",
-                            },
-                          ]
-                        : []),
-                      ...(podeExcluir
-                        ? [
-                            {
-                              key: "delete",
-                              label: "Excluir",
-                              onClick: () => solicitarExclusao(p),
-                              icon: excluindoId === p.id ? "..." : "🗑️",
-                              variant: "danger" as const,
-                              disabled: excluindoId === p.id,
-                            },
-                          ]
-                        : []),
-                    ]}
-                  />
-                </td>
-              </tr>
-            ))}
-          </DataTable>
-        </>
-      )}
-
-      <ConfirmDialog
-        open={Boolean(produtoParaExcluir)}
-        title="Excluir produto"
-        message={`Tem certeza que deseja excluir ${produtoParaExcluir?.nome || "este produto"}?`}
-        confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
-        confirmVariant="danger"
-        confirmDisabled={Boolean(excluindoId)}
-        onCancel={() => setProdutoParaExcluir(null)}
-        onConfirm={confirmarExclusao}
-      />
-      <ToastStack toasts={toasts} onDismiss={dismissToast} />
-    </div>
+        <ConfirmDialog
+          open={Boolean(produtoParaExcluir)}
+          title="Excluir produto"
+          message={`Tem certeza que deseja excluir ${produtoParaExcluir?.nome || "este produto"}?`}
+          confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
+          confirmVariant="danger"
+          confirmDisabled={Boolean(excluindoId)}
+          onCancel={() => setProdutoParaExcluir(null)}
+          onConfirm={confirmarExclusao}
+        />
+        <ToastStack toasts={toasts} onDismiss={dismissToast} />
+      </div>
+    </AppPrimerProvider>
   );
 }

@@ -1,3 +1,4 @@
+import { Dialog } from "@primer/react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import pdfWorkerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { supabase } from "../../lib/supabase";
@@ -9,7 +10,15 @@ import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import AlertMessage from "../ui/AlertMessage";
+import DataTable from "../ui/DataTable";
+import EmptyState from "../ui/EmptyState";
+import TableActions from "../ui/TableActions";
 import { ToastStack, useToastQueue } from "../ui/Toast";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type Circuito = {
   id: string;
@@ -299,6 +308,9 @@ export default function CircuitosIsland() {
   const circuitosExibidos = useMemo(() => {
     return busca.trim() ? circuitosFiltrados : circuitosFiltrados.slice(0, 5);
   }, [circuitosFiltrados, busca]);
+  const resumoLista = busca.trim()
+    ? `${circuitosFiltrados.length} circuito(s) encontrados para a busca atual.`
+    : `${circuitos.length} circuito(s) disponíveis. A listagem mostra os 5 mais recentes até você buscar.`;
 
   useEffect(() => {
     carregarCircuitos();
@@ -1145,124 +1157,147 @@ export default function CircuitosIsland() {
   }
 
   if (loadingPerm) return <LoadingUsuarioContext />;
-  if (!podeVer) return <div>Voce nao possui acesso ao modulo de Cadastros.</div>;
+  if (!podeVer) {
+    return (
+      <AppPrimerProvider>
+        <AppCard tone="config">Voce nao possui acesso ao modulo de Cadastros.</AppCard>
+      </AppPrimerProvider>
+    );
+  }
 
   return (
-    <div className="circuitos-page">
-      {!mostrarFormulario && (
-        <>
-          {erro && (
-            <div className="mb-3">
-              <AlertMessage variant="error">{erro}</AlertMessage>
-            </div>
-          )}
-          {sucesso && (
-            <div className="card-base card-green mb-3">
-              <strong>{sucesso}</strong>
-            </div>
-          )}
-
-          <div className="card-base card-blue mb-3 list-toolbar-sticky">
-            <div className="form-row mobile-stack">
-              <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label">Buscar circuito</label>
-                <input
-                  className="form-input"
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  placeholder="Busque por nome, codigo, operador ou cidade"
-                />
+    <AppPrimerProvider>
+      <div className="circuitos-page">
+        <AppToolbar
+          sticky
+          tone="config"
+          className="mb-3 list-toolbar-sticky"
+          title={mostrarFormulario ? (editandoId ? "Editar circuito" : "Novo circuito") : "Consulta de circuitos"}
+          subtitle={
+            mostrarFormulario
+              ? "Estruture operador, datas de inicio e roteiro dia a dia antes de publicar o circuito."
+              : resumoLista
+          }
+          actions={
+            mostrarFormulario ? (
+              <div className="vtur-quote-top-actions">
+                <AppButton type="button" variant="secondary" onClick={fecharFormulario} disabled={salvando}>
+                  Voltar para lista
+                </AppButton>
               </div>
-              {!modoSomenteLeitura && (
-                <div className="form-group" style={{ alignItems: "flex-end" }}>
-                  <button
-                    type="button"
-                    className="btn btn-primary w-full sm:w-auto"
-                    onClick={abrirFormulario}
-                    disabled={mostrarFormulario}
-                  >
-                    Novo circuito
-                  </button>
-                </div>
-              )}
+            ) : !modoSomenteLeitura ? (
+              <AppButton
+                type="button"
+                variant="primary"
+                onClick={abrirFormulario}
+                disabled={mostrarFormulario}
+              >
+                Novo circuito
+              </AppButton>
+            ) : null
+          }
+        >
+          {!mostrarFormulario ? (
+            <div className="vtur-toolbar-grid">
+              <AppField
+                label="Buscar circuito"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Busque por nome, codigo, operador ou cidade"
+              />
             </div>
-          </div>
-        </>
-      )}
+          ) : (
+            <div className="vtur-quote-summary-grid">
+              <div className="vtur-quote-summary-item">
+                <span className="vtur-quote-summary-label">Dias do roteiro</span>
+                <strong>{dias.length}</strong>
+              </div>
+              <div className="vtur-quote-summary-item">
+                <span className="vtur-quote-summary-label">Datas de inicio</span>
+                <strong>{datas.length}</strong>
+              </div>
+              <div className="vtur-quote-summary-item">
+                <span className="vtur-quote-summary-label">Status</span>
+                <strong>{form.ativo ? "Ativo" : "Inativo"}</strong>
+              </div>
+            </div>
+          )}
+        </AppToolbar>
 
-      {mostrarFormulario && (
-        <div className="card-base card-blue mb-3">
-          <form onSubmit={salvar}>
-            <div className="form-row mobile-stack">
-              <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label">Importar roteiro (PDF)</label>
-                <input
-                  ref={pdfInputRef}
-                  className="sr-only"
-                  type="file"
-                  accept="application/pdf"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setPdfSelecionado(file.name);
-                      importarPdf(file);
-                    }
-                    if (!file) {
-                      setPdfSelecionado("");
-                    }
-                    e.currentTarget.value = "";
-                  }}
-                  disabled={modoSomenteLeitura || importandoPdf}
-                />
-                <div className="mobile-stack-buttons" style={{ justifyContent: "flex-start" }}>
-                  <button
-                    type="button"
-                    className="btn btn-light w-full sm:w-auto"
-                    onClick={() => pdfInputRef.current?.click()}
+        {erro ? (
+          <AlertMessage variant="error" className="mb-3">
+            {erro}
+          </AlertMessage>
+        ) : null}
+        {sucesso ? (
+          <AlertMessage variant="success" className="mb-3">
+            {sucesso}
+          </AlertMessage>
+        ) : null}
+
+        {mostrarFormulario ? (
+          <form onSubmit={salvar} className="vtur-modal-body-stack">
+            <AppCard
+              title="Importar roteiro (PDF)"
+              subtitle="Importa operador, código, circuito e o roteiro dia a dia. As datas finais do PDF são ignoradas."
+            >
+              <div className="vtur-import-upload-stack">
+                <div className="vtur-import-upload-row">
+                  <input
+                    ref={pdfInputRef}
+                    id="circuito-pdf-input"
+                    className="sr-only"
+                    type="file"
+                    accept="application/pdf"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setPdfSelecionado(file.name);
+                        importarPdf(file);
+                      }
+                      if (!file) {
+                        setPdfSelecionado("");
+                      }
+                      e.currentTarget.value = "";
+                    }}
                     disabled={modoSomenteLeitura || importandoPdf}
-                  >
+                  />
+                  <label htmlFor="circuito-pdf-input" className="vtur-import-upload-trigger">
                     Escolher arquivo
-                  </button>
+                  </label>
+                  <span className="vtur-import-file-name">
+                    {pdfSelecionado || "Nenhum arquivo escolhido"}
+                  </span>
                 </div>
-                <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>
-                  {pdfSelecionado || "Nenhum arquivo escolhido"}
-                </div>
-                <small style={{ color: "#64748b" }}>
-                  Importa Operador, Codigo, Circuito e o roteiro dia a dia (datas finais sao ignoradas).
-                </small>
-                {importandoPdf && <div style={{ fontSize: 12, color: "#6b7280" }}>Importando PDF...</div>}
-                {erroImportacao && !importandoPdf && (
-                  <div style={{ fontSize: 12, color: "#dc2626" }}>{erroImportacao}</div>
-                )}
+                {importandoPdf ? <div className="vtur-inline-note">Importando PDF...</div> : null}
+                {erroImportacao && !importandoPdf ? (
+                  <AlertMessage variant="error">{erroImportacao}</AlertMessage>
+                ) : null}
               </div>
-            </div>
+            </AppCard>
 
-            <div className="form-row mobile-stack">
-              <div className="form-group" style={{ flex: "1 1 320px", minWidth: 240 }}>
-                <label className="form-label">Circuito *</label>
-                <input
-                  className="form-input"
+            <AppCard
+              title="Dados principais"
+              subtitle="Padronize o cadastro do circuito antes de salvar o produto espelhado no CRM."
+            >
+              <div className="vtur-form-grid vtur-form-grid-3">
+                <AppField
+                  label="Circuito"
                   value={form.nome}
                   onChange={(e) => handleChange("nome", e.target.value)}
                   onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
                   placeholder="Nome do circuito"
                   disabled={modoSomenteLeitura}
                 />
-              </div>
-              <div className="form-group" style={{ minWidth: 180 }}>
-                <label className="form-label">Codigo</label>
-                <input
-                  className="form-input"
+                <AppField
+                  label="Codigo"
                   value={form.codigo}
                   onChange={(e) => handleChange("codigo", e.target.value)}
                   placeholder="Ex: P25001"
                   disabled={modoSomenteLeitura}
                 />
-              </div>
-              <div className="form-group" style={{ flex: "1 1 220px", minWidth: 200 }}>
-                <label className="form-label">Operador</label>
-                <input
-                  className="form-input"
+                <AppField
+                  label="Operador"
                   value={form.operador}
                   onChange={(e) => handleChange("operador", e.target.value)}
                   onBlur={(e) => handleChange("operador", titleCaseWithExceptions(e.target.value))}
@@ -1270,49 +1305,46 @@ export default function CircuitosIsland() {
                   disabled={modoSomenteLeitura}
                 />
               </div>
-            </div>
-
-            <div className="form-row mobile-stack">
-              <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label">Resumo</label>
-                <textarea
-                  className="form-input"
-                  rows={2}
+              <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 16 }}>
+                <AppField
+                  as="textarea"
+                  label="Resumo"
+                  rows={3}
                   value={form.resumo}
                   onChange={(e) => handleChange("resumo", e.target.value)}
                   placeholder="Resumo do circuito"
                   disabled={modoSomenteLeitura}
                 />
-              </div>
-              <div className="form-group sm:max-w-[160px]">
-                <label className="form-label">Ativo</label>
-                <select
-                  className="form-select"
+                <AppField
+                  as="select"
+                  label="Ativo"
                   value={form.ativo ? "true" : "false"}
                   onChange={(e) => handleChange("ativo", e.target.value === "true")}
                   disabled={modoSomenteLeitura}
-                >
-                  <option value="true">Sim</option>
-                  <option value="false">Nao</option>
-                </select>
+                  options={[
+                    { label: "Sim", value: "true" },
+                    { label: "Nao", value: "false" },
+                  ]}
+                />
               </div>
-            </div>
+            </AppCard>
 
-            <div className="mt-2 mobile-stack-buttons" style={{ justifyContent: "space-between" }}>
-              <div style={{ color: "#64748b" }}>Datas de inicio</div>
-              <button
-                type="button"
-                className="btn btn-light w-full sm:w-auto"
-                onClick={adicionarData}
-                disabled={modoSomenteLeitura}
-              >
-                Adicionar data
-              </button>
-            </div>
-
-            <div className="table-container overflow-x-auto" style={{ marginTop: 12 }}>
-              <table className="table-default table-mobile-cards min-w-[760px]">
-                <thead>
+            <AppCard
+              title="Datas de inicio"
+              subtitle="Cadastre datas comerciais e a cidade de origem de cada saída."
+              actions={
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  onClick={adicionarData}
+                  disabled={modoSomenteLeitura}
+                >
+                  Adicionar data
+                </AppButton>
+              }
+            >
+              <DataTable
+                headers={
                   <tr>
                     <th>Data de inicio</th>
                     <th>Cidade de inicio</th>
@@ -1320,32 +1352,36 @@ export default function CircuitosIsland() {
                     <th>Dias depois</th>
                     <th className="th-actions">Ações</th>
                   </tr>
-                </thead>
-                <tbody>
-                  {datas.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="empty-mobile-center">
-                        Nenhuma data informada.
-                      </td>
-                    </tr>
-                  )}
-                  {datas.map((item) => (
-                    <tr key={item.tempId}>
-                      <td data-label="Data de inicio">
-                        <input
-                          type="date"
-                          className="form-input"
-                          value={item.data_inicio}
-                          onFocus={selectAllInputOnFocus}
-                          onChange={(e) => atualizarData(item.tempId, "data_inicio", e.target.value)}
-                          disabled={modoSomenteLeitura}
-                        />
-                      </td>
-                      <td data-label="Cidade de inicio" style={{ minWidth: 220 }}>
-                        <input
-                          className="form-input"
-                          placeholder="Buscar cidade"
+                }
+                empty={datas.length === 0}
+                emptyMessage={
+                  <EmptyState
+                    title="Nenhuma data informada"
+                    description="Adicione pelo menos uma data comercial quando o circuito tiver saídas definidas."
+                  />
+                }
+                colSpan={5}
+                className="table-mobile-cards"
+              >
+                {datas.map((item) => (
+                  <tr key={item.tempId}>
+                    <td data-label="Data de inicio">
+                      <AppField
+                        label="Data de inicio"
+                        type="date"
+                        value={item.data_inicio}
+                        onFocus={selectAllInputOnFocus}
+                        onChange={(e) => atualizarData(item.tempId, "data_inicio", e.target.value)}
+                        disabled={modoSomenteLeitura}
+                        wrapperClassName="vtur-table-field"
+                      />
+                    </td>
+                    <td data-label="Cidade de inicio" style={{ minWidth: 240 }}>
+                      <div className="vtur-city-picker">
+                        <AppField
+                          label="Cidade de inicio"
                           value={formatarLabelData(item)}
+                          placeholder="Buscar cidade"
                           onChange={(e) => handleCidadeInput(item.tempId, "data", e.target.value)}
                           onFocus={() => {
                             setCidadeContexto({ tipo: "data", id: item.tempId });
@@ -1354,480 +1390,423 @@ export default function CircuitosIsland() {
                           }}
                           onBlur={() => setTimeout(() => setMostrarSugestoesCidade(false), 150)}
                           disabled={modoSomenteLeitura}
+                          wrapperClassName="vtur-table-field"
                         />
-                        {cidadeContexto?.tipo === "data" && cidadeContexto.id === item.tempId && (
+                        {cidadeContexto?.tipo === "data" && cidadeContexto.id === item.tempId ? (
                           <>
-                            {buscandoCidade && (
-                              <div style={{ fontSize: 12, color: "#6b7280" }}>Buscando...</div>
-                            )}
-                            {erroCidadeBusca && !buscandoCidade && (
-                              <div style={{ fontSize: 12, color: "#dc2626" }}>{erroCidadeBusca}</div>
-                            )}
-                            {mostrarSugestoesCidade && (
-                              <div
-                                className="card-base"
-                                style={{
-                                  marginTop: 4,
-                                  maxHeight: 160,
-                                  overflowY: "auto",
-                                  padding: 6,
-                                  border: "1px solid #e5e7eb",
-                                }}
-                              >
-                                {resultadosCidade.length === 0 && !buscandoCidade && cidadeBusca.trim().length >= 2 && (
-                                  <div style={{ padding: "4px 6px", color: "#6b7280" }}>
-                                    Nenhuma cidade encontrada.
-                                  </div>
-                                )}
+                            {buscandoCidade ? <div className="vtur-city-helper">Buscando...</div> : null}
+                            {erroCidadeBusca && !buscandoCidade ? (
+                              <div className="vtur-city-helper error">{erroCidadeBusca}</div>
+                            ) : null}
+                            {mostrarSugestoesCidade ? (
+                              <div className="vtur-city-dropdown">
+                                {resultadosCidade.length === 0 && !buscandoCidade && cidadeBusca.trim().length >= 2 ? (
+                                  <div className="vtur-city-helper">Nenhuma cidade encontrada.</div>
+                                ) : null}
                                 {resultadosCidade.map((cidade) => (
-                                  <button
+                                  <AppButton
                                     key={cidade.id}
                                     type="button"
-                                    className="btn btn-light"
-                                    style={{
-                                      width: "100%",
-                                      justifyContent: "flex-start",
-                                      marginBottom: 4,
-                                    }}
+                                    variant="ghost"
+                                    className="vtur-city-option"
                                     onMouseDown={(e) => {
                                       e.preventDefault();
                                       selecionarCidade(cidade);
                                     }}
                                   >
                                     {formatCidadeLabel(cidade)}
-                                  </button>
+                                  </AppButton>
                                 ))}
                               </div>
-                            )}
+                            ) : null}
                           </>
-                        )}
-                      </td>
-                      <td data-label="Dias antes" style={{ maxWidth: 120 }}>
-                        <input
-                          className="form-input"
-                          type="number"
-                          min={0}
-                          value={item.dias_extra_antes}
-                          onChange={(e) => atualizarData(item.tempId, "dias_extra_antes", e.target.value)}
-                          disabled={modoSomenteLeitura}
-                        />
-                      </td>
-                      <td data-label="Dias depois" style={{ maxWidth: 120 }}>
-                        <input
-                          className="form-input"
-                          type="number"
-                          min={0}
-                          value={item.dias_extra_depois}
-                          onChange={(e) => atualizarData(item.tempId, "dias_extra_depois", e.target.value)}
-                          disabled={modoSomenteLeitura}
-                        />
-                      </td>
-                      <td className="th-actions" data-label="Ações">
-                        <div className="action-buttons">
-                          <button
-                            type="button"
-                            className="btn-icon btn-danger"
-                            onClick={() => removerData(item.tempId)}
-                            disabled={modoSomenteLeitura}
-                            title="Remover"
-                            aria-label="Remover"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="mt-4 mobile-stack-buttons" style={{ justifyContent: "space-between" }}>
-              <div style={{ color: "#64748b" }}>Roteiro dia a dia</div>
-              <button
-                type="button"
-                className="btn btn-light w-full sm:w-auto"
-                onClick={adicionarDia}
-                disabled={modoSomenteLeitura}
-              >
-                Adicionar dia
-              </button>
-            </div>
-
-            {dias.map((dia, idx) => {
-              const isContextoDia = cidadeContexto?.tipo === "dia" && cidadeContexto.id === dia.tempId;
-              const isDragOver = dragOverDiaId === dia.tempId;
-              const isDragging = draggingDiaId === dia.tempId;
-              const podeArrastar = !modoSomenteLeitura && dias.length > 1;
-              return (
-                <div
-                  key={dia.tempId}
-                  className="card-base mb-2"
-                  style={{
-                    border: isDragOver ? "2px dashed #2563eb" : "1px solid #e5e7eb",
-                    marginTop: 12,
-                    opacity: isDragging ? 0.7 : 1,
-                  }}
-                  onDragOver={(e) => {
-                    if (podeArrastar) handleDragOverDia(e, dia.tempId);
-                  }}
-                  onDrop={(e) => {
-                    if (podeArrastar) {
-                      e.preventDefault();
-                      handleDropDia(e, dia.tempId);
-                    }
-                  }}
-                  onDragLeave={() => {
-                    if (isDragOver) setDragOverDiaId(null);
-                  }}
-                >
-                  <div className="form-row mobile-stack" style={{ marginTop: 12 }}>
-                    <div className="form-group" style={{ maxWidth: 140 }}>
-                      <div className="form-label-row">
-                        <label className="form-label">Dia</label>
-                        <div className="icon-action-group">
-                          <button
-                            type="button"
-                            className="icon-action-btn"
-                            title="Mover para cima"
-                            onClick={() => {
-                              if (idx === 0) return;
-                              reordenarDias(dia.tempId, dias[idx - 1].tempId);
-                            }}
-                            disabled={modoSomenteLeitura || idx === 0}
-                          >
-                            ⬆️
-                          </button>
-                          <button
-                            type="button"
-                            className="icon-action-btn"
-                            title="Mover para baixo"
-                            onClick={() => {
-                              if (idx >= dias.length - 1) return;
-                              reordenarDias(dia.tempId, dias[idx + 1].tempId);
-                            }}
-                            disabled={modoSomenteLeitura || idx >= dias.length - 1}
-                          >
-                            ⬇️
-                          </button>
-                          <button
-                            type="button"
-                            className="icon-action-btn danger"
-                            title="Remover dia"
-                            onClick={() => removerDia(dia.tempId)}
-                            disabled={modoSomenteLeitura || dias.length === 1}
-                          >
-                            🗑️
-                          </button>
-                        </div>
+                        ) : null}
                       </div>
-                      <input
-                        className="form-input"
+                    </td>
+                    <td data-label="Dias antes" style={{ maxWidth: 140 }}>
+                      <AppField
+                        label="Dias antes"
                         type="number"
-                        min={1}
-                        value={dia.dia_numero}
-                        onChange={(e) => atualizarDia(dia.tempId, "dia_numero", Number(e.target.value))}
+                        min={0}
+                        value={item.dias_extra_antes}
+                        onChange={(e) => atualizarData(item.tempId, "dias_extra_antes", e.target.value)}
                         disabled={modoSomenteLeitura}
+                        wrapperClassName="vtur-table-field"
                       />
-                    </div>
-                    <div className="form-group" style={{ flex: 1 }}>
-                      <label className="form-label">Titulo</label>
-                      <input
-                        className="form-input"
-                        value={dia.titulo}
-                        onChange={(e) => atualizarDia(dia.tempId, "titulo", e.target.value)}
-                        placeholder="Ex: Lisboa e Fatima"
+                    </td>
+                    <td data-label="Dias depois" style={{ maxWidth: 140 }}>
+                      <AppField
+                        label="Dias depois"
+                        type="number"
+                        min={0}
+                        value={item.dias_extra_depois}
+                        onChange={(e) => atualizarData(item.tempId, "dias_extra_depois", e.target.value)}
                         disabled={modoSomenteLeitura}
+                        wrapperClassName="vtur-table-field"
                       />
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Descricao *</label>
-                    <textarea
-                      className="form-input"
-                      rows={3}
-                      value={dia.descricao}
-                      onChange={(e) => atualizarDia(dia.tempId, "descricao", e.target.value)}
-                      placeholder={`Descricao do dia ${idx + 1}`}
-                      disabled={modoSomenteLeitura}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Cidades</label>
-                    <div className="flex flex-wrap gap-2" style={{ marginBottom: 6 }}>
-                      {dia.cidades.length === 0 && (
-                        <span style={{ color: "#64748b", fontSize: 12 }}>Nenhuma cidade adicionada.</span>
-                      )}
-                      {dia.cidades.map((cidade) => (
-                        <span
-                          key={cidade.id}
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 6,
-                            padding: "4px 8px",
-                            borderRadius: 999,
-                            border: "1px solid #e5e7eb",
-                            background: "#f8fafc",
-                            fontSize: 12,
-                          }}
-                        >
-                          {cidade.label}
-                          <button
-                            type="button"
-                            className="btn btn-light"
-                            style={{ padding: "2px 6px" }}
-                            onClick={() => removerCidadeDoDia(dia.tempId, cidade.id)}
-                            disabled={modoSomenteLeitura}
-                          >
-                            x
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                    <input
-                      className="form-input"
-                      placeholder="Buscar cidade"
-                      value={isContextoDia ? cidadeBusca : ""}
-                      onChange={(e) => handleCidadeInput(dia.tempId, "dia", e.target.value)}
-                      onFocus={() => {
-                        setCidadeContexto({ tipo: "dia", id: dia.tempId });
-                        setCidadeBusca("");
-                        setMostrarSugestoesCidade(true);
-                      }}
-                      onBlur={() => setTimeout(() => setMostrarSugestoesCidade(false), 150)}
-                      disabled={modoSomenteLeitura}
-                    />
-                    {isContextoDia && (
-                      <>
-                        {buscandoCidade && <div style={{ fontSize: 12, color: "#6b7280" }}>Buscando...</div>}
-                        {erroCidadeBusca && !buscandoCidade && (
-                          <div style={{ fontSize: 12, color: "#dc2626" }}>{erroCidadeBusca}</div>
-                        )}
-                        {mostrarSugestoesCidade && (
-                          <div
-                            className="card-base"
-                            style={{
-                              marginTop: 4,
-                              maxHeight: 160,
-                              overflowY: "auto",
-                              padding: 6,
-                              border: "1px solid #e5e7eb",
-                            }}
-                          >
-                            {resultadosCidade.length === 0 && !buscandoCidade && cidadeBusca.trim().length >= 2 && (
-                              <div style={{ padding: "4px 6px", color: "#6b7280" }}>
-                                Nenhuma cidade encontrada.
-                              </div>
-                            )}
-                            {resultadosCidade.map((cidade) => (
-                              <button
-                                key={cidade.id}
-                                type="button"
-                                className="btn btn-light"
-                                style={{
-                                  width: "100%",
-                                  justifyContent: "flex-start",
-                                  marginBottom: 4,
-                                }}
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
-                                  selecionarCidade(cidade);
-                                }}
-                              >
-                                {formatCidadeLabel(cidade)}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-
-            {dias.length === 0 && (
-              <div className="card-base empty-mobile-center" style={{ marginTop: 12 }}>
-                Nenhum dia cadastrado.
-              </div>
-            )}
-
-            <div className="mt-2 mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-              <button type="submit" className="btn btn-primary" disabled={salvando}>
-                {salvando ? "Salvando..." : editandoId ? "Salvar alteracoes" : "Salvar circuito"}
-              </button>
-              <button type="button" className="btn btn-light" onClick={fecharFormulario} disabled={salvando}>
-                Cancelar
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {!mostrarFormulario && (
-        <div
-          className="table-container overflow-x-auto"
-          style={{ maxHeight: "65vh", overflowY: "auto" }}
-        >
-          <table className="table-default table-header-blue table-mobile-cards min-w-[840px]">
-            <thead>
-              <tr>
-                <th>Circuito</th>
-                <th>Codigo</th>
-                <th>Operador</th>
-                <th>Status</th>
-                <th className="th-actions">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr>
-                  <td colSpan={5}>Carregando...</td>
-                </tr>
-              )}
-              {!loading && circuitosExibidos.length === 0 && (
-                <tr>
-                  <td colSpan={5}>Nenhum circuito encontrado.</td>
-                </tr>
-              )}
-              {!loading &&
-                circuitosExibidos.map((circuito) => (
-                  <tr key={circuito.id}>
-                    <td data-label="Circuito">{circuito.nome}</td>
-                    <td data-label="Codigo">{circuito.codigo || "-"}</td>
-                    <td data-label="Operador">{circuito.operador || "-"}</td>
-                    <td data-label="Status">{circuito.ativo ? "Ativo" : "Inativo"}</td>
+                    </td>
                     <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        <button
-                          type="button"
-                          className="btn-icon"
-                          onClick={() => iniciarEdicao(circuito.id)}
-                          title="Editar"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-icon"
-                          onClick={() => abrirPreview(circuito.id)}
-                          title="Visualizar"
-                        >
-                          👁️
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-icon btn-danger"
-                          onClick={() => solicitarExclusao(circuito.id)}
-                          disabled={excluindoId === circuito.id}
-                          title="Excluir"
-                        >
-                          {excluindoId === circuito.id ? "..." : "🗑️"}
-                        </button>
-                      </div>
+                      <TableActions
+                        actions={[
+                          {
+                            key: `delete-data-${item.tempId}`,
+                            label: "Excluir",
+                            variant: "danger",
+                            onClick: () => removerData(item.tempId),
+                            disabled: modoSomenteLeitura,
+                          },
+                        ]}
+                      />
                     </td>
                   </tr>
                 ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </DataTable>
+            </AppCard>
 
-      {previewOpen && (
-        <div className="modal-backdrop">
-          <div className="modal-panel circuito-preview-modal" style={{ maxWidth: 980, width: "95vw" }}>
-            <div className="modal-header">
-              <div className="modal-title">Visualizacao do circuito</div>
-              <button className="btn-ghost" onClick={fecharPreview} type="button">
-                ✕
-              </button>
-            </div>
-            <div className="modal-body" style={{ display: "grid", gap: 16 }}>
-              {previewLoading && <div>Carregando preview...</div>}
-              {previewErro && <div style={{ color: "#dc2626" }}>{previewErro}</div>}
-              {!previewLoading && previewData && (
-                <div className="card-base" style={{ border: "1px solid #e5e7eb" }}>
-                  <div style={{ display: "grid", gap: 12 }}>
-                    <div>
-                      <h3 style={{ fontSize: "1.1rem", fontWeight: 700 }}>{previewData.circuito.nome}</h3>
-                      <div style={{ color: "#64748b", fontSize: 14 }}>
-                        {previewData.circuito.operador ? `Operador: ${previewData.circuito.operador}` : null}
-                        {previewData.circuito.operador && previewData.circuito.codigo ? " • " : null}
-                        {previewData.circuito.codigo ? `Codigo: ${previewData.circuito.codigo}` : null}
-                      </div>
-                    </div>
+            <AppCard
+              title="Roteiro dia a dia"
+              subtitle="Descreva o itinerário com ordenação, títulos, descrições e cidades por etapa."
+              actions={
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  onClick={adicionarDia}
+                  disabled={modoSomenteLeitura}
+                >
+                  Adicionar dia
+                </AppButton>
+              }
+            >
+              {dias.length === 0 ? (
+                <EmptyState
+                  title="Nenhum dia cadastrado"
+                  description="Adicione ao menos um dia ao roteiro para salvar o circuito."
+                />
+              ) : (
+                <div className="vtur-modal-body-stack">
+                  {dias.map((dia, idx) => {
+                    const isContextoDia = cidadeContexto?.tipo === "dia" && cidadeContexto.id === dia.tempId;
+                    const isDragOver = dragOverDiaId === dia.tempId;
+                    const isDragging = draggingDiaId === dia.tempId;
+                    const podeArrastar = !modoSomenteLeitura && dias.length > 1;
+                    const diaActions = [
+                      {
+                        key: `up-${dia.tempId}`,
+                        label: "Subir",
+                        variant: "ghost" as const,
+                        onClick: () => {
+                          if (idx === 0) return;
+                          reordenarDias(dia.tempId, dias[idx - 1].tempId);
+                        },
+                        disabled: modoSomenteLeitura || idx === 0,
+                      },
+                      {
+                        key: `down-${dia.tempId}`,
+                        label: "Descer",
+                        variant: "ghost" as const,
+                        onClick: () => {
+                          if (idx >= dias.length - 1) return;
+                          reordenarDias(dia.tempId, dias[idx + 1].tempId);
+                        },
+                        disabled: modoSomenteLeitura || idx >= dias.length - 1,
+                      },
+                      {
+                        key: `delete-${dia.tempId}`,
+                        label: "Excluir",
+                        variant: "danger" as const,
+                        onClick: () => removerDia(dia.tempId),
+                        disabled: modoSomenteLeitura || dias.length === 1,
+                      },
+                    ];
 
-                    {previewData.circuito.resumo && (
-                      <div>
-                        <strong>Resumo</strong>
-                        <div style={{ whiteSpace: "pre-line" }}>{previewData.circuito.resumo}</div>
-                      </div>
-                    )}
+                    return (
+                      <AppCard
+                        key={dia.tempId}
+                        className={`vtur-circuit-day-card ${isDragging ? "is-dragging" : ""} ${isDragOver ? "is-drag-over" : ""}`.trim()}
+                        tone={idx === 0 ? "config" : "default"}
+                        title={`Dia ${dia.dia_numero}`}
+                        subtitle={dia.titulo || `Etapa ${idx + 1} do roteiro`}
+                        actions={<TableActions actions={diaActions} />}
+                        onDragOver={(e) => {
+                          if (podeArrastar) handleDragOverDia(e, dia.tempId);
+                        }}
+                        onDrop={(e) => {
+                          if (podeArrastar) {
+                            e.preventDefault();
+                            handleDropDia(e, dia.tempId);
+                          }
+                        }}
+                        onDragLeave={() => {
+                          if (isDragOver) setDragOverDiaId(null);
+                        }}
+                      >
+                        <div className="vtur-form-grid vtur-form-grid-2">
+                          <AppField
+                            label="Dia"
+                            type="number"
+                            min={1}
+                            value={String(dia.dia_numero)}
+                            onChange={(e) => atualizarDia(dia.tempId, "dia_numero", Number(e.target.value))}
+                            disabled={modoSomenteLeitura}
+                          />
+                          <AppField
+                            label="Titulo"
+                            value={dia.titulo}
+                            onChange={(e) => atualizarDia(dia.tempId, "titulo", e.target.value)}
+                            placeholder="Ex: Lisboa e Fatima"
+                            disabled={modoSomenteLeitura}
+                          />
+                        </div>
 
-                    {previewData.datas.length > 0 && (
-                      <div>
-                        <strong>Datas de inicio</strong>
-                        <ul style={{ marginTop: 6, display: "grid", gap: 4 }}>
-                          {previewData.datas.map((d, idx) => (
-                            <li key={`${d.data_inicio}-${idx}`}>
-                              {d.data_inicio || "-"}
-                              {d.cidade_inicio_nome ? ` - ${d.cidade_inicio_nome}` : ""}
-                              {(d.dias_extra_antes || d.dias_extra_depois) && (
-                                <span style={{ color: "#64748b" }}>
-                                  {` (Dias antes: ${d.dias_extra_antes || 0}, Dias depois: ${d.dias_extra_depois || 0})`}
-                                </span>
+                        <div className="vtur-form-grid" style={{ marginTop: 16 }}>
+                          <AppField
+                            as="textarea"
+                            label="Descricao"
+                            rows={4}
+                            value={dia.descricao}
+                            onChange={(e) => atualizarDia(dia.tempId, "descricao", e.target.value)}
+                            placeholder={`Descricao do dia ${idx + 1}`}
+                            disabled={modoSomenteLeitura}
+                          />
+                        </div>
+
+                        <div className="vtur-form-grid" style={{ marginTop: 16 }}>
+                          <div>
+                            <div className="vtur-inline-note" style={{ marginTop: 0, marginBottom: 10 }}>
+                              Cidades associadas a este dia
+                            </div>
+                            <div className="vtur-import-city-tags">
+                              {dia.cidades.length === 0 ? (
+                                <span className="vtur-city-helper">Nenhuma cidade adicionada.</span>
+                              ) : (
+                                dia.cidades.map((cidade) => (
+                                  <span key={cidade.id} className="vtur-import-city-tag">
+                                    <span>{cidade.label}</span>
+                                    <button
+                                      type="button"
+                                      className="vtur-import-city-tag-remove"
+                                      onClick={() => removerCidadeDoDia(dia.tempId, cidade.id)}
+                                      disabled={modoSomenteLeitura}
+                                    >
+                                      x
+                                    </button>
+                                  </span>
+                                ))
                               )}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                            </div>
+                            <div className="vtur-city-picker" style={{ marginTop: 12 }}>
+                              <AppField
+                                label="Buscar cidade"
+                                value={isContextoDia ? cidadeBusca : ""}
+                                onChange={(e) => handleCidadeInput(dia.tempId, "dia", e.target.value)}
+                                onFocus={() => {
+                                  setCidadeContexto({ tipo: "dia", id: dia.tempId });
+                                  setCidadeBusca("");
+                                  setMostrarSugestoesCidade(true);
+                                }}
+                                onBlur={() => setTimeout(() => setMostrarSugestoesCidade(false), 150)}
+                                disabled={modoSomenteLeitura}
+                              />
+                              {isContextoDia ? (
+                                <>
+                                  {buscandoCidade ? <div className="vtur-city-helper">Buscando...</div> : null}
+                                  {erroCidadeBusca && !buscandoCidade ? (
+                                    <div className="vtur-city-helper error">{erroCidadeBusca}</div>
+                                  ) : null}
+                                  {mostrarSugestoesCidade ? (
+                                    <div className="vtur-city-dropdown">
+                                      {resultadosCidade.length === 0 && !buscandoCidade && cidadeBusca.trim().length >= 2 ? (
+                                        <div className="vtur-city-helper">Nenhuma cidade encontrada.</div>
+                                      ) : null}
+                                      {resultadosCidade.map((cidade) => (
+                                        <AppButton
+                                          key={cidade.id}
+                                          type="button"
+                                          variant="ghost"
+                                          className="vtur-city-option"
+                                          onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            selecionarCidade(cidade);
+                                          }}
+                                        >
+                                          {formatCidadeLabel(cidade)}
+                                        </AppButton>
+                                      ))}
+                                    </div>
+                                  ) : null}
+                                </>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      </AppCard>
+                    );
+                  })}
+                </div>
+              )}
 
-                    <div>
-                      <strong>Itinerario do circuito</strong>
-                      <div style={{ display: "grid", gap: 12, marginTop: 8 }}>
+              <div className="vtur-form-actions">
+                <AppButton type="submit" variant="primary" disabled={salvando}>
+                  {salvando ? "Salvando..." : editandoId ? "Salvar alteracoes" : "Salvar circuito"}
+                </AppButton>
+                <AppButton type="button" variant="secondary" onClick={fecharFormulario} disabled={salvando}>
+                  Cancelar
+                </AppButton>
+              </div>
+            </AppCard>
+          </form>
+        ) : (
+          <AppCard
+            title="Circuitos cadastrados"
+            subtitle="Consulta rápida por nome, código, operador e cidades do roteiro."
+          >
+            <DataTable
+              headers={
+                <tr>
+                  <th>Circuito</th>
+                  <th>Codigo</th>
+                  <th>Operador</th>
+                  <th>Status</th>
+                  <th className="th-actions">Ações</th>
+                </tr>
+              }
+              loading={loading}
+              empty={!loading && circuitosExibidos.length === 0}
+              emptyMessage={
+                <EmptyState
+                  title="Nenhum circuito encontrado"
+                  description="Ajuste a busca ou cadastre um novo circuito para iniciar o catálogo."
+                />
+              }
+              colSpan={5}
+              className="table-header-blue table-mobile-cards"
+              containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+            >
+              {circuitosExibidos.map((circuito) => (
+                <tr key={circuito.id}>
+                  <td data-label="Circuito">{circuito.nome}</td>
+                  <td data-label="Codigo">{circuito.codigo || "-"}</td>
+                  <td data-label="Operador">{circuito.operador || "-"}</td>
+                  <td data-label="Status">{circuito.ativo ? "Ativo" : "Inativo"}</td>
+                  <td className="th-actions" data-label="Ações">
+                    <TableActions
+                      actions={[
+                        {
+                          key: `edit-${circuito.id}`,
+                          label: "Editar",
+                          variant: "ghost",
+                          onClick: () => iniciarEdicao(circuito.id),
+                        },
+                        {
+                          key: `preview-${circuito.id}`,
+                          label: "Visualizar",
+                          variant: "light",
+                          onClick: () => abrirPreview(circuito.id),
+                        },
+                        {
+                          key: `delete-${circuito.id}`,
+                          label: excluindoId === circuito.id ? "..." : "Excluir",
+                          variant: "danger",
+                          onClick: () => solicitarExclusao(circuito.id),
+                          disabled: excluindoId === circuito.id,
+                        },
+                      ]}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </DataTable>
+          </AppCard>
+        )}
+
+        {previewOpen ? (
+          <Dialog
+            title="Visualizacao do circuito"
+            width="xlarge"
+            onClose={fecharPreview}
+            footerButtons={[
+              {
+                content: "Fechar",
+                buttonType: "primary",
+                onClick: fecharPreview,
+              },
+            ]}
+          >
+            <div className="vtur-modal-body-stack">
+              {previewLoading ? <AppCard tone="info">Carregando preview...</AppCard> : null}
+              {previewErro ? <AlertMessage variant="error">{previewErro}</AlertMessage> : null}
+              {!previewLoading && previewData ? (
+                <AppCard
+                  title={previewData.circuito.nome}
+                  subtitle={[
+                    previewData.circuito.operador ? `Operador: ${previewData.circuito.operador}` : null,
+                    previewData.circuito.codigo ? `Codigo: ${previewData.circuito.codigo}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" • ")}
+                >
+                  <div className="vtur-modal-body-stack">
+                    {previewData.circuito.resumo ? (
+                      <AppCard title="Resumo" className="vtur-modal-section-card">
+                        <div style={{ whiteSpace: "pre-line" }}>{previewData.circuito.resumo}</div>
+                      </AppCard>
+                    ) : null}
+
+                    {previewData.datas.length > 0 ? (
+                      <AppCard title="Datas de inicio" className="vtur-modal-section-card">
+                        <div className="vtur-modal-list">
+                          {previewData.datas.map((d, idx) => (
+                            <div key={`${d.data_inicio}-${idx}`} className="vtur-modal-list-item">
+                              <strong>{d.data_inicio || "-"}</strong>
+                              <span>
+                                {d.cidade_inicio_nome ? `Cidade: ${d.cidade_inicio_nome}` : "Sem cidade vinculada"}
+                              </span>
+                              {d.dias_extra_antes || d.dias_extra_depois ? (
+                                <span>
+                                  Dias antes: {d.dias_extra_antes || 0} • Dias depois: {d.dias_extra_depois || 0}
+                                </span>
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                      </AppCard>
+                    ) : null}
+
+                    <AppCard title="Itinerario do circuito" className="vtur-modal-section-card">
+                      <div className="vtur-modal-list">
                         {previewData.dias.map((dia) => (
-                          <div key={dia.dia_numero}>
-                            <div style={{ fontWeight: 600 }}>
+                          <div key={dia.dia_numero} className="vtur-modal-list-item">
+                            <strong>
                               Dia {dia.dia_numero}
                               {dia.titulo ? `: ${dia.titulo}` : ""}
-                            </div>
-                            {dia.cidades.length > 0 && (
-                              <div style={{ color: "#64748b", fontSize: 13 }}>
-                                Cidades: {dia.cidades.join(" • ")}
-                              </div>
-                            )}
-                            <div style={{ whiteSpace: "pre-line", marginTop: 4 }}>{dia.descricao}</div>
+                            </strong>
+                            {dia.cidades.length > 0 ? (
+                              <span>Cidades: {dia.cidades.join(" • ")}</span>
+                            ) : null}
+                            <div style={{ whiteSpace: "pre-line" }}>{dia.descricao}</div>
                           </div>
                         ))}
                       </div>
-                    </div>
+                    </AppCard>
                   </div>
-                </div>
-              )}
+                </AppCard>
+              ) : null}
             </div>
-            <div className="modal-footer">
-              <button className="btn btn-light w-full sm:w-auto" onClick={fecharPreview} type="button">
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      <ConfirmDialog
-        open={Boolean(circuitoParaExcluir)}
-        title="Excluir circuito"
-        message="Tem certeza que deseja excluir este circuito?"
-        confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
-        confirmVariant="danger"
-        confirmDisabled={Boolean(excluindoId)}
-        onCancel={() => setCircuitoParaExcluir(null)}
-        onConfirm={confirmarExclusaoCircuito}
-      />
-      <ToastStack toasts={toasts} onDismiss={dismissToast} />
-    </div>
+          </Dialog>
+        ) : null}
+
+        <ConfirmDialog
+          open={Boolean(circuitoParaExcluir)}
+          title="Excluir circuito"
+          message="Tem certeza que deseja excluir este circuito?"
+          confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
+          confirmVariant="danger"
+          confirmDisabled={Boolean(excluindoId)}
+          onCancel={() => setCircuitoParaExcluir(null)}
+          onConfirm={confirmarExclusaoCircuito}
+        />
+        <ToastStack toasts={toasts} onDismiss={dismissToast} />
+      </div>
+    </AppPrimerProvider>
   );
 }

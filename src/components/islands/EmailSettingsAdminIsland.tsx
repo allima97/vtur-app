@@ -5,6 +5,11 @@ import AlertMessage from "../ui/AlertMessage";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { DEFAULT_FROM_EMAILS } from "../../lib/systemName";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type EmailSettings = {
   id?: string;
@@ -217,270 +222,261 @@ const EmailSettingsAdminIsland: React.FC = () => {
   if (loadingPerm) return <LoadingUsuarioContext />;
   if (!podeVer) {
     return (
-      <div style={{ padding: 20 }}>
-        <h3>Apenas administradores podem acessar este módulo.</h3>
-      </div>
+      <AppPrimerProvider>
+        <AppCard tone="config">
+          <strong>Apenas administradores podem acessar este modulo.</strong>
+        </AppCard>
+      </AppPrimerProvider>
     );
   }
 
   return (
-    <div className="mt-6 admin-page admin-email-page">
-      <div className="card-base card-config mb-3 list-toolbar-sticky">
-        <div className="form-row mobile-stack" style={{ gap: 12 }}>
-          <div className="form-group">
-            <h3 className="page-title">✉️ Configurações de envio de e-mail</h3>
-            <p className="page-subtitle">
-              Em hospedagens como Cloudflare Pages, SMTP via porta TCP não funciona. Para envio, prefira Resend (API
-              HTTP). SMTP fica como fallback para ambientes com TCP. Recebimento foi desativado.
-            </p>
-          </div>
-        </div>
-      </div>
+    <AppPrimerProvider>
+      <div className="mt-6 admin-page admin-email-page">
+        <AppToolbar
+          sticky
+          tone="config"
+          className="mb-3 list-toolbar-sticky"
+          title="Configuracoes de envio de e-mail"
+          subtitle="Em hospedagens como Cloudflare Pages, SMTP via TCP normalmente nao funciona. Prefira Resend via API HTTP e mantenha SMTP apenas como fallback."
+        />
 
-      {erro && (
-        <div className="mt-3">
-          <AlertMessage variant="error">{erro}</AlertMessage>
-        </div>
-      )}
+        {erro && (
+          <AlertMessage variant="error" className="mb-3">
+            {erro}
+          </AlertMessage>
+        )}
 
-      {loading ? (
-        <p className="mt-4">Carregando configurações...</p>
-      ) : (
-        <form className="card-base card-config mt-4" onSubmit={salvar}>
-          <div className="form-group">
-            <label className="form-label">Resend API Key (recomendado)</label>
-            <div className="password-field">
-              <input
-                className="form-input"
-                type={mostrarResend ? "text" : "password"}
-                value={form.resend_api_key}
-                onChange={(e) => setForm((prev) => ({ ...prev, resend_api_key: e.target.value }))}
-                placeholder="re_..."
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setMostrarResend((prev) => !prev)}
-                aria-label={mostrarResend ? "Ocultar chave" : "Mostrar chave"}
-              >
-                {mostrarResend ? "🙈" : "👁️"}
-              </button>
-            </div>
-            <small style={{ color: "#94a3b8" }}>
-              Esta chave é usada para enviar via API HTTP (Resend).
-            </small>
-          </div>
+        {loading ? (
+          <AppCard tone="config">
+            <p>Carregando configuracoes...</p>
+          </AppCard>
+        ) : (
+          <form onSubmit={salvar}>
+            <AppCard
+              tone="info"
+              title="Envio principal"
+              subtitle="Configure a API do Resend e valide rapidamente com um envio de teste."
+            >
+              <div className="vtur-form-grid vtur-form-grid-2">
+                <div>
+                  <label className="form-label">Resend API Key (recomendado)</label>
+                  <div className="password-field">
+                    <input
+                      className="form-input"
+                      type={mostrarResend ? "text" : "password"}
+                      value={form.resend_api_key}
+                      onChange={(e) => setForm((prev) => ({ ...prev, resend_api_key: e.target.value }))}
+                      placeholder="re_..."
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle"
+                      onClick={() => setMostrarResend((prev) => !prev)}
+                      aria-label={mostrarResend ? "Ocultar chave" : "Mostrar chave"}
+                      aria-pressed={mostrarResend}
+                    >
+                      {mostrarResend ? "🙈" : "👁️"}
+                    </button>
+                  </div>
+                  <div className="vtur-inline-note">
+                    Esta chave e usada para enviar via API HTTP, evitando limitacoes de SMTP no ambiente Cloudflare.
+                  </div>
+                </div>
 
-          <div className="form-row mobile-stack">
-            <div className="form-group flex-1">
-              <label className="form-label">Enviar teste para</label>
-              <input
-                className="form-input"
-                type="email"
-                value={testeEmail}
-                onChange={(e) => setTesteEmail(e.target.value.toLowerCase())}
-                placeholder={form.admin_from_email || DEFAULT_FROM_EMAILS.admin}
-              />
-            </div>
-            <div className="form-group w-full sm:w-40">
-              <label className="form-label">&nbsp;</label>
-              <button
-                type="button"
-                className="btn btn-light w-full"
-                onClick={enviarTeste}
-                disabled={enviandoTeste}
-              >
-                {enviandoTeste ? "Enviando..." : "Testar envio"}
-              </button>
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Usar SMTP como fallback?</label>
-            <label className="flex items-center gap-2 text-sm text-slate-400">
-              <input
-                type="checkbox"
-                checked={usarSmtp}
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  setUsarSmtp(checked);
-                  if (!checked) {
-                    setForm((prev) => ({
-                      ...prev,
-                      smtp_host: "",
-                      smtp_port: "",
-                      smtp_user: "",
-                      smtp_pass: "",
-                    }));
-                  } else {
-                    setForm((prev) => ({
-                      ...prev,
-                      smtp_host: prev.smtp_host || "smtp.hostinger.com",
-                      smtp_port: prev.smtp_port || "465",
-                    }));
-                  }
-                }}
-              />
-              Ative somente se seu servidor permite conexões SMTP (TCP).
-            </label>
-          </div>
-
-          {usarSmtp && (
-          <>
-          <div className="form-row mobile-stack">
-            <div className="form-group flex-1">
-              <label className="form-label">SMTP Host</label>
-              <input
-                className="form-input"
-                value={form.smtp_host}
-                onChange={(e) => setForm((prev) => ({ ...prev, smtp_host: e.target.value }))}
-                disabled={!usarSmtp}
-                placeholder="smtp.hostinger.com"
-              />
-            </div>
-            <div className="form-group w-full sm:w-40">
-              <label className="form-label">Porta</label>
-              <input
-                className="form-input"
-                type="number"
-                min="1"
-                value={form.smtp_port}
-                onChange={(e) => setForm((prev) => ({ ...prev, smtp_port: e.target.value }))}
-                disabled={!usarSmtp}
-                placeholder="465"
-              />
-            </div>
-            <div className="form-group w-full sm:w-40">
-              <label className="form-label">SSL?</label>
-              <select
-                className="form-select"
-                value={form.smtp_secure ? "true" : "false"}
-                onChange={(e) => setForm((prev) => ({ ...prev, smtp_secure: e.target.value === "true" }))}
-                disabled={!usarSmtp}
-              >
-                <option value="true">Sim</option>
-                <option value="false">Não</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="form-row mobile-stack">
-            <div className="form-group flex-1">
-              <label className="form-label">Usuário SMTP</label>
-              <input
-                className="form-input"
-                value={form.smtp_user}
-                onChange={(e) => setForm((prev) => ({ ...prev, smtp_user: e.target.value }))}
-                disabled={!usarSmtp}
-              />
-            </div>
-            <div className="form-group flex-1">
-              <label className="form-label">Senha SMTP</label>
-              <div className="password-field">
-                <input
-                  className="form-input"
-                  type={mostrarSenha ? "text" : "password"}
-                  value={form.smtp_pass}
-                  onChange={(e) => setForm((prev) => ({ ...prev, smtp_pass: e.target.value }))}
-                  disabled={!usarSmtp}
-                />
-                <button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() => setMostrarSenha((prev) => !prev)}
-                  aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
-                  disabled={!usarSmtp}
-                >
-                  {mostrarSenha ? "🙈" : "👁️"}
-                </button>
+                <div className="vtur-form-grid vtur-form-grid-2">
+                  <AppField
+                    type="email"
+                    label="Enviar teste para"
+                    value={testeEmail}
+                    onChange={(e) => setTesteEmail(e.target.value.toLowerCase())}
+                    placeholder={form.admin_from_email || DEFAULT_FROM_EMAILS.admin}
+                    caption="Se vazio, o sistema usa admin, alerta ou avisos como destino padrao."
+                  />
+                  <div style={{ display: "flex", alignItems: "flex-end" }}>
+                    <AppButton
+                      type="button"
+                      variant="secondary"
+                      block
+                      onClick={enviarTeste}
+                      disabled={enviandoTeste}
+                    >
+                      {enviandoTeste ? "Enviando..." : "Testar envio"}
+                    </AppButton>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-          </>
-          )}
+            </AppCard>
 
-          <div className="form-row">
-            <div className="form-group flex-1">
-              <label className="form-label">E-mail padrão (fallback)</label>
-              <input
-                className="form-input"
-                type="email"
-                value={form.alerta_from_email}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, alerta_from_email: e.target.value.toLowerCase() }))
-                }
-                placeholder={DEFAULT_FROM_EMAILS.admin}
-              />
-              <small style={{ color: "#94a3b8" }}>
-                Se não informar os específicos, o sistema usa este.
-              </small>
-            </div>
-            <div className="form-group flex-1">
-              <label className="form-label">E-mail admin</label>
-              <input
-                className="form-input"
-                type="email"
-                value={form.admin_from_email}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, admin_from_email: e.target.value.toLowerCase() }))
-                }
-                placeholder={DEFAULT_FROM_EMAILS.admin}
-              />
-            </div>
-          </div>
+            <AppCard
+              className="vtur-sales-embedded-card"
+              tone="config"
+              title="Fallback SMTP"
+              subtitle="Ative apenas se o ambiente permitir conexoes TCP para SMTP."
+            >
+              <label className="vtur-sales-principal-label">
+                <input
+                  type="checkbox"
+                  checked={usarSmtp}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setUsarSmtp(checked);
+                    if (!checked) {
+                      setForm((prev) => ({
+                        ...prev,
+                        smtp_host: "",
+                        smtp_port: "",
+                        smtp_user: "",
+                        smtp_pass: "",
+                      }));
+                    } else {
+                      setForm((prev) => ({
+                        ...prev,
+                        smtp_host: prev.smtp_host || "smtp.hostinger.com",
+                        smtp_port: prev.smtp_port || "465",
+                      }));
+                    }
+                  }}
+                />
+                Usar SMTP como fallback
+              </label>
+              <div className="vtur-inline-note">
+                Deixe desligado em ambientes serverless puros. Use somente quando houver suporte real a conexoes SMTP.
+              </div>
 
-          <div className="form-row">
-            <div className="form-group flex-1">
-              <label className="form-label">E-mail de avisos</label>
-              <input
-                className="form-input"
-                type="email"
-                value={form.avisos_from_email}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, avisos_from_email: e.target.value.toLowerCase() }))
-                }
-                placeholder={DEFAULT_FROM_EMAILS.avisos}
-              />
-            </div>
-            <div className="form-group flex-1">
-              <label className="form-label">E-mail financeiro</label>
-              <input
-                className="form-input"
-                type="email"
-                value={form.financeiro_from_email}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, financeiro_from_email: e.target.value.toLowerCase() }))
-                }
-                placeholder={DEFAULT_FROM_EMAILS.financeiro}
-              />
-            </div>
-          </div>
+              {usarSmtp && (
+                <>
+                  <div className="vtur-form-grid vtur-form-grid-3" style={{ marginTop: 16 }}>
+                    <AppField
+                      label="SMTP Host"
+                      value={form.smtp_host}
+                      onChange={(e) => setForm((prev) => ({ ...prev, smtp_host: e.target.value }))}
+                      disabled={!usarSmtp}
+                      placeholder="smtp.hostinger.com"
+                    />
+                    <AppField
+                      type="number"
+                      min="1"
+                      label="Porta"
+                      value={form.smtp_port}
+                      onChange={(e) => setForm((prev) => ({ ...prev, smtp_port: e.target.value }))}
+                      disabled={!usarSmtp}
+                      placeholder="465"
+                    />
+                    <AppField
+                      as="select"
+                      label="SSL?"
+                      value={form.smtp_secure ? "true" : "false"}
+                      onChange={(e) => setForm((prev) => ({ ...prev, smtp_secure: e.target.value === "true" }))}
+                      disabled={!usarSmtp}
+                      options={[
+                        { value: "true", label: "Sim" },
+                        { value: "false", label: "Nao" },
+                      ]}
+                    />
+                  </div>
 
-          <div className="form-row">
-            <div className="form-group flex-1">
-              <label className="form-label">E-mail suporte</label>
-              <input
-                className="form-input"
-                type="email"
-                value={form.suporte_from_email}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, suporte_from_email: e.target.value.toLowerCase() }))
-                }
-                placeholder={DEFAULT_FROM_EMAILS.suporte}
-              />
+                  <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 16 }}>
+                    <AppField
+                      label="Usuario SMTP"
+                      value={form.smtp_user}
+                      onChange={(e) => setForm((prev) => ({ ...prev, smtp_user: e.target.value }))}
+                      disabled={!usarSmtp}
+                    />
+                    <div>
+                      <label className="form-label">Senha SMTP</label>
+                      <div className="password-field">
+                        <input
+                          className="form-input"
+                          type={mostrarSenha ? "text" : "password"}
+                          value={form.smtp_pass}
+                          onChange={(e) => setForm((prev) => ({ ...prev, smtp_pass: e.target.value }))}
+                          disabled={!usarSmtp}
+                        />
+                        <button
+                          type="button"
+                          className="password-toggle"
+                          onClick={() => setMostrarSenha((prev) => !prev)}
+                          aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
+                          aria-pressed={mostrarSenha}
+                          disabled={!usarSmtp}
+                        >
+                          {mostrarSenha ? "🙈" : "👁️"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </AppCard>
+
+            <AppCard
+              className="vtur-sales-embedded-card"
+              tone="config"
+              title="Remetentes por contexto"
+              subtitle="Defina identidades de envio por area e mantenha um fallback padrao para quando algum contexto nao tiver remetente proprio."
+            >
+              <div className="vtur-form-grid vtur-form-grid-2">
+                <AppField
+                  type="email"
+                  label="E-mail padrao (fallback)"
+                  value={form.alerta_from_email}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, alerta_from_email: e.target.value.toLowerCase() }))
+                  }
+                  placeholder={DEFAULT_FROM_EMAILS.admin}
+                  caption="Se nao informar os especificos, o sistema usa este remetente."
+                />
+                <AppField
+                  type="email"
+                  label="E-mail admin"
+                  value={form.admin_from_email}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, admin_from_email: e.target.value.toLowerCase() }))
+                  }
+                  placeholder={DEFAULT_FROM_EMAILS.admin}
+                />
+                <AppField
+                  type="email"
+                  label="E-mail de avisos"
+                  value={form.avisos_from_email}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, avisos_from_email: e.target.value.toLowerCase() }))
+                  }
+                  placeholder={DEFAULT_FROM_EMAILS.avisos}
+                />
+                <AppField
+                  type="email"
+                  label="E-mail financeiro"
+                  value={form.financeiro_from_email}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, financeiro_from_email: e.target.value.toLowerCase() }))
+                  }
+                  placeholder={DEFAULT_FROM_EMAILS.financeiro}
+                />
+                <AppField
+                  type="email"
+                  label="E-mail suporte"
+                  value={form.suporte_from_email}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, suporte_from_email: e.target.value.toLowerCase() }))
+                  }
+                  placeholder={DEFAULT_FROM_EMAILS.suporte}
+                />
+              </div>
+            </AppCard>
+
+            <div className="vtur-form-actions">
+              <AppButton type="submit" variant="primary" disabled={salvando} loading={salvando}>
+                {salvando ? "Salvando..." : "Salvar configuracoes"}
+              </AppButton>
             </div>
-          </div>
+          </form>
+        )}
 
-          <div className="flex gap-2 flex-wrap mt-3 mobile-stack-buttons">
-            <button type="submit" className="btn btn-primary" disabled={salvando}>
-              {salvando ? "Salvando..." : "Salvar configurações"}
-            </button>
-          </div>
-        </form>
-      )}
-
-      <ToastStack toasts={toasts} onDismiss={dismissToast} />
-    </div>
+        <ToastStack toasts={toasts} onDismiss={dismissToast} />
+      </div>
+    </AppPrimerProvider>
   );
 };
 

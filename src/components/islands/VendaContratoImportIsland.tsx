@@ -1,3 +1,4 @@
+import { Dialog } from "@primer/react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   extractContratosFromPdf,
@@ -12,8 +13,17 @@ import { normalizeText } from "../../lib/normalizeText";
 import { formatNumberBR } from "../../lib/format";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
+import AlertMessage from "../ui/AlertMessage";
+import EmptyState from "../ui/EmptyState";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import TableActions from "../ui/TableActions";
 import { ToastStack, useToastQueue } from "../ui/Toast";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 import { AlertTriangle } from "lucide-react";
 
 type CidadeSugestao = {
@@ -845,82 +855,203 @@ export default function VendaContratoImportIsland() {
     }
   }
 
+  const principalContrato = contratos[principalIndex] || contratos[0] || null;
+  const totalPassageiros = useMemo(
+    () => contratos.reduce((acc, contrato) => acc + ((contrato.passageiros || []).length || 0), 0),
+    [contratos]
+  );
+  const contratosSemCpf = useMemo(
+    () => contratos.filter((contrato) => !(contrato.contratante?.cpf || "").trim()).length,
+    [contratos]
+  );
+  const resumoImportacao = tipoImportacao === "roteiro" ? "Reserva de Cruzeiro" : "Contrato CVC";
+
+  function resetImportacao() {
+    setFile(null);
+    setTextInput("");
+    setContratos([]);
+    setContratoFiles([]);
+    setPrincipalIndex(0);
+    setStatus(null);
+    setError(null);
+    setPreviewError(null);
+    setPreviewOpen(false);
+    setPreviewText("");
+    setBuscaCidade("");
+    setCidadeId("");
+    setCidadeNome("");
+    setCidadeSelecionadaLabel("");
+    setMostrarSugestoesCidade(false);
+    setResultadosCidade([]);
+    setErroCidade(null);
+    setBuscaDestino("");
+    setDestinoId("");
+    setCidadeManual(false);
+    setDestinoManual(false);
+    setCidadeAutoIndefinida(false);
+    setLoadingCidadeIndefinida(false);
+    setIncluirMaisRecibos(false);
+    setCpfInputIndex(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
   if (loadPerm) return <LoadingUsuarioContext />;
   if (!podeVer) {
     return (
-      <div className="card-base card-config">
-        <strong>Acesso negado ao módulo de importação.</strong>
-      </div>
+      <AppPrimerProvider>
+        <AppCard tone="config">
+          <strong>Acesso negado ao módulo de importação.</strong>
+        </AppCard>
+      </AppPrimerProvider>
     );
   }
 
   return (
-    <div className="page-content-wrap">
-      <div className="card-base mb-3">
-        <h3 style={{ marginTop: 0 }}>Importar contrato</h3>
-        <div className="form-row" style={{ marginTop: 12 }}>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Tipo de importação</label>
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="tipo-importacao"
-                  checked={tipoImportacao === "cvc"}
-                  onChange={() => setTipoImportacao("cvc")}
-                  disabled={contratos.length > 0}
-                />
-                Contrato CVC
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="tipo-importacao"
-                  checked={tipoImportacao === "roteiro"}
-                  onChange={() => setTipoImportacao("roteiro")}
-                  disabled={contratos.length > 0}
-                />
-                Reserva de Cruzeiro
-              </label>
+    <AppPrimerProvider>
+      <div className="page-content-wrap">
+        <AppToolbar
+          className="mb-3"
+          sticky
+          tone="config"
+          title="Importação de contratos"
+          subtitle={`Fluxo de ${resumoImportacao} com revisão comercial antes da criação da venda.`}
+          actions={
+            <div className="vtur-quote-top-actions">
+              <AppButton type="button" variant="secondary" onClick={resetImportacao} disabled={extracting}>
+                Limpar importação
+              </AppButton>
+              <AppButton type="button" variant="ghost" onClick={handleCancelarImportacao} disabled={saving}>
+                Cancelar
+              </AppButton>
             </div>
-            {contratos.length > 0 && (
-              <small style={{ color: "#64748b" }}>
-                Limpe os contratos para trocar o tipo de importação.
-              </small>
-            )}
+          }
+        >
+          <div className="vtur-choice-grid">
+            <AppButton
+              type="button"
+              variant={tipoImportacao === "cvc" ? "primary" : "secondary"}
+              className="vtur-choice-button"
+              onClick={() => setTipoImportacao("cvc")}
+              disabled={contratos.length > 0}
+            >
+              <span className="vtur-choice-button-content">
+                <span className="vtur-choice-button-title">Contrato CVC</span>
+                <span className="vtur-choice-button-caption">
+                  Importação padrão do contrato ou orçamento em PDF/texto.
+                </span>
+              </span>
+            </AppButton>
+            <AppButton
+              type="button"
+              variant={tipoImportacao === "roteiro" ? "primary" : "secondary"}
+              className="vtur-choice-button"
+              onClick={() => setTipoImportacao("roteiro")}
+              disabled={contratos.length > 0}
+            >
+              <span className="vtur-choice-button-content">
+                <span className="vtur-choice-button-title">Reserva de Cruzeiro</span>
+                <span className="vtur-choice-button-caption">
+                  Leitura otimizada do roteiro e da reserva com passageiros e fornecedores.
+                </span>
+              </span>
+            </AppButton>
           </div>
-        </div>
-        <div className="form-row" style={{ marginTop: 12 }}>
-          <div className="form-group" style={{ flex: 1, minWidth: 240 }}>
-            <label className="form-label">PDF do contrato/orçamento</label>
-            <div className="file-input-stack">
-              <input
-                id="contrato-file-input"
-                type="file"
-                accept="application/pdf"
-                className="sr-only"
-                ref={fileInputRef}
-                onChange={(e) => {
-                  const nextFile = e.target.files?.[0] || null;
-                  setFile(nextFile);
-                  if (nextFile) {
-                    setTextInput("");
-                  }
-                }}
-              />
-              <label htmlFor="contrato-file-input" className="btn btn-light w-full sm:w-auto">
-                Escolher arquivo
-              </label>
-              <span className="file-input-name">{file?.name || "Nenhum arquivo escolhido"}</span>
+          {contratos.length > 0 ? (
+            <div className="vtur-inline-note">
+              Limpe os contratos para trocar o tipo de importação.
+            </div>
+          ) : null}
+
+          <div className="vtur-quote-summary-grid" style={{ marginTop: 16 }}>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Contratos</span>
+              <strong>{contratos.length}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Passageiros</span>
+              <strong>{totalPassageiros}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">CPF pendente</span>
+              <strong>{contratosSemCpf}</strong>
             </div>
           </div>
-        </div>
-        <div className="form-row" style={{ marginTop: 12 }}>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Texto do contrato/orçamento</label>
-            <textarea
-              className="form-input"
-              rows={8}
+        </AppToolbar>
+
+        {status ? (
+          <AlertMessage variant="info" className="mb-3">
+            {status}
+          </AlertMessage>
+        ) : null}
+        {error ? (
+          <AlertMessage variant="error" className="mb-3">
+            {error}
+          </AlertMessage>
+        ) : null}
+        {previewError ? (
+          <AlertMessage variant="error" className="mb-3">
+            {previewError}
+          </AlertMessage>
+        ) : null}
+
+        <AppCard
+          className="mb-3"
+          title="Fonte do contrato"
+          subtitle="Envie o PDF do contrato/orçamento ou cole o texto bruto para extrair os recibos."
+        >
+          <div className="vtur-form-grid vtur-form-grid-2">
+            <div className="vtur-import-upload-stack">
+              <label className="form-label">PDF do contrato/orçamento</label>
+              <div className="vtur-import-upload-row">
+                <input
+                  id="contrato-file-input"
+                  type="file"
+                  accept="application/pdf"
+                  className="sr-only"
+                  ref={fileInputRef}
+                  onChange={(e) => {
+                    const nextFile = e.target.files?.[0] || null;
+                    setFile(nextFile);
+                    if (nextFile) {
+                      setTextInput("");
+                    }
+                  }}
+                />
+                <label htmlFor="contrato-file-input" className="vtur-import-upload-trigger">
+                  Escolher arquivo
+                </label>
+                <span className="vtur-import-file-name">{file?.name || "Nenhum arquivo selecionado"}</span>
+              </div>
+              <div className="vtur-form-actions">
+                <AppButton
+                  type="button"
+                  variant="primary"
+                  onClick={handleExtract}
+                  disabled={extracting || (contratos.length > 0 && !incluirMaisRecibos)}
+                >
+                  {extracting
+                    ? "Extraindo..."
+                    : contratos.length > 0 && incluirMaisRecibos
+                      ? "Adicionar recibos"
+                      : "Extrair"}
+                </AppButton>
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  onClick={handlePreviewPdf}
+                  disabled={extracting || previewing || !file}
+                >
+                  {previewing ? "Abrindo..." : "Pré-visualizar PDF"}
+                </AppButton>
+              </div>
+            </div>
+
+            <AppField
+              as="textarea"
+              label="Texto do contrato/orçamento"
+              rows={10}
               placeholder="Cole aqui o texto do contrato/orçamento"
               value={textInput}
               onChange={(e) => {
@@ -935,912 +1066,698 @@ export default function VendaContratoImportIsland() {
               }}
             />
           </div>
-        </div>
-        <div className="mobile-stack-buttons" style={{ marginTop: 12 }}>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={handleExtract}
-            disabled={extracting || (contratos.length > 0 && !incluirMaisRecibos)}
-          >
-            {extracting
-              ? "Extraindo..."
-              : contratos.length > 0 && incluirMaisRecibos
-              ? "Adicionar recibos"
-              : "Extrair"}
-          </button>
-          <button
-            type="button"
-            className="btn btn-light"
-            onClick={handlePreviewPdf}
-            disabled={extracting || previewing || !file}
-          >
-            {previewing ? "Abrindo..." : "Pré-visualizar PDF"}
-          </button>
-          <button
-            type="button"
-            className="btn btn-light"
-            onClick={() => {
-              setFile(null);
-              setTextInput("");
-              setContratos([]);
-              setContratoFiles([]);
-              setPrincipalIndex(0);
-              setStatus(null);
-              setError(null);
-              setPreviewError(null);
-              setPreviewOpen(false);
-              setPreviewText("");
-              setBuscaCidade("");
-              setCidadeId("");
-              setCidadeNome("");
-              setCidadeSelecionadaLabel("");
-              setMostrarSugestoesCidade(false);
-              setResultadosCidade([]);
-              setErroCidade(null);
-              setBuscaDestino("");
-              setDestinoId("");
-              setCidadeManual(false);
-              setDestinoManual(false);
-              setCidadeAutoIndefinida(false);
-              setLoadingCidadeIndefinida(false);
-              setIncluirMaisRecibos(false);
-              if (fileInputRef.current) {
-                fileInputRef.current.value = "";
-              }
-            }}
-            disabled={extracting}
-          >
-            Limpar
-          </button>
-        </div>
-        {status && <div style={{ marginTop: 12, fontSize: 14 }}>{status}</div>}
-        {error && <div style={{ marginTop: 12, color: "#b91c1c" }}>{error}</div>}
-        {previewError && (
-          <div style={{ marginTop: 12, color: "#b91c1c" }}>{previewError}</div>
-        )}
-      </div>
+        </AppCard>
 
-      {contratos.length > 0 && (
-        <div className="card-base">
-          <h3 style={{ marginTop: 0 }}>Contratos identificados</h3>
-          <p style={{ marginTop: 4 }}>
-            Selecione qual contrato deve ser o principal (define o destino da venda).
-          </p>
-          <div style={{ display: "grid", gap: 12 }}>
-            {contratos.map((c, idx) => {
-              const hasCpf = Boolean((c.contratante?.cpf || "").trim());
-              const cpfControlsVisible = cpfInputIndex === idx;
-              const buttonClass =
-                cpfControlsVisible || hasCpf
-                  ? "btn btn-ghost btn-ghost-xs"
-                  : "btn btn-primary";
-              const passageiros = (c.passageiros || []).filter((p) => (p?.nome || "").trim());
-              const adultos = passageiros.filter((p) => {
-                const age = calcAge(p.nascimento || null, dataVenda);
-                return age != null && age >= 18;
-              });
-              const passageirosContratante = adultos.length ? adultos : passageiros;
-              const selectedContratanteIndex = (() => {
-                if (!passageirosContratante.length) return "";
-                const currentCpf = normalizeCpf(c.contratante?.cpf || "");
-                if (currentCpf) {
-                  const found = passageirosContratante.findIndex(
-                    (p) => normalizeCpf(p.cpf) === currentCpf
-                  );
-                  if (found >= 0) return String(found);
-                }
-                const currentNomeNorm = normalizeText(c.contratante?.nome || "", {
-                  trim: true,
-                  collapseWhitespace: true,
-                });
-                if (currentNomeNorm) {
-                  const found = passageirosContratante.findIndex(
-                    (p) =>
-                      normalizeText(p.nome || "", { trim: true, collapseWhitespace: true }) ===
-                      currentNomeNorm
-                  );
-                  if (found >= 0) return String(found);
-                }
-                return "";
-              })();
-              return (
-                <div key={`${c.contrato_numero}-${idx}`} className="card-base" style={{ border: "1px solid #e2e8f0" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                  <strong>Contrato {c.contrato_numero || "-"}</strong>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="radio"
-                      name="contrato-principal"
-                      checked={principalIndex === idx}
-                      onChange={() => setPrincipalIndex(idx)}
-                    />
-                    Principal
-                  </label>
-                </div>
-                <div style={{ marginTop: 8, fontSize: 14, lineHeight: 1.4 }}>
-                  <div>
-                    <strong>Contratante:</strong> {c.contratante?.nome || "-"} (
-                    {c.contratante?.cpf ? formatCpf(c.contratante.cpf) : "-"})
-                  </div>
-                  {isRoteiro && idx === principalIndex && passageiros.length >= 2 && (
-                    <div style={{ marginTop: 8 }}>
-                      <label className="form-label" style={{ marginBottom: 6 }}>
-                        Selecionar contratante (passageiros ≥ 18 anos, aplica em todos)
-                      </label>
-                      <select
-                        className="form-select"
-                        value={selectedContratanteIndex}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (!value) return;
-                          const passenger = passageirosContratante[Number(value)];
-                          if (!passenger) return;
-                          updateContratanteAll({
-                            nome: passenger.nome,
-                            cpf: normalizeCpf(passenger.cpf) || "",
-                            nascimento: passenger.nascimento || null,
-                          });
-                          setCpfInputIndex(null);
-                        }}
-                      >
-                        <option value="">Manter como está</option>
-                        {passageirosContratante.map((p, pIdx) => {
-                          const age = calcAge(p.nascimento || null, dataVenda);
-                          const cpfDigits = normalizeCpf(p.cpf);
-                          const ageLabel = age != null ? `${age} anos` : "idade ?";
-                          const cpfLabel =
-                            cpfDigits.length === 11 ? formatCpf(cpfDigits) : "CPF não informado";
-                          return (
-                            <option key={`${p.nome}-${pIdx}`} value={String(pIdx)}>
-                              {`${p.nome} — ${ageLabel} — ${cpfLabel}`}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </div>
-                  )}
-                  <div><strong>Reserva:</strong> {c.reserva_numero || "-"}</div>
-                  <div><strong>Destino:</strong> {c.destino || "-"}</div>
-                  <div><strong>Período:</strong> {formatDate(c.data_saida)} até {formatDate(c.data_retorno)}</div>
-                  <div><strong>Produto:</strong> {c.produto_principal || "-"}</div>
-                  <div><strong>Tipo de pacote:</strong> {c.tipo_pacote || "-"}</div>
-                  <div><strong>Passageiros:</strong> {c.passageiros?.length || 0}</div>
-                  <div><strong>Total bruto:</strong> {formatCurrency(c.total_bruto)}</div>
-                  <div><strong>Total pago:</strong> {formatCurrency(c.total_pago)}</div>
-                  <div><strong>Desconto comercial:</strong> {formatCurrency(c.desconto_comercial)}</div>
-                </div>
-                <div
-                  className="form-row"
-                  style={{
-                    marginTop: 8,
-                    gap: 4,
-                    flexWrap: "wrap",
-                    alignItems: "center",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <span
-                      className={
-                        hasCpf ? "text-sm text-slate-500" : "text-sm text-red-500"
+        {contratos.length > 0 ? (
+          <div className="vtur-modal-body-stack">
+            <AppCard
+              title="Contratos identificados"
+              subtitle="Revise recibos, defina o principal e ajuste dados comerciais antes de salvar a venda."
+            >
+              <div className="vtur-import-contract-list">
+                {contratos.map((c, idx) => {
+                  const hasCpf = Boolean((c.contratante?.cpf || "").trim());
+                  const cpfControlsVisible = cpfInputIndex === idx;
+                  const passageiros = (c.passageiros || []).filter((p) => (p?.nome || "").trim());
+                  const adultos = passageiros.filter((p) => {
+                    const age = calcAge(p.nascimento || null, dataVenda);
+                    return age != null && age >= 18;
+                  });
+                  const passageirosContratante = adultos.length ? adultos : passageiros;
+                  const selectedContratanteIndex = (() => {
+                    if (!passageirosContratante.length) return "";
+                    const currentCpf = normalizeCpf(c.contratante?.cpf || "");
+                    if (currentCpf) {
+                      const found = passageirosContratante.findIndex(
+                        (p) => normalizeCpf(p.cpf) === currentCpf
+                      );
+                      if (found >= 0) return String(found);
+                    }
+                    const currentNomeNorm = normalizeText(c.contratante?.nome || "", {
+                      trim: true,
+                      collapseWhitespace: true,
+                    });
+                    if (currentNomeNorm) {
+                      const found = passageirosContratante.findIndex(
+                        (p) =>
+                          normalizeText(p.nome || "", { trim: true, collapseWhitespace: true }) ===
+                          currentNomeNorm
+                      );
+                      if (found >= 0) return String(found);
+                    }
+                    return "";
+                  })();
+
+                  const contractActions = [
+                    {
+                      key: `principal-${idx}`,
+                      label: principalIndex === idx ? "Principal" : "Definir principal",
+                      variant: principalIndex === idx ? "primary" : "light",
+                      onClick: () => setPrincipalIndex(idx),
+                      disabled: principalIndex === idx,
+                    },
+                    {
+                      key: `cpf-${idx}`,
+                      label: cpfControlsVisible ? "Ocultar CPF" : hasCpf ? "Editar CPF" : "Informar CPF",
+                      variant: hasCpf ? "ghost" : "primary",
+                      onClick: () => setCpfInputIndex(cpfControlsVisible ? null : idx),
+                    },
+                  ];
+
+                  const tipoPacoteOptions = [
+                    { label: "Selecione", value: "" },
+                    ...tiposPacote.map((tipo) => ({
+                      label: tipo.nome || "",
+                      value: tipo.nome || "",
+                    })),
+                  ];
+                  if (
+                    c.tipo_pacote &&
+                    !tiposPacote.some(
+                      (tipo) =>
+                        normalizeText(tipo.nome) ===
+                        normalizeText(c.tipo_pacote || "", { trim: true, collapseWhitespace: true })
+                    )
+                  ) {
+                    tipoPacoteOptions.push({
+                      label: `${c.tipo_pacote} (nao cadastrado)`,
+                      value: c.tipo_pacote,
+                    });
+                  }
+
+                  return (
+                    <AppCard
+                      key={`${c.contrato_numero}-${idx}`}
+                      tone={principalIndex === idx ? "config" : "default"}
+                      className="vtur-import-contract-card"
+                      title={`Contrato ${c.contrato_numero || "-"}`}
+                      subtitle={
+                        principalIndex === idx
+                          ? "Este recibo define o destino e o contexto principal da venda."
+                          : "Recibo complementar vinculado a esta importação."
                       }
+                      actions={<TableActions actions={contractActions as any[]} />}
                     >
-                      {hasCpf
-                        ? "Atualize o CPF quando necessário."
-                        : "CPF do contratante não encontrado, Informe-o agora para continuar."}
-                    </span>
-                    <button
-                      type="button"
-                      className={buttonClass}
-                      onClick={() =>
-                        setCpfInputIndex(cpfControlsVisible ? null : idx)
-                      }
-                    >
-                      {cpfControlsVisible
-                        ? "Ocultar CPF"
-                        : hasCpf
-                        ? "Editar CPF"
-                        : "Informar CPF"}
-                    </button>
-                  </div>
-                </div>
-                {cpfControlsVisible && (
-                  <div className="form-row" style={{ marginTop: 8 }}>
-                    <div className="form-group flex-1 min-w-[220px]">
-                      <label className="form-label">CPF do contratante *</label>
-                      <input
-                        className="form-input"
-                        type="text"
-                        inputMode="numeric"
-                        placeholder="000.000.000-00"
-                        value={c.contratante?.cpf || ""}
-                        onChange={(e) =>
-                          updateContratoContratante(idx, { cpf: e.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
-                )}
-                <div className="form-row" style={{ marginTop: 12, marginBottom: 4 }}>
-                  <div className="form-group flex-1 min-w-[220px]">
-                    <label className="form-label">Produto (ajuste se necessário)</label>
-                    <input
-                      className="form-input"
-                      list="listaProdutosImportAll"
-                      placeholder={cidadeId ? "Digite ou selecione um produto" : "Digite o produto do recibo"}
-                      value={c.produto_principal || ""}
-                      onChange={(e) => updateContratoField(idx, { produto_principal: e.target.value })}
-                      disabled={loadingProdutos}
-                    />
-                  </div>
-                  <div className="form-group flex-1 min-w-[220px]">
-                    <label className="form-label">Tipo de Pacote</label>
-                    <select
-                      className="form-select"
-                      value={c.tipo_pacote || ""}
-                      onChange={(e) => updateContratoField(idx, { tipo_pacote: e.target.value })}
-                      disabled={isRoteiro || tiposPacote.length === 0}
-                      style={
-                        isReguaTipoPacote(c.tipo_pacote)
-                          ? { color: "#b91c1c", fontWeight: 700 }
-                          : undefined
-                      }
-                    >
-                      <option value="">Selecione</option>
-                      {tiposPacote.map((tipo) => {
-                        const label = tipo.nome || "";
-                        const isRegua = isReguaTipoPacote(label);
-                        return (
-                          <option
-                            key={tipo.id}
-                            value={label}
-                            style={isRegua ? { color: "#b91c1c", fontWeight: 600 } : undefined}
-                          >
-                            {label}
-                          </option>
-                        );
-                      })}
-                      {c.tipo_pacote &&
-                        !tiposPacote.some(
-                          (tipo) =>
-                            normalizeText(tipo.nome) ===
-                            normalizeText(c.tipo_pacote || "", { trim: true, collapseWhitespace: true })
-                        ) && (
-                          <option value={c.tipo_pacote}>{`${c.tipo_pacote} (não cadastrado)`}</option>
-                        )}
-                    </select>
-                    {tiposPacote.length === 0 && !isRoteiro && (
-                      <input
-                        className="form-input mt-2"
-                        placeholder="Ex: Somente Hotel"
-                        value={c.tipo_pacote || ""}
-                        onChange={(e) => updateContratoField(idx, { tipo_pacote: e.target.value })}
-                      />
-                    )}
-                  </div>
-                </div>
-                {(hasTransporteAereo(c) || Number(c.taxa_du || 0) > 0) && (
-                  <div className="form-row" style={{ marginTop: 6 }}>
-                    <div className="form-group flex-1 min-w-[220px]">
-                      <label className="form-label" title="DU comissionada. Informe o valor embutido nas taxas para entrar na comissao.">
-                        DU (comissionada)
-                      </label>
-                      {/* Confirmação se aplica DU */}
-                      {isViagemNacional(c, cidadePaisNome) && (
-                        <div style={{ marginBottom: 6 }}>
-                          <span>Aplicar DU automática? </span>
-                          <button
-                            type="button"
-                            className={c.aplica_du ? "btn btn-primary btn-xs" : "btn btn-light btn-xs"}
-                            onClick={() => {
-                              const next = !Boolean(c.aplica_du);
-                              if (next) {
-                                const duAtual = Number(c.taxa_du || 0);
-                                const duDefault = calcDuDefault(c);
-                                updateContratoField(idx, {
-                                  aplica_du: true,
-                                  taxa_du: duAtual > 0 ? duAtual : duDefault > 0 ? duDefault : null,
-                                });
-                              } else {
-                                updateContratoField(idx, { aplica_du: false, taxa_du: null });
-                              }
+                      <div className="vtur-import-contract-summary">
+                        <div className="vtur-import-contract-summary-item">
+                          <span className="vtur-quote-summary-label">Contratante</span>
+                          <strong>{c.contratante?.nome || "-"}</strong>
+                          <span>{c.contratante?.cpf ? formatCpf(c.contratante.cpf) : "CPF pendente"}</span>
+                        </div>
+                        <div className="vtur-import-contract-summary-item">
+                          <span className="vtur-quote-summary-label">Reserva</span>
+                          <strong>{c.reserva_numero || "-"}</strong>
+                          <span>{formatDate(c.data_saida)} até {formatDate(c.data_retorno)}</span>
+                        </div>
+                        <div className="vtur-import-contract-summary-item">
+                          <span className="vtur-quote-summary-label">Produto</span>
+                          <strong>{c.produto_principal || "-"}</strong>
+                          <span>{c.tipo_pacote || "Tipo de pacote pendente"}</span>
+                        </div>
+                        <div className="vtur-import-contract-summary-item">
+                          <span className="vtur-quote-summary-label">Financeiro</span>
+                          <strong>{formatCurrency(c.total_bruto)}</strong>
+                          <span>Pago {formatCurrency(c.total_pago)}</span>
+                        </div>
+                      </div>
+
+                      {isRoteiro && idx === principalIndex && passageiros.length >= 2 ? (
+                        <div className="vtur-form-grid" style={{ marginTop: 16 }}>
+                          <AppField
+                            as="select"
+                            label="Selecionar contratante (passageiros >= 18 anos)"
+                            value={selectedContratanteIndex}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (!value) return;
+                              const passenger = passageirosContratante[Number(value)];
+                              if (!passenger) return;
+                              updateContratanteAll({
+                                nome: passenger.nome,
+                                cpf: normalizeCpf(passenger.cpf) || "",
+                                nascimento: passenger.nascimento || null,
+                              });
+                              setCpfInputIndex(null);
                             }}
-                          >
-                            {c.aplica_du ? "SIM" : "NÃO"}
-                          </button>
+                            options={[
+                              { label: "Manter como está", value: "" },
+                              ...passageirosContratante.map((p, pIdx) => {
+                                const age = calcAge(p.nascimento || null, dataVenda);
+                                const cpfDigits = normalizeCpf(p.cpf);
+                                const ageLabel = age != null ? `${age} anos` : "idade ?";
+                                const cpfLabel =
+                                  cpfDigits.length === 11 ? formatCpf(cpfDigits) : "CPF nao informado";
+                                return {
+                                  label: `${p.nome} - ${ageLabel} - ${cpfLabel}`,
+                                  value: String(pIdx),
+                                };
+                              }),
+                            ]}
+                          />
                         </div>
-                      )}
-                      <input
-                        className="form-input"
-                        type="text"
-                        inputMode="decimal"
-                        pattern="[0-9,.]*"
-                        placeholder="20,00"
-                        value={formatMoneyInput(c.taxa_du ?? null)}
-                        onChange={(e) => updateContratoField(idx, { taxa_du: parseMoneyInput(e.target.value) })}
-                        disabled={!isViagemNacional(c, cidadePaisNome) ? true : !c.aplica_du}
-                      />
-                      <small style={{ color: "#64748b" }}>
-                        DU padrão: R$ 20,00 por passageiro (apenas Brasil). Edite se necessário.
-                      </small>
-                    </div>
-                  </div>
-                )}
-                {c.roteiro_reserva && (
-                  <div style={{ marginTop: 12 }}>
-                    <details className="card-base" style={{ padding: 12 }}>
-                      <summary style={{ cursor: "pointer", fontWeight: 600 }}>Reserva de Cruzeiro</summary>
-                      <div style={{ marginTop: 10, display: "grid", gap: 10, fontSize: 14 }}>
+                      ) : null}
+
+                      <div className="vtur-inline-note" style={{ marginTop: 16 }}>
+                        {hasCpf
+                          ? "Atualize o CPF quando necessário."
+                          : "CPF do contratante não encontrado. Informe-o antes de concluir a criação da venda."}
+                      </div>
+
+                      {cpfControlsVisible ? (
+                        <div className="vtur-form-grid" style={{ marginTop: 16 }}>
+                          <AppField
+                            label="CPF do contratante"
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="000.000.000-00"
+                            value={c.contratante?.cpf || ""}
+                            onChange={(e) => updateContratoContratante(idx, { cpf: e.target.value })}
+                          />
+                        </div>
+                      ) : null}
+
+                      <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 16 }}>
+                        <AppField
+                          label="Produto (ajuste se necessário)"
+                          list="listaProdutosImportAll"
+                          placeholder={cidadeId ? "Digite ou selecione um produto" : "Digite o produto do recibo"}
+                          value={c.produto_principal || ""}
+                          onChange={(e) => updateContratoField(idx, { produto_principal: e.target.value })}
+                          disabled={loadingProdutos}
+                        />
                         <div>
-                          <strong>Contratante</strong>
-                          <div>Nome: {formatLabelValue(c.roteiro_reserva.contratante?.nome || null)}</div>
-                          <div>Recibo: {formatLabelValue(c.roteiro_reserva.contratante?.recibo || null)}</div>
-                          <div>Valor: {formatCurrency(c.roteiro_reserva.contratante?.valor || null)}</div>
-                          <div>Taxa embarque: {formatCurrency(c.roteiro_reserva.contratante?.taxa_embarque || null)}</div>
-                          <div>Taxa DU: {formatCurrency(c.roteiro_reserva.contratante?.taxa_du || null)}</div>
-                        </div>
-                        <div>
-                          <strong>Roteiro</strong>
-                          <div>Descrição: {formatLabelValue(c.roteiro_reserva.roteiro?.descricao || null)}</div>
-                          <div>Tipo de produto: {formatLabelValue(c.roteiro_reserva.roteiro?.tipo_produto || null)}</div>
-                          <div>Número do roteiro: {formatLabelValue(c.roteiro_reserva.roteiro?.numero || null)}</div>
-                          <div>Roteiro Systur: {formatLabelValue(c.roteiro_reserva.roteiro?.systur || null)}</div>
-                          <div>Saída: {formatDate(c.roteiro_reserva.roteiro?.data_saida || null)}</div>
-                          <div>Retorno: {formatDate(c.roteiro_reserva.roteiro?.data_retorno || null)}</div>
-                          <div>Vendedor: {formatLabelValue(c.roteiro_reserva.roteiro?.vendedor || null)}</div>
-                          <div>Office ID: {formatLabelValue(c.roteiro_reserva.roteiro?.office_id || null)}</div>
-                          <div>Voo: {formatLabelValue(c.roteiro_reserva.roteiro?.voo || null)}</div>
-                          <div>Mensagem: {formatLabelValue(c.roteiro_reserva.roteiro?.mensagem || null)}</div>
-                        </div>
-                        <div>
-                          <strong>Origem</strong>
-                          <div>
-                            {formatLabelValue(c.roteiro_reserva.origem?.pais || null)} /{" "}
-                            {formatLabelValue(c.roteiro_reserva.origem?.estado || null)} /{" "}
-                            {formatLabelValue(c.roteiro_reserva.origem?.cidade || null)}
-                          </div>
-                        </div>
-                        <div>
-                          <strong>Destino</strong>
-                          <div>
-                            {formatLabelValue(c.roteiro_reserva.destino?.pais || null)} /{" "}
-                            {formatLabelValue(c.roteiro_reserva.destino?.estado || null)} /{" "}
-                            {formatLabelValue(c.roteiro_reserva.destino?.cidade || null)}
-                          </div>
-                        </div>
-                        <div>
-                          <strong>Dados da Reserva</strong>
-                          <div>Filial: {formatLabelValue(c.roteiro_reserva.dados_reserva?.filial || null)}</div>
-                          <div>Carrinho ID: {formatLabelValue(c.roteiro_reserva.dados_reserva?.carrinho_id || null)}</div>
-                          <div>Tipo de venda: {formatLabelValue(c.roteiro_reserva.dados_reserva?.tipo_venda || null)}</div>
-                          <div>Pedido: {formatLabelValue(c.roteiro_reserva.dados_reserva?.pedido || null)}</div>
-                          <div>Pedido dinâmico: {formatLabelValue(c.roteiro_reserva.dados_reserva?.pedido_dinamico || null)}</div>
-                          <div>Número da reserva: {formatLabelValue(c.roteiro_reserva.dados_reserva?.numero_reserva || null)}</div>
-                          <div>Vendedor da reserva: {formatLabelValue(c.roteiro_reserva.dados_reserva?.vendedor_reserva || null)}</div>
-                          <div>Data da reserva: {formatLabelValue(c.roteiro_reserva.dados_reserva?.data_reserva || null)}</div>
-                          <div>Remarcação: {formatLabelValue(c.roteiro_reserva.dados_reserva?.remarcacao || null)}</div>
-                          <div>Validade: {formatLabelValue(c.roteiro_reserva.dados_reserva?.validade_reserva || null)}</div>
-                          <div>Tipo de reserva: {formatLabelValue(c.roteiro_reserva.dados_reserva?.tipo_reserva || null)}</div>
-                          <div>Tabela: {formatLabelValue(c.roteiro_reserva.dados_reserva?.tabela || null)}</div>
-                          <div>Observação: {formatLabelValue(c.roteiro_reserva.dados_reserva?.observacao || null)}</div>
-                          <div>Operador online: {formatLabelValue(c.roteiro_reserva.dados_reserva?.operador_online || null)}</div>
-                          <div>Tipo de pacote: {formatLabelValue(c.roteiro_reserva.dados_reserva?.tipo_pacote || null)}</div>
-                          <div>Desvio loja: {formatLabelValue(c.roteiro_reserva.dados_reserva?.desvio_loja || null)}</div>
-                        </div>
-                        {c.roteiro_reserva.fornecedores && c.roteiro_reserva.fornecedores.length > 0 && (
-                          <div>
-                            <strong>Fornecedores</strong>
-                            <div style={{ display: "grid", gap: 6, marginTop: 6 }}>
-                              {c.roteiro_reserva.fornecedores.map((f, i) => {
-                                const produtoNome = getFornecedorProdutoNome(f);
-                                const titulo = produtoNome || f.nome || null;
-                                const mostrarFornecedor = Boolean(produtoNome && f.nome && produtoNome !== f.nome);
-                                return (
-                                <div key={`${c.contrato_numero}-for-${i}`} style={{ padding: "6px 8px", border: "1px solid #e2e8f0", borderRadius: 6 }}>
-                                  <div><strong>{formatLabelValue(titulo)}</strong></div>
-                                  {mostrarFornecedor && (
-                                    <div>Fornecedor: {formatLabelValue(f.nome || null)}</div>
-                                  )}
-                                  <div>Tipo: {formatLabelValue(f.tipo_servico || null)}</div>
-                                  <div>Nº acordo: {formatLabelValue(f.numero_acordo || null)}</div>
-                                  <div>Cidade: {formatLabelValue(f.cidade || null)}</div>
-                                  <div>Categoria: {formatLabelValue(f.categoria || null)}</div>
-                                  <div>Serviço: {formatLabelValue(f.servico || null)}</div>
-                                  <div>Transporte aéreo: {formatLabelValue(f.transporte_aereo || null)}</div>
-                                  <div>Trecho: {formatLabelValue(f.trecho || null)}</div>
-                                  <div>Data inicial: {formatDate(f.data_inicial || null)}</div>
-                                  <div>Data final: {formatDate(f.data_final || null)}</div>
-                                </div>
-                                );
-                              })}
+                          <AppField
+                            as="select"
+                            label="Tipo de pacote"
+                            value={c.tipo_pacote || ""}
+                            onChange={(e) => updateContratoField(idx, { tipo_pacote: e.target.value })}
+                            disabled={isRoteiro || tiposPacote.length === 0}
+                            options={tipoPacoteOptions}
+                          />
+                          {tiposPacote.length === 0 && !isRoteiro ? (
+                            <AppField
+                              wrapperClassName="mt-2"
+                              label="Tipo de pacote manual"
+                              placeholder="Ex: Somente Hotel"
+                              value={c.tipo_pacote || ""}
+                              onChange={(e) => updateContratoField(idx, { tipo_pacote: e.target.value })}
+                            />
+                          ) : null}
+                          {isReguaTipoPacote(c.tipo_pacote) ? (
+                            <div className="vtur-inline-feedback">
+                              Tipo de pacote em régua especial de comissionamento.
                             </div>
-                          </div>
-                        )}
-                        {c.roteiro_reserva.passageiros && c.roteiro_reserva.passageiros.length > 0 && (
-                          <div>
-                            <strong>Passageiros</strong>
-                            <div style={{ display: "grid", gap: 6, marginTop: 6 }}>
-                              {c.roteiro_reserva.passageiros.map((p, i) => (
-                                <div key={`${c.contrato_numero}-pax-${i}`} style={{ padding: "6px 8px", border: "1px solid #e2e8f0", borderRadius: 6 }}>
-                                  <div>
-                                    {formatLabelValue([p.sobrenome, p.nome].filter(Boolean).join(" ") || null)}
-                                  </div>
-                                  <div>Nascimento: {formatDate(p.nascimento || null)}</div>
-                                  <div>Sexo: {formatLabelValue(p.sexo || null)}</div>
-                                  <div>Idade: {formatLabelValue(p.idade || null)}</div>
-                                  <div>Local embarque: {formatLabelValue(p.local_embarque || null)}</div>
-                                  <div>Documento: {formatLabelValue(p.documento_numero || null)}</div>
-                                </div>
-                              ))}
+                          ) : null}
+                        </div>
+                      </div>
+
+                      {(hasTransporteAereo(c) || Number(c.taxa_du || 0) > 0) ? (
+                        <AppCard
+                          className="vtur-sales-embedded-card"
+                          tone="info"
+                          title="DU comissionada"
+                          subtitle="Informe o valor embutido nas taxas quando a viagem permitir comissão sobre DU."
+                        >
+                          {isViagemNacional(c, cidadePaisNome) ? (
+                            <div className="vtur-sales-principal-toggle">
+                              <span>Aplicar DU automática?</span>
+                              <AppButton
+                                type="button"
+                                variant={c.aplica_du ? "primary" : "secondary"}
+                                onClick={() => {
+                                  const next = !Boolean(c.aplica_du);
+                                  if (next) {
+                                    const duAtual = Number(c.taxa_du || 0);
+                                    const duDefault = calcDuDefault(c);
+                                    updateContratoField(idx, {
+                                      aplica_du: true,
+                                      taxa_du: duAtual > 0 ? duAtual : duDefault > 0 ? duDefault : null,
+                                    });
+                                  } else {
+                                    updateContratoField(idx, { aplica_du: false, taxa_du: null });
+                                  }
+                                }}
+                              >
+                                {c.aplica_du ? "SIM" : "NAO"}
+                              </AppButton>
                             </div>
+                          ) : null}
+                          <div className="vtur-form-grid" style={{ marginTop: 12 }}>
+                            <AppField
+                              label="Valor da DU"
+                              type="text"
+                              inputMode="decimal"
+                              pattern="[0-9,.]*"
+                              placeholder="20,00"
+                              value={formatMoneyInput(c.taxa_du ?? null)}
+                              onChange={(e) => updateContratoField(idx, { taxa_du: parseMoneyInput(e.target.value) })}
+                              disabled={!isViagemNacional(c, cidadePaisNome) ? true : !c.aplica_du}
+                              caption="DU padrão: R$ 20,00 por passageiro (apenas Brasil)."
+                            />
                           </div>
-                        )}
-                        {c.roteiro_reserva.orcamento && (
-                          <div>
-                            <strong>Orçamento</strong>
-                            <div>Valor total: {formatCurrency(c.roteiro_reserva.orcamento.valor_total || null)}</div>
-                            <div>Férias protegidas: {formatCurrency(c.roteiro_reserva.orcamento.valor_ferias_protegidas || null)}</div>
-                            <div>Forma: {formatLabelValue(c.roteiro_reserva.orcamento.forma_pagamento || null)}</div>
-                            <div>Plano: {formatLabelValue(c.roteiro_reserva.orcamento.plano || null)}</div>
-                          </div>
-                        )}
-                        {c.roteiro_reserva.pagamento && (
-                          <div>
-                            <strong>Pagamento</strong>
-                            <div>Forma: {formatLabelValue(c.roteiro_reserva.pagamento.forma || null)}</div>
-                            <div>Plano: {formatLabelValue(c.roteiro_reserva.pagamento.plano || null)}</div>
-                            {c.roteiro_reserva.pagamento.parcelas && (
-                              <div>
-                                <div>Parcelas:</div>
-                                <div style={{ display: "grid", gap: 4, marginTop: 4 }}>
-                                  {c.roteiro_reserva.pagamento.parcelas.map((parcela, i) => (
-                                    <div key={`${c.contrato_numero}-par-${i}`}>
-                                      {parcela.numero} - {formatCurrency(parcela.valor)} {parcela.vencimento ? `(${formatDate(parcela.vencimento)})` : ""}
-                                    </div>
-                                  ))}
+                        </AppCard>
+                      ) : null}
+
+                      {c.roteiro_reserva ? (
+                        <div style={{ marginTop: 16 }}>
+                          <details className="vtur-import-accordion">
+                            <summary>Reserva de Cruzeiro</summary>
+                            <div className="vtur-import-accordion-grid">
+                              <div className="vtur-import-accordion-box">
+                                <strong>Contratante</strong>
+                                <div>Nome: {formatLabelValue(c.roteiro_reserva.contratante?.nome || null)}</div>
+                                <div>Recibo: {formatLabelValue(c.roteiro_reserva.contratante?.recibo || null)}</div>
+                                <div>Valor: {formatCurrency(c.roteiro_reserva.contratante?.valor || null)}</div>
+                                <div>Taxa embarque: {formatCurrency(c.roteiro_reserva.contratante?.taxa_embarque || null)}</div>
+                                <div>Taxa DU: {formatCurrency(c.roteiro_reserva.contratante?.taxa_du || null)}</div>
+                              </div>
+                              <div className="vtur-import-accordion-box">
+                                <strong>Roteiro</strong>
+                                <div>Descrição: {formatLabelValue(c.roteiro_reserva.roteiro?.descricao || null)}</div>
+                                <div>Tipo de produto: {formatLabelValue(c.roteiro_reserva.roteiro?.tipo_produto || null)}</div>
+                                <div>Número do roteiro: {formatLabelValue(c.roteiro_reserva.roteiro?.numero || null)}</div>
+                                <div>Roteiro Systur: {formatLabelValue(c.roteiro_reserva.roteiro?.systur || null)}</div>
+                                <div>Saída: {formatDate(c.roteiro_reserva.roteiro?.data_saida || null)}</div>
+                                <div>Retorno: {formatDate(c.roteiro_reserva.roteiro?.data_retorno || null)}</div>
+                                <div>Vendedor: {formatLabelValue(c.roteiro_reserva.roteiro?.vendedor || null)}</div>
+                                <div>Office ID: {formatLabelValue(c.roteiro_reserva.roteiro?.office_id || null)}</div>
+                                <div>Voo: {formatLabelValue(c.roteiro_reserva.roteiro?.voo || null)}</div>
+                                <div>Mensagem: {formatLabelValue(c.roteiro_reserva.roteiro?.mensagem || null)}</div>
+                              </div>
+                              <div className="vtur-import-accordion-box">
+                                <strong>Origem</strong>
+                                <div>
+                                  {formatLabelValue(c.roteiro_reserva.origem?.pais || null)} /{" "}
+                                  {formatLabelValue(c.roteiro_reserva.origem?.estado || null)} /{" "}
+                                  {formatLabelValue(c.roteiro_reserva.origem?.cidade || null)}
                                 </div>
                               </div>
-                            )}
+                              <div className="vtur-import-accordion-box">
+                                <strong>Destino</strong>
+                                <div>
+                                  {formatLabelValue(c.roteiro_reserva.destino?.pais || null)} /{" "}
+                                  {formatLabelValue(c.roteiro_reserva.destino?.estado || null)} /{" "}
+                                  {formatLabelValue(c.roteiro_reserva.destino?.cidade || null)}
+                                </div>
+                              </div>
+                              <div className="vtur-import-accordion-box">
+                                <strong>Dados da Reserva</strong>
+                                <div>Filial: {formatLabelValue(c.roteiro_reserva.dados_reserva?.filial || null)}</div>
+                                <div>Carrinho ID: {formatLabelValue(c.roteiro_reserva.dados_reserva?.carrinho_id || null)}</div>
+                                <div>Tipo de venda: {formatLabelValue(c.roteiro_reserva.dados_reserva?.tipo_venda || null)}</div>
+                                <div>Pedido: {formatLabelValue(c.roteiro_reserva.dados_reserva?.pedido || null)}</div>
+                                <div>Pedido dinâmico: {formatLabelValue(c.roteiro_reserva.dados_reserva?.pedido_dinamico || null)}</div>
+                                <div>Número da reserva: {formatLabelValue(c.roteiro_reserva.dados_reserva?.numero_reserva || null)}</div>
+                                <div>Vendedor da reserva: {formatLabelValue(c.roteiro_reserva.dados_reserva?.vendedor_reserva || null)}</div>
+                                <div>Data da reserva: {formatLabelValue(c.roteiro_reserva.dados_reserva?.data_reserva || null)}</div>
+                                <div>Remarcação: {formatLabelValue(c.roteiro_reserva.dados_reserva?.remarcacao || null)}</div>
+                                <div>Validade: {formatLabelValue(c.roteiro_reserva.dados_reserva?.validade_reserva || null)}</div>
+                                <div>Tipo de reserva: {formatLabelValue(c.roteiro_reserva.dados_reserva?.tipo_reserva || null)}</div>
+                                <div>Tabela: {formatLabelValue(c.roteiro_reserva.dados_reserva?.tabela || null)}</div>
+                                <div>Observação: {formatLabelValue(c.roteiro_reserva.dados_reserva?.observacao || null)}</div>
+                                <div>Operador online: {formatLabelValue(c.roteiro_reserva.dados_reserva?.operador_online || null)}</div>
+                                <div>Tipo de pacote: {formatLabelValue(c.roteiro_reserva.dados_reserva?.tipo_pacote || null)}</div>
+                                <div>Desvio loja: {formatLabelValue(c.roteiro_reserva.dados_reserva?.desvio_loja || null)}</div>
+                              </div>
+
+                              {c.roteiro_reserva.fornecedores && c.roteiro_reserva.fornecedores.length > 0 ? (
+                                <div className="vtur-import-accordion-box">
+                                  <strong>Fornecedores</strong>
+                                  <div className="vtur-modal-list" style={{ marginTop: 8 }}>
+                                    {c.roteiro_reserva.fornecedores.map((f, i) => {
+                                      const produtoNome = getFornecedorProdutoNome(f);
+                                      const titulo = produtoNome || f.nome || null;
+                                      const mostrarFornecedor = Boolean(produtoNome && f.nome && produtoNome !== f.nome);
+                                      return (
+                                        <div key={`${c.contrato_numero}-for-${i}`} className="vtur-modal-list-item">
+                                          <div><strong>{formatLabelValue(titulo)}</strong></div>
+                                          {mostrarFornecedor ? (
+                                            <div>Fornecedor: {formatLabelValue(f.nome || null)}</div>
+                                          ) : null}
+                                          <div>Tipo: {formatLabelValue(f.tipo_servico || null)}</div>
+                                          <div>Nº acordo: {formatLabelValue(f.numero_acordo || null)}</div>
+                                          <div>Cidade: {formatLabelValue(f.cidade || null)}</div>
+                                          <div>Categoria: {formatLabelValue(f.categoria || null)}</div>
+                                          <div>Serviço: {formatLabelValue(f.servico || null)}</div>
+                                          <div>Transporte aéreo: {formatLabelValue(f.transporte_aereo || null)}</div>
+                                          <div>Trecho: {formatLabelValue(f.trecho || null)}</div>
+                                          <div>Data inicial: {formatDate(f.data_inicial || null)}</div>
+                                          <div>Data final: {formatDate(f.data_final || null)}</div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              ) : null}
+
+                              {c.roteiro_reserva.passageiros && c.roteiro_reserva.passageiros.length > 0 ? (
+                                <div className="vtur-import-accordion-box">
+                                  <strong>Passageiros</strong>
+                                  <div className="vtur-modal-list" style={{ marginTop: 8 }}>
+                                    {c.roteiro_reserva.passageiros.map((p, i) => (
+                                      <div key={`${c.contrato_numero}-pax-${i}`} className="vtur-modal-list-item">
+                                        <div>{formatLabelValue([p.sobrenome, p.nome].filter(Boolean).join(" ") || null)}</div>
+                                        <div>Nascimento: {formatDate(p.nascimento || null)}</div>
+                                        <div>Sexo: {formatLabelValue(p.sexo || null)}</div>
+                                        <div>Idade: {formatLabelValue(p.idade || null)}</div>
+                                        <div>Local embarque: {formatLabelValue(p.local_embarque || null)}</div>
+                                        <div>Documento: {formatLabelValue(p.documento_numero || null)}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : null}
+
+                              {c.roteiro_reserva.orcamento ? (
+                                <div className="vtur-import-accordion-box">
+                                  <strong>Orçamento</strong>
+                                  <div>Valor total: {formatCurrency(c.roteiro_reserva.orcamento.valor_total || null)}</div>
+                                  <div>Férias protegidas: {formatCurrency(c.roteiro_reserva.orcamento.valor_ferias_protegidas || null)}</div>
+                                  <div>Forma: {formatLabelValue(c.roteiro_reserva.orcamento.forma_pagamento || null)}</div>
+                                  <div>Plano: {formatLabelValue(c.roteiro_reserva.orcamento.plano || null)}</div>
+                                </div>
+                              ) : null}
+
+                              {c.roteiro_reserva.pagamento ? (
+                                <div className="vtur-import-accordion-box">
+                                  <strong>Pagamento</strong>
+                                  <div>Forma: {formatLabelValue(c.roteiro_reserva.pagamento.forma || null)}</div>
+                                  <div>Plano: {formatLabelValue(c.roteiro_reserva.pagamento.plano || null)}</div>
+                                  {c.roteiro_reserva.pagamento.parcelas ? (
+                                    <div className="vtur-modal-list" style={{ marginTop: 8 }}>
+                                      {c.roteiro_reserva.pagamento.parcelas.map((parcela, i) => (
+                                        <div key={`${c.contrato_numero}-par-${i}`} className="vtur-modal-list-item">
+                                          {parcela.numero} - {formatCurrency(parcela.valor)}{" "}
+                                          {parcela.vencimento ? `(${formatDate(parcela.vencimento)})` : ""}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                            </div>
+                          </details>
+                        </div>
+                      ) : null}
+
+                      {c.pagamentos && c.pagamentos.length > 0 ? (
+                        <AppCard
+                          className="vtur-sales-embedded-card"
+                          title="Pagamentos identificados"
+                          subtitle="Resumo dos recebimentos extraídos deste contrato."
+                        >
+                          <div className="vtur-modal-list">
+                            {c.pagamentos.map((p, i) => (
+                              <div key={`${c.contrato_numero}-pg-${i}`} className="vtur-modal-list-item">
+                                {p.forma} {p.operacao ? `(${p.operacao})` : ""} - {formatCurrency(p.valor_bruto)}
+                              </div>
+                            ))}
                           </div>
-                        )}
-                      </div>
-                    </details>
-                  </div>
-                )}
-                {c.pagamentos && c.pagamentos.length > 0 && (
-                  <div style={{ marginTop: 10 }}>
-                    <strong>Pagamentos</strong>
-                    <ul style={{ marginTop: 6, paddingLeft: 18 }}>
-                      {c.pagamentos.map((p, i) => (
-                        <li key={`${c.contrato_numero}-pg-${i}`}>
-                          {p.forma} {p.operacao ? `(${p.operacao})` : ""} — {formatCurrency(p.valor_bruto)}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                        </AppCard>
+                      ) : null}
+                    </AppCard>
+                  );
+                })}
               </div>
-            );
-          })}
-          </div>
-          <div style={{ marginTop: 16 }}>
-            <h4 style={{ margin: 0 }}>Confirme cidade e Produto</h4>
-            <p style={{ marginTop: 4, marginBottom: 12, color: "#64748b", fontSize: 13 }}>
-              Esses dados serão usados como cidade e produto principal da venda. O produto pode ser escolhido ou criado.
-            </p>
-            <div className="form-row" style={{ marginTop: 8 }}>
-              <div className="form-group flex-1 min-w-[220px] relative">
-                <label className="form-label">Cidade *</label>
-                <input
-                  className="form-input"
-                  placeholder="Digite o nome da cidade"
-                  value={buscaCidade}
-                  onChange={(e) => handleCidadeInput(e.target.value)}
-                  onFocus={() => setMostrarSugestoesCidade(true)}
-                  onBlur={() => setTimeout(() => setMostrarSugestoesCidade(false), 150)}
-                  style={{ marginBottom: 6 }}
-                  disabled={cidadeAutoIndefinida || loadingCidadeIndefinida}
-                />
-                {mostrarSugestoesCidade && (buscandoCidade || buscaCidade.trim().length >= 2) && (
-                  <div
-                    className="card-base card-config"
-                    style={{
-                      position: "absolute",
-                      top: "100%",
-                      left: 0,
-                      right: 0,
-                      maxHeight: 160,
-                      overflowY: "auto",
-                      zIndex: 20,
-                      padding: "4px 0",
+            </AppCard>
+
+            <AppCard
+              title="Destino principal da venda"
+              subtitle="Confirme cidade, produto e data da venda. Esses dados determinam o contexto comercial salvo."
+            >
+              <div className="vtur-form-grid vtur-form-grid-3">
+                <div className="vtur-city-picker">
+                  <AppField
+                    label="Cidade"
+                    placeholder="Digite o nome da cidade"
+                    value={buscaCidade}
+                    onChange={(e) => handleCidadeInput(e.target.value)}
+                    onFocus={() => setMostrarSugestoesCidade(true)}
+                    onBlur={() => setTimeout(() => setMostrarSugestoesCidade(false), 150)}
+                    disabled={cidadeAutoIndefinida || loadingCidadeIndefinida}
+                    validation={!cidadeId && buscaCidade.trim() ? "Selecione uma cidade na lista para confirmar." : undefined}
+                    validationVariant="error"
+                  />
+                  {mostrarSugestoesCidade && (buscandoCidade || buscaCidade.trim().length >= 2) ? (
+                    <div className="vtur-city-dropdown">
+                      {buscandoCidade ? (
+                        <div className="vtur-city-helper">Buscando cidades...</div>
+                      ) : null}
+                      {!buscandoCidade && erroCidade ? (
+                        <div className="vtur-city-helper error">{erroCidade}</div>
+                      ) : null}
+                      {!buscandoCidade && !erroCidade && resultadosCidade.length === 0 ? (
+                        <div className="vtur-city-helper">Nenhuma cidade encontrada.</div>
+                      ) : null}
+                      {!buscandoCidade && !erroCidade
+                        ? resultadosCidade.map((c) => {
+                            const label = formatCidadeLabel(c);
+                            return (
+                              <AppButton
+                                key={c.id}
+                                type="button"
+                                variant="ghost"
+                                className="vtur-city-option"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  setCidadeManual(true);
+                                  setCidadeId(c.id);
+                                  setCidadeNome(c.nome);
+                                  setBuscaCidade(label);
+                                  setCidadeSelecionadaLabel(label);
+                                  setCidadePaisNome(c.pais_nome || null);
+                                  setMostrarSugestoesCidade(false);
+                                  setResultadosCidade([]);
+                                }}
+                              >
+                                {label}
+                                {c.pais_nome ? <span className="vtur-city-helper"> - {c.pais_nome}</span> : null}
+                              </AppButton>
+                            );
+                          })
+                        : null}
+                    </div>
+                  ) : null}
+                  {loadingCidadeIndefinida ? (
+                    <div className="vtur-city-helper">Definindo cidade automaticamente...</div>
+                  ) : null}
+                  {cidadeAutoIndefinida && !loadingCidadeIndefinida ? (
+                    <div className="vtur-city-helper">Cidade definida automaticamente: Indefinida (locação de carros).</div>
+                  ) : null}
+                </div>
+
+                <div>
+                  <AppField
+                    label="Produto"
+                    list="listaDestinosImport"
+                    placeholder={cidadeId ? "Digite ou selecione um produto" : "Selecione a cidade primeiro"}
+                    value={buscaDestino}
+                    onChange={(e) => handleDestinoInput(e.target.value)}
+                    onBlur={() => {
+                      const texto = buscaDestino.trim();
+                      if (!texto) {
+                        setDestinoId("");
+                        return;
+                      }
+                      const achado = destinosFiltrados.find(
+                        (p) => normalizeText(p.nome) === normalizeText(texto)
+                      );
+                      if (achado) {
+                        setDestinoId(achado.id);
+                        setBuscaDestino(achado.nome);
+                      } else {
+                        setDestinoId("");
+                      }
                     }}
-                  >
-                    {buscandoCidade && (
-                      <div style={{ padding: "6px 12px", color: "#64748b" }}>
-                        Buscando cidades...
-                      </div>
-                    )}
-                    {!buscandoCidade && erroCidade && (
-                      <div style={{ padding: "6px 12px", color: "#dc2626" }}>{erroCidade}</div>
-                    )}
-                    {!buscandoCidade && !erroCidade && resultadosCidade.length === 0 && (
-                      <div style={{ padding: "6px 12px", color: "#94a3b8" }}>
-                        Nenhuma cidade encontrada.
-                      </div>
-                    )}
-                    {!buscandoCidade &&
-                      !erroCidade &&
-                      resultadosCidade.map((c) => {
-                        const label = formatCidadeLabel(c);
-                        return (
-                          <button
-                            key={c.id}
-                            type="button"
-                            className="btn btn-ghost w-full text-left"
-                            style={{ padding: "6px 12px" }}
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              setCidadeManual(true);
-                              setCidadeId(c.id);
-                              setCidadeNome(c.nome);
-                              setBuscaCidade(label);
-                              setCidadeSelecionadaLabel(label);
-                              setCidadePaisNome(c.pais_nome || null);
-                              setMostrarSugestoesCidade(false);
-                              setResultadosCidade([]);
-                            }}
-                          >
-                            {label}
-                            {c.pais_nome ? (
-                              <span style={{ color: "#6b7280", marginLeft: 6 }}> - {c.pais_nome}</span>
-                            ) : null}
-                          </button>
-                        );
-                      })}
-                  </div>
-                )}
-                {loadingCidadeIndefinida && (
-                  <small style={{ color: "#64748b" }}>Definindo cidade automaticamente...</small>
-                )}
-                {cidadeAutoIndefinida && !loadingCidadeIndefinida && (
-                  <small style={{ color: "#0f766e" }}>
-                    Cidade definida automaticamente: Indefinida (locação de carros).
-                  </small>
-                )}
-                {!cidadeId && buscaCidade.trim() && (
-                  <small style={{ color: "#b45309" }}>
-                    Selecione uma cidade na lista para confirmar.
-                  </small>
-                )}
-              </div>
+                    disabled={!cidadeId || loadingProdutos}
+                  />
+                  <datalist id="listaDestinosImport">
+                    {destinosFiltrados.map((p) => (
+                      <option key={p.id} value={p.nome} />
+                    ))}
+                  </datalist>
+                  <datalist id="listaProdutosImportAll">
+                    {destinosDisponiveis.map((p) => (
+                      <option key={p.id} value={p.nome} />
+                    ))}
+                  </datalist>
+                  {loadingProdutos ? <div className="vtur-city-helper">Carregando produtos...</div> : null}
+                  {errorProdutos ? <div className="vtur-city-helper error">{errorProdutos}</div> : null}
+                  {!destinoId && buscaDestino.trim() && cidadeId && !loadingProdutos ? (
+                    <div className="vtur-city-helper">Produto será criado automaticamente para a cidade selecionada.</div>
+                  ) : null}
+                </div>
 
-              <div className="form-group flex-1 min-w-[220px]">
-                <label className="form-label">Produto *</label>
-                <input
-                  className="form-input"
-                  list="listaDestinosImport"
-                  placeholder={cidadeId ? "Digite ou selecione um produto" : "Selecione a cidade primeiro"}
-                  value={buscaDestino}
-                  onChange={(e) => handleDestinoInput(e.target.value)}
-                  onBlur={() => {
-                    const texto = buscaDestino.trim();
-                    if (!texto) {
-                      setDestinoId("");
-                      return;
-                    }
-                    const achado = destinosFiltrados.find(
-                      (p) => normalizeText(p.nome) === normalizeText(texto)
-                    );
-                    if (achado) {
-                      setDestinoId(achado.id);
-                      setBuscaDestino(achado.nome);
-                    } else {
-                      setDestinoId("");
-                    }
-                  }}
-                  disabled={!cidadeId || loadingProdutos}
-                />
-                <datalist id="listaDestinosImport">
-                  {destinosFiltrados.map((p) => (
-                    <option key={p.id} value={p.nome} />
-                  ))}
-                </datalist>
-                <datalist id="listaProdutosImportAll">
-                  {destinosDisponiveis.map((p) => (
-                    <option key={p.id} value={p.nome} />
-                  ))}
-                </datalist>
-                {loadingProdutos && (
-                  <small style={{ color: "#64748b" }}>Carregando produtos...</small>
-                )}
-                {errorProdutos && (
-                  <small style={{ color: "#dc2626" }}>{errorProdutos}</small>
-                )}
-                {!destinoId && buscaDestino.trim() && cidadeId && !loadingProdutos && (
-                  <small style={{ color: "#0f766e" }}>
-                    Produto será criado automaticamente para a cidade selecionada.
-                  </small>
-                )}
-              </div>
-
-              <div className="form-group" style={{ minWidth: 180 }}>
-                <label className="form-label">
-                  Data da Venda *
-                  <span title="Informe a data da venda conforme no Systur. Campo importante para Emissão de Nota Fiscal!" style={{ marginLeft: 6, color: '#0ea5e9', cursor: 'help' }}>?</span>
-                </label>
-                <input
+                <AppField
+                  label={
+                    <span>
+                      Data da Venda *
+                      <span
+                        title="Informe a data da venda conforme no Systur. Campo importante para emissão de nota fiscal."
+                        style={{ marginLeft: 6, color: "#0ea5e9", cursor: "help" }}
+                      >
+                        ?
+                      </span>
+                    </span>
+                  }
                   type="date"
-                  className="form-input"
                   value={dataVenda}
                   onFocus={selectAllInputOnFocus}
                   onChange={(e) => setDataVenda(e.target.value)}
                 />
               </div>
-            </div>
-          </div>
-          <div style={{ marginTop: 16 }}>
-            <h4 style={{ margin: 0 }}>Deseja incluir mais recibos?</h4>
-            <div style={{ display: "flex", gap: 12, marginTop: 8, flexWrap: "wrap" }}>
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="incluir-mais-recibos"
-                  checked={!incluirMaisRecibos}
-                  onChange={() => setIncluirMaisRecibos(false)}
-                />
-                Não
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="incluir-mais-recibos"
-                  checked={incluirMaisRecibos}
-                  onChange={() => setIncluirMaisRecibos(true)}
-                />
-                Sim
-              </label>
-            </div>
-            {incluirMaisRecibos && (
-              <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>
-                Use os campos acima para importar outro PDF ou colar texto. Clique em &quot;Adicionar recibos&quot;.
-                Selecione &quot;Não&quot; para finalizar e salvar.
+            </AppCard>
+
+            <AppCard
+              title="Finalização"
+              subtitle="Decida se vai anexar novos recibos a esta mesma venda ou concluir a criação agora."
+            >
+              <div className="vtur-choice-grid">
+                <AppButton
+                  type="button"
+                  variant={!incluirMaisRecibos ? "primary" : "secondary"}
+                  className="vtur-choice-button"
+                  onClick={() => setIncluirMaisRecibos(false)}
+                >
+                  <span className="vtur-choice-button-content">
+                    <span className="vtur-choice-button-title">Não incluir mais recibos</span>
+                    <span className="vtur-choice-button-caption">
+                      Finaliza a revisão e libera o salvamento da venda.
+                    </span>
+                  </span>
+                </AppButton>
+                <AppButton
+                  type="button"
+                  variant={incluirMaisRecibos ? "primary" : "secondary"}
+                  className="vtur-choice-button"
+                  onClick={() => setIncluirMaisRecibos(true)}
+                >
+                  <span className="vtur-choice-button-content">
+                    <span className="vtur-choice-button-title">Adicionar mais recibos</span>
+                    <span className="vtur-choice-button-caption">
+                      Continue importando outros PDFs/textos antes de salvar a venda consolidada.
+                    </span>
+                  </span>
+                </AppButton>
               </div>
-            )}
+              {incluirMaisRecibos ? (
+                <div className="vtur-inline-note">
+                  Use os campos acima para importar outro PDF ou colar texto e clique em "Adicionar recibos". Selecione "Não incluir mais recibos" para finalizar.
+                </div>
+              ) : null}
+
+              <div className="vtur-form-actions">
+                <AppButton
+                  type="button"
+                  variant="primary"
+                  onClick={handleSave}
+                  disabled={saving || !podeCriar || incluirMaisRecibos}
+                >
+                  {saving ? "Salvando..." : "Salvar venda"}
+                </AppButton>
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  onClick={handleCancelarImportacao}
+                  disabled={saving}
+                >
+                  Cancelar
+                </AppButton>
+              </div>
+            </AppCard>
           </div>
-          <div
-            className="mobile-stack-buttons"
-            style={{
-              marginTop: 16,
-              display: "flex",
-              gap: 8,
-              flexWrap: "wrap",
-              justifyContent: "flex-end",
-            }}
+        ) : (
+          <AppCard tone="info">
+            <EmptyState
+              title="Nenhum contrato extraído ainda"
+              description="Escolha o tipo de importação, envie o arquivo ou cole o texto bruto para iniciar a leitura do contrato."
+            />
+          </AppCard>
+        )}
+
+        <ToastStack toasts={toasts} onDismiss={dismissToast} />
+
+        {previewOpen ? (
+          <Dialog
+            title="Texto extraído do PDF"
+            width="xlarge"
+            onClose={() => setPreviewOpen(false)}
+            footerButtons={[
+              {
+                content: "Fechar",
+                buttonType: "primary",
+                onClick: () => setPreviewOpen(false),
+              },
+            ]}
           >
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleSave}
-              disabled={saving || !podeCriar || incluirMaisRecibos}
-            >
-              {saving ? "Salvando..." : "Salvar venda"}
-            </button>
-            <button
-              type="button"
-              className="btn btn-light"
-              onClick={handleCancelarImportacao}
-              disabled={saving}
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
-      <ToastStack toasts={toasts} onDismiss={dismissToast} />
-      {previewOpen && (
-        <div className="modal-backdrop">
-          <div className="modal-panel" style={{ maxWidth: 820 }}>
-            <div className="modal-header">
-              <div className="modal-title">Texto extraido do PDF</div>
-            </div>
-            <div className="modal-body">
-              <textarea
-                className="form-input"
-                rows={14}
-                readOnly
-                value={previewText}
-              />
-            </div>
-            <div className="modal-footer">
-              <button type="button" className="btn btn-light" onClick={() => setPreviewOpen(false)}>
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {cvcModalOpen && (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Aviso sobre importação de contrato"
-        >
-          <div className="modal-panel" style={{ maxWidth: 520, width: "95vw" }}>
-            <div className="modal-header">
-              <div
-                className="modal-title"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  color: "#b45309",
-                  fontWeight: 700,
-                }}
+            <div className="vtur-modal-body-stack">
+              <AppCard
+                tone="info"
+                title="Pré-visualização do texto"
+                subtitle="Use esta visão para conferir se o PDF está legível antes de extrair os recibos."
               >
-                <AlertTriangle size={20} strokeWidth={2} />
-                ATENÇÃO!
-              </div>
+                <AppField as="textarea" label="Texto extraído" rows={14} readOnly value={previewText} />
+              </AppCard>
             </div>
-            <div className="modal-body" style={{ display: "grid", gap: 10 }}>
+          </Dialog>
+        ) : null}
+
+        <AppNoticeDialog
+          open={cvcModalOpen}
+          title="ATENÇÃO!"
+          icon={<AlertTriangle size={20} strokeWidth={2} />}
+          onClose={() => setCvcModalOpen(false)}
+          message={
+            <div className="vtur-modal-body-stack">
               <p style={{ margin: 0 }}>
-                Para que a importação do Contrato seja correta, e o cálculo das comissões
-                sejam mostradas corretamente, informe o Tipo de Pacote, de acordo com o que
-                está informado na Reserva de Cruzeiro em Tipo de Pacote, por exemplo:
+                Para que a importação do contrato seja correta e o cálculo das comissões reflita o cenário real,
+                informe o tipo de pacote conforme o documento original.
               </p>
               <p style={{ margin: 0 }}>
-                <strong>
-                  Fretamento, Terrestre (Quando o produto for Ingresso, marque Ingressos),
-                  VHI Plus, Terrestre + Aéreo, Somente Hotel, Navio, Chip
-                </strong>
-                , etc.
+                <strong>Exemplos:</strong> Fretamento, Terrestre, Ingressos, VHI Plus, Terrestre + Aéreo,
+                Somente Hotel, Navio, Chip.
               </p>
               <p style={{ margin: 0 }}>
-                Isso deve ser feito para determinar os produtos que possuem opção de mudar a Régua
-                de Comissionamento!
+                Isso determina os produtos com possibilidade de ajuste na régua de comissionamento.
               </p>
             </div>
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => setCvcModalOpen(false)}
-              >
-                Entendi
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {roteiroAvisoAberto && (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Aviso sobre importação de reserva de cruzeiro"
-        >
-          <div className="modal-panel" style={{ maxWidth: 520, width: "95vw" }}>
-            <div className="modal-header">
-              <div
-                className="modal-title"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  color: "#b45309",
-                  fontWeight: 700,
-                }}
-              >
-                <AlertTriangle size={20} strokeWidth={2} />
-                ATENÇÃO!
-              </div>
-            </div>
-            <div className="modal-body" style={{ display: "grid", gap: 10 }}>
+          }
+        />
+
+        <AppNoticeDialog
+          open={roteiroAvisoAberto}
+          title="ATENÇÃO!"
+          icon={<AlertTriangle size={20} strokeWidth={2} />}
+          onClose={() => setRoteiroAvisoAberto(false)}
+          message={
+            <div className="vtur-modal-body-stack">
               <p style={{ margin: 0 }}>
-                Opção válida para importação somente de{" "}
-                <span style={{ color: "#b45309", fontWeight: 700 }}>Reserva do Cruzeiro</span>.
-                Para que funcione corretamente, é preciso abrir o campo <strong>+ Dados Pessoais</strong> de cada
-                passageiro, caso contrário você deverá informar manualmente o CPF do cliente.
+                Esta opção é válida somente para importação de <strong>Reserva de Cruzeiro</strong>.
               </p>
               <p style={{ margin: 0 }}>
-                Caso não tenha CPF cadastrado, deverá ser feito manualmente.
+                Para que o fluxo funcione corretamente, abra o campo <strong>+ Dados Pessoais</strong> de cada passageiro.
+                Caso contrário, o CPF deverá ser informado manualmente.
               </p>
             </div>
-            <div className="modal-footer mobile-stack-buttons">
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => setRoteiroAvisoAberto(false)}
-              >
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {duplicadoModal && (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Duplicidade de recibo"
-        >
-          <div className="modal-panel" style={{ maxWidth: 520, width: "95vw" }}>
-            <div className="modal-header">
-              <div
-                className="modal-title"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  color: "#b45309",
-                  fontWeight: 700,
-                }}
-              >
-                <AlertTriangle size={20} strokeWidth={2} />
-                ATENÇÃO!
-              </div>
-            </div>
-            <div className="modal-body" style={{ display: "grid", gap: 10 }}>
-              <p style={{ margin: 0 }}>{duplicadoModal.mensagem}</p>
-            </div>
-            <div className="modal-footer mobile-stack-buttons">
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => setDuplicadoModal(null)}
-              >
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {tipoPacoteModal && (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Tipo de pacote obrigatório"
-        >
-          <div className="modal-panel" style={{ maxWidth: 520, width: "95vw" }}>
-            <div className="modal-header">
-              <div
-                className="modal-title"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  color: "#b45309",
-                  fontWeight: 700,
-                }}
-              >
-                <AlertTriangle size={20} strokeWidth={2} />
-                ATENÇÃO!
-              </div>
-            </div>
-            <div className="modal-body" style={{ display: "grid", gap: 10 }}>
-              <p style={{ margin: 0 }}>{tipoPacoteModal.mensagem}</p>
-            </div>
-            <div className="modal-footer mobile-stack-buttons">
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => setTipoPacoteModal(null)}
-              >
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+          }
+        />
+
+        <AppNoticeDialog
+          open={Boolean(duplicadoModal)}
+          title="ATENÇÃO!"
+          icon={<AlertTriangle size={20} strokeWidth={2} />}
+          onClose={() => setDuplicadoModal(null)}
+          message={duplicadoModal?.mensagem || ""}
+        />
+
+        <AppNoticeDialog
+          open={Boolean(tipoPacoteModal)}
+          title="ATENÇÃO!"
+          icon={<AlertTriangle size={20} strokeWidth={2} />}
+          onClose={() => setTipoPacoteModal(null)}
+          message={tipoPacoteModal?.mensagem || ""}
+        />
+      </div>
+    </AppPrimerProvider>
   );
 }
