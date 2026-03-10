@@ -17,6 +17,20 @@ type Env = {
   };
 };
 
+function ensureSSRDomGlobals() {
+  const g = globalThis as any;
+
+  if (typeof g.HTMLElement === "undefined") {
+    g.HTMLElement = class HTMLElement {};
+  }
+  if (typeof g.Element === "undefined") {
+    g.Element = g.HTMLElement;
+  }
+  if (typeof g.Node === "undefined") {
+    g.Node = class Node {};
+  }
+}
+
 function logUncaughtError(params: {
   error: unknown;
   request: Request;
@@ -55,6 +69,7 @@ export function createExports(manifest: SSRManifest) {
     env: Env,
     context: ExecutionContext
   ) => {
+    ensureSSRDomGlobals();
     // Expose env to SSR/API modules that don't receive env directly
     (globalThis as any).env = env;
     try {
