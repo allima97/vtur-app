@@ -5,7 +5,7 @@
 
 export interface Env {
   // KV Namespace for caching
-  CACHE: KVNamespace;
+  CACHE?: KVNamespace;
   SESSION: KVNamespace;
 
   // Environment variables
