@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { formatDateBR } from "../../lib/format";
+import AlertMessage from "../ui/AlertMessage";
+import EmptyState from "../ui/EmptyState";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
 
 type UsuarioItem = {
   id: string;
@@ -64,32 +68,30 @@ export default function AniversariantesColaboradoresIsland() {
     };
   }, [month]);
 
-  if (loading) return <div>Carregando aniversariantes...</div>;
-  if (erro) return <div style={{ color: "#b91c1c" }}>{erro}</div>;
+  if (loading) return <AppCard tone="info">Carregando aniversariantes...</AppCard>;
+  if (erro) return <AlertMessage variant="error">{erro}</AlertMessage>;
 
   return (
-    <div className="card-base card-blue" style={{ marginBottom: 16 }}>
+    <AppCard
+      className="aniversariantes-colaboradores-card"
+      tone="info"
+      style={{ marginBottom: 16 }}
+      title="Aniversariantes (colaboradores)"
+    >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <h3 style={{ marginBottom: 8 }}>Aniversariantes (colaboradores)</h3>
-        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 14 }}>Mês</span>
-          <select
-            className="input"
-            value={month}
-            onChange={(e) => setMonth(Number(e.target.value))}
-            style={{ maxWidth: 180 }}
-          >
-            {MONTHS.map((label, idx) => (
-              <option key={label} value={idx + 1}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div />
+        <AppField
+          as="select"
+          label="Mes"
+          value={String(month)}
+          onChange={(e) => setMonth(Number(e.target.value))}
+          style={{ maxWidth: 180 }}
+          options={MONTHS.map((label, idx) => ({ value: String(idx + 1), label }))}
+        />
       </div>
 
       {!items.length ? (
-        <div>Nenhum aniversariante este mês.</div>
+        <EmptyState title="Sem aniversariantes" description="Nenhum aniversariante neste mes." />
       ) : (
         <ul style={{ paddingLeft: 16 }}>
           {items.map((u) => (
@@ -101,6 +103,6 @@ export default function AniversariantesColaboradoresIsland() {
           ))}
         </ul>
       )}
-    </div>
+    </AppCard>
   );
 }

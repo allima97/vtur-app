@@ -36,42 +36,42 @@ Objetivo: aplicar `@primer/react` em toda a experiencia do `vtur`, usando wrappe
 - [x] `ComissionamentoIsland`
 - [ ] `MetasVendedorIsland`
 - [x] `AuthLoginIsland`
-- [ ] `AuthRecoverIsland`
-- [ ] `AuthRegisterIsland`
-- [ ] `AuthResetIsland`
-- [ ] `PerfilIsland`
-- [ ] `MinhasPreferenciasIsland`
+- [x] `AuthRecoverIsland`
+- [x] `AuthRegisterIsland`
+- [x] `AuthResetIsland`
+- [x] `PerfilIsland`
+- [x] `MinhasPreferenciasIsland`
 
 ## Gestor e Master
 
 - [x] `DashboardGestorIsland`
 - [x] `EquipeGestorIsland`
-- [ ] `EscalaGestorIsland`
+- [x] `EscalaGestorIsland`
 - [x] `MasterUsuariosIsland`
-- [ ] `MasterEmpresasIsland`
-- [ ] `MasterPermissoesIsland`
-- [ ] `MinhaEscalaIsland`
-- [ ] `RankingVendasIsland`
-- [ ] `FechamentoComissaoIsland`
+- [x] `MasterEmpresasIsland`
+- [x] `MasterPermissoesIsland`
+- [x] `MinhaEscalaIsland`
+- [x] `RankingVendasIsland`
+- [x] `FechamentoComissaoIsland`
 
 ## Admin
 
 - [x] `DashboardAdminIsland`
-- [ ] `AdminPermissoesIsland`
-- [ ] `PermissoesAdminIsland`
+- [x] `AdminPermissoesIsland`
+- [x] `PermissoesAdminIsland`
 - [ ] `UsuariosAdminIsland`
 - [x] `EmailSettingsAdminIsland`
 - [ ] `EmpresasAdminIsland`
-- [ ] `PlanosAdminIsland`
+- [x] `PlanosAdminIsland`
 - [x] `CommissionTemplatesIsland`
 - [x] `CommissionRulesIsland`
-- [ ] `AdminUserTypesIsland`
-- [ ] `AvisosAdminIsland`
+- [x] `AdminUserTypesIsland`
+- [x] `AvisosAdminIsland`
 - [ ] `FinanceiroAdminIsland`
-- [ ] `LogsIsland`
-- [ ] `PerformanceDashboardIsland`
-- [ ] `DocumentationIsland`
-- [ ] `DocumentationPortalIsland`
+- [x] `LogsIsland`
+- [x] `PerformanceDashboardIsland`
+- [x] `DocumentationIsland`
+- [x] `DocumentationPortalIsland`
 
 ## Cadastros
 
@@ -93,10 +93,10 @@ Objetivo: aplicar `@primer/react` em toda a experiencia do `vtur`, usando wrappe
 - [x] `CommissionTemplatesIsland`
 - [ ] `ParametrosCambiosIsland`
 - [ ] `ParametrosAvisosIsland`
-- [ ] `ParametrosNaoComissionaveisIsland`
-- [ ] `ParametrosSistemaIsland`
-- [ ] `QuotePrintSettingsIsland`
-- [ ] `AdminUserTypesIsland`
+- [x] `ParametrosNaoComissionaveisIsland`
+- [x] `ParametrosSistemaIsland`
+- [x] `QuotePrintSettingsIsland`
+- [x] `AdminUserTypesIsland`
 
 ## Relatorios
 
@@ -104,7 +104,7 @@ Objetivo: aplicar `@primer/react` em toda a experiencia do `vtur`, usando wrappe
 - [x] `RelatorioAgrupadoProdutoIsland`
 - [x] `RelatorioAgrupadoDestinoIsland`
 - [x] `RelatorioAgrupadoClienteIsland`
-- [ ] `RankingVendasIsland`
+- [x] `RankingVendasIsland`
 
 ## Operacao e CRM
 
@@ -118,20 +118,20 @@ Objetivo: aplicar `@primer/react` em toda a experiencia do `vtur`, usando wrappe
 - [ ] `DocumentosViagensIsland`
 - [ ] `DossieViagemIsland`
 - [ ] `ViagensListaIsland`
-- [ ] `AniversariantesColaboradoresIsland`
-- [ ] `PushNotificationsIsland`
-- [ ] `ConsultoriaLembretesModalIsland`
-- [ ] `StreamChatIsland`
+- [x] `AniversariantesColaboradoresIsland`
+- [x] `PushNotificationsIsland`
+- [x] `ConsultoriaLembretesModalIsland`
+- [x] `StreamChatIsland`
 
 ## Infra e suporte
 
-- [ ] `HelpDrawerIsland`
+- [x] `HelpDrawerIsland`
 - [x] `NetMetricsPanelIsland`
-- [ ] `LogoutButtonIsland`
-- [ ] `MaintenanceAccessIsland`
-- [ ] `DashboardRouterIsland`
+- [x] `LogoutButtonIsland`
+- [x] `MaintenanceAccessIsland`
+- [x] `DashboardRouterIsland`
 - [ ] `PermissoesProvider`
-- [ ] `PersonalizarMenuIsland`
+- [x] `PersonalizarMenuIsland`
 
 ## Criterios de conclusao por modulo
 

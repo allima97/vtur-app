@@ -6,6 +6,11 @@ import { useMasterScope } from "../../lib/useMasterScope";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { formatCurrencyBRL, formatNumberBR } from "../../lib/format";
 import { fetchGestorEquipeVendedorIds } from "../../lib/gestorEquipe";
+import AlertMessage from "../ui/AlertMessage";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type Papel = "GESTOR" | "MASTER" | "OUTRO" | "VIEWER";
 
@@ -710,57 +715,16 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
   if (!podeVer) return <div>Você não possui acesso a este relatório.</div>;
 
   return (
-    <div className="ranking-vendas-page">
+    <AppPrimerProvider>
+    <div className="ranking-vendas-page vtur-legacy-module">
       {!effectiveViewOnly && papel === "MASTER" && (
-        <div className="card-base card-purple mb-3 list-toolbar-sticky">
-          <div className="form-row mobile-stack" style={{ gap: 12 }}>
-            <div className="form-group">
-              <label className="form-label">Filial</label>
-              <select
-                className="form-select"
-                value={masterScope.empresaSelecionada}
-                onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
-              >
-                <option value="all">Todas</option>
-                {masterScope.empresasAprovadas.map((empresa) => (
-                  <option key={empresa.id} value={empresa.id}>
-                    {empresa.nome_fantasia}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Equipe</label>
-              <select
-                className="form-select"
-                value={masterScope.gestorSelecionado}
-                onChange={(e) => masterScope.setGestorSelecionado(e.target.value)}
-              >
-                <option value="all">Todas</option>
-                {masterScope.gestoresDisponiveis.map((gestor) => (
-                  <option key={gestor.id} value={gestor.id}>
-                    {formatNome(gestor.nome_completo) || "Gestor"}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Vendedor</label>
-              <select
-                className="form-select"
-                value={masterScope.vendedorSelecionado}
-                onChange={(e) => masterScope.setVendedorSelecionado(e.target.value)}
-              >
-                <option value="all">Todos</option>
-                {masterScope.vendedoresDisponiveis.map((vendedor) => (
-                  <option key={vendedor.id} value={vendedor.id}>
-                    {formatNome(vendedor.nome_completo) || "Vendedor"}
-                  </option>
-                ))}
-              </select>
-            </div>
+        <AppToolbar title="Ranking de vendas" subtitle="Compare desempenho por mês, equipe e produto." tone="info" sticky>
+          <div className="vtur-form-grid vtur-form-grid-3">
+            <AppField as="select" label="Filial" value={masterScope.empresaSelecionada} onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)} options={[{ label: "Todas", value: "all" }, ...masterScope.empresasAprovadas.map((empresa) => ({ label: empresa.nome_fantasia, value: empresa.id }))]} />
+            <AppField as="select" label="Equipe" value={masterScope.gestorSelecionado} onChange={(e) => masterScope.setGestorSelecionado(e.target.value)} options={[{ label: "Todas", value: "all" }, ...masterScope.gestoresDisponiveis.map((gestor) => ({ label: formatNome(gestor.nome_completo) || "Gestor", value: gestor.id }))]} />
+            <AppField as="select" label="Vendedor" value={masterScope.vendedorSelecionado} onChange={(e) => masterScope.setVendedorSelecionado(e.target.value)} options={[{ label: "Todos", value: "all" }, ...masterScope.vendedoresDisponiveis.map((vendedor) => ({ label: formatNome(vendedor.nome_completo) || "Vendedor", value: vendedor.id }))]} />
           </div>
-        </div>
+        </AppToolbar>
       )}
 
       {!effectiveViewOnly && gestoresParaConfig.length > 0 && (
@@ -798,20 +762,16 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
         </div>
       )}
 
-      {erro && (
-        <div className="card-base card-config mb-3">
-          <strong>{erro}</strong>
-        </div>
-      )}
+      {erro && <AlertMessage variant="error"><strong>{erro}</strong></AlertMessage>}
 
       {loadingDados && (
-        <div className="card-base card-config mb-3">Carregando dados...</div>
+        <AppCard tone="config">Carregando dados...</AppCard>
       )}
 
       {!loadingDados && equipeFiltroIds.length === 0 && (
-        <div className="card-base card-config mb-3">
+        <AppCard tone="config">
           Nenhum vendedor vinculado para exibir ranking.
-        </div>
+        </AppCard>
       )}
 
       {!loadingDados && equipeFiltroIds.length > 0 && (
@@ -981,16 +941,17 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
             )}
 
             {(!metaProdEnabled || produtosComMeta.length === 0) && (
-              <div className="card-base card-config">
+              <AppCard tone="config">
                 {metaProdEnabled
                   ? "Nenhuma meta diferenciada por produto no período."
                   : "Ranking por produto desativado nos parâmetros."}
-              </div>
+              </AppCard>
             )}
             </aside>
           </div>
         </>
       )}
     </div>
+    </AppPrimerProvider>
   );
 }

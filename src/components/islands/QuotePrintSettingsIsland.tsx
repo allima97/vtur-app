@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
+import AlertMessage from "../ui/AlertMessage";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { registrarLog } from "../../lib/logs";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type QuotePrintSettings = {
   id?: string;
@@ -268,15 +272,19 @@ export default function QuotePrintSettingsIsland() {
   }
 
   if (!podeVer) {
-    return <div>Acesso ao modulo de parametros bloqueado.</div>;
+    return <AppCard tone="config">Acesso ao modulo de parametros bloqueado.</AppCard>;
   }
 
   return (
-    <div className="card-base">
-      <h2 className="card-title">Parametros do Orcamento (PDF)</h2>
-
-      {erro && <div className="auth-error">{erro}</div>}
-      {sucesso && <div className="auth-success">{sucesso}</div>}
+    <section className="quote-print-settings-page">
+      <AppToolbar
+        tone="config"
+        title="Parametros do Orcamento (PDF)"
+        subtitle="Logo, contatos, rodape e imagem complementar para o template de impressao."
+      />
+      <AppCard tone="config">
+      {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
+      {sucesso && <AlertMessage variant="success">{sucesso}</AlertMessage>}
 
       <div className="form-row">
         <div className="form-group">
@@ -445,10 +453,11 @@ export default function QuotePrintSettingsIsland() {
       </div>
 
       <div className="mobile-stack-buttons" style={{ display: "flex", gap: 12, marginTop: 12 }}>
-        <button className="btn btn-primary" type="button" onClick={salvar} disabled={salvando || bloqueado}>
+        <AppButton type="button" variant="primary" onClick={salvar} disabled={salvando || bloqueado}>
           {salvando ? "Salvando..." : "Salvar parametros"}
-        </button>
+        </AppButton>
       </div>
-    </div>
+      </AppCard>
+    </section>
   );
 }

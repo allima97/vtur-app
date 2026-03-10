@@ -13,6 +13,12 @@ import {
 import { buildMonthOptionsYYYYMM, formatMonthYearBR } from "../../lib/format";
 import { registrarLog } from "../../lib/logs";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
+import AlertMessage from "../ui/AlertMessage";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type Papel = "GESTOR" | "MASTER" | "OUTRO";
 
@@ -1118,102 +1124,40 @@ export default function EscalaGestorIsland() {
   const loadingEscala = loadingDados || carregandoContextoEscala;
 
   return (
-    <div className="escala-page">
+    <AppPrimerProvider>
+    <div className="escala-page vtur-legacy-module">
       {papel === "MASTER" && (
-        <div className="card-base card-purple mb-3 list-toolbar-sticky">
-          <div className="form-row mobile-stack" style={{ gap: 12 }}>
-            <div className="form-group">
-              <label className="form-label">Filial</label>
-              <select
-                className="form-select"
-                value={masterScope.empresaSelecionada}
-                onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
-              >
-                <option value="all">Selecione</option>
-                {masterScope.empresasAprovadas.map((empresa) => (
-                  <option key={empresa.id} value={empresa.id}>
-                    {empresa.nome_fantasia}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Equipe</label>
-              <select
-                className="form-select"
-                value={masterScope.gestorSelecionado}
-                onChange={(e) => masterScope.setGestorSelecionado(e.target.value)}
-              >
-                <option value="all">Selecione</option>
-                {masterScope.gestoresDisponiveis.map((gestor) => (
-                  <option key={gestor.id} value={gestor.id}>
-                    {gestor.nome_completo}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Vendedor</label>
-              <select
-                className="form-select"
-                value={masterScope.vendedorSelecionado}
-                onChange={(e) => masterScope.setVendedorSelecionado(e.target.value)}
-              >
-                <option value="all">Todos</option>
-                {masterScope.vendedoresDisponiveis.map((vendedor) => (
-                  <option key={vendedor.id} value={vendedor.id}>
-                    {vendedor.nome_completo || "Vendedor"}
-                  </option>
-                ))}
-              </select>
-            </div>
+        <AppToolbar title="Escala da equipe" subtitle="Defina filtros do contexto Master antes de editar a escala mensal." tone="info" sticky>
+          <div className="vtur-form-grid vtur-form-grid-3">
+            <AppField as="select" label="Filial" value={masterScope.empresaSelecionada} onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)} options={[{ label: "Selecione", value: "all" }, ...masterScope.empresasAprovadas.map((empresa) => ({ label: empresa.nome_fantasia, value: empresa.id }))]} />
+            <AppField as="select" label="Equipe" value={masterScope.gestorSelecionado} onChange={(e) => masterScope.setGestorSelecionado(e.target.value)} options={[{ label: "Selecione", value: "all" }, ...masterScope.gestoresDisponiveis.map((gestor) => ({ label: gestor.nome_completo, value: gestor.id }))]} />
+            <AppField as="select" label="Vendedor" value={masterScope.vendedorSelecionado} onChange={(e) => masterScope.setVendedorSelecionado(e.target.value)} options={[{ label: "Todos", value: "all" }, ...masterScope.vendedoresDisponiveis.map((vendedor) => ({ label: vendedor.nome_completo || "Vendedor", value: vendedor.id }))]} />
           </div>
-        </div>
+        </AppToolbar>
       )}
 
-      <div className="card-base card-teal mb-3 escala-toolbar">
-        <div>
-          <div className="escala-title">
-            Escala {companyNome ? `- ${companyNome}` : ""}
-          </div>
-          <div className="escala-subtitle">
-            Mês: <strong>{formatMonthYearBR(periodo)}</strong>
-          </div>
+      <AppToolbar title={`Escala${companyNome ? ` - ${companyNome}` : ""}`} subtitle={`Mês: ${formatMonthYearBR(periodo)}`} tone="config">
+        <div className="vtur-form-grid vtur-form-grid-2">
+          <AppField as="select" label="Mês" value={periodo} onChange={(e) => setPeriodo(e.target.value)} options={periodoOptions.map((value) => ({ label: formatMonthYearBR(value), value }))} />
         </div>
-        <div className="escala-toolbar-actions">
-          <div className="form-group">
-            <label className="form-label sr-only">Mês</label>
-            <select className="form-select" value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
-              {periodoOptions.map((value) => (
-                <option key={value} value={value}>
-                  {formatMonthYearBR(value)}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
+      </AppToolbar>
 
       {precisaFiltroMaster && (
-        <div className="card-base card-config mb-3">
+        <AppCard tone="config">
           Selecione uma filial e uma equipe para editar a escala.
-        </div>
+        </AppCard>
       )}
 
       {erro && (
-        <div className="card-base card-config mb-3">
-          <strong>{erro}</strong>
-        </div>
+        <AlertMessage variant="error"><strong>{erro}</strong></AlertMessage>
       )}
 
       {feriadosErro && (
-        <div className="card-base card-config mb-3">
-          <strong>{feriadosErro}</strong>
-        </div>
+        <AlertMessage variant="error"><strong>{feriadosErro}</strong></AlertMessage>
       )}
 
       {loadingEscala && (
-        <div className="card-base card-config mb-3">Carregando escala...</div>
+        <AppCard tone="config">Carregando escala...</AppCard>
       )}
 
       {!loadingEscala && !precisaFiltroMaster && (
@@ -1282,22 +1226,12 @@ export default function EscalaGestorIsland() {
               </div>
             </div>
             <div className="form-group escala-multi-actions">
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => limparSelecaoMultipla(true)}
-                disabled={!podeEditar || !multiAtivo || multiDatas.length === 0}
-              >
+              <AppButton type="button" variant="default" onClick={() => limparSelecaoMultipla(true)} disabled={!podeEditar || !multiAtivo || multiDatas.length === 0}>
                 Limpar
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={aplicarSelecaoMultipla}
-                disabled={!podeEditar || !multiAtivo || multiDatas.length === 0 || multiAplicando}
-              >
+              </AppButton>
+              <AppButton type="button" variant="primary" onClick={aplicarSelecaoMultipla} disabled={!podeEditar || !multiAtivo || multiDatas.length === 0 || multiAplicando}>
                 {multiAplicando ? "Aplicando..." : "Aplicar"}
-              </button>
+              </AppButton>
             </div>
           </div>
           {multiErro && (
@@ -1639,5 +1573,6 @@ export default function EscalaGestorIsland() {
         </div>
       )}
     </div>
+    </AppPrimerProvider>
   );
 }

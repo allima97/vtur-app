@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { usePermissoesStore } from "../../lib/permissoesStore";
+import AlertMessage from "../ui/AlertMessage";
+import DataTable from "../ui/DataTable";
+import EmptyState from "../ui/EmptyState";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppToolbar from "../ui/primer/AppToolbar";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { normalizeText } from "../../lib/normalizeText";
 
@@ -131,118 +138,116 @@ export default function ParametrosNaoComissionaveisIsland() {
 
   if (!podeVer) {
     return (
-      <div className="card-base card-config">
-        <strong>Acesso negado ao módulo.</strong>
-      </div>
+      <AppCard tone="config">
+        <strong>Acesso negado ao modulo.</strong>
+      </AppCard>
     );
   }
 
   return (
-      <div className="page-content-wrap">
-      <div className="card-base mb-3">
-        <h3 style={{ marginTop: 0 }}>Critérios de não comissão</h3>
-        <p style={{ color: "#64748b", marginTop: 4 }}>
-          Estes termos sobrescrevem o campo <strong>paga_comissão</strong> e não entram em meta,
-          comissão e relatórios.
-        </p>
+    <div className="page-content-wrap">
+      <AppToolbar
+        tone="config"
+        title="Criterios de nao comissao"
+        subtitle="Sobrescreve paga_comissao e remove valores de metas, comissoes e relatorios."
+      />
+      <AppCard tone="config">
         <form onSubmit={salvar}>
           <div className="form-row">
-            <div className="form-group" style={{ flex: 2, minWidth: 240 }}>
-              <label className="form-label">Termo *</label>
-              <input
-                className="form-input"
-                value={form.termo}
-                onChange={(e) => setForm((prev) => ({ ...prev, termo: e.target.value }))}
-                placeholder="Ex.: Crédito diversos"
-                required
-              />
-            </div>
-            <div className="form-group" style={{ minWidth: 160 }}>
-              <label className="form-label">Ativo</label>
-              <select
-                className="form-select"
-                value={form.ativo ? "sim" : "nao"}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, ativo: e.target.value === "sim" }))
-                }
-              >
-                <option value="sim">Sim</option>
-                <option value="nao">Não</option>
-              </select>
-            </div>
+            <AppField
+              as="input"
+              wrapperClassName="form-group"
+              label="Termo *"
+              value={form.termo}
+              onChange={(e) => setForm((prev) => ({ ...prev, termo: e.target.value }))}
+              placeholder="Ex.: Credito diversos"
+              required
+            />
+            <AppField
+              as="select"
+              wrapperClassName="form-group"
+              label="Ativo"
+              value={form.ativo ? "sim" : "nao"}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, ativo: e.target.value === "sim" }))
+              }
+              options={[
+                { value: "sim", label: "Sim" },
+                { value: "nao", label: "Nao" },
+              ]}
+            />
           </div>
-          {erro && <div style={{ color: "#b91c1c", marginTop: 8 }}>{erro}</div>}
+          {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
           <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-            <button className="btn btn-primary" type="submit" disabled={salvando}>
+            <AppButton variant="primary" type="submit" disabled={salvando}>
               {salvando ? "Salvando..." : editId ? "Atualizar" : "Salvar"}
-            </button>
+            </AppButton>
             {editId && (
-              <button className="btn btn-light" type="button" onClick={resetForm}>
+              <AppButton variant="secondary" type="button" onClick={resetForm}>
                 Cancelar
-              </button>
+              </AppButton>
             )}
           </div>
         </form>
-      </div>
+      </AppCard>
 
-      <div className="card-base">
-        <h3 style={{ marginTop: 0 }}>Termos cadastrados</h3>
+      <AppCard tone="config" title="Termos cadastrados">
         {loading ? (
           <p>Carregando...</p>
         ) : termos.length === 0 ? (
-          <p>Nenhum critério cadastrado.</p>
+          <EmptyState title="Nenhum criterio cadastrado" />
         ) : (
-          <div className="table-container overflow-x-auto">
-            <table className="table-default table-header-blue table-mobile-cards">
-              <thead>
-                <tr>
-                  <th>Termo</th>
-                  <th>Ativo</th>
-                  <th className="th-actions">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {termos.map((t) => (
-                  <tr key={t.id}>
-                    <td data-label="Termo">{t.termo}</td>
-                    <td data-label="Ativo">{t.ativo ? "Sim" : "Não"}</td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        {podeEditar && (
-                          <button
-                            type="button"
-                            className="btn-icon"
-                            title="Editar"
-                            onClick={() => {
-                              setEditId(t.id);
-                              setForm({
-                                termo: t.termo || "",
-                                ativo: Boolean(t.ativo),
-                              });
-                            }}
-                          >
-                            ✏️
-                          </button>
-                        )}
-                        {podeEditar && (
-                          <button
-                            type="button"
-                            className="btn-icon btn-danger"
-                            disabled={excluindoId === t.id}
-                            onClick={() => excluir(t.id)}
-                          >
-                            {excluindoId === t.id ? "…" : "🗑️"}
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            className="table-mobile-cards"
+            headers={
+              <tr>
+                <th>Termo</th>
+                <th>Ativo</th>
+                <th className="th-actions">Acoes</th>
+              </tr>
+            }
+            colSpan={3}
+            empty={termos.length === 0}
+          >
+            {termos.map((t) => (
+              <tr key={t.id}>
+                <td data-label="Termo">{t.termo}</td>
+                <td data-label="Ativo">{t.ativo ? "Sim" : "Nao"}</td>
+                <td className="th-actions" data-label="Acoes">
+                  <div className="action-buttons">
+                    {podeEditar && (
+                      <AppButton
+                        type="button"
+                        variant="ghost"
+                        title="Editar"
+                        onClick={() => {
+                          setEditId(t.id);
+                          setForm({
+                            termo: t.termo || "",
+                            ativo: Boolean(t.ativo),
+                          });
+                        }}
+                      >
+                        Editar
+                      </AppButton>
+                    )}
+                    {podeEditar && (
+                      <AppButton
+                        type="button"
+                        variant="danger"
+                        disabled={excluindoId === t.id}
+                        onClick={() => excluir(t.id)}
+                      >
+                        {excluindoId === t.id ? "Excluindo..." : "Excluir"}
+                      </AppButton>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </DataTable>
         )}
-      </div>
+      </AppCard>
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );

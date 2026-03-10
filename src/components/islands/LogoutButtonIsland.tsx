@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { logoutUsuario } from "../../lib/logout";
+import AppButton from "../ui/primer/AppButton";
 
 export default function LogoutButtonIsland() {
   const [loading, setLoading] = useState(false);
@@ -11,23 +12,18 @@ export default function LogoutButtonIsland() {
   }
 
   return (
-    <button
+    <AppButton
       type="button"
+      variant="danger"
       className="menu-logout"
       onClick={handleLogout}
       style={{
         width: "100%",
         textAlign: "left",
-        background: "transparent",
-        border: "none",
-        color: "#f43f5e",
-        fontWeight: "bold",
-        padding: "8px 12px",
-        cursor: "pointer",
       }}
       disabled={loading}
     >
       {loading ? "Saindo..." : "Sair"}
-    </button>
+    </AppButton>
   );
 }

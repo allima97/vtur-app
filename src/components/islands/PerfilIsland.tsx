@@ -5,6 +5,13 @@ import { refreshPermissoes } from "../../lib/permissoesStore";
 import { clearPermissoesCache } from "../../lib/permissoesCache";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
+import AlertMessage from "../ui/AlertMessage";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppDialog from "../ui/primer/AppDialog";
+import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type Perfil = {
   nome_completo: string;
@@ -614,101 +621,70 @@ function formatCnpj(value: string) {
     }
   }
 
-  if (loading) return <div className="card-base card-config">Carregando perfil...</div>;
-  if (!perfil) return <div className="card-base card-config">Perfil não encontrado.</div>;
+  if (loading) {
+    return (
+      <AppPrimerProvider>
+        <div className="page-content-wrap perfil-page">
+          <AppCard tone="config">Carregando perfil...</AppCard>
+        </div>
+      </AppPrimerProvider>
+    );
+  }
+  if (!perfil) {
+    return (
+      <AppPrimerProvider>
+        <div className="page-content-wrap perfil-page">
+          <AppCard tone="config">Perfil não encontrado.</AppCard>
+        </div>
+      </AppPrimerProvider>
+    );
+  }
 
   return (
-    <div className="perfil-page">
-      {modalCamposObrigatorios && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal-panel" style={{ maxWidth: 520 }}>
-            <div className="modal-header">
-              <div className="modal-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <i className="fa-solid fa-circle-exclamation text-yellow-600"></i>
-                Campos obrigatórios
-              </div>
-            </div>
-            <div className="modal-body">
-              <p style={{ marginBottom: 12 }}>
-                Para finalizar o cadastro, preencha os campos abaixo:
-              </p>
-              <ul style={{ paddingLeft: 18, margin: 0, display: "grid", gap: 6 }}>
-                {camposObrigatorios.map((campo) => (
-                  <li key={campo}>{CAMPOS_OBRIGATORIOS_INFO[campo].label}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="modal-footer">
-              <button
-                onClick={() => {
-                  setModalCamposObrigatorios(false);
-                }}
-                className="btn btn-primary"
-              >
-                OK
-              </button>
-            </div>
+    <AppPrimerProvider>
+      <div className="page-content-wrap perfil-page vtur-legacy-module">
+      <AppNoticeDialog
+        open={modalCamposObrigatorios}
+        title="Campos obrigatórios"
+        onClose={() => setModalCamposObrigatorios(false)}
+        message={
+          <div style={{ display: "grid", gap: 12 }}>
+            <p style={{ margin: 0 }}>Para finalizar o cadastro, preencha os campos abaixo:</p>
+            <ul style={{ paddingLeft: 18, margin: 0, display: "grid", gap: 6 }}>
+              {camposObrigatorios.map((campo) => (
+                <li key={campo}>{CAMPOS_OBRIGATORIOS_INFO[campo].label}</li>
+              ))}
+            </ul>
           </div>
-        </div>
-      )}
-      {modalOnboardingSucesso && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal-panel" style={{ maxWidth: 520 }}>
-            <div className="modal-header">
-              <div className="modal-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <i className="fa-solid fa-circle-check text-green-600"></i>
-                Dados salvos
-              </div>
-            </div>
-            <div className="modal-body">
-              <p>Dados salvos com sucesso! Deseja fazer o login no sistema?</p>
-            </div>
-            <div className="modal-footer">
-              <button onClick={confirmarLoginNoSistema} className="btn btn-primary">
-                Sim
-              </button>
-              <button onClick={() => setModalOnboardingSucesso(false)} className="btn btn-secondary">
-                Não
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {modalSairOnboarding && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal-panel" style={{ maxWidth: 520 }}>
-            <div className="modal-header">
-              <div className="modal-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <i className="fa-solid fa-circle-exclamation text-yellow-600"></i>
-                Preencher depois
-              </div>
-            </div>
-            <div className="modal-body">
-              <p>
-                Você poderá voltar ao formulário quando quiser, mas o sistema não permitirá o acesso aos módulos até que o cadastro obrigatório esteja concluído.
-              </p>
-            </div>
-            <div className="modal-footer">
-              <button
-                type="button"
-                onClick={() => setModalSairOnboarding(false)}
-                className="btn btn-secondary"
-              >
-                Continuar preenchendo
-              </button>
-              <button
-                type="button"
-                onClick={confirmarSairOnboarding}
-                className="btn btn-primary"
-              >
-                Confirmar saída
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        }
+      />
+      <AppDialog
+        open={modalOnboardingSucesso}
+        title="Dados salvos"
+        message="Dados salvos com sucesso. Deseja fazer o login no sistema?"
+        confirmLabel="Sim"
+        cancelLabel="Não"
+        onConfirm={confirmarLoginNoSistema}
+        onCancel={() => setModalOnboardingSucesso(false)}
+      />
+      <AppDialog
+        open={modalSairOnboarding}
+        title="Preencher depois"
+        message="Você poderá voltar ao formulário quando quiser, mas o sistema não permitirá o acesso aos módulos até que o cadastro obrigatório esteja concluído."
+        confirmLabel="Confirmar saída"
+        cancelLabel="Continuar preenchendo"
+        onConfirm={confirmarSairOnboarding}
+        onCancel={() => setModalSairOnboarding(false)}
+      />
+
+      <AppToolbar
+        title="Meu perfil"
+        subtitle={onboarding ? "Finalize seu cadastro para liberar o acesso ao sistema." : `Revise seus dados, acesso e vínculo atual${cidadeEstado ? ` • ${cidadeEstado}` : ""}.`}
+        tone="info"
+        sticky
+      />
       {onboarding && (
-        <div className="card-base card-config mb-3">
+        <AppCard tone="config">
           <p style={{ margin: 0, marginBottom: 6 }}>
             Complete os dados para finalizar seu primeiro acesso e liberar o acesso aos módulos solicitados.
           </p>
@@ -716,37 +692,24 @@ function formatCnpj(value: string) {
             Caso precise sair, clique em <strong>Preencher depois</strong>. Você precisará entrar novamente para continuar o cadastro.
           </p>
           <div className="mobile-stack-buttons" style={{ marginTop: 10 }}>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setModalSairOnboarding(true)}
-            >
+            <AppButton type="button" variant="secondary" onClick={() => setModalSairOnboarding(true)}>
               Preencher depois
-            </button>
+            </AppButton>
           </div>
-        </div>
+        </AppCard>
       )}
 
       {(forcePasswordRequired || perfil?.must_change_password) && (
-        <div className="card-base card-config mb-3" role="alert">
+        <AlertMessage variant="warning" role="alert">
           Por seguranca, altere sua senha antes de acessar os modulos do sistema.
-        </div>
+        </AlertMessage>
       )}
 
-      {erro && (
-        <div className="card-base card-config mb-3">
-          {erro}
-        </div>
-      )}
-      {msg && (
-        <div className="card-base card-green mb-3">
-          {msg}
-        </div>
-      )}
+      {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
+      {msg && <AlertMessage variant="success">{msg}</AlertMessage>}
 
       <div className="flex flex-col gap-3">
-        <div className="card-base card-blue" style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
-          <h3>👤 Dados pessoais</h3>
+        <AppCard title="Dados pessoais" tone="info" style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
           {!camposExtrasOk && (
             <small style={{ color: "#b91c1c", marginBottom: 8 }}>
               Campos extras indisponíveis. Adicione as colunas novas em "users" no banco para editar CEP/WhatsApp/RG/endereço.
@@ -1004,15 +967,14 @@ function formatCnpj(value: string) {
             </div>
           </div>
           <div className="mobile-stack-buttons" style={{ marginTop: 16 }}>
-            <button className="btn btn-primary" onClick={salvarPerfil} disabled={salvando}>
+            <AppButton type="button" variant="primary" onClick={salvarPerfil} disabled={salvando}>
               {salvando ? "Salvando..." : "Salvar dados"}
-            </button>
+            </AppButton>
           </div>
-        </div>
+        </AppCard>
 
         <div className="grid md:grid-cols-2 gap-3">
-          <div className="card-base card-config" style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
-            <h3>🔐 Dados de acesso</h3>
+          <AppCard title="Dados de acesso" tone="config" style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <div className="form-group" style={{ flex: 1 }}>
                 <label>E-mail de login</label>
@@ -1025,9 +987,9 @@ function formatCnpj(value: string) {
                 <small>Será necessário confirmar o novo e-mail.</small>
               </div>
               <div className="mobile-stack-buttons">
-                <button className="btn btn-secondary w-full sm:w-auto" onClick={alterarEmail} disabled={salvando}>
+                <AppButton type="button" variant="secondary" onClick={alterarEmail} disabled={salvando}>
                   Atualizar e-mail
-                </button>
+                </AppButton>
               </div>
             </div>
 
@@ -1074,21 +1036,21 @@ function formatCnpj(value: string) {
               </div>
             </div>
             <div className="mobile-stack-buttons" style={{ marginTop: 16 }}>
-              <button className="btn btn-primary" onClick={alterarSenha} disabled={salvando}>
+              <AppButton type="button" variant="primary" onClick={alterarSenha} disabled={salvando}>
                 Alterar senha
-              </button>
-              <button
-                className="btn btn-secondary"
+              </AppButton>
+              <AppButton
+                type="button"
+                variant="secondary"
                 onClick={atualizarPermissoesAgora}
                 disabled={salvando || atualizandoPermissoes}
               >
                 {atualizandoPermissoes ? "Atualizando permissoes..." : "Atualizar permissoes"}
-              </button>
+              </AppButton>
             </div>
-          </div>
+          </AppCard>
 
-          <div className="card-base" style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
-            <h3>🏢 Empresa</h3>
+          <AppCard title="Empresa" style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
             {empresaAtual ? (
               <p className="perfil-text-wrap" style={{ marginBottom: 12, lineHeight: 1.5 }}>
                 <strong>Empresa:</strong> {empresaAtual.nome_empresa || "-"}<br />
@@ -1111,9 +1073,10 @@ function formatCnpj(value: string) {
                 Seu acesso corporativo depende do vínculo da empresa.
               </small>
             )}
-          </div>
+          </AppCard>
         </div>
       </div>
-    </div>
+      </div>
+    </AppPrimerProvider>
   );
 }

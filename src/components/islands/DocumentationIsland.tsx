@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import AppCard from "../ui/primer/AppCard";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 export default function DocumentationIsland() {
   const [content, setContent] = useState<string>("Carregando documentação...");
@@ -22,18 +24,25 @@ export default function DocumentationIsland() {
   }, []);
 
   return (
-    <div
-      className="card-base card-blue"
-      style={{
-        padding: "20px",
-        lineHeight: "1.6",
-        whiteSpace: "pre-wrap",
-        fontFamily: "monospace",
-        fontSize: "0.9rem",
-        overflowX: "auto",
-      }}
-      dangerouslySetInnerHTML={{ __html: markdownToHtml(content) }}
-    />
+    <section className="documentation-page">
+      <AppToolbar
+        tone="info"
+        title="Documentacao do sistema"
+        subtitle="Guia tecnico e operacional centralizado."
+      />
+      <AppCard tone="info">
+        <div
+          style={{
+            lineHeight: "1.6",
+            whiteSpace: "pre-wrap",
+            fontFamily: "monospace",
+            fontSize: "0.9rem",
+            overflowX: "auto",
+          }}
+          dangerouslySetInnerHTML={{ __html: markdownToHtml(content) }}
+        />
+      </AppCard>
+    </section>
   );
 }
 

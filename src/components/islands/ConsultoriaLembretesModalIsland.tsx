@@ -6,6 +6,8 @@ import {
   getConsultoriaLembreteMinutes,
 } from "../../lib/consultoriaLembretes";
 import { formatDateTimeBR } from "../../lib/format";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
 
 type ConsultoriaRow = {
   id: string;
@@ -223,15 +225,14 @@ export default function ConsultoriaLembretesModalIsland() {
           <div className="modal-title" style={{ color: "#b45309", fontWeight: 800 }}>
             Lembrete de consultoria
           </div>
-          <button className="btn-ghost" onClick={fecharModal}>
-            ✖
-          </button>
+          <AppButton type="button" variant="ghost" onClick={fecharModal}>
+            Fechar
+          </AppButton>
         </div>
         <div className="modal-body">
           <div style={{ display: "grid", gap: 12 }}>
             {lembretesModal.map((item) => (
-              <div key={item.storageKey} className="card-base" style={{ padding: 12 }}>
-                <div style={{ fontWeight: 700 }}>{item.clienteNome}</div>
+              <AppCard key={item.storageKey} tone="info" title={item.clienteNome}>
                 <div>
                   <strong>Agendamento:</strong> {item.dataHoraLocal}
                 </div>
@@ -249,17 +250,17 @@ export default function ConsultoriaLembretesModalIsland() {
                     Adicionar ao calendario
                   </a>
                 </div>
-              </div>
+              </AppCard>
             ))}
           </div>
         </div>
         <div className="modal-footer mobile-stack-buttons">
-          <a className="btn btn-light w-full sm:w-auto" href="/consultoria-online">
+          <AppButton as="a" variant="secondary" className="w-full sm:w-auto" href="/consultoria-online">
             Abrir consultorias
-          </a>
-          <button className="btn btn-primary w-full sm:w-auto" onClick={fecharModal}>
+          </AppButton>
+          <AppButton type="button" variant="primary" className="w-full sm:w-auto" onClick={fecharModal}>
             Ok
-          </button>
+          </AppButton>
         </div>
       </div>
     </div>

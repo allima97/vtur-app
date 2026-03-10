@@ -2,6 +2,10 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { registrarLog } from "../../lib/logs";
 import { SYSTEM_NAME } from "../../lib/systemName";
+import AlertMessage from "../ui/AlertMessage";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
 export default function AuthResetIsland() {
   const [password, setPassword] = useState("");
@@ -112,22 +116,18 @@ export default function AuthResetIsland() {
   }
 
   return (
-    <div className="auth-container">
-      <div className="auth-card auth-card-lg">
-        <div className="auth-header">
-          <div className="auth-icon">
-            <i className="fa-solid fa-plane-departure"></i>
-          </div>
-          <h1>Definir nova senha</h1>
-          <h2 className="auth-subtitle">
-            Crie uma nova senha para voltar a usar o {SYSTEM_NAME}.
-          </h2>
-        </div>
-        {erro && <div className="alert alert-danger" style={{ marginBottom: 16 }}>{erro}</div>}
+    <AppPrimerProvider>
+      <div className="auth-container">
+        <AppCard
+          className="auth-card auth-card-lg"
+          title="Definir nova senha"
+          subtitle={`Crie uma nova senha para voltar a usar o ${SYSTEM_NAME}.`}
+        >
+        {erro && <AlertMessage variant="error" className="mb-3">{erro}</AlertMessage>}
         {ok && (
-          <div className="alert alert-success" style={{ marginBottom: 16 }}>
-            Senha alterada com sucesso! Redirecionando...
-          </div>
+          <AlertMessage variant="success" className="mb-3">
+            Senha alterada com sucesso. Redirecionando...
+          </AlertMessage>
         )}
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
@@ -186,20 +186,19 @@ export default function AuthResetIsland() {
             </div>
           </div>
           <div className="auth-actions">
-            <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
-              <i className="fa-solid fa-key"></i>
-              {loading ? " Salvando..." : " Salvar nova senha"}
-            </button>
+            <AppButton type="submit" variant="primary" disabled={loading}>
+              {loading ? "Salvando..." : "Salvar nova senha"}
+            </AppButton>
             <div className="auth-divider">
               <span>ou</span>
             </div>
             <a href="/auth/login" className="btn btn-secondary btn-block">
-              <i className="fa-solid fa-right-to-bracket"></i>
               Voltar ao login
             </a>
           </div>
         </form>
+        </AppCard>
       </div>
-    </div>
+    </AppPrimerProvider>
   );
 }

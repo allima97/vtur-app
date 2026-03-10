@@ -13,6 +13,11 @@ import {
   type MenuPrefsV1,
 } from "../../lib/menuPrefs";
 import type { Permissao } from "../../lib/permissoesCache";
+import EmptyState from "../ui/EmptyState";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type MenuItem = {
   key: string;
@@ -276,112 +281,113 @@ export default function PersonalizarMenuIsland() {
   };
 
   if (!ready) {
-    return <div className="card-base">Carregando permissões…</div>;
+    return <AppCard tone="config">Carregando permissoes...</AppCard>;
   }
 
   if (!userId) {
-    return <div className="card-base">Faça login para personalizar o menu.</div>;
+    return <AppCard tone="config">Faca login para personalizar o menu.</AppCard>;
   }
 
   return (
-    <div className="card-base">
-      <p style={{ marginTop: 0, opacity: 0.85 }}>
-        Escolha quais itens aparecem no seu menu e ajuste a ordem. As mudanças são aplicadas
-        automaticamente.
-      </p>
-
-      {grouped.length === 0 ? (
-        <div style={{ opacity: 0.8 }}>Nenhum item disponível para personalizar.</div>
-      ) : (
-        grouped.map((group) => (
-          <div key={group.section} style={{ marginTop: 16 }}>
-            <div className="sidebar-section-title" style={{ marginTop: 0 }}>
-              {sectionTitle(group.section)}
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {group.items.map((item, idx) => {
-                const hidden = prefs.hidden.includes(item.key);
-                const effectiveSection = getEffectiveItemSection(prefs, item.key, item.section);
-                return (
-                  <div
-                    key={item.key}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 10,
-                      padding: "8px 10px",
-                      borderRadius: "var(--radius-md)",
-                      opacity: hidden ? 0.55 : 1,
-                    }}
-                  >
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {item.label}
+    <section className="personalizar-menu-page">
+      <AppToolbar
+        tone="config"
+        title="Personalizar menu"
+        subtitle="Escolha itens visiveis e ajuste a ordem automaticamente."
+      />
+      <AppCard tone="config">
+        {grouped.length === 0 ? (
+          <EmptyState title="Nenhum item disponivel" description="Nao ha itens para personalizar no seu perfil." />
+        ) : (
+          grouped.map((group) => (
+            <div key={group.section} style={{ marginTop: 16 }}>
+              <div className="sidebar-section-title" style={{ marginTop: 0 }}>
+                {sectionTitle(group.section)}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {group.items.map((item, idx) => {
+                  const hidden = prefs.hidden.includes(item.key);
+                  const effectiveSection = getEffectiveItemSection(prefs, item.key, item.section);
+                  return (
+                    <div
+                      key={item.key}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 10,
+                        padding: "8px 10px",
+                        borderRadius: "var(--radius-md)",
+                        opacity: hidden ? 0.55 : 1,
+                      }}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {item.label}
+                        </div>
+                        {hidden && <div style={{ fontSize: 12, opacity: 0.8 }}>Oculto</div>}
                       </div>
-                      {hidden && <div style={{ fontSize: 12, opacity: 0.8 }}>Oculto</div>}
-                    </div>
 
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                      <select
-                        value={effectiveSection}
-                        onChange={(e) => onChangeSection(item, e.target.value)}
-                        className="input"
-                        style={{ height: 30, padding: "0 8px", fontSize: 12, maxWidth: 170 }}
-                        aria-label="Seção"
-                      >
-                        {(
-                          isSystemAdmin
-                            ? ["admin"]
-                            : [
-                                "informativos",
-                                "operacao",
-                                "financeiro",
-                                "cadastros",
-                                "gestao",
-                                "relatorios",
-                                "parametros",
-                                "documentacao",
-                              ]
-                        ).map((s) => (
-                          <option key={s} value={s}>
-                            {sectionTitle(s)}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        className="btn btn-xs btn-light"
-                        onClick={() => onMove(group.section, item.key, "up")}
-                        disabled={idx === 0}
-                      >
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-xs btn-light"
-                        onClick={() => onMove(group.section, item.key, "down")}
-                        disabled={idx === group.items.length - 1}
-                      >
-                        ↓
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-xs btn-light"
-                        onClick={() => onToggleHidden(item)}
-                        disabled={Boolean(item.locked)}
-                        title={item.locked ? "Este item não pode ser ocultado." : undefined}
-                      >
-                        {hidden ? "Mostrar" : "Ocultar"}
-                      </button>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                        <AppField
+                          as="select"
+                          label="Secao"
+                          value={effectiveSection}
+                          onChange={(e) => onChangeSection(item, e.target.value)}
+                          wrapperClassName="m-0"
+                          style={{ fontSize: 12, minWidth: 170 }}
+                          options={(
+                            isSystemAdmin
+                              ? ["admin"]
+                              : [
+                                  "informativos",
+                                  "operacao",
+                                  "financeiro",
+                                  "cadastros",
+                                  "gestao",
+                                  "relatorios",
+                                  "parametros",
+                                  "documentacao",
+                                ]
+                          ).map((s) => ({
+                            value: s,
+                            label: sectionTitle(s),
+                          }))}
+                        />
+                        <AppButton
+                          type="button"
+                          variant="secondary"
+                          onClick={() => onMove(group.section, item.key, "up")}
+                          disabled={idx === 0}
+                        >
+                          ↑
+                        </AppButton>
+                        <AppButton
+                          type="button"
+                          variant="secondary"
+                          onClick={() => onMove(group.section, item.key, "down")}
+                          disabled={idx === group.items.length - 1}
+                        >
+                          ↓
+                        </AppButton>
+                        <AppButton
+                          type="button"
+                          variant="secondary"
+                          onClick={() => onToggleHidden(item)}
+                          disabled={Boolean(item.locked)}
+                          title={item.locked ? "Este item nao pode ser ocultado." : undefined}
+                        >
+                          {hidden ? "Mostrar" : "Ocultar"}
+                        </AppButton>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))
-      )}
-    </div>
+          ))
+        )}
+      </AppCard>
+    </section>
   );
 }

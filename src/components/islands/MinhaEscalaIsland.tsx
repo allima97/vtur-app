@@ -3,6 +3,12 @@ import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
+import AlertMessage from "../ui/AlertMessage";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type EscalaDia = {
   id: string;
@@ -413,52 +419,41 @@ export default function MinhaEscalaIsland() {
   if (loadingPerm) return <LoadingUsuarioContext />;
 
   return (
-    <div className="minha-escala-page">
-      <div className="card-base card-teal mb-3 escala-toolbar">
-        <div>
-          <div className="escala-title">Minha escala {userNome ? `- ${userNome}` : ""}</div>
-          <div className="escala-subtitle">
-            Mês: <strong>{formatPeriodoLabel(periodo)}</strong>
-          </div>
-        </div>
-        <div className="escala-toolbar-actions">
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button
-              type="button"
-              className={`btn ${activeTab === "minha" ? "btn-primary" : "btn-light"}`}
-              onClick={() => setActiveTab("minha")}
-            >
+    <AppPrimerProvider>
+    <div className="page-content-wrap minha-escala-page vtur-legacy-module">
+      <AppToolbar
+        title={`Minha escala${userNome ? ` - ${userNome}` : ""}`}
+        subtitle={`Mês: ${formatPeriodoLabel(periodo)}`}
+        tone="info"
+        sticky
+        actions={
+          <div className="vtur-card-toolbar-actions">
+            <AppButton type="button" variant={activeTab === "minha" ? "primary" : "default"} onClick={() => setActiveTab("minha")}>
               Minha escala
-            </button>
-            <button
-              type="button"
-              className={`btn ${activeTab === "equipe" ? "btn-primary" : "btn-light"}`}
-              onClick={() => setActiveTab("equipe")}
-            >
+            </AppButton>
+            <AppButton type="button" variant={activeTab === "equipe" ? "primary" : "default"} onClick={() => setActiveTab("equipe")}>
               Escala equipe
-            </button>
+            </AppButton>
           </div>
-          <div className="form-group" style={{ marginTop: 8 }}>
-            <label className="form-label sr-only">Mês</label>
-            <select className="form-select" value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
-              {opcoesPeriodo.map((opcao) => (
-                <option key={opcao} value={opcao}>
-                  {formatPeriodoLabel(opcao)}
-                </option>
-              ))}
-            </select>
-          </div>
+        }
+      >
+        <div className="vtur-form-grid vtur-form-grid-2">
+          <AppField
+            as="select"
+            label="Mês"
+            value={periodo}
+            onChange={(e) => setPeriodo(e.target.value)}
+            options={opcoesPeriodo.map((opcao) => ({ label: formatPeriodoLabel(opcao), value: opcao }))}
+          />
         </div>
-      </div>
+      </AppToolbar>
 
       {activeTab === "minha" && erro && (
-        <div className="card-base card-config mb-3">
-          <strong>{erro}</strong>
-        </div>
+        <AlertMessage variant="error"><strong>{erro}</strong></AlertMessage>
       )}
 
       {activeTab === "minha" && loadingDados && (
-        <div className="card-base card-config mb-3">Carregando escala...</div>
+        <AppCard tone="config">Carregando escala...</AppCard>
       )}
 
       {activeTab === "minha" && !loadingDados && (
@@ -623,13 +618,11 @@ export default function MinhaEscalaIsland() {
       )}
 
       {activeTab === "equipe" && erroEquipe && (
-        <div className="card-base card-config mb-3">
-          <strong>{erroEquipe}</strong>
-        </div>
+        <AlertMessage variant="error"><strong>{erroEquipe}</strong></AlertMessage>
       )}
 
       {activeTab === "equipe" && loadingEquipe && (
-        <div className="card-base card-config mb-3">Carregando escala da equipe...</div>
+        <AppCard tone="config">Carregando escala da equipe...</AppCard>
       )}
 
       {activeTab === "equipe" && !loadingEquipe && (
@@ -774,5 +767,6 @@ export default function MinhaEscalaIsland() {
         </div>
       )}
     </div>
+    </AppPrimerProvider>
   );
 }

@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { usePermissoesStore } from "../../lib/permissoesStore";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
 
 const DISMISS_KEY = "push_optin_dismissed_at";
 const DISMISS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -111,17 +113,23 @@ export default function PushNotificationsIsland() {
   if (!canPrompt || permission === "unsupported") return null;
 
   return (
-    <div className="push-optin">
-      <div className="push-optin-title">Ativar notificacoes</div>
-      <div className="push-optin-text">Receba lembretes de consultoria mesmo fora do sistema.</div>
-      <div className="push-optin-actions">
-        <button className="btn btn-primary" onClick={requestPermission} disabled={subscribing}>
-          {subscribing ? "Ativando..." : "Ativar"}
-        </button>
-        <button className="btn btn-light" onClick={dismissPrompt}>
-          Agora nao
-        </button>
-      </div>
-    </div>
+    <AppCard
+      className="push-optin"
+      tone="info"
+      title="Ativar notificacoes"
+      subtitle="Receba lembretes de consultoria mesmo fora do sistema."
+      actions={
+        <div className="push-optin-actions">
+          <AppButton type="button" variant="primary" onClick={requestPermission} disabled={subscribing}>
+            {subscribing ? "Ativando..." : "Ativar"}
+          </AppButton>
+          <AppButton type="button" variant="secondary" onClick={dismissPrompt}>
+            Agora nao
+          </AppButton>
+        </div>
+      }
+    >
+      <div className="push-optin-text">Notificacoes web para agenda e consultoria.</div>
+    </AppCard>
   );
 }

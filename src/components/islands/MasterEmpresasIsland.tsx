@@ -4,6 +4,9 @@ import { usePermissoesStore } from "../../lib/permissoesStore";
 import AlertMessage from "../ui/AlertMessage";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import AppCard from "../ui/primer/AppCard";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type EmpresaRow = {
   id: string;
@@ -91,27 +94,23 @@ export default function MasterEmpresasIsland() {
   if (loadingPerm) return <LoadingUsuarioContext />;
   if (!podeVer || !isMaster) {
     return (
-      <div style={{ padding: 20 }}>
-        <h3>Apenas usuários MASTER podem acessar este módulo.</h3>
-      </div>
+      <AppPrimerProvider>
+        <div className="page-content-wrap admin-page admin-empresas-page">
+          <AppCard tone="config">Apenas usuários MASTER podem acessar este módulo.</AppCard>
+        </div>
+      </AppPrimerProvider>
     );
   }
 
   return (
-    <div className="mt-6 admin-page admin-empresas-page">
-      <div className="card-base card-blue mb-3 list-toolbar-sticky">
-        <div
-          className="form-row mobile-stack"
-          style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
-        >
-          <div className="form-group">
-            <h3 className="page-title">🏢 Empresas do portfólio</h3>
-            <p className="page-subtitle">
-              Empresas atribuídas pelo admin.
-            </p>
-          </div>
-        </div>
-      </div>
+    <AppPrimerProvider>
+    <div className="mt-6 admin-page admin-empresas-page vtur-legacy-module">
+      <AppToolbar
+        title="Empresas do portfólio"
+        subtitle="Empresas atribuídas pelo admin."
+        tone="info"
+        sticky
+      />
 
       {erro && (
         <div className="mb-3">
@@ -120,7 +119,7 @@ export default function MasterEmpresasIsland() {
       )}
 
       {loading ? (
-        <p>Carregando empresas...</p>
+        <AppCard tone="config">Carregando empresas...</AppCard>
       ) : (
         <div className="table-container overflow-x-auto">
           <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
@@ -155,5 +154,6 @@ export default function MasterEmpresasIsland() {
 
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
+    </AppPrimerProvider>
   );
 }

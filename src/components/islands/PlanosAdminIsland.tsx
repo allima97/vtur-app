@@ -3,6 +3,11 @@ import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import AlertMessage from "../ui/AlertMessage";
+import DataTable from "../ui/DataTable";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppToolbar from "../ui/primer/AppToolbar";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 
 type PlanoRow = {
@@ -148,194 +153,166 @@ const PlanosAdminIsland: React.FC = () => {
 
   if (!podeVer) {
     return (
-      <div style={{ padding: 20 }}>
-        <h3>Apenas administradores podem acessar os planos.</h3>
-      </div>
+      <AppCard tone="config" className="admin-page admin-planos-page">
+        Apenas administradores podem acessar os planos.
+      </AppCard>
     );
   }
 
   return (
     <div className="mt-6 admin-page admin-planos-page">
-      <div className="card-base card-red mb-3 list-toolbar-sticky">
-        <div
-          className="form-row mobile-stack"
-          style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
-        >
-          <div className="form-group">
-            <h3 className="page-title">💳 Planos do sistema</h3>
-            <p className="page-subtitle">Cadastro e configuração de planos.</p>
-          </div>
-          <div className="form-group" style={{ alignItems: "flex-end" }}>
-            <button className="btn btn-primary w-full sm:w-auto" onClick={() => openModal()}>
-              Novo plano
-            </button>
-          </div>
-        </div>
-      </div>
+      <AppToolbar
+        tone="config"
+        className="list-toolbar-sticky"
+        title="Planos do sistema"
+        subtitle="Cadastro e configuracao de planos."
+        actions={
+          <AppButton type="button" variant="primary" onClick={() => openModal()}>
+            Novo plano
+          </AppButton>
+        }
+      />
 
       {erro && (
-        <div className="mt-3">
-          <AlertMessage variant="error">{erro}</AlertMessage>
-        </div>
+        <AlertMessage variant="error">{erro}</AlertMessage>
       )}
 
       {loading ? (
-        <p className="mt-4">Carregando planos...</p>
+        <AppCard tone="config">Carregando planos...</AppCard>
       ) : (
-        <div className="table-container overflow-x-auto mt-4">
-          <table className="table-default table-header-red table-mobile-cards min-w-[720px]">
-            <thead>
+        <AppCard tone="config">
+          <DataTable
+            className="table-mobile-cards min-w-[720px]"
+            headers={
               <tr>
                 <th>Plano</th>
-                <th>Descrição</th>
+                <th>Descricao</th>
                 <th>Valor mensal</th>
                 <th>Moeda</th>
                 <th>Ativo</th>
-                <th className="th-actions">Ações</th>
+                <th className="th-actions">Acoes</th>
               </tr>
-            </thead>
-            <tbody>
-              {planos.length === 0 ? (
-                <tr>
-                  <td colSpan={6}>Nenhum plano cadastrado.</td>
-                </tr>
-              ) : (
-                planos.map((p) => (
-                  <tr key={p.id}>
-                    <td data-label="Plano">{p.nome}</td>
-                    <td data-label="Descrição">{p.descricao || "—"}</td>
-                    <td data-label="Valor mensal">R$ {p.valor_mensal.toFixed(2)}</td>
-                    <td data-label="Moeda">{p.moeda}</td>
-                    <td
-                      data-label="Ativo"
-                      className={p.ativo ? "text-emerald-500 font-bold" : "text-rose-500 font-bold"}
-                    >
-                      {p.ativo ? "Sim" : "Não"}
-                    </td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        <button
-                          type="button"
-                          className="btn-icon icon-action-btn"
-                          onClick={() => openModal(p)}
-                          title="Editar"
-                          aria-label="Editar"
-                        >
-                          <span aria-hidden="true">✏️</span>
-                          <span className="sr-only">Editar</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-icon icon-action-btn"
-                          onClick={() => toggleStatus(p)}
-                          title={p.ativo ? "Desativar" : "Ativar"}
-                          aria-label={p.ativo ? "Desativar" : "Ativar"}
-                        >
-                          <span aria-hidden="true">{p.ativo ? "⏸️" : "✅"}</span>
-                          <span className="sr-only">{p.ativo ? "Desativar" : "Ativar"}</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+            }
+            colSpan={6}
+            empty={planos.length === 0}
+            emptyMessage="Nenhum plano cadastrado."
+          >
+            {planos.map((p) => (
+              <tr key={p.id}>
+                <td data-label="Plano">{p.nome}</td>
+                <td data-label="Descricao">{p.descricao || "-"}</td>
+                <td data-label="Valor mensal">R$ {p.valor_mensal.toFixed(2)}</td>
+                <td data-label="Moeda">{p.moeda}</td>
+                <td
+                  data-label="Ativo"
+                  className={p.ativo ? "text-emerald-500 font-bold" : "text-rose-500 font-bold"}
+                >
+                  {p.ativo ? "Sim" : "Nao"}
+                </td>
+                <td className="th-actions" data-label="Acoes">
+                  <div className="action-buttons">
+                    <AppButton type="button" variant="ghost" onClick={() => openModal(p)}>
+                      Editar
+                    </AppButton>
+                    <AppButton type="button" variant="secondary" onClick={() => toggleStatus(p)}>
+                      {p.ativo ? "Desativar" : "Ativar"}
+                    </AppButton>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </DataTable>
+        </AppCard>
       )}
 
       {modalOpen && (
         <div className="fixed inset-0 z-40 bg-black/50 flex justify-center items-center p-4">
           <form
-            className="card-base card-config w-full max-w-xl"
+            className="w-full max-w-xl"
             onSubmit={salvarPlano}
           >
-            <div className="flex justify-between items-center mb-3">
-              <h4 className="text-lg font-semibold">
-                {form.id ? "Editar plano" : "Novo plano"}
-              </h4>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => setModalOpen(false)}
-                disabled={salvando}
-              >
-                Fechar
-              </button>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Nome</label>
-              <input
-                className="form-input"
+            <AppCard
+              tone="config"
+              title={form.id ? "Editar plano" : "Novo plano"}
+              actions={
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setModalOpen(false)}
+                  disabled={salvando}
+                >
+                  Fechar
+                </AppButton>
+              }
+            >
+              <AppField
+                as="input"
+                label="Nome"
                 value={form.nome}
                 onChange={(e) => setForm((prev) => ({ ...prev, nome: e.target.value }))}
                 required
               />
-            </div>
 
-            <div className="form-group">
-              <label className="form-label">Descrição</label>
-              <textarea
-                className="form-input"
+              <AppField
+                as="textarea"
+                label="Descricao"
                 rows={3}
                 value={form.descricao}
                 onChange={(e) => setForm((prev) => ({ ...prev, descricao: e.target.value }))}
               />
-            </div>
 
-            <div className="form-row">
-              <div className="form-group flex-1">
-                <label className="form-label">Valor mensal</label>
-                <input
+              <div className="form-row">
+                <AppField
+                  as="input"
                   type="number"
                   min="0"
                   step="0.01"
-                  className="form-input"
+                  label="Valor mensal"
+                  wrapperClassName="form-group flex-1"
                   value={form.valor_mensal}
                   onChange={(e) => setForm((prev) => ({ ...prev, valor_mensal: e.target.value }))}
                 />
-              </div>
-              <div className="form-group flex-1">
-                <label className="form-label">Moeda</label>
-                <select
-                  className="form-select"
+                <AppField
+                  as="select"
+                  label="Moeda"
+                  wrapperClassName="form-group flex-1"
                   value={form.moeda}
                   onChange={(e) => setForm((prev) => ({ ...prev, moeda: e.target.value }))}
-                >
-                  <option value="BRL">BRL</option>
-                  <option value="USD">USD</option>
-                  <option value="EUR">EUR</option>
-                </select>
-              </div>
-              <div className="form-group flex-1">
-                <label className="form-label">Ativo?</label>
-                <select
-                  className="form-select"
+                  options={[
+                    { value: "BRL", label: "BRL" },
+                    { value: "USD", label: "USD" },
+                    { value: "EUR", label: "EUR" },
+                  ]}
+                />
+                <AppField
+                  as="select"
+                  label="Ativo?"
+                  wrapperClassName="form-group flex-1"
                   value={form.ativo ? "true" : "false"}
                   onChange={(e) =>
                     setForm((prev) => ({ ...prev, ativo: e.target.value === "true" }))
                   }
-                >
-                  <option value="true">Sim</option>
-                  <option value="false">Não</option>
-                </select>
+                  options={[
+                    { value: "true", label: "Sim" },
+                    { value: "false", label: "Nao" },
+                  ]}
+                />
               </div>
-            </div>
 
-            <div className="flex gap-2 flex-wrap mt-3 mobile-stack-buttons">
-              <button type="submit" className="btn btn-primary" disabled={salvando}>
-                {salvando ? "Salvando..." : "Salvar"}
-              </button>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => setModalOpen(false)}
-                disabled={salvando}
-              >
-                Cancelar
-              </button>
-            </div>
+              <div className="flex gap-2 flex-wrap mt-3 mobile-stack-buttons">
+                <AppButton type="submit" variant="primary" disabled={salvando}>
+                  {salvando ? "Salvando..." : "Salvar"}
+                </AppButton>
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setModalOpen(false)}
+                  disabled={salvando}
+                >
+                  Cancelar
+                </AppButton>
+              </div>
+            </AppCard>
           </form>
         </div>
       )}

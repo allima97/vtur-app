@@ -4,6 +4,11 @@ import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import AlertMessage from "../ui/AlertMessage";
 import { ToastStack, useToastQueue } from "../ui/Toast";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 import { MODULOS_MASTER_PERMISSOES } from "../../config/modulos";
 import {
   agruparModulosPorSecao,
@@ -384,16 +389,26 @@ export default function MasterPermissoesIsland() {
   if (loadingPerm) return <LoadingUsuarioContext />;
   if (!podeVer || (!isMaster && !isGestor))
     return (
-      <div style={{ padding: 20 }}>
-        <h3>Apenas usuários MASTER ou GESTOR podem acessar este módulo.</h3>
-      </div>
+      <AppPrimerProvider>
+        <div className="page-content-wrap permissoes-admin-page admin-page">
+          <AppCard tone="config">Apenas usuários MASTER ou GESTOR podem acessar este módulo.</AppCard>
+        </div>
+      </AppPrimerProvider>
     );
 
   return (
-    <div className="permissoes-admin-page admin-page">
-      <div className="mb-4 p-4 rounded-lg bg-sky-950 border border-sky-700 text-sky-100">
-        <strong>{isGestor ? "Permissões Gestor" : "Permissões Master"}</strong> — limite máximo até excluir
-      </div>
+    <AppPrimerProvider>
+    <div className="page-content-wrap permissoes-admin-page admin-page vtur-legacy-module">
+      <AppToolbar
+        title={isGestor ? "Permissões Gestor" : "Permissões Master"}
+        subtitle="Defina níveis de acesso corporativo por usuário, com aplicação em bloco por seção."
+        tone="info"
+        sticky
+      >
+        <AppCard tone="config">
+          <strong>Limite operacional:</strong> o escopo deste módulo vai até permissão de exclusão.
+        </AppCard>
+      </AppToolbar>
 
       {erro && (
         <div className="mb-3">
@@ -401,42 +416,37 @@ export default function MasterPermissoesIsland() {
         </div>
       )}
 
-      {loading && <div>Carregando...</div>}
+      {loading && <AppCard tone="config">Carregando...</AppCard>}
 
-      <div className="form-row mobile-stack mb-3">
-        <div className="form-group flex-1">
-          <label className="form-label">Buscar usuário</label>
-          <input
-            className="form-input"
+      <AppCard tone="info">
+        <div className="vtur-form-grid vtur-form-grid-2">
+          <AppField
+            label="Buscar usuário"
             placeholder="Nome ou e-mail"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
           />
-        </div>
-        <div className="form-group flex-1">
-          <label className="form-label">Usuário</label>
-          <select
-            className="form-select"
+          <AppField
+            as="select"
+            label="Usuário"
             value={selecionado?.id || ""}
             onChange={(e) => {
               const u = usuariosFiltrados.find((x) => x.id === e.target.value) || null;
               if (u) abrirEditor(u);
             }}
-          >
-            <option value="" disabled>
-              Selecione
-            </option>
-            {usuariosFiltrados.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.nome_completo} {u.email ? `(${u.email})` : ""}
-              </option>
-            ))}
-          </select>
+            options={[
+              { label: "Selecione", value: "", disabled: true },
+              ...usuariosFiltrados.map((u) => ({
+                label: `${u.nome_completo}${u.email ? ` (${u.email})` : ""}`,
+                value: u.id,
+              })),
+            ]}
+          />
         </div>
-      </div>
+      </AppCard>
 
       {selecionado && (
-        <div className="card-base card-config">
+        <AppCard tone="config">
           <div className="mb-3">
             <strong>Usuário:</strong> {selecionado.nome_completo}{" "}
             {selecionado.email ? `(${selecionado.email})` : ""}
@@ -520,18 +530,15 @@ export default function MasterPermissoesIsland() {
           </div>
 
           <div className="flex gap-2 flex-wrap mt-4 mobile-stack-buttons">
-            <button
-              className="btn btn-primary"
-              onClick={salvarPermissoes}
-              disabled={salvando}
-            >
+            <AppButton type="button" variant="primary" onClick={salvarPermissoes} disabled={salvando}>
               {salvando ? "Salvando..." : "Salvar alterações"}
-            </button>
+            </AppButton>
           </div>
-        </div>
+        </AppCard>
       )}
 
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
+    </AppPrimerProvider>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import AppField from "../ui/primer/AppField";
 
 type CredentialsFormProps = {
   email: string;
@@ -24,22 +25,18 @@ export default function CredentialsForm({
 
   return (
     <>
-      <div className="form-group">
-        <label htmlFor="cadastro-email">
-          <i className="fa-solid fa-envelope"></i> E-mail
-        </label>
-        <input
-          id="cadastro-email"
-          type="email"
-          className="form-input"
-          placeholder="seu@email.com"
-          required
-          autoComplete="email"
-          value={email}
-          onChange={(e) => onEmailChange(e.target.value.toLowerCase())}
-          disabled={disabled}
-        />
-      </div>
+      <AppField
+        as="input"
+        id="cadastro-email"
+        type="email"
+        label="E-mail"
+        placeholder="seu@email.com"
+        required
+        autoComplete="email"
+        value={email}
+        onChange={(e) => onEmailChange(e.target.value.toLowerCase())}
+        disabled={disabled}
+      />
       <div className="form-group">
         <label htmlFor="cadastro-senha">
           <i className="fa-solid fa-lock"></i> Senha

@@ -13,6 +13,9 @@ import {
   Legend,
   Cell,
 } from "recharts";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type Tab = "live" | "historical" | "recommendations";
 
@@ -135,64 +138,70 @@ export default function PerformanceDashboardIsland() {
 
   return (
     <div className="space-y-6" key={refreshKey}>
+      <AppToolbar
+        tone="config"
+        title="Painel de performance"
+        subtitle="Metricas ao vivo, historico e recomendacoes."
+      />
       {/* Tabs */}
-      <div className="flex flex-wrap gap-2 border-b">
+      <AppCard tone="config">
+        <div className="flex flex-wrap gap-2">
         {[
           { id: "live", label: "🔴 Metricas ao vivo", icon: "●" },
           { id: "historical", label: "📊 Historico", icon: "📈" },
           { id: "recommendations", label: "💡 Recomendacoes", icon: "⚡" },
         ].map((tab) => (
-          <button
+          <AppButton
             key={tab.id}
+            type="button"
             onClick={() => setActiveTab(tab.id as Tab)}
-            className={`px-3 py-2 text-xs sm:text-sm font-medium transition-colors ${
-              activeTab === tab.id
-                ? "border-b-2 border-blue-500 text-blue-600"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
+            variant={activeTab === tab.id ? "primary" : "secondary"}
+            className="text-xs sm:text-sm"
           >
             {tab.label}
-          </button>
+          </AppButton>
         ))}
-      </div>
+        </div>
+      </AppCard>
 
       {/* Live Metrics Tab */}
       {activeTab === "live" && (
         <div className="space-y-4">
           {/* Recording Controls */}
-          <div className="flex flex-col gap-3 bg-gray-50 p-4 rounded-lg md:flex-row md:items-center md:justify-between">
+          <AppCard tone="info">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap items-center gap-3">
-              <button
+              <AppButton
+                type="button"
                 onClick={toggleRecording}
-                className={`w-full sm:w-auto px-4 py-2 rounded-lg font-medium transition-colors ${
-                  isRecording
-                    ? "bg-red-500 text-white hover:bg-red-600"
-                    : "bg-green-500 text-white hover:bg-green-600"
-                }`}
+                variant={isRecording ? "danger" : "primary"}
               >
                 {isRecording ? "🛑 Parar gravacao" : "🎯 Iniciar gravacao"}
-              </button>
+              </AppButton>
               <span className="text-sm text-gray-600">
                 Capturas: <strong>{snapshotCount}</strong>
               </span>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button
+              <AppButton
+                type="button"
                 onClick={exportData}
                 disabled={snapshotCount === 0}
-                className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+                variant="primary"
               >
                 💾 Exportar
-              </button>
-              <button
+              </AppButton>
+              <AppButton
+                type="button"
                 onClick={clearData}
                 disabled={snapshotCount === 0}
-                className="px-3 py-1 text-sm bg-gray-500 text-white rounded hover:bg-gray-600 disabled:opacity-50"
+                variant="secondary"
               >
                 🗑️ Limpar
-              </button>
+              </AppButton>
             </div>
-          </div>
+            </div>
+          </AppCard>
 
           {/* Live KPI Cards */}
           {liveMetrics && (

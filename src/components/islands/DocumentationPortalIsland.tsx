@@ -2,6 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import type ToastEditor from "@toast-ui/editor";
 import "@toast-ui/editor/dist/toastui-editor.css";
 import { usePermissoesStore } from "../../lib/permissoesStore";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 export default function DocumentationPortalIsland() {
   const [raw, setRaw] = useState("Carregando documentação...");
@@ -354,123 +358,128 @@ export default function DocumentationPortalIsland() {
   // ==========================================================
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
-      {/* PAINEL LATERAL */}
-      <aside
-        className="card-base card-blue h-auto lg:h-[calc(100vh-200px)] overflow-y-auto p-4 lg:sticky lg:top-[110px]"
-      >
-        <h3 style={{ marginBottom: "10px" }}>📘 Sumário</h3>
+    <section className="documentation-portal-page">
+      <AppToolbar
+        tone="info"
+        title="Portal de Documentacao"
+        subtitle="Documentacao viva com sumario, busca e historico de versoes."
+      />
+      <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
+        <AppCard
+          tone="info"
+          title="Sumario"
+          className="h-auto lg:h-[calc(100vh-200px)] overflow-y-auto lg:sticky lg:top-[110px]"
+        >
+          <AppField
+            as="input"
+            type="text"
+            label="Pesquisar"
+            placeholder="Pesquisar..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            wrapperClassName="mb-3"
+          />
 
-        <input
-          type="text"
-          className="form-input"
-          placeholder="Pesquisar..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ marginBottom: "15px" }}
-        />
-
-        {toc.map((item) => (
-          <div
-            key={item.id}
-            style={{
-              marginLeft: `${(item.level - 1) * 15}px`,
-              marginBottom: "6px",
-            }}
-          >
-            <a
-              href={`#${item.id}`}
+          {toc.map((item) => (
+            <div
+              key={item.id}
               style={{
-                textDecoration: activeId === item.id ? "underline" : "none",
-                fontWeight: activeId === item.id ? "bold" : "normal",
+                marginLeft: `${(item.level - 1) * 15}px`,
+                marginBottom: "6px",
               }}
             >
-              {item.title}
-            </a>
-          </div>
-        ))}
-      </aside>
+              <a
+                href={`#${item.id}`}
+                style={{
+                  textDecoration: activeId === item.id ? "underline" : "none",
+                  fontWeight: activeId === item.id ? "bold" : "normal",
+                }}
+              >
+                {item.title}
+              </a>
+            </div>
+          ))}
+        </AppCard>
 
-      {/* CONTEÚDO PRINCIPAL */}
-      <div
-        ref={contentRef}
-        className="card-base card-blue h-auto lg:h-[calc(100vh-200px)] overflow-y-auto p-4"
-        style={{ lineHeight: 1.6 }}
-      >
-        {isSystemAdmin && (
-          <div className="doc-editor-bar">
-            {!isEditing ? (
-              <button type="button" className="btn btn-light" onClick={startEditing}>
-                Editar documentação
-              </button>
-            ) : (
-              <>
-                <div className="doc-editor-toolbar">
-                  <button type="button" className="btn btn-light" onClick={toggleHistory}>
-                    {historyOpen ? "Fechar histórico" : "Histórico"}
-                  </button>
-                </div>
-                <div className="doc-editor-actions">
-                  <button type="button" className="btn btn-primary" onClick={saveEditing} disabled={saving}>
-                    {saving ? "Salvando..." : "Salvar"}
-                  </button>
-                  <button type="button" className="btn btn-light" onClick={cancelEditing} disabled={saving}>
-                    Cancelar
-                  </button>
-                </div>
-              </>
-            )}
-            {saveStatus && <div className="doc-editor-status">{saveStatus}</div>}
-            {historyOpen && (
-              <div className="doc-history">
-                {historyLoading && <div>Carregando histórico...</div>}
-                {!historyLoading && historyItems.length === 0 && (
-                  <div>Nenhuma alteração registrada.</div>
+        <AppCard tone="info" className="h-auto lg:h-[calc(100vh-200px)]">
+          <div ref={contentRef} className="h-full overflow-y-auto" style={{ lineHeight: 1.6 }}>
+            {isSystemAdmin && (
+              <div className="doc-editor-bar">
+                {!isEditing ? (
+                  <AppButton type="button" variant="secondary" onClick={startEditing}>
+                    Editar documentacao
+                  </AppButton>
+                ) : (
+                  <>
+                    <div className="doc-editor-toolbar">
+                      <AppButton type="button" variant="secondary" onClick={toggleHistory}>
+                        {historyOpen ? "Fechar historico" : "Historico"}
+                      </AppButton>
+                    </div>
+                    <div className="doc-editor-actions">
+                      <AppButton type="button" variant="primary" onClick={saveEditing} disabled={saving}>
+                        {saving ? "Salvando..." : "Salvar"}
+                      </AppButton>
+                      <AppButton type="button" variant="secondary" onClick={cancelEditing} disabled={saving}>
+                        Cancelar
+                      </AppButton>
+                    </div>
+                  </>
                 )}
-                {!historyLoading &&
-                  historyItems.map((item) => {
-                    const user = item?.users?.nome_completo || item?.users?.email || "Admin";
-                    const date = item?.created_at
-                      ? new Date(item.created_at).toLocaleString("pt-BR")
-                      : "";
-                    const action =
-                      item?.action === "INSERT"
-                        ? "Criação"
-                        : item?.action === "DELETE"
-                        ? "Remoção"
-                        : "Atualização";
-                    return (
-                      <div key={item.id} className="doc-history-item">
-                        <div className="doc-history-info">
-                          <strong>{action}</strong> • {user} • {date}
-                        </div>
-                        <button
-                          type="button"
-                          className="btn btn-light btn-xs"
-                          onClick={() => restoreVersion(item.id)}
-                          disabled={Boolean(restoringId)}
-                        >
-                          {restoringId === item.id ? "Restaurando..." : "Restaurar"}
-                        </button>
-                      </div>
-                    );
-                  })}
+                {saveStatus && <div className="doc-editor-status">{saveStatus}</div>}
+                {historyOpen && (
+                  <div className="doc-history">
+                    {historyLoading && <div>Carregando historico...</div>}
+                    {!historyLoading && historyItems.length === 0 && (
+                      <div>Nenhuma alteracao registrada.</div>
+                    )}
+                    {!historyLoading &&
+                      historyItems.map((item) => {
+                        const user = item?.users?.nome_completo || item?.users?.email || "Admin";
+                        const date = item?.created_at
+                          ? new Date(item.created_at).toLocaleString("pt-BR")
+                          : "";
+                        const action =
+                          item?.action === "INSERT"
+                            ? "Criacao"
+                            : item?.action === "DELETE"
+                            ? "Remocao"
+                            : "Atualizacao";
+                        return (
+                          <div key={item.id} className="doc-history-item">
+                            <div className="doc-history-info">
+                              <strong>{action}</strong> • {user} • {date}
+                            </div>
+                            <AppButton
+                              type="button"
+                              variant="secondary"
+                              onClick={() => restoreVersion(item.id)}
+                              disabled={Boolean(restoringId)}
+                              className="btn-xs"
+                            >
+                              {restoringId === item.id ? "Restaurando..." : "Restaurar"}
+                            </AppButton>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
 
-        {isEditing ? (
-          <div className="doc-editor">
-            <div ref={editorElRef} />
+            {isEditing ? (
+              <div className="doc-editor">
+                <div ref={editorElRef} />
+              </div>
+            ) : (
+              <div
+                className="doc-content"
+                dangerouslySetInnerHTML={{ __html: filteredHTML }}
+              />
+            )}
           </div>
-        ) : (
-          <div
-            className="doc-content"
-            dangerouslySetInnerHTML={{ __html: filteredHTML }}
-          />
-        )}
+        </AppCard>
       </div>
-    </div>
+    </section>
   );
 }

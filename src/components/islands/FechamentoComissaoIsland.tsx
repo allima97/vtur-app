@@ -2,6 +2,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import AlertMessage from "../ui/AlertMessage";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 import {
   calcularValorComissao,
 } from "../../lib/comissao";
@@ -680,16 +686,30 @@ export default function FechamentoComissaoIsland() {
   if (loadingPermissao) return <LoadingUsuarioContext />;
 
   if (!ativo) {
-    return <div>Acesso ao módulo de Metas & Comissões bloqueado.</div>;
+    return (
+      <AppPrimerProvider>
+        <div className="page-content-wrap comissionamento-page gestor-page">
+          <AppCard tone="config">Acesso ao módulo de Metas & Comissões bloqueado.</AppCard>
+        </div>
+      </AppPrimerProvider>
+    );
   }
 
   if (carregandoDados) {
-    return <div>Carregando dados do fechamento...</div>;
+    return (
+      <AppPrimerProvider>
+        <div className="page-content-wrap comissionamento-page gestor-page">
+          <AppCard tone="config">Carregando dados do fechamento...</AppCard>
+        </div>
+      </AppPrimerProvider>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-2 md:p-6 comissionamento-page gestor-page">
+    <AppPrimerProvider>
+    <div className="min-h-screen bg-slate-50 p-2 md:p-6 comissionamento-page gestor-page vtur-legacy-module">
       {/* BARRA DE CONTEXTO */}
+      <AppToolbar title="Fechamento de comissão" subtitle="Consolide meta, base, comissão aplicada e vendas do período." tone="info" sticky>
       <div className="mb-4 p-3 rounded-lg bg-emerald-950 border border-emerald-800 text-emerald-100 text-sm flex flex-wrap gap-3 items-center justify-between">
         <div>
           <strong>Módulo:</strong> Fechamento de Comissão
@@ -781,66 +801,38 @@ export default function FechamentoComissaoIsland() {
           </div>
         )}
       </div>
+      </AppToolbar>
 
       {/* FILTROS */}
-      <div className="card-base card-green mb-3">
+      <AppCard className="mb-3" tone="info" title="Filtros e cálculo">
         <div className="form-row flex flex-col md:flex-row gap-4">
           {mostrarSelectVendedor && (
             <div className="form-group flex-1 min-w-[180px]">
-              <label className="form-label">Vendedor</label>
-              <select
-                className="form-select"
+              <AppField as="select" label="Vendedor"
                 value={vendedorSelecionado}
                 onChange={(e) => setVendedorSelecionado(e.target.value)}
-              >
-                {vendedores.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.nome_completo}
-                  </option>
-                ))}
-              </select>
+                options={vendedores.map((v) => ({ label: v.nome_completo, value: v.id }))}
+              />
             </div>
           )}
 
           <div className="form-group flex-1 min-w-[180px]">
-            <label className="form-label">Período</label>
-            <select className="form-select" value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
-              {periodoOptions.map((value) => (
-                <option key={value} value={value}>
-                  {formatMonthYearBR(value)}
-                </option>
-              ))}
-            </select>
+            <AppField as="select" label="Período" value={periodo} onChange={(e) => setPeriodo(e.target.value)} options={periodoOptions.map((value) => ({ label: formatMonthYearBR(value), value }))} />
           </div>
 
           <div className="form-group flex-1 min-w-[180px]">
-            <label className="form-label">Template de Comissão</label>
-            <select
-              className="form-select"
+            <AppField as="select" label="Template de Comissão"
               value={templateIdSelecionado}
               onChange={(e) => setTemplateIdSelecionado(e.target.value)}
-            >
-              {templates.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.nome} ({t.modo})
-                </option>
-              ))}
-              {templates.length === 0 && (
-                <option value="">Nenhum template disponível</option>
-              )}
-            </select>
+              options={templates.length > 0 ? templates.map((t) => ({ label: `${t.nome} (${t.modo})`, value: t.id })) : [{ label: "Nenhum template disponível", value: "" }]}
+            />
           </div>
         </div>
 
         <div className="mt-2 flex gap-2 flex-wrap mobile-stack-buttons">
-          <button
-            type="button"
-            className="btn btn-primary w-full sm:w-auto"
-            onClick={calcularFechamento}
-            disabled={calculando || !metaAtual}
-          >
+          <AppButton type="button" variant="primary" onClick={calcularFechamento} disabled={calculando || !metaAtual}>
             {calculando ? "Calculando..." : "Calcular comissão do mês"}
-          </button>
+          </AppButton>
           {!metaAtual && (
             <span style={{ marginLeft: 10, fontSize: "0.85rem" }}>
               Defina uma meta para este período em{" "}
@@ -850,11 +842,9 @@ export default function FechamentoComissaoIsland() {
         </div>
 
         {erro && (
-          <div className="card-base card-config mt-2">
-            <strong>{erro}</strong>
-          </div>
+          <AlertMessage variant="error"><strong>{erro}</strong></AlertMessage>
         )}
-      </div>
+      </AppCard>
 
       {/* KPIs PRINCIPAIS */}
       <div
@@ -1041,5 +1031,6 @@ export default function FechamentoComissaoIsland() {
         </table>
       </div>
     </div>
+    </AppPrimerProvider>
   );
 }

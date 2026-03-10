@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import AlertMessage from "../ui/AlertMessage";
+import AppCard from "../ui/primer/AppCard";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type UserWithType = {
   id: string;
@@ -62,8 +65,6 @@ const DashboardRouterIsland: React.FC = () => {
           return;
         }
 
-        window.location.href = "/dashboard";
-
         window.location.href = "/dashboard/geral";
       } catch (e: any) {
         console.error(e);
@@ -76,15 +77,13 @@ const DashboardRouterIsland: React.FC = () => {
   }, []);
 
   return (
-    <div style={{ padding: "24px", fontSize: "0.95rem" }}>
-      <h2 style={{ marginBottom: 8 }}>Carregando seu dashboard...</h2>
-      <p>{mensagem}</p>
-      {erro && (
-        <p style={{ marginTop: 8, color: "#b91c1c" }}>
-          {erro}
-        </p>
-      )}
-    </div>
+    <section className="dashboard-router-page">
+      <AppToolbar tone="config" title="Carregando seu dashboard..." />
+      <AppCard tone="config">
+        <p>{mensagem}</p>
+        {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
+      </AppCard>
+    </section>
   );
 };
 

@@ -2,6 +2,11 @@ import React, { useState } from "react";
 import { useRegisterForm } from "../../lib/useRegisterForm";
 import CredentialsForm from "../forms/CredentialsForm";
 import { SYSTEM_NAME } from "../../lib/systemName";
+import AlertMessage from "../ui/AlertMessage";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
 export default function AuthRegisterIsland() {
   const [modalSucesso, setModalSucesso] = useState(false);
@@ -26,83 +31,57 @@ export default function AuthRegisterIsland() {
   }
 
   return (
-    <div className="auth-container">
-      <div className="auth-card auth-card-lg">
-        {modalSucesso && (
-          <div className="modal">
-            <div className="modal-overlay" onClick={fecharModalSucesso}></div>
-            <div className="modal-content">
-              <div className="modal-header">
-                <i className="fa-solid fa-envelope-open-text text-green-600"></i>
-                <h2>{successMode === "signup" ? "Confirme seu e-mail" : "Acesso enviado por e-mail"}</h2>
-              </div>
-              <div className="modal-body">
-                {successMode === "signup" ? (
-                  <p>
-                    Conta criada com sucesso! Para continuar, confirme o e-mail de cadastro e depois faca login.
-                  </p>
-                ) : (
-                  <p>
-                    Identificamos um cadastro anterior no Auth. Enviamos e-mail de acesso (confirmacao ou
-                    recuperacao, conforme disponibilidade). Se nao receber, aguarde alguns minutos por limite do
-                    provedor e tente novamente.
-                  </p>
-                )}
-              </div>
-              <div className="modal-footer">
-                <button onClick={fecharModalSucesso} className="btn btn-primary">
-                  OK
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="auth-header">
-          <div className="auth-icon">
-            <i className="fa-solid fa-plane-departure"></i>
-          </div>
-          <h1>{`Bem-vindo ao ${SYSTEM_NAME}`}</h1>
-          <h2>Sistema de Gerenciamento de Vendas para Turismo</h2>
-          <p className="auth-subtitle">
-            Cadastre-se, confirme o e-mail e complete seus dados no primeiro acesso.
-          </p>
-        </div>
-
-        {registerForm.message && (
-          <div className="alert alert-danger" style={{ marginBottom: 16 }}>
-            {registerForm.message}
-          </div>
-        )}
-
-        <form onSubmit={registerForm.handleSubmit} className="auth-form">
-          <CredentialsForm
-            email={registerForm.email}
-            password={registerForm.password}
-            confirmPassword={registerForm.confirmPassword}
-            onEmailChange={registerForm.setEmail}
-            onPasswordChange={registerForm.setPassword}
-            onConfirmPasswordChange={registerForm.setConfirmPassword}
-            disabled={registerForm.loading}
+    <AppPrimerProvider>
+      <div className="auth-container">
+        <AppCard
+          className="auth-card auth-card-lg"
+          title={`Bem-vindo ao ${SYSTEM_NAME}`}
+          subtitle="Cadastre-se, confirme o e-mail e complete seus dados no primeiro acesso."
+        >
+          <AppNoticeDialog
+            open={modalSucesso}
+            title={successMode === "signup" ? "Confirme seu e-mail" : "Acesso enviado por e-mail"}
+            onClose={fecharModalSucesso}
+            message={
+              successMode === "signup"
+                ? "Conta criada com sucesso. Para continuar, confirme o e-mail de cadastro e depois faça login."
+                : "Identificamos um cadastro anterior no Auth. Enviamos e-mail de acesso, confirmação ou recuperação conforme disponibilidade. Se não receber, aguarde alguns minutos e tente novamente."
+            }
           />
 
-          <div className="auth-actions">
-            <button type="submit" className="btn btn-primary w-full" disabled={registerForm.loading}>
-              <i className="fa-solid fa-user-plus"></i>
-              {registerForm.loading ? " Criando..." : " Criar Conta"}
-            </button>
+          {registerForm.message && (
+            <AlertMessage variant="error" className="mb-3">
+              {registerForm.message}
+            </AlertMessage>
+          )}
 
-            <div className="auth-divider">
-              <span>ou</span>
+          <form onSubmit={registerForm.handleSubmit} className="auth-form">
+            <CredentialsForm
+              email={registerForm.email}
+              password={registerForm.password}
+              confirmPassword={registerForm.confirmPassword}
+              onEmailChange={registerForm.setEmail}
+              onPasswordChange={registerForm.setPassword}
+              onConfirmPasswordChange={registerForm.setConfirmPassword}
+              disabled={registerForm.loading}
+            />
+
+            <div className="auth-actions">
+              <AppButton type="submit" variant="primary" disabled={registerForm.loading}>
+                {registerForm.loading ? "Criando..." : "Criar conta"}
+              </AppButton>
+
+              <div className="auth-divider">
+                <span>ou</span>
+              </div>
+
+              <a href="/auth/login" className="btn btn-secondary w-full">
+                Já tenho conta
+              </a>
             </div>
-
-            <a href="/auth/login" className="btn btn-secondary w-full">
-              <i className="fa-solid fa-right-to-bracket"></i>
-              Ja tenho conta
-            </a>
-          </div>
-        </form>
+          </form>
+        </AppCard>
       </div>
-    </div>
+    </AppPrimerProvider>
   );
 }

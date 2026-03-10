@@ -6,6 +6,12 @@ import SearchInput from "../ui/SearchInput";
 import TableActions from "../ui/TableActions";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import { ToastStack, useToastQueue } from "../ui/Toast";
+import AlertMessage from "../ui/AlertMessage";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type Cidade = { id: string; nome: string };
 type TipoProduto = { id: string; nome: string; tipo?: string | null };
@@ -411,83 +417,80 @@ export default function MinhasPreferenciasIsland() {
 
   if (loadPerm) {
     return (
-      <div className="minhas-preferencias-page">
-        <LoadingUsuarioContext />
-      </div>
+      <AppPrimerProvider>
+        <div className="page-content-wrap minhas-preferencias-page">
+          <LoadingUsuarioContext />
+        </div>
+      </AppPrimerProvider>
     );
   }
 
   if (!podeVer) {
     return (
-      <div className="minhas-preferencias-page">
-        <div className="card-base card-config">
-          <strong>Acesso negado ao módulo de Minhas Preferências.</strong>
+      <AppPrimerProvider>
+        <div className="page-content-wrap minhas-preferencias-page">
+          <AppCard tone="config">Acesso negado ao módulo de Minhas Preferências.</AppCard>
         </div>
-      </div>
+      </AppPrimerProvider>
     );
   }
 
   const colSpan = 7;
 
   return (
-    <div className="page-content-wrap minhas-preferencias-page">
+    <AppPrimerProvider>
+    <div className="page-content-wrap minhas-preferencias-page vtur-legacy-module">
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
       {!mostrarFormulario && (
-        <div className="card-base card-blue mb-3 list-toolbar-sticky">
-          <div
-            className="form-row mobile-stack"
-            style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
-          >
-            <div style={{ flex: "1 1 320px" }}>
-              <SearchInput
-                label="Buscar"
-                value={busca}
-                onChange={setBusca}
-                placeholder="Nome, tipo, cidade, localização..."
-                wrapperClassName="m-0"
-              />
-            </div>
-            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-              <button
-                type="button"
-                className="btn btn-primary w-full sm:w-auto"
-                onClick={abrirFormularioNovo}
-                disabled={!podeCriar}
-              >
-                Adicionar preferência
-              </button>
-            </div>
+        <AppToolbar
+          title="Minhas preferências"
+          subtitle="Cadastre referências pessoais, compartilhe com a equipe e gerencie convites de acesso."
+          tone="info"
+          sticky
+          actions={
+            <AppButton type="button" variant="primary" onClick={abrirFormularioNovo} disabled={!podeCriar}>
+              Adicionar preferência
+            </AppButton>
+          }
+        >
+          <div className="vtur-form-grid vtur-form-grid-2">
+            <AppField
+              label="Buscar"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Nome, tipo, cidade, localização..."
+            />
           </div>
-        </div>
+        </AppToolbar>
       )}
 
       {mostrarFormulario && (
-        <div className="card-base card-blue form-card mb-3">
-          <div className="flex items-center justify-between gap-3" style={{ flexWrap: "wrap" }}>
-            <h3 style={{ marginTop: 0, marginBottom: 0 }}>{editId ? "Editar preferência" : "Nova preferência"}</h3>
-            <button type="button" className="btn btn-light" onClick={fecharFormulario} disabled={salvando}>
+        <AppCard
+          className="form-card mb-3"
+          tone="info"
+          title={editId ? "Editar preferência" : "Nova preferência"}
+          actions={
+            <AppButton type="button" variant="default" onClick={fecharFormulario} disabled={salvando}>
               Cancelar
-            </button>
-          </div>
+            </AppButton>
+          }
+        >
 
           <form onSubmit={salvar}>
           <div className="form-row">
             <div className="form-group" style={{ minWidth: 220, flex: 1 }}>
-              <label className="form-label">Tipo</label>
-              <select
-                className="form-input"
+              <AppField
+                as="select"
+                label="Tipo"
                 value={form.tipo_produto_id}
                 disabled={baseLoading}
                 onChange={(e) => setForm((prev) => ({ ...prev, tipo_produto_id: e.target.value }))}
-              >
-                <option value="">(Selecione)</option>
-                {tipos.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.nome}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { label: "(Selecione)", value: "" },
+                  ...tipos.map((t) => ({ label: t.nome, value: t.id })),
+                ]}
+              />
             </div>
 
             <div className="form-group relative" style={{ minWidth: 220, flex: 1 }}>
@@ -563,17 +566,15 @@ export default function MinhasPreferenciasIsland() {
 
           <div className="form-row">
             <div className="form-group" style={{ flex: 2, minWidth: 240 }}>
-              <label className="form-label">Nome *</label>
-              <input
-                className="form-input"
+              <AppField
+                label="Nome *"
                 value={form.nome}
                 onChange={(e) => setForm((prev) => ({ ...prev, nome: e.target.value }))}
               />
             </div>
             <div className="form-group" style={{ flex: 2, minWidth: 240 }}>
-              <label className="form-label">Localização</label>
-              <input
-                className="form-input"
+              <AppField
+                label="Localização"
                 value={form.localizacao}
                 onChange={(e) => setForm((prev) => ({ ...prev, localizacao: e.target.value }))}
               />
@@ -582,38 +583,36 @@ export default function MinhasPreferenciasIsland() {
 
           <div className="form-row">
             <div className="form-group" style={{ flex: 1, minWidth: 220 }}>
-              <label className="form-label">Classificação</label>
-              <input
-                className="form-input"
+              <AppField
+                label="Classificação"
                 value={form.classificacao}
                 onChange={(e) => setForm((prev) => ({ ...prev, classificacao: e.target.value }))}
               />
             </div>
             <div className="form-group" style={{ flex: 3, minWidth: 260 }}>
-              <label className="form-label">Observação</label>
-              <input
-                className="form-input"
+              <AppField
+                label="Observação"
                 value={form.observacao}
                 onChange={(e) => setForm((prev) => ({ ...prev, observacao: e.target.value }))}
               />
             </div>
           </div>
 
-          {erro && <div className="auth-error">{erro}</div>}
+          {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
 
           <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-            <button
+            <AppButton
               type="submit"
-              className="btn btn-primary"
+              variant="primary"
               disabled={
                 salvando || (editId ? !podeEditar : !podeCriar)
               }
             >
               {salvando ? "Salvando..." : editId ? "Salvar" : "Criar"}
-            </button>
+            </AppButton>
           </div>
           </form>
-        </div>
+        </AppCard>
       )}
 
       {!mostrarFormulario && (
@@ -786,33 +785,31 @@ export default function MinhasPreferenciasIsland() {
               )}
 
               <div className="form-group">
-                <label className="form-label">Usuário</label>
-                <select
-                  className="form-input"
+                <AppField
+                  as="select"
+                  label="Usuário"
                   value={shareUserId}
                   disabled={baseLoading}
                   onChange={(e) => setShareUserId(e.target.value)}
-                >
-                  <option value="">(Selecione)</option>
-                  {usuarios.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.nome_completo || u.email}
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    { label: "(Selecione)", value: "" },
+                    ...usuarios.map((u) => ({ label: u.nome_completo || u.email, value: u.id })),
+                  ]}
+                />
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-light" onClick={() => setSharePrefId(null)}>
+              <AppButton type="button" variant="default" onClick={() => setSharePrefId(null)}>
                 Cancelar
-              </button>
-              <button className="btn btn-primary" onClick={compartilhar} disabled={sharing}>
+              </AppButton>
+              <AppButton type="button" variant="primary" onClick={compartilhar} disabled={sharing}>
                 {sharing ? "Enviando..." : "Enviar convite"}
-              </button>
+              </AppButton>
             </div>
           </div>
         </div>
       )}
     </div>
+    </AppPrimerProvider>
   );
 }

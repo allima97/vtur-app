@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { descobrirModulo } from "../../config/modulos";
+import AppButton from "../ui/primer/AppButton";
+import EmptyState from "../ui/EmptyState";
 
 type ModuleSection = {
   title: string;
@@ -219,22 +221,22 @@ export default function HelpDrawerIsland() {
 
   return (
     <>
-      <button type="button" className="help-fab" onClick={() => setOpen(true)}>
+      <AppButton type="button" variant="primary" className="help-fab" onClick={() => setOpen(true)}>
         Precisa de ajuda?
-      </button>
+      </AppButton>
       {open && (
         <div className="help-drawer">
           <div className="help-drawer-header">
             <strong>Ajuda do módulo</strong>
-            <button type="button" className="btn btn-light" onClick={() => setOpen(false)}>
+            <AppButton type="button" variant="secondary" onClick={() => setOpen(false)}>
               Fechar
-            </button>
+            </AppButton>
           </div>
           <div className="help-drawer-body doc-content">
             {helpHtml ? (
               <div dangerouslySetInnerHTML={{ __html: helpHtml }} />
             ) : (
-              <div>Ajuda ainda não cadastrada para este módulo.</div>
+              <EmptyState title="Ajuda indisponivel" description="Ajuda ainda nao cadastrada para este modulo." />
             )}
           </div>
         </div>

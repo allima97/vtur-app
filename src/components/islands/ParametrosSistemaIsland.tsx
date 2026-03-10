@@ -1,9 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
+import AlertMessage from "../ui/AlertMessage";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { registrarLog } from "../../lib/logs";
 import { formatDateTimeBR } from "../../lib/format";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type ParametrosSistema = {
   id?: string;
@@ -138,28 +143,32 @@ export default function ParametrosSistemaIsland() {
   }
 
   if (!podeVer) {
-    return <div>Acesso ao módulo de Parâmetros bloqueado.</div>;
+    return <AppCard tone="config">Acesso ao modulo de Parametros bloqueado.</AppCard>;
   }
 
   return (
-    <div className="card-base">
-      <h2 className="card-title">Parâmetros do Sistema</h2>
-
-      {erro && <div className="auth-error">{erro}</div>}
-      {sucesso && <div className="auth-success">{sucesso}</div>}
+    <section className="parametros-sistema-page">
+      <AppToolbar
+        tone="config"
+        title="Parametros do Sistema"
+        subtitle="Configuracoes gerais de metas, cancelamento, faturamento e exportacoes."
+      />
+      <AppCard tone="config">
+      {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
+      {sucesso && <AlertMessage variant="success">{sucesso}</AlertMessage>}
       {ultimaAtualizacao && (
         <p style={{ marginTop: 0, color: "#64748b", fontSize: "0.9rem" }}>
-          Última atualização: {formatDateTimeBR(ultimaAtualizacao)}
+          Ultima atualizacao: {formatDateTimeBR(ultimaAtualizacao)}
         </p>
       )}
       {origemDados && (
         <p style={{ marginTop: 4, color: "#94a3b8", fontSize: "0.85rem" }}>
-          Origem dos dados: {origemDados === "banco" ? "Banco de dados" : "Valores padrão"}
+          Origem dos dados: {origemDados === "banco" ? "Banco de dados" : "Valores padrao"}
         </p>
       )}
       {ownerNome && (
         <p style={{ marginTop: 4, color: "#94a3b8", fontSize: "0.85rem" }}>
-          Última edição por: {ownerNome}
+          Ultima edicao por: {ownerNome}
         </p>
       )}
 
@@ -182,9 +191,9 @@ export default function ParametrosSistemaIsland() {
         </div>
 
         <div className="form-group">
-          <label className="form-label">Foco das metas</label>
-          <select
-            className="form-select"
+          <AppField
+            as="select"
+            label="Foco das metas"
             value={params.foco_valor}
             onChange={(e) =>
               setParams((p) => ({
@@ -193,10 +202,11 @@ export default function ParametrosSistemaIsland() {
               }))
             }
             disabled={bloqueado}
-          >
-            <option value="bruto">Valor bruto</option>
-            <option value="liquido">Valor líquido</option>
-          </select>
+            options={[
+              { value: "bruto", label: "Valor bruto" },
+              { value: "liquido", label: "Valor liquido" },
+            ]}
+          />
           <small style={{ color: "#64748b" }}>{focoLabel} será usado em metas e dashboards.</small>
         </div>
 
@@ -216,9 +226,9 @@ export default function ParametrosSistemaIsland() {
         </div>
 
         <div className="form-group">
-          <label className="form-label">Política de cancelamento</label>
-          <select
-            className="form-select"
+          <AppField
+            as="select"
+            label="Politica de cancelamento"
             value={params.politica_cancelamento}
             onChange={(e) =>
               setParams((p) => ({
@@ -230,10 +240,11 @@ export default function ParametrosSistemaIsland() {
               }))
             }
             disabled={bloqueado}
-          >
-            <option value="cancelar_venda">Cancelar venda (exclui venda)</option>
-            <option value="estornar_recibos">Estornar recibos (manter venda)</option>
-          </select>
+            options={[
+              { value: "cancelar_venda", label: "Cancelar venda (exclui venda)" },
+              { value: "estornar_recibos", label: "Estornar recibos (manter venda)" },
+            ]}
+          />
           <small style={{ color: "#64748b" }}>
             Define comportamento padrão ao cancelar vendas.
           </small>
@@ -242,9 +253,9 @@ export default function ParametrosSistemaIsland() {
 
       <div className="form-row">
         <div className="form-group">
-          <label className="form-label">Foco de faturamento</label>
-          <select
-            className="form-select"
+          <AppField
+            as="select"
+            label="Foco de faturamento"
             value={params.foco_faturamento}
             onChange={(e) =>
               setParams((p) => ({
@@ -253,10 +264,11 @@ export default function ParametrosSistemaIsland() {
               }))
             }
             disabled={bloqueado}
-          >
-            <option value="bruto">Valor bruto</option>
-            <option value="liquido">Valor líquido</option>
-          </select>
+            options={[
+              { value: "bruto", label: "Valor bruto" },
+              { value: "liquido", label: "Valor liquido" },
+            ]}
+          />
           <small style={{ color: "#64748b" }}>
             Define base para faturamento e relatórios financeiros.
           </small>
@@ -295,23 +307,24 @@ export default function ParametrosSistemaIsland() {
       </div>
 
       <div className="mobile-stack-buttons" style={{ display: "flex", gap: 10, marginTop: 16 }}>
-        <button
-          className="btn btn-primary"
+        <AppButton
+          variant="primary"
           onClick={salvar}
           disabled={bloqueado || salvando}
         >
-          {salvando ? "Salvando..." : "Salvar parâmetros"}
-        </button>
-        <button className="btn btn-secondary" onClick={carregar} disabled={salvando}>
+          {salvando ? "Salvando..." : "Salvar parametros"}
+        </AppButton>
+        <AppButton variant="secondary" onClick={carregar} disabled={salvando}>
           Recarregar
-        </button>
+        </AppButton>
       </div>
 
       {bloqueado && (
         <p style={{ marginTop: 12, color: "#f97316" }}>
-          Você não tem permissão para editar. Solicite acesso ao administrador.
+          Voce nao tem permissao para editar. Solicite acesso ao administrador.
         </p>
       )}
-    </div>
+      </AppCard>
+    </section>
   );
 }

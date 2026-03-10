@@ -1,5 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { StreamChat, Channel } from "stream-chat";
+import AlertMessage from "../ui/AlertMessage";
+import EmptyState from "../ui/EmptyState";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
 
 const API_KEY = import.meta.env.PUBLIC_STREAM_API_KEY || "";
 
@@ -59,41 +64,44 @@ export default function StreamChatIsland() {
   }
 
   return (
-    <div className="card-base" style={{ padding: 12, display: "grid", gap: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-        <h3 style={{ margin: 0 }}>Stream Chat</h3>
-        {disabled && (
-          <span style={{ color: "#b91c1c" }}>Defina PUBLIC_STREAM_API_KEY</span>
-        )}
-      </div>
-
+    <AppCard
+      tone="info"
+      title="Stream Chat"
+      subtitle="Canal em tempo real para suporte e operacao."
+      actions={disabled ? <span style={{ color: "#b91c1c" }}>Defina PUBLIC_STREAM_API_KEY</span> : undefined}
+    >
       <form onSubmit={handleConnect} className="form-row" style={{ gap: 8, flexWrap: "wrap" }}>
-        <input
-          className="form-input"
-          style={{ minWidth: 140 }}
+        <AppField
+          as="input"
+          label="User ID"
           placeholder="User ID"
           value={userId}
           onChange={(e) => setUserId(e.target.value)}
+          wrapperClassName="min-w-[140px]"
         />
-        <input
-          className="form-input"
-          style={{ minWidth: 220, flex: 1 }}
+        <AppField
+          as="input"
+          label="Token"
           placeholder="Token gerado no backend"
           value={userToken}
           onChange={(e) => setUserToken(e.target.value)}
+          wrapperClassName="min-w-[220px] flex-1"
         />
-        <input
-          className="form-input"
-          style={{ minWidth: 160 }}
+        <AppField
+          as="input"
+          label="Canal"
           placeholder="Channel ID"
           value={channelId}
           onChange={(e) => setChannelId(e.target.value)}
+          wrapperClassName="min-w-[160px]"
         />
-        <button type="submit" className="btn btn-primary" disabled={connecting || disabled}>
-          {connecting ? "Conectando..." : "Conectar"}
-        </button>
+        <div className="form-group" style={{ alignSelf: "end" }}>
+          <AppButton type="submit" variant="primary" disabled={connecting || disabled}>
+            {connecting ? "Conectando..." : "Conectar"}
+          </AppButton>
+        </div>
       </form>
-      {error && <div style={{ color: "#b91c1c" }}>{error}</div>}
+      {error && <AlertMessage variant="error">{error}</AlertMessage>}
 
       {channel ? (
         <div style={{ border: "1px solid #e2e8f0", borderRadius: 10, minHeight: 360, display: "flex", flexDirection: "column" }}>
@@ -107,19 +115,24 @@ export default function StreamChatIsland() {
             ))}
           </div>
           <form onSubmit={sendMessage} style={{ display: "flex", gap: 8, padding: 10, borderTop: "1px solid #e2e8f0" }}>
-            <input
-              className="form-input"
-              style={{ flex: 1 }}
+            <AppField
+              as="input"
+              label="Mensagem"
               placeholder="Digite sua mensagem"
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              wrapperClassName="flex-1"
             />
-            <button type="submit" className="btn btn-primary">Enviar</button>
+            <div className="form-group" style={{ alignSelf: "end" }}>
+              <AppButton type="submit" variant="primary">
+                Enviar
+              </AppButton>
+            </div>
           </form>
         </div>
       ) : (
-        <div style={{ color: "#94a3b8" }}>Conecte-se para ver mensagens.</div>
+        <EmptyState title="Sem conexao ativa" description="Conecte-se para ver mensagens." />
       )}
-    </div>
+    </AppCard>
   );
 }

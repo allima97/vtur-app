@@ -4,6 +4,11 @@ import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { MODULOS_ADMIN_PERMISSOES } from "../../config/modulos";
 import AlertMessage from "../ui/AlertMessage";
+import DataTable from "../ui/DataTable";
+import EmptyState from "../ui/EmptyState";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppToolbar from "../ui/primer/AppToolbar";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 
 type Usuario = {
@@ -22,7 +27,11 @@ type Permissao = {
 };
 
 const MODULOS = MODULOS_ADMIN_PERMISSOES;
-
+const PERMISSAO_OPTIONS = [
+  { value: "view", label: "View" },
+  { value: "edit", label: "Edit" },
+  { value: "admin", label: "Admin" },
+];
 
 export default function PermissoesAdminIsland() {
   const { can, loading: loadingPerms, ready } = usePermissoesStore();
@@ -63,9 +72,9 @@ export default function PermissoesAdminIsland() {
   if (loadingPerm) return <LoadingUsuarioContext />;
   if (!podeVer || !isAdmin)
     return (
-      <div style={{ padding: 20 }}>
-        <h3>Apenas administradores podem acessar este módulo.</h3>
-      </div>
+      <AppCard className="permissoes-admin-page admin-page" tone="config">
+        Apenas administradores podem acessar este modulo.
+      </AppCard>
     );
 
   // -----------------------
@@ -186,72 +195,60 @@ export default function PermissoesAdminIsland() {
 
   return (
     <div className="permissoes-admin-page admin-page">
-      <div className="mb-4 p-4 rounded-lg bg-rose-950 border border-rose-700 text-rose-100">
-        <strong>Editor de Permissões</strong> — controle total dos módulos
-      </div>
+      <AppToolbar
+        tone="config"
+        title="Editor de Permissoes"
+        subtitle="Controle total dos modulos por usuario."
+      />
 
       {erro && (
-        <div className="mb-3">
-          <AlertMessage variant="error">{erro}</AlertMessage>
-        </div>
+        <AlertMessage variant="error">{erro}</AlertMessage>
       )}
 
-      {loading && <div>Carregando...</div>}
+      {loading && <AppCard tone="config">Carregando...</AppCard>}
 
       {/* LISTAGEM */}
-      <div className="sm:hidden">
-        <div className="card-base card-red mb-3">
-          <div className="form-group">
-            <label className="form-label">Usuário</label>
-            <select
-              className="form-select"
+      {!loading && (
+        <div className="sm:hidden">
+          <AppCard tone="config">
+            <AppField
+              as="select"
+              label="Usuario"
               value={usuarioSelecionadoId}
               onChange={(e) => setUsuarioSelecionadoId(e.target.value)}
-            >
-              {usuarios.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.nome_completo}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+              options={usuarios.map((u) => ({ value: u.id, label: u.nome_completo }))}
+            />
+          </AppCard>
 
-        {usuarioSelecionado && (
-          <div className="card-base card-red">
-            <h3 className="mb-3 font-semibold">Permissões de {usuarioSelecionado.nome_completo}</h3>
-            <div className="flex flex-col gap-2">
-              {MODULOS.map((m) => {
-                const per = getPermissao(usuarioSelecionado.id, m);
-                return (
-                  <div
-                    key={m}
-                    style={{
-                      border: "1px solid #e2e8f0",
-                      borderRadius: 10,
-                      padding: 12,
-                      background: "#fff",
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                      <strong>{m}</strong>
-                      <label style={{ fontSize: 12 }}>
-                        <input
-                          type="checkbox"
-                          checked={per.ativo}
-                          onChange={(e) =>
-                            salvar({
-                              ...per,
-                              ativo: e.target.checked,
-                            })
-                          }
-                        />{" "}
-                        ativo
-                      </label>
-                    </div>
-                    <div style={{ marginTop: 8 }}>
-                      <select
-                        className="form-select"
+          {usuarioSelecionado ? (
+            <AppCard tone="config" title={`Permissoes de ${usuarioSelecionado.nome_completo}`}>
+              <div className="flex flex-col gap-2">
+                {MODULOS.map((m) => {
+                  const per = getPermissao(usuarioSelecionado.id, m);
+                  return (
+                    <AppCard
+                      key={m}
+                      tone="info"
+                      title={m}
+                      actions={
+                        <label className="text-xs">
+                          <input
+                            type="checkbox"
+                            checked={per.ativo}
+                            onChange={(e) =>
+                              salvar({
+                                ...per,
+                                ativo: e.target.checked,
+                              })
+                            }
+                          />{" "}
+                          ativo
+                        </label>
+                      }
+                    >
+                      <AppField
+                        as="select"
+                        label="Permissao"
                         disabled={!per.ativo}
                         value={per.permissao}
                         onChange={(e) =>
@@ -260,89 +257,89 @@ export default function PermissoesAdminIsland() {
                             permissao: e.target.value as any,
                           })
                         }
-                      >
-                        <option value="view">View</option>
-                        <option value="edit">Edit</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
+                        options={PERMISSAO_OPTIONS}
+                      />
+                    </AppCard>
+                  );
+                })}
+              </div>
+            </AppCard>
+          ) : (
+            <EmptyState title="Nenhum usuario encontrado" />
+          )}
+        </div>
+      )}
 
-      <div className="hidden sm:block">
-        <div className="card-base card-red">
-          <h3 className="mb-3 font-semibold">Usuários</h3>
-          <div className="table-container overflow-x-auto">
-            <table className="table-default table-header-red table-mobile-cards min-w-[900px]">
-              <thead>
+      {!loading && (
+        <div className="hidden sm:block">
+          <AppCard tone="config" title="Usuarios">
+            <DataTable
+              className="table-mobile-cards min-w-[900px]"
+              headers={
                 <tr>
-                  <th className="min-w-[180px]">Usuário</th>
+                  <th className="min-w-[180px]">Usuario</th>
                   {MODULOS.map((m) => (
                     <th key={m}>{m}</th>
                   ))}
                 </tr>
-              </thead>
-              <tbody>
-                {usuarios.map((u) => (
-                  <tr key={u.id}>
-                    <td data-label="Usuário">
-                      <strong>{u.nome_completo}</strong>
-                      <br />
-                      <small>{u.email}</small>
-                      <br />
-                      <small>Tipo: {u.tipo}</small>
-                    </td>
-                    {MODULOS.map((m) => {
-                      const per = getPermissao(u.id, m);
-                      return (
-                        <td key={m} data-label={m}>
-                          <div className="flex flex-col gap-1">
-                            {/* Toggle ATIVO */}
-                            <label className="text-xs">
-                              <input
-                                type="checkbox"
-                                checked={per.ativo}
-                                onChange={(e) =>
-                                  salvar({
-                                    ...per,
-                                    ativo: e.target.checked,
-                                  })
-                                }
-                              />{" "}
-                              ativo
-                            </label>
-                            {/* SELECT PERMISSÃO */}
-                            <select
-                              disabled={!per.ativo}
-                              value={per.permissao}
+              }
+              colSpan={MODULOS.length + 1}
+              loading={loading}
+              empty={usuarios.length === 0}
+              emptyMessage="Nenhum usuario encontrado."
+            >
+              {usuarios.map((u) => (
+                <tr key={u.id}>
+                  <td data-label="Usuario">
+                    <strong>{u.nome_completo}</strong>
+                    <br />
+                    <small>{u.email}</small>
+                    <br />
+                    <small>Tipo: {u.tipo}</small>
+                  </td>
+                  {MODULOS.map((m) => {
+                    const per = getPermissao(u.id, m);
+                    return (
+                      <td key={m} data-label={m}>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs">
+                            <input
+                              type="checkbox"
+                              checked={per.ativo}
                               onChange={(e) =>
                                 salvar({
                                   ...per,
-                                  permissao: e.target.value as any,
+                                  ativo: e.target.checked,
                                 })
                               }
-                              className="text-xs bg-indigo-950 text-indigo-100 border border-indigo-900 rounded px-1 py-0.5"
-                            >
-                              <option value="view">View</option>
-                              <option value="edit">Edit</option>
-                              <option value="admin">Admin</option>
-                            </select>
-                          </div>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                            />{" "}
+                            ativo
+                          </label>
+                          <select
+                            disabled={!per.ativo}
+                            value={per.permissao}
+                            onChange={(e) =>
+                              salvar({
+                                ...per,
+                                permissao: e.target.value as any,
+                              })
+                            }
+                            className="text-xs form-select"
+                          >
+                            <option value="view">View</option>
+                            <option value="edit">Edit</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </DataTable>
+          </AppCard>
         </div>
-      </div>
+      )}
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );

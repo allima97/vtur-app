@@ -4,7 +4,12 @@ import "@toast-ui/editor/dist/toastui-editor.css";
 import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import AlertMessage from "../ui/AlertMessage";
+import DataTable from "../ui/DataTable";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppToolbar from "../ui/primer/AppToolbar";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 
 type AvisoTemplate = {
@@ -217,192 +222,157 @@ const AvisosAdminIsland: React.FC = () => {
 
   if (!podeVer) {
     return (
-      <div style={{ padding: 20 }}>
-        <h3>Apenas administradores podem acessar este módulo.</h3>
-      </div>
+      <AppCard tone="config" className="admin-page admin-avisos-page">
+        Apenas administradores podem acessar este modulo.
+      </AppCard>
     );
   }
 
   return (
     <div className="mt-6 admin-page admin-avisos-page">
-      <div className="card-base card-red mb-3 list-toolbar-sticky">
-        <div
-          className="form-row mobile-stack"
-          style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
-        >
-          <div className="form-group">
-            <h3 className="page-title">📣 Templates de avisos</h3>
-            <p className="page-subtitle">Crie modelos e selecione remetentes padrão.</p>
-          </div>
-          <div className="form-group" style={{ alignItems: "flex-end" }}>
-            <button className="btn btn-primary w-full sm:w-auto" onClick={() => openModal()}>
-              Novo template
-            </button>
-          </div>
-        </div>
-      </div>
+      <AppToolbar
+        tone="config"
+        className="list-toolbar-sticky"
+        title="Templates de avisos"
+        subtitle="Crie modelos e selecione remetentes padrao."
+        actions={
+          <AppButton type="button" variant="primary" onClick={() => openModal()}>
+            Novo template
+          </AppButton>
+        }
+      />
 
       {erro && (
-        <div className="mt-3">
-          <AlertMessage variant="error">{erro}</AlertMessage>
-        </div>
+        <AlertMessage variant="error">{erro}</AlertMessage>
       )}
 
       {loading ? (
-        <p className="mt-4">Carregando templates...</p>
+        <AppCard tone="config">Carregando templates...</AppCard>
       ) : (
-        <div className="table-container overflow-x-auto mt-4">
-          <table className="table-default table-header-red table-mobile-cards min-w-[720px]">
-            <thead>
+        <AppCard tone="config">
+          <DataTable
+            className="table-mobile-cards min-w-[720px]"
+            headers={
               <tr>
                 <th>Nome</th>
                 <th>Assunto</th>
                 <th>Remetente</th>
                 <th>Status</th>
-                <th className="th-actions">Ações</th>
+                <th className="th-actions">Acoes</th>
               </tr>
-            </thead>
-            <tbody>
-              {templates.length === 0 ? (
-                <tr>
-                  <td colSpan={5}>Nenhum template cadastrado.</td>
-                </tr>
-              ) : (
-                templates.map((t) => (
-                  <tr key={t.id}>
-                    <td data-label="Nome">{t.nome}</td>
-                    <td data-label="Assunto">{t.assunto}</td>
-                    <td data-label="Remetente">
-                      {REMETENTE_OPTIONS.find((opt) => opt.value === t.sender_key)?.label || "Avisos"}
-                    </td>
-                    <td
-                      data-label="Status"
-                      className={t.ativo ? "text-emerald-500 font-bold" : "text-rose-500 font-bold"}
-                    >
-                      {t.ativo ? "Ativo" : "Inativo"}
-                    </td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        <button
-                          type="button"
-                          className="btn-icon icon-action-btn"
-                          onClick={() => openModal(t)}
-                          title="Editar"
-                          aria-label="Editar"
-                        >
-                          <span aria-hidden="true">✏️</span>
-                          <span className="sr-only">Editar</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-icon icon-action-btn"
-                          onClick={() => toggleAtivo(t)}
-                          title={t.ativo ? "Desativar" : "Ativar"}
-                          aria-label={t.ativo ? "Desativar" : "Ativar"}
-                        >
-                          <span aria-hidden="true">{t.ativo ? "⏸️" : "✅"}</span>
-                          <span className="sr-only">{t.ativo ? "Desativar" : "Ativar"}</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+            }
+            colSpan={5}
+            empty={templates.length === 0}
+            emptyMessage="Nenhum template cadastrado."
+          >
+            {templates.map((t) => (
+              <tr key={t.id}>
+                <td data-label="Nome">{t.nome}</td>
+                <td data-label="Assunto">{t.assunto}</td>
+                <td data-label="Remetente">
+                  {REMETENTE_OPTIONS.find((opt) => opt.value === t.sender_key)?.label || "Avisos"}
+                </td>
+                <td
+                  data-label="Status"
+                  className={t.ativo ? "text-emerald-500 font-bold" : "text-rose-500 font-bold"}
+                >
+                  {t.ativo ? "Ativo" : "Inativo"}
+                </td>
+                <td className="th-actions" data-label="Acoes">
+                  <div className="action-buttons">
+                    <AppButton type="button" variant="ghost" onClick={() => openModal(t)}>
+                      Editar
+                    </AppButton>
+                    <AppButton type="button" variant="secondary" onClick={() => toggleAtivo(t)}>
+                      {t.ativo ? "Desativar" : "Ativar"}
+                    </AppButton>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </DataTable>
+        </AppCard>
       )}
 
       {modalOpen && (
         <div className="fixed inset-0 z-40 bg-black/50 flex justify-center items-center p-4">
-          <form className="card-base card-config w-full max-w-xl" onSubmit={salvarTemplate}>
-            <div className="flex justify-between items-center mb-3">
-              <h4 className="text-lg font-semibold">{form.id ? "Editar template" : "Novo template"}</h4>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => setModalOpen(false)}
-                disabled={salvando}
-              >
-                Fechar
-              </button>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Nome</label>
-              <input
-                className="form-input"
+          <form className="w-full max-w-xl" onSubmit={salvarTemplate}>
+            <AppCard
+              tone="config"
+              title={form.id ? "Editar template" : "Novo template"}
+              actions={
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setModalOpen(false)}
+                  disabled={salvando}
+                >
+                  Fechar
+                </AppButton>
+              }
+            >
+              <AppField
+                as="input"
+                label="Nome"
                 value={form.nome}
                 onChange={(e) => setForm((prev) => ({ ...prev, nome: e.target.value }))}
                 required
               />
-            </div>
 
-            <div className="form-group">
-              <label className="form-label">Assunto</label>
-              <input
-                className="form-input"
+              <AppField
+                as="input"
+                label="Assunto"
                 value={form.assunto}
                 onChange={(e) => setForm((prev) => ({ ...prev, assunto: e.target.value }))}
                 required
               />
-            </div>
 
-            <div className="form-group">
-              <label className="form-label">Mensagem</label>
-              <div className="avisos-editor">
-                <div ref={editorElRef} />
+              <div className="form-group">
+                <label className="form-label">Mensagem</label>
+                <div className="avisos-editor">
+                  <div ref={editorElRef} />
+                </div>
+                <small style={{ color: "#94a3b8" }}>
+                  Voce pode usar: {"{{nome}}"}, {"{{email}}"}, {"{{empresa}}"}.
+                </small>
               </div>
-              <small style={{ color: "#94a3b8" }}>
-                Você pode usar: {"{{nome}}"}, {"{{email}}"}, {"{{empresa}}"}.
-              </small>
-            </div>
 
-            <div className="form-group">
-              <label className="form-label">Remetente</label>
-              <select
-                className="form-select"
+              <AppField
+                as="select"
+                label="Remetente"
                 value={form.sender_key}
                 onChange={(e) => setForm((prev) => ({ ...prev, sender_key: e.target.value }))}
                 required
-              >
-                {REMETENTE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+                options={REMETENTE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))}
+              />
 
-            <div className="form-row">
-              <div className="form-group flex-1">
-                <label className="form-label">Ativo?</label>
-                <select
-                  className="form-select"
-                  value={form.ativo ? "true" : "false"}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, ativo: e.target.value === "true" }))
-                  }
+              <AppField
+                as="select"
+                label="Ativo?"
+                value={form.ativo ? "true" : "false"}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, ativo: e.target.value === "true" }))
+                }
+                options={[
+                  { value: "true", label: "Sim" },
+                  { value: "false", label: "Nao" },
+                ]}
+              />
+
+              <div className="flex gap-2 flex-wrap mt-3 mobile-stack-buttons">
+                <AppButton type="submit" variant="primary" disabled={salvando}>
+                  {salvando ? "Salvando..." : "Salvar"}
+                </AppButton>
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setModalOpen(false)}
+                  disabled={salvando}
                 >
-                  <option value="true">Sim</option>
-                  <option value="false">Não</option>
-                </select>
+                  Cancelar
+                </AppButton>
               </div>
-            </div>
-
-            <div className="flex gap-2 flex-wrap mt-3 mobile-stack-buttons">
-              <button type="submit" className="btn btn-primary" disabled={salvando}>
-                {salvando ? "Salvando..." : "Salvar"}
-              </button>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => setModalOpen(false)}
-                disabled={salvando}
-              >
-                Cancelar
-              </button>
-            </div>
+            </AppCard>
           </form>
         </div>
       )}

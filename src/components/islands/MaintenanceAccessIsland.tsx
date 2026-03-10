@@ -1,5 +1,10 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import AlertMessage from "../ui/AlertMessage";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type MaintenanceStatus = {
   maintenance_enabled: boolean;
@@ -110,90 +115,101 @@ export default function MaintenanceAccessIsland() {
   }
 
   if (view === "loading") {
-    return <div className="maintenance-admin">Carregando acesso...</div>;
+    return (
+      <AppCard tone="config" className="maintenance-admin">
+        Carregando acesso...
+      </AppCard>
+    );
   }
 
   if (view === "forbidden") {
     return (
-      <div className="maintenance-admin">
-        <h2>Area restrita</h2>
-        <p>Somente administradores podem alterar o modo de manutencao.</p>
-        <button type="button" className="maintenance-btn" onClick={handleSignOut}>
+      <AppCard
+        tone="config"
+        className="maintenance-admin"
+        title="Area restrita"
+        subtitle="Somente administradores podem alterar o modo de manutencao."
+      >
+        <AppButton type="button" variant="danger" onClick={handleSignOut}>
           Sair
-        </button>
-      </div>
+        </AppButton>
+      </AppCard>
     );
   }
 
   if (view === "login") {
     return (
-      <div className="maintenance-admin">
-        <h2>Acesso administrativo</h2>
-        <p>Entre para liberar o sistema ou manter a manutencao ativa.</p>
-        {message && <div className="maintenance-alert">{message}</div>}
+      <AppCard
+        tone="config"
+        className="maintenance-admin"
+        title="Acesso administrativo"
+        subtitle="Entre para liberar o sistema ou manter a manutencao ativa."
+      >
+        {message && <AlertMessage variant="warning">{message}</AlertMessage>}
         <form className="maintenance-form" onSubmit={handleLogin}>
-          <label>
-            E-mail
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value.toLowerCase())}
-              placeholder="admin@email.com"
-              required
-            />
-          </label>
-          <label>
-            Senha
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </label>
-          <button type="submit" className="maintenance-btn">
+          <AppField
+            as="input"
+            type="email"
+            label="E-mail"
+            value={email}
+            onChange={(e) => setEmail(e.target.value.toLowerCase())}
+            placeholder="admin@email.com"
+            required
+          />
+          <AppField
+            as="input"
+            type="password"
+            label="Senha"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <AppButton type="submit" variant="primary">
             Entrar
-          </button>
+          </AppButton>
         </form>
-      </div>
+      </AppCard>
     );
   }
 
   return (
-    <div className="maintenance-admin">
-      <div className="maintenance-admin-header">
-        <div>
-          <h2>Painel de manutencao</h2>
-          <p>Somente administradores podem liberar o acesso ao sistema.</p>
+    <section className="maintenance-admin">
+      <AppToolbar
+        tone="config"
+        title="Painel de manutencao"
+        subtitle="Somente administradores podem liberar o acesso ao sistema."
+        actions={
+          <AppButton type="button" variant="secondary" onClick={handleSignOut}>
+            Sair
+          </AppButton>
+        }
+      />
+      <AppCard tone="config">
+        {message && <AlertMessage variant="info">{message}</AlertMessage>}
+        <div className="maintenance-toggle">
+          <label>
+            <input
+              type="checkbox"
+              checked={status.maintenance_enabled}
+              onChange={(e) =>
+                setStatus((prev) => ({ ...prev, maintenance_enabled: e.target.checked }))
+              }
+            />
+            Ativar modo de manutencao
+          </label>
+          <AppButton type="button" variant="primary" onClick={handleSave} disabled={saving}>
+            {saving ? "Salvando..." : "Salvar"}
+          </AppButton>
         </div>
-        <button type="button" className="maintenance-btn ghost" onClick={handleSignOut}>
-          Sair
-        </button>
-      </div>
-      {message && <div className="maintenance-alert">{message}</div>}
-      <div className="maintenance-toggle">
-        <label>
-          <input
-            type="checkbox"
-            checked={status.maintenance_enabled}
-            onChange={(e) =>
-              setStatus((prev) => ({ ...prev, maintenance_enabled: e.target.checked }))
-            }
-          />
-          Ativar modo de manutencao
-        </label>
-        <button type="button" className="maintenance-btn" onClick={handleSave} disabled={saving}>
-          {saving ? "Salvando..." : "Salvar"}
-        </button>
-      </div>
-      {status.updated_at && (
-        <div className="maintenance-meta">Ultima alteracao: {new Date(status.updated_at).toLocaleString()}</div>
-      )}
-      {!status.maintenance_enabled && (
-        <a className="maintenance-link" href="/dashboard/admin">
-          Ir para o painel administrativo
-        </a>
-      )}
-    </div>
+        {status.updated_at && (
+          <div className="maintenance-meta">Ultima alteracao: {new Date(status.updated_at).toLocaleString()}</div>
+        )}
+        {!status.maintenance_enabled && (
+          <AppButton as="a" href="/dashboard/admin" variant="secondary">
+            Ir para o painel administrativo
+          </AppButton>
+        )}
+      </AppCard>
+    </section>
   );
 }
