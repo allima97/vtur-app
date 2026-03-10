@@ -1,0 +1,68 @@
+:root {
+  --vtur-primer-accent: #3b82f6;
+  --vtur-primer-accent-strong: #2563eb;
+  --vtur-primer-ink: #1f2937;
+  --vtur-primer-muted: #6b7280;
+  --vtur-primer-surface: #ffffff;
+  --vtur-primer-surface-alt: #f8fafc;
+  --vtur-primer-border: rgba(15, 23, 42, 0.12);
+  --vtur-primer-sidebar-hover: rgba(255, 255, 255, 0.12);
+}
+
+body {
+  background:
+    radial-gradient(circle at 8% -10%, rgba(59, 130, 246, 0.18), transparent 36%),
+    radial-gradient(circle at 100% 0%, rgba(45, 212, 191, 0.14), transparent 30%),
+    #f3f6fb;
+  color: var(--vtur-primer-ink);
+}
+
+.app-main {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(248, 250, 252, 0.82));
+}
+
+.vtur-primer-scope {
+  font-family: Inter, "Segoe UI", Roboto, sans-serif;
+}
+
+.vtur-app-card {
+  border-radius: 14px;
+  border-color: var(--vtur-primer-border);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  background: var(--vtur-primer-surface);
+}
+
+.vtur-app-toolbar {
+  border-radius: 14px;
+  border-color: var(--vtur-primer-border);
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+  background: var(--vtur-primer-surface);
+}
+
+.vtur-app-toolbar-config {
+  border-color: rgba(59, 130, 246, 0.22);
+  background: linear-gradient(180deg, rgba(239, 246, 255, 0.9), #ffffff);
+}
+
+.vtur-app-button {
+  border-radius: 10px;
+}
+
+.vtur-app-button-primary {
+  background: linear-gradient(135deg, var(--vtur-primer-accent), var(--vtur-primer-accent-strong));
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.28);
+}
+
+.vtur-app-field input,
+.vtur-app-field select,
+.vtur-app-field textarea {
+  border-radius: 10px;
+}
+
+.table-default th {
+  background: #eff6ff;
+}
+
+.table-default tbody tr:nth-child(even) {
+  background: #f8fafc;
+}

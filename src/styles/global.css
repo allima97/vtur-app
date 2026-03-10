@@ -1,4 +1,5 @@
 @import "./sgtur-tailwind.css";
+@import "./sakai-primer-theme.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
