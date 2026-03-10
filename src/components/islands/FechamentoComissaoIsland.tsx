@@ -851,16 +851,16 @@ export default function FechamentoComissaoIsland() {
         className="mb-3 grid gap-3 md:gap-4"
         style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}
       >
-        <div className="card-base card-green">
+        <AppCard className="card-green">
           <div style={{ fontSize: "0.8rem", opacity: 0.8 }}>Meta do mês</div>
           <div style={{ fontSize: "1.2rem", fontWeight: 600 }}>
             {metaAtual
               ? formatCurrencyBRL(metaAtual.meta_geral)
               : "–"}
           </div>
-        </div>
+        </AppCard>
 
-        <div className="card-base card-green">
+        <AppCard className="card-green">
           <div style={{ fontSize: "0.8rem", opacity: 0.8 }}>
             Base da meta (usando{" "}
             {parametros?.usar_taxas_na_meta
@@ -876,25 +876,25 @@ export default function FechamentoComissaoIsland() {
               return formatCurrencyBRL(base);
             })()}
           </div>
-        </div>
+        </AppCard>
 
-        <div className="card-base card-green">
+        <AppCard className="card-green">
           <div style={{ fontSize: "0.8rem", opacity: 0.8 }}>
             % Meta Atingida
           </div>
           <div style={{ fontSize: "1.2rem", fontWeight: 600 }}>
             {pctMeta.toFixed(1)}%
           </div>
-        </div>
+        </AppCard>
 
-        <div className="card-base card-green">
+        <AppCard className="card-green">
           <div style={{ fontSize: "0.8rem", opacity: 0.8 }}>
             % Comissão Aplicada
           </div>
           <div style={{ fontSize: "1.2rem", fontWeight: 600 }}>
             {pctComissao.toFixed(2)}%
           </div>
-        </div>
+        </AppCard>
       </div>
 
       {/* VALORES FINANCEIROS */}
@@ -906,36 +906,36 @@ export default function FechamentoComissaoIsland() {
           gap: 12,
         }}
       >
-        <div className="card-base card-green">
+        <AppCard className="card-green">
           <div style={{ fontSize: "0.8rem", opacity: 0.8 }}>
             Valor bruto no período (venda + taxas)
           </div>
           <div style={{ fontSize: "1.2rem", fontWeight: 600 }}>
             {formatCurrencyBRL(valorBruto)}
           </div>
-        </div>
+        </AppCard>
 
-        <div className="card-base card-green">
+        <AppCard className="card-green">
           <div style={{ fontSize: "0.8rem", opacity: 0.8 }}>
             Total de taxas no período
           </div>
           <div style={{ fontSize: "1.2rem", fontWeight: 600 }}>
             {formatCurrencyBRL(valorTaxas)}
           </div>
-        </div>
+        </AppCard>
 
-        <div className="card-base card-green">
+        <AppCard className="card-green">
           <div style={{ fontSize: "0.8rem", opacity: 0.8 }}>
             Valor líquido (base da comissão)
           </div>
           <div style={{ fontSize: "1.2rem", fontWeight: 600 }}>
             {formatCurrencyBRL(valorLiquido)}
           </div>
-        </div>
+        </AppCard>
       </div>
 
       {/* VALOR FINAL DA COMISSÃO */}
-      <div className="card-base card-green mb-3">
+      <AppCard className="card-green mb-3">
         <div style={{ fontSize: "0.9rem", marginBottom: 4 }}>
           Comissão estimada para o período
         </div>
@@ -952,15 +952,15 @@ export default function FechamentoComissaoIsland() {
           Cálculo considerando sempre o valor líquido (venda - taxas), conforme
           sua regra de negócio.
         </div>
-      </div>
+      </AppCard>
 
       {/* LISTA DAS VENDAS PARA CONFERÊNCIA */}
-      <div className="card-base card-green mb-2">
+      <AppCard className="card-green mb-2">
         <h3>Vendas do período</h3>
         <div style={{ fontSize: "0.8rem", opacity: 0.8 }}>
           Somente vendas não canceladas com recibos vinculados.
         </div>
-      </div>
+      </AppCard>
 
       <div
         className="table-container overflow-x-auto"

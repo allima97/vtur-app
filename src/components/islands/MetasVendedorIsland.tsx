@@ -3,6 +3,11 @@ import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import ConfirmDialog from "../ui/ConfirmDialog";
+import AlertMessage from "../ui/AlertMessage";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 import { buildMonthOptionsYYYYMM, formatCurrencyBRL, formatMonthYearBR, formatNumberBR } from "../../lib/format";
 import { fetchGestorEquipeVendedorIds } from "../../lib/gestorEquipe";
 import {
@@ -938,26 +943,35 @@ export default function MetasVendedorIsland() {
   const formatarValor = (valor: number) => formatCurrencyBRL(valor);
 
   return (
-    <div className="min-h-screen bg-slate-50 p-2 md:p-6 metas-page">
+    <AppPrimerProvider>
+      <div className="min-h-screen bg-slate-50 p-2 md:p-6 metas-page">
+      <AppToolbar
+        className="mb-3"
+        sticky
+        tone="info"
+        title="Metas de vendedor"
+        subtitle="Gerencie metas da loja e metas individuais por período."
+      />
       {isVendedorOnly && (
-        <div className="card-base card-config mb-2">
+        <AlertMessage variant="info" className="mb-2">
           Metas são definidas pelo gestor da equipe. Abaixo estão as metas atribuídas a você.
-        </div>
+        </AlertMessage>
       )}
       {erro && !mostrarFormularioMeta && (
-        <div className="card-base card-config mb-3">
+        <AlertMessage variant="error" className="mb-3">
           <strong>{erro}</strong>
-        </div>
+        </AlertMessage>
       )}
 
       {podeGerenciarMetasEquipe && (
-        <div className="card-base card-blue mb-3">
+        <AppCard className="card-blue mb-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-end">
             <h3 className="text-center sm:text-left">Meta da Loja</h3>
             {usuarioPodeEditar && !mostrarFormularioMetaLoja && (
-              <button
+              <AppButton
                 type="button"
-                className="btn btn-primary w-full sm:w-auto"
+                className="w-full sm:w-auto"
+                variant="primary"
                 onClick={() => {
                   limparFormularioEquipe();
                   setMostrarFormularioMeta(false);
@@ -965,7 +979,7 @@ export default function MetasVendedorIsland() {
                 }}
               >
                 Adicionar Metas
-              </button>
+              </AppButton>
             )}
           </div>
 
@@ -1124,22 +1138,22 @@ export default function MetasVendedorIsland() {
                           />
                         </div>
                         <div className="form-group meta-produtos-remove">
-                          <button
+                          <AppButton
                             type="button"
-                            className="btn btn-light"
+                            variant="secondary"
                             onClick={() => {
                               setMetaEquipeProdutos(metaEquipeProdutos.filter((_, i) => i !== idx));
                             }}
                           >
                             Remover
-                          </button>
+                          </AppButton>
                         </div>
                       </div>
                     ))}
                     <div className="meta-produtos-actions">
-                      <button
+                      <AppButton
                         type="button"
-                        className="btn btn-primary"
+                        variant="primary"
                         onClick={() =>
                           setMetaEquipeProdutos([
                             ...metaEquipeProdutos,
@@ -1148,7 +1162,7 @@ export default function MetasVendedorIsland() {
                         }
                       >
                         + Adicionar produto
-                      </button>
+                      </AppButton>
                       <div className="meta-produtos-total">
                         Total diferenciada: {formatCurrencyBRL(totalMetaEquipeDiferenciada())}
                       </div>
@@ -1162,7 +1176,7 @@ export default function MetasVendedorIsland() {
                 )}
 
                 {dividirMetaIgual && (
-                  <div className="card-base card-config mt-3">
+                  <AppCard className="card-config mt-3">
                     <div style={{ fontWeight: 600 }}>
                       Equipe: {equipeCount} vendedor(es)
                     </div>
@@ -1178,29 +1192,29 @@ export default function MetasVendedorIsland() {
                         )}
                       </div>
                     )}
-                  </div>
+                  </AppCard>
                 )}
 
                 {erroEquipe && (
-                  <div className="card-base card-config mb-2 mt-2">
+                  <AlertMessage variant="error" className="mb-2 mt-2">
                     <strong>{erroEquipe}</strong>
-                  </div>
+                  </AlertMessage>
                 )}
 
                 <div
                   className="mobile-stack-buttons"
                   style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}
                 >
-                  <button type="submit" className="btn btn-primary" disabled={salvandoEquipe}>
+                  <AppButton type="submit" variant="primary" disabled={salvandoEquipe}>
                     {salvandoEquipe
                       ? "Salvando..."
                       : editandoMetaEquipe
                       ? "Salvar alterações"
                       : "Salvar"}
-                  </button>
-                  <button
+                  </AppButton>
+                  <AppButton
                     type="button"
-                    className="btn btn-light"
+                    variant="secondary"
                     onClick={() => {
                       limparFormularioEquipe();
                       setMostrarFormularioMetaLoja(false);
@@ -1208,26 +1222,27 @@ export default function MetasVendedorIsland() {
                     disabled={salvandoEquipe}
                   >
                     Cancelar
-                  </button>
+                  </AppButton>
                 </div>
               </form>
             </>
           )}
-        </div>
+        </AppCard>
       )}
 
       {usuarioPodeEditar && (
-        <div className={`card-base card-blue mb-3${mostrarFormularioMeta ? " form-card" : ""}`}>
+        <AppCard className={`card-blue mb-3${mostrarFormularioMeta ? " form-card" : ""}`}>
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-end">
             <h3 className="text-center sm:text-left">Metas individuais por vendedor</h3>
             {!mostrarFormularioMeta && (
-              <button
+              <AppButton
                 type="button"
-                className="btn btn-primary w-full sm:w-auto"
+                className="w-full sm:w-auto"
+                variant="primary"
                 onClick={abrirFormularioMeta}
               >
                 Adicionar Metas
-              </button>
+              </AppButton>
             )}
           </div>
 
@@ -1354,26 +1369,26 @@ export default function MetasVendedorIsland() {
                         />
                       </div>
                       <div className="form-group meta-produtos-remove">
-                        <button
+                        <AppButton
                           type="button"
-                          className="btn btn-light"
+                          variant="secondary"
                           onClick={() => {
                             setMetaProdutos(metaProdutos.filter((_, i) => i !== idx));
                           }}
                         >
                           Remover
-                        </button>
+                        </AppButton>
                       </div>
                     </div>
                   ))}
                   <div className="meta-produtos-actions">
-                    <button
+                    <AppButton
                       type="button"
-                      className="btn btn-primary"
+                      variant="primary"
                       onClick={() => setMetaProdutos([...metaProdutos, { produto_id: "", valor: "" }])}
                     >
                       + Adicionar produto
-                    </button>
+                    </AppButton>
                     <div className="meta-produtos-total">
                       Total diferenciada: {formatCurrencyBRL(totalMetaDiferenciada())}
                     </div>
@@ -1387,33 +1402,33 @@ export default function MetasVendedorIsland() {
               )}
 
               {erro && (
-                <div className="card-base card-config mb-2">
+                <AlertMessage variant="error" className="mb-2">
                   <strong>{erro}</strong>
-                </div>
+                </AlertMessage>
               )}
 
               <div
                 className="mobile-stack-buttons"
                 style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}
               >
-                <button type="submit" className="btn btn-primary" disabled={salvando}>
+                <AppButton type="submit" variant="primary" disabled={salvando}>
                   {salvando ? "Salvando..." : editId ? "Salvar alterações" : "Salvar meta"}
-                </button>
-                <button
+                </AppButton>
+                <AppButton
                   type="button"
-                  className="btn btn-light"
+                  variant="secondary"
                   onClick={fecharFormularioMeta}
                   disabled={salvando}
                 >
                   Cancelar
-                </button>
+                </AppButton>
               </div>
             </form>
           )}
-        </div>
+        </AppCard>
       )}
 
-      <div className="card-base card-blue mb-2">
+      <AppCard className="card-blue mb-2">
         <div className="flex flex-col gap-2">
           <h3 className="text-center sm:text-left">Metas cadastradas</h3>
           {podeGerenciarMetasEquipe && (
@@ -1479,13 +1494,14 @@ export default function MetasVendedorIsland() {
                           {usuarioPodeEditar && (
                             <td className="th-actions" data-label="Ações">
                               <div className="action-buttons">
-                                <button
-                                  className="btn-icon icon-action-btn"
+                                <AppButton
+                                  variant="ghost"
+                                  className="icon-action-btn"
                                   title="Editar"
                                   onClick={() => iniciarEdicaoMetaLoja()}
                                 >
                                   ✏️
-                                </button>
+                                </AppButton>
                               </div>
                             </td>
                           )}
@@ -1543,13 +1559,14 @@ export default function MetasVendedorIsland() {
                             {usuarioPodeEditar && (
                               <td className="th-actions" data-label="Ações">
                                 <div className="action-buttons">
-                                  <button
-                                    className="btn-icon icon-action-btn"
+                                  <AppButton
+                                    variant="ghost"
+                                    className="icon-action-btn"
                                     title="Editar"
                                     onClick={() => iniciarEdicaoEquipe(m)}
                                   >
                                     ✏️
-                                  </button>
+                                  </AppButton>
                                 </div>
                               </td>
                             )}
@@ -1604,28 +1621,31 @@ export default function MetasVendedorIsland() {
                     {usuarioPodeEditar && (
                       <td className="th-actions" data-label="Ações">
                         <div className="action-buttons">
-                          <button
-                            className="btn-icon icon-action-btn"
+                          <AppButton
+                            variant="ghost"
+                            className="icon-action-btn"
                             title="Editar"
                             onClick={() => iniciarEdicao(m)}
                           >
                             ✏️
-                          </button>
+                          </AppButton>
 
-                          <button
-                            className="btn-icon icon-action-btn danger"
+                          <AppButton
+                            variant="danger"
+                            className="icon-action-btn danger"
                             title="Excluir"
                             onClick={() => solicitarExclusaoMeta(m)}
                           >
                             🗑️
-                          </button>
-                          <button
-                            className="btn-icon icon-action-btn"
+                          </AppButton>
+                          <AppButton
+                            variant="ghost"
+                            className="icon-action-btn"
                             title={m.ativo ? "Inativar" : "Ativar"}
                             onClick={() => toggleAtivo(m.id, m.ativo)}
                           >
                             {m.ativo ? "⏸️" : "▶️"}
-                          </button>
+                          </AppButton>
                         </div>
                       </td>
                     )}
@@ -1635,7 +1655,7 @@ export default function MetasVendedorIsland() {
             </table>
           </div>
         )}
-      </div>
+      </AppCard>
       <ConfirmDialog
         open={Boolean(metaParaExcluir)}
         title="Excluir meta"
@@ -1656,6 +1676,7 @@ export default function MetasVendedorIsland() {
         onCancel={() => setSucessoEquipe(false)}
         onConfirm={() => setSucessoEquipe(false)}
       />
-    </div>
+      </div>
+    </AppPrimerProvider>
   );
 }

@@ -897,8 +897,9 @@ export default function EquipeGestorIsland() {
                       {podeAlterarEquipe && (
                         <td className="th-actions" data-label="Ação">
                           <div className="action-buttons">
-                            <button
-                              className={`btn-icon icon-action-btn${ativo ? " danger" : ""}`}
+                            <AppButton
+                              variant={ativo ? "danger" : "ghost"}
+                              className={`icon-action-btn${ativo ? " danger" : ""}`}
                               onClick={() => toggleEquipe(u.id)}
                               disabled={salvando || Boolean(equipeCompartilhadaBase)}
                               title={labelAcao}
@@ -906,7 +907,7 @@ export default function EquipeGestorIsland() {
                             >
                               <span aria-hidden="true">{iconAcao}</span>
                               <span className="sr-only">{labelAcao}</span>
-                            </button>
+                            </AppButton>
                           </div>
                         </td>
                       )}
@@ -1086,13 +1087,13 @@ export default function EquipeGestorIsland() {
                           </td>
                           <td className="th-actions" data-label="Ações">
                             <div className="action-buttons">
-                              <button
-                                className="btn btn-primary"
+                              <AppButton
+                                variant="primary"
                                 onClick={() => salvarHorarioUsuario(u.id)}
                                 disabled={!podeEditarHorarios || salvando}
                               >
                                 {salvando ? "Salvando..." : "Salvar"}
-                              </button>
+                              </AppButton>
                             </div>
                           </td>
                         </tr>
@@ -1297,13 +1298,13 @@ export default function EquipeGestorIsland() {
                           </td>
                           <td className="th-actions" data-label="Ações">
                             <div className="action-buttons">
-                              <button
-                                className="btn btn-primary"
+                              <AppButton
+                                variant="primary"
                                 onClick={() => salvarHorarioUsuario(u.id)}
                                 disabled={!podeEditarHorarios || salvando}
                               >
                                 {salvando ? "Salvando..." : "Salvar"}
-                              </button>
+                              </AppButton>
                             </div>
                           </td>
                         </tr>

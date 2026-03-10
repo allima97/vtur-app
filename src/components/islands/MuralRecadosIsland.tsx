@@ -2,6 +2,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { supabase } from "../../lib/supabase";
 import AlertMessage from "../ui/AlertMessage";
 import ConfirmDialog from "../ui/ConfirmDialog";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type EmpresaOption = { id: string; nome_fantasia: string; status: string };
 
@@ -954,9 +958,9 @@ export default function MuralRecadosIsland() {
 
   if (loading) {
     return (
-      <div className="card-base" style={{ padding: 14 }}>
+      <AppCard style={{ padding: 14 }}>
         Carregando mural...
-      </div>
+      </AppCard>
     );
   }
 
@@ -974,7 +978,14 @@ export default function MuralRecadosIsland() {
   }
 
   return (
-    <div className="mural-recados mural-whatsapp">
+    <AppPrimerProvider>
+      <div className="mural-recados mural-whatsapp">
+      <AppToolbar
+        className="mb-3"
+        tone="info"
+        title="Mural de recados"
+        subtitle="Converse com sua empresa e contatos internos em tempo real."
+      />
       {erro && (
         <div style={{ marginBottom: 12 }}>
           <AlertMessage variant="error">{erro}</AlertMessage>
@@ -991,16 +1002,16 @@ export default function MuralRecadosIsland() {
             <div className="mural-wa-mobile-list">
               <div className="mural-wa-mobile-topbar">
                 <div className="mural-wa-mobile-title">Recados</div>
-                <button
+                <AppButton
                   type="button"
-                  className={formOpen ? "btn btn-outline" : "btn btn-primary"}
+                  variant={formOpen ? "secondary" : "primary"}
                   onClick={() => {
                     toggleFormOpen();
                     setMobileScreen("chat");
                   }}
                 >
                   {formOpen ? "Cancelar" : "Nova"}
-                </button>
+                </AppButton>
               </div>
               <div className="mural-wa-mobile-tabs" role="tablist" aria-label="Seções">
                 <button
@@ -1049,13 +1060,13 @@ export default function MuralRecadosIsland() {
                 <div className="mural-wa-mobile-chat-title" title={currentThread?.name || ""}>
                   {currentThread?.name || "Conversa"}
                 </div>
-                <button
+                <AppButton
                   type="button"
-                  className={formOpen ? "btn btn-outline" : "btn btn-primary"}
+                  variant={formOpen ? "secondary" : "primary"}
                   onClick={toggleFormOpen}
                 >
                   {formOpen ? "Cancelar" : "Nova"}
-                </button>
+                </AppButton>
               </div>
 
               <div className="mural-whatsapp-chat-body">
@@ -1243,11 +1254,11 @@ export default function MuralRecadosIsland() {
                   </div>
                 )}
 
-                <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end", marginTop: 12 }}>
-                  {supportsAttachments && (
-                    <button
+                  <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end", marginTop: 12 }}>
+                    {supportsAttachments && (
+                    <AppButton
                       type="button"
-                      className="btn btn-light"
+                      variant="secondary"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={enviando || anexos.length >= MAX_UPLOAD_FILES}
                       title={
@@ -1257,14 +1268,14 @@ export default function MuralRecadosIsland() {
                       }
                     >
                       📎 Anexar
-                    </button>
+                    </AppButton>
                   )}
-                  <button type="button" className="btn btn-light" onClick={clearMessageFields} disabled={enviando}>
+                  <AppButton type="button" variant="secondary" onClick={clearMessageFields} disabled={enviando}>
                     Limpar
-                  </button>
-                  <button type="submit" className="btn btn-primary" disabled={(!conteudo.trim() && anexos.length === 0) || enviando}>
+                  </AppButton>
+                  <AppButton type="submit" variant="primary" disabled={(!conteudo.trim() && anexos.length === 0) || enviando}>
                     {enviando ? "Enviando..." : "Enviar recado"}
-                  </button>
+                  </AppButton>
                 </div>
               </form>
             </div>
@@ -1323,13 +1334,13 @@ export default function MuralRecadosIsland() {
                   </div>
                 </div>
               </div>
-              <button
+              <AppButton
                 type="button"
-                className={formOpen ? "btn btn-outline" : "btn btn-primary"}
+                variant={formOpen ? "secondary" : "primary"}
                 onClick={toggleFormOpen}
               >
                 {formOpen ? "Cancelar" : "Nova mensagem"}
-              </button>
+              </AppButton>
             </div>
 
             <div className="mural-whatsapp-chat-body">
@@ -1519,9 +1530,9 @@ export default function MuralRecadosIsland() {
 
                   <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end", marginTop: 12 }}>
                     {supportsAttachments && (
-                      <button
+                      <AppButton
                         type="button"
-                        className="btn btn-light"
+                        variant="secondary"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={enviando || anexos.length >= MAX_UPLOAD_FILES}
                         title={
@@ -1531,14 +1542,14 @@ export default function MuralRecadosIsland() {
                         }
                       >
                         📎 Anexar
-                      </button>
+                      </AppButton>
                     )}
-                    <button type="button" className="btn btn-light" onClick={clearMessageFields} disabled={enviando}>
+                    <AppButton type="button" variant="secondary" onClick={clearMessageFields} disabled={enviando}>
                       Limpar
-                    </button>
-                    <button type="submit" className="btn btn-primary" disabled={(!conteudo.trim() && anexos.length === 0) || enviando}>
+                    </AppButton>
+                    <AppButton type="submit" variant="primary" disabled={(!conteudo.trim() && anexos.length === 0) || enviando}>
                       {enviando ? "Enviando..." : "Enviar recado"}
-                    </button>
+                    </AppButton>
                   </div>
                 </form>
               </div>
@@ -1565,6 +1576,7 @@ export default function MuralRecadosIsland() {
           handleDeleteRecado(recado, deleteForAll);
         }}
       />
-    </div>
+      </div>
+    </AppPrimerProvider>
   );
 }

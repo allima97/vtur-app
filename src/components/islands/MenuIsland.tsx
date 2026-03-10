@@ -1514,16 +1514,16 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
               “Continuar Logado” para ganhar mais 15 minutos sem perder o progresso.
             </p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button type="button" className="btn btn-primary" onClick={handleExtendSession}>
+              <AppButton type="button" variant="primary" onClick={handleExtendSession}>
                 Continuar Logado
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
-                className="btn btn-light"
+                variant="secondary"
                 onClick={() => executarLogout(true)}
               >
                 Sair agora
-              </button>
+              </AppButton>
             </div>
           </div>
         </div>

@@ -75,9 +75,9 @@ export default function AuthRegisterIsland() {
                 <span>ou</span>
               </div>
 
-              <a href="/auth/login" className="btn btn-secondary w-full">
+              <AppButton as="a" href="/auth/login" variant="secondary" block>
                 Já tenho conta
-              </a>
+              </AppButton>
             </div>
           </form>
         </AppCard>

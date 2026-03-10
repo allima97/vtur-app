@@ -728,7 +728,7 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
       )}
 
       {!effectiveViewOnly && gestoresParaConfig.length > 0 && (
-        <div className="card-base card-config mb-3">
+        <AppCard className="card-config mb-3">
           <div className="mb-2">
             <strong>Gestores no ranking</strong>
           </div>
@@ -759,7 +759,7 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
               </tbody>
             </table>
           </div>
-        </div>
+        </AppCard>
       )}
 
       {erro && <AlertMessage variant="error"><strong>{erro}</strong></AlertMessage>}
@@ -777,7 +777,7 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
       {!loadingDados && equipeFiltroIds.length > 0 && (
         <>
           {effectiveViewOnly && (
-            <div className="card-base card-config mb-3">
+            <AppCard className="card-config mb-3">
               <div className="form-group" style={{ marginBottom: 8 }}>
                 <label className="form-label">Mes</label>
                 <select
@@ -796,7 +796,7 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
               <div style={{ color: "#64748b", fontSize: "0.9rem" }}>
                 Utilize o abaixo filtro para navegar em outros meses.
               </div>
-            </div>
+            </AppCard>
           )}
 
           <div className="ranking-layout">

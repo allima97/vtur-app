@@ -298,14 +298,16 @@ export default function QuotePrintSettingsIsland() {
               onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
               disabled={bloqueado}
             />
-            <label
+            <AppButton
+              as="label"
               htmlFor="logo-file-input"
-              className="btn btn-light w-full sm:w-auto"
+              variant="secondary"
+              className="w-full sm:w-auto"
               style={{ opacity: bloqueado ? 0.6 : 1, pointerEvents: bloqueado ? "none" : "auto" }}
               aria-disabled={bloqueado}
             >
               Escolher arquivo
-            </label>
+            </AppButton>
             <span className="file-input-name">{logoFile?.name || "Nenhum arquivo escolhido"}</span>
           </div>
           {logoPreview && (
@@ -431,14 +433,16 @@ export default function QuotePrintSettingsIsland() {
             onChange={(e) => setComplementImageFile(e.target.files?.[0] || null)}
             disabled={bloqueado}
           />
-          <label
+          <AppButton
+            as="label"
             htmlFor="complement-file-input"
-            className="btn btn-light w-full sm:w-auto"
+            variant="secondary"
+            className="w-full sm:w-auto"
             style={{ opacity: bloqueado ? 0.6 : 1, pointerEvents: bloqueado ? "none" : "auto" }}
             aria-disabled={bloqueado}
           >
             Escolher arquivo
-          </label>
+          </AppButton>
           <span className="file-input-name">
             {complementImageFile?.name || "Nenhum arquivo escolhido"}
           </span>

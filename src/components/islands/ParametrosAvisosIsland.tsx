@@ -2,6 +2,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 import { renderTemplateText } from "../../lib/messageTemplates";
 import { construirLinkWhatsAppComTexto } from "../../lib/whatsapp";
 import {
@@ -739,11 +743,18 @@ export default function ParametrosAvisosIsland() {
   }
 
   if (loadPerm) return <LoadingUsuarioContext />;
-  if (!podeVer) return <div className="card-base card-config">Acesso negado.</div>;
+  if (!podeVer) return <AppCard tone="config">Acesso negado.</AppCard>;
 
   return (
-    <div className="mt-6">
-      <div className="card-base card-blue mb-3">
+    <AppPrimerProvider>
+      <div className="mt-6">
+      <AppToolbar
+        className="mb-3"
+        tone="info"
+        title="Avisos de relacionamento"
+        subtitle="Configure artes e mensagens de WhatsApp com preview em tempo real."
+      />
+      <AppCard tone="info" className="mb-3">
         <h3 className="page-title">📣 Avisos de relacionamento vtur</h3>
         <p className="page-subtitle">
           Suba a arte pronta por ocasião, vincule uma mensagem curta de WhatsApp e valide tudo em uma prévia real.
@@ -758,17 +769,17 @@ export default function ParametrosAvisosIsland() {
             <small style={{ color: "#475569", display: "block", marginBottom: 8 }}>
               Use isso só para instalar ou reinstalar a biblioteca padrão do sistema. Não é necessário na operação diária.
             </small>
-            <button type="button" className="btn btn-light" onClick={carregarBibliotecaPadrao} disabled={carregandoPadrao}>
+            <AppButton type="button" variant="secondary" onClick={carregarBibliotecaPadrao} disabled={carregandoPadrao}>
               {carregandoPadrao ? "Instalando biblioteca..." : "Instalar modelos padrao vtur"}
-            </button>
+            </AppButton>
           </div>
         </details>
-      </div>
+      </AppCard>
 
       {(erro || msg) && (
-        <div className="card-base card-config mb-3">
+        <AppCard tone="config" className="mb-3">
           {erro ? <strong style={{ color: "#b91c1c" }}>{erro}</strong> : <strong style={{ color: "#166534" }}>{msg}</strong>}
-        </div>
+        </AppCard>
       )}
 
       <datalist id="aviso-categorias-list">
@@ -777,7 +788,7 @@ export default function ParametrosAvisosIsland() {
         ))}
       </datalist>
 
-      <div className="card-base card-config mb-3">
+      <AppCard tone="config" className="mb-3">
         <h4 style={{ marginBottom: 8 }}>1. Artes / Temas por ocasião</h4>
         <small style={{ color: "#64748b", display: "block", marginBottom: 12 }}>
           A arte sobe praticamente pronta. O sistema só injeta o primeiro nome do cliente no ponto definido para o tema.
@@ -825,12 +836,12 @@ export default function ParametrosAvisosIsland() {
             </div>
           </div>
           <div className="mobile-stack-buttons">
-            <button className="btn btn-primary" type="submit" disabled={salvandoTheme}>
+            <AppButton variant="primary" type="submit" disabled={salvandoTheme}>
               {salvandoTheme ? "Salvando..." : themeForm.id ? "Salvar arte" : "Cadastrar arte"}
-            </button>
-            <button className="btn btn-light" type="button" onClick={resetThemeForm} disabled={salvandoTheme}>
+            </AppButton>
+            <AppButton variant="secondary" type="button" onClick={resetThemeForm} disabled={salvandoTheme}>
               Nova arte
-            </button>
+            </AppButton>
           </div>
         </form>
 
@@ -876,9 +887,9 @@ export default function ParametrosAvisosIsland() {
                     <td data-label="Status">{theme.ativo ? "Ativo" : "Inativo"}</td>
                     <td className="th-actions" data-label="Ações">
                       <div className="action-buttons">
-                        <button className="btn-icon" type="button" onClick={() => editarTheme(theme)} title="Editar arte">✏️</button>
-                        <a className="btn-icon" href={resolvedThemeAsset.asset_url || theme.asset_url} target="_blank" rel="noreferrer" title="Visualizar arte">👁️</a>
-                        <button className="btn-icon btn-danger" type="button" onClick={() => void removerTheme(theme.id)} title="Excluir arte">🗑️</button>
+                        <AppButton variant="ghost" type="button" onClick={() => editarTheme(theme)} title="Editar arte">✏️</AppButton>
+                        <AppButton as="a" variant="ghost" href={resolvedThemeAsset.asset_url || theme.asset_url} target="_blank" rel="noreferrer" title="Visualizar arte">👁️</AppButton>
+                        <AppButton variant="danger" type="button" onClick={() => void removerTheme(theme.id)} title="Excluir arte">🗑️</AppButton>
                       </div>
                     </td>
                   </tr>
@@ -887,9 +898,9 @@ export default function ParametrosAvisosIsland() {
             </tbody>
           </table>
         </div>
-      </div>
+      </AppCard>
 
-      <div className="card-base card-config mb-3">
+      <AppCard tone="config" className="mb-3">
         <h4 style={{ marginBottom: 8 }}>2. Preview e mensagem de disparo</h4>
         <small style={{ color: "#64748b", display: "block", marginBottom: 12 }}>
           Cada configuração liga uma arte a uma mensagem curta de WhatsApp. Essa configuração é a mesma usada no disparo pelo cadastro do cliente.
@@ -1061,20 +1072,20 @@ export default function ParametrosAvisosIsland() {
               Ajuste fonte, cor, tamanho e posição de cada bloco. O preview abaixo reflete as mudanças antes de salvar.
             </small>
             <div className="mobile-stack-buttons" style={{ marginTop: 12 }}>
-              <button
+              <AppButton
                 type="button"
-                className="btn btn-light"
+                variant="secondary"
                 onClick={() => aplicarPadraoVisual(form.theme_id)}
                 disabled={!form.theme_id}
               >
                 Restaurar padrão da arte
-              </button>
+              </AppButton>
             </div>
             <div className="parametros-avisos-style-grid" style={{ marginTop: 12 }}>
               {CARD_STYLE_SECTION_ORDER.map((section) => {
                 const style = styleForm[section];
                 return (
-                  <div key={section} className="card-base card-blue parametros-avisos-style-card">
+                  <AppCard key={section} tone="info" className="parametros-avisos-style-card">
                     <div className="parametros-avisos-style-card-header">
                       <strong>{CARD_STYLE_SECTION_LABELS[section]}</strong>
                       <small style={{ color: "#64748b" }}>{STYLE_SECTION_SAMPLE[section]}</small>
@@ -1143,23 +1154,23 @@ export default function ParametrosAvisosIsland() {
                         <span>Itálico</span>
                       </label>
                     </div>
-                  </div>
+                  </AppCard>
                 );
               })}
             </div>
           </details>
 
           <div className="mobile-stack-buttons">
-            <button className="btn btn-primary" type="submit" disabled={salvando}>
+            <AppButton variant="primary" type="submit" disabled={salvando}>
               {salvando ? "Salvando..." : "Salvar configuração"}
-            </button>
-            <button className="btn btn-light" type="button" onClick={resetForm} disabled={salvando}>
+            </AppButton>
+            <AppButton variant="secondary" type="button" onClick={resetForm} disabled={salvando}>
               Nova configuração
-            </button>
+            </AppButton>
             {form.id ? (
               <>
-                <button
-                  className="btn btn-light"
+                <AppButton
+                  variant="secondary"
                   type="button"
                   onClick={() => {
                     const currentTemplate = templates.find((tpl) => tpl.id === form.id);
@@ -1168,10 +1179,10 @@ export default function ParametrosAvisosIsland() {
                   disabled={salvando}
                 >
                   Duplicar
-                </button>
-                <button className="btn btn-light" type="button" onClick={() => void removerConfiguracao(form.id)} disabled={salvando}>
+                </AppButton>
+                <AppButton variant="secondary" type="button" onClick={() => void removerConfiguracao(form.id)} disabled={salvando}>
                   Excluir
-                </button>
+                </AppButton>
               </>
             ) : null}
           </div>
@@ -1184,11 +1195,11 @@ export default function ParametrosAvisosIsland() {
           </div>
           <div className="form-group">
             <label className="form-label">Contexto do preview</label>
-            <div className="card-base card-blue" style={{ padding: 12 }}>
+            <AppCard tone="info" style={{ padding: 12 }}>
               <div><strong>Cliente:</strong> {previewNomeCliente}</div>
               <div><strong>Arte:</strong> {selectedThemeForForm?.nome || "Selecione uma arte"}</div>
               <div><strong>Ocasião:</strong> {form.categoria || selectedThemeForForm?.categoria || "-"}</div>
-            </div>
+            </AppCard>
           </div>
         </div>
 
@@ -1196,21 +1207,22 @@ export default function ParametrosAvisosIsland() {
           <>
             <img src={previewThemeSvgUrl} alt="Prévia do cartão" style={{ maxWidth: 320, borderRadius: 12, border: "1px solid #cbd5e1" }} />
             <div className="mobile-stack-buttons" style={{ marginTop: 8 }}>
-              <a className="btn btn-light" href={previewThemeSvgUrl} target="_blank" rel="noreferrer">Abrir SVG</a>
-              <a className="btn btn-light" href={previewThemePngUrl} target="_blank" rel="noreferrer">Abrir PNG</a>
+              <AppButton as="a" variant="secondary" href={previewThemeSvgUrl} target="_blank" rel="noreferrer">Abrir SVG</AppButton>
+              <AppButton as="a" variant="secondary" href={previewThemePngUrl} target="_blank" rel="noreferrer">Abrir PNG</AppButton>
               {previewWhatsappUrl ? (
-                <a className="btn btn-light" href={previewWhatsappUrl} target="_blank" rel="noreferrer">Abrir WhatsApp</a>
+                <AppButton as="a" variant="secondary" href={previewWhatsappUrl} target="_blank" rel="noreferrer">Abrir WhatsApp</AppButton>
               ) : (
-                <button type="button" className="btn btn-light" disabled title="Cliente sem WhatsApp/telefone">
+                <AppButton type="button" variant="secondary" disabled title="Cliente sem WhatsApp/telefone">
                   Abrir WhatsApp
-                </button>
+                </AppButton>
               )}
             </div>
           </>
         ) : (
           <small style={{ color: "#64748b" }}>Selecione uma arte e preencha a mensagem para pré-visualizar o cartão final.</small>
         )}
+      </AppCard>
       </div>
-    </div>
+    </AppPrimerProvider>
   );
 }

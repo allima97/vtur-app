@@ -457,7 +457,7 @@ export default function MinhaEscalaIsland() {
       )}
 
       {activeTab === "minha" && !loadingDados && (
-        <div className="card-base mb-3">
+        <AppCard className="mb-3">
           <div className="table-container">
             <table className="escala-calendario">
               <thead>
@@ -566,11 +566,11 @@ export default function MinhaEscalaIsland() {
               </ul>
             </div>
           )}
-        </div>
+        </AppCard>
       )}
 
       {activeTab === "minha" && !loadingDados && escalaDias.length > 0 && (
-        <div className="card-base">
+        <AppCard>
           <div className="escala-list-title">Detalhes do mes</div>
           <div className="table-container">
             <table className="table-default table-mobile-cards">
@@ -614,7 +614,7 @@ export default function MinhaEscalaIsland() {
               </tbody>
             </table>
           </div>
-        </div>
+        </AppCard>
       )}
 
       {activeTab === "equipe" && erroEquipe && (
@@ -626,7 +626,7 @@ export default function MinhaEscalaIsland() {
       )}
 
       {activeTab === "equipe" && !loadingEquipe && (
-        <div className="card-base mb-3">
+        <AppCard className="mb-3">
           <div className="table-container">
             <table className="escala-table">
               <thead>
@@ -764,7 +764,7 @@ export default function MinhaEscalaIsland() {
               </ul>
             </div>
           )}
-        </div>
+        </AppCard>
       )}
     </div>
     </AppPrimerProvider>

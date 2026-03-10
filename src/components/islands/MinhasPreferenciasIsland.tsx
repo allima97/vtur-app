@@ -525,8 +525,8 @@ export default function MinhasPreferenciasIsland() {
               />
 
               {mostrarSugestoesCidade && (buscandoCidade || cidadeBusca.trim().length >= 2) && (
-                <div
-                  className="card-base card-config"
+                <AppCard
+                  className="card-config"
                   style={{
                     position: "absolute",
                     top: "100%",
@@ -559,7 +559,7 @@ export default function MinhasPreferenciasIsland() {
                         {c.nome}
                       </button>
                     ))}
-                </div>
+                </AppCard>
               )}
             </div>
           </div>
@@ -770,14 +770,14 @@ export default function MinhasPreferenciasIsland() {
                             {String(s.status || "").toUpperCase()}
                           </div>
                         </div>
-                        <button
+                        <AppButton
                           type="button"
-                          className="btn btn-light"
+                          variant="secondary"
                           onClick={() => revogarShare(s.id)}
                           disabled={revokingShareId === s.id || !podeEditar}
                         >
                           {revokingShareId === s.id ? "Revogando..." : "Revogar"}
-                        </button>
+                        </AppButton>
                       </div>
                     ))}
                   </div>

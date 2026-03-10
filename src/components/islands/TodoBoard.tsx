@@ -698,9 +698,10 @@ export default function TodoBoard() {
                 </button>
               )}
 
-              <button
+              <AppButton
                 type="button"
-                className="btn-icon"
+                className="icon-action-btn"
+                variant="ghost"
                 style={{ padding: "2px 6px", flexShrink: 0, fontSize: 12 }}
                 disabled={currentIndex === 0}
                 onClick={() => moveStatus(card.id, -1)}
@@ -708,10 +709,11 @@ export default function TodoBoard() {
                 title="Mover para trás"
               >
                 {"◀"}
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
-                className="btn-icon"
+                className="icon-action-btn"
+                variant="ghost"
                 style={{ padding: "2px 6px", flexShrink: 0, fontSize: 12 }}
                 disabled={currentIndex === STATUS_COLS.length - 1}
                 onClick={() => moveStatus(card.id, 1)}
@@ -719,11 +721,12 @@ export default function TodoBoard() {
                 title="Mover para frente"
               >
                 {"▶"}
-              </button>
+              </AppButton>
 
-              <button
+              <AppButton
                 type="button"
-                className="btn-icon"
+                className="icon-action-btn"
+                variant="ghost"
                 style={{ padding: "2px 6px", flexShrink: 0, fontSize: 13 }}
                 onClick={() => {
                   setCreateOpen(true);
@@ -736,26 +739,28 @@ export default function TodoBoard() {
                 aria-label="Editar tarefa"
               >
                 {"✎"}
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
-                className="btn-icon"
+                className="icon-action-btn"
+                variant="ghost"
                 style={{ padding: "2px 6px", flexShrink: 0, fontSize: 13 }}
                 onClick={() => archiveTodo(card.id)}
                 aria-label="Arquivar tarefa"
                 title="Arquivar"
               >
                 {"📁"}
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
-                className="btn-icon danger no-border"
+                className="icon-action-btn danger no-border"
+                variant="danger"
                 style={{ padding: "2px 6px", flexShrink: 0, fontSize: 13 }}
                 onClick={() => removeTodo(card.id)}
                 aria-label="Excluir tarefa"
               >
                 🗑️
-              </button>
+              </AppButton>
             </div>
           </div>
 
@@ -824,9 +829,10 @@ export default function TodoBoard() {
             )}
 
             {/* Botões de movimentação */}
-            <button
+            <AppButton
               type="button"
-              className="btn-icon"
+              className="icon-action-btn"
+              variant="ghost"
               style={{ fontSize: 11, padding: "2px 5px" }}
               disabled={col.value === STATUS_COLS[0].value}
               onClick={() => moveStatus(card.id, -1)}
@@ -834,10 +840,11 @@ export default function TodoBoard() {
               title="Mover para trás"
             >
               {"◀"}
-            </button>
-            <button
+            </AppButton>
+            <AppButton
               type="button"
-              className="btn-icon"
+              className="icon-action-btn"
+              variant="ghost"
               style={{ fontSize: 11, padding: "2px 5px" }}
               disabled={col.value === STATUS_COLS[STATUS_COLS.length - 1].value}
               onClick={() => moveStatus(card.id, 1)}
@@ -845,7 +852,7 @@ export default function TodoBoard() {
               title="Mover para frente"
             >
               {"▶"}
-            </button>
+            </AppButton>
 
             {/* Checkbox */}
             <input
@@ -857,9 +864,10 @@ export default function TodoBoard() {
             />
 
             {/* Editar */}
-            <button
+            <AppButton
               type="button"
-              className="btn-icon"
+              className="icon-action-btn"
+              variant="ghost"
               style={{ fontSize: 11, padding: "2px 5px" }}
               onClick={() => {
                 setCreateOpen(true);
@@ -872,30 +880,32 @@ export default function TodoBoard() {
               aria-label="Editar tarefa"
             >
               {"✎"}
-            </button>
+            </AppButton>
 
             {/* Arquivar */}
-            <button
+            <AppButton
               type="button"
-              className="btn-icon"
+              className="icon-action-btn"
+              variant="ghost"
               style={{ fontSize: 11, padding: "2px 5px" }}
               onClick={() => archiveTodo(card.id)}
               aria-label="Arquivar tarefa"
               title="Arquivar"
             >
               {"📁"}
-            </button>
+            </AppButton>
 
             {/* Excluir */}
-            <button
+            <AppButton
               type="button"
-              className="btn-icon danger no-border"
+              className="icon-action-btn danger no-border"
+              variant="danger"
               style={{ fontSize: 11, padding: "2px 5px" }}
               onClick={() => removeTodo(card.id)}
               aria-label="Excluir tarefa"
             >
               🗑️
-            </button>
+            </AppButton>
           </div>
         </div>
 
@@ -953,9 +963,9 @@ export default function TodoBoard() {
       )}
       {isMobile ? (
         <div className="todo-mobile-shell">
-          <div className="card-base todo-mobile-title-card">
+          <AppCard className="todo-mobile-title-card">
             <div className="todo-mobile-title">Tarefas</div>
-          </div>
+          </AppCard>
 
           <div
             className="todo-mobile-sectionbar"
@@ -998,9 +1008,10 @@ export default function TodoBoard() {
                     </div>
                     <span className="todo-category-count">{count}</span>
                     <div className="todo-category-actions">
-                      <button
+                      <AppButton
                         type="button"
-                        className="btn-icon"
+                        className="icon-action-btn"
+                        variant="ghost"
                         onClick={() => {
                           setEditingCategory(c);
                           setCatNome(c.nome);
@@ -1011,17 +1022,18 @@ export default function TodoBoard() {
                         title="Editar"
                       >
                         {"✎"}
-                      </button>
-                      <button
+                      </AppButton>
+                      <AppButton
                         type="button"
-                        className="btn-icon danger no-border"
+                        className="icon-action-btn danger no-border"
+                        variant="danger"
                         disabled={categoriasComTodo.has(c.id)}
                         onClick={() => removeCategoria(c.id)}
                         aria-label="Excluir categoria"
                         title={categoriasComTodo.has(c.id) ? "Remova as tarefas dessa categoria para excluir." : "Excluir"}
                       >
                         🗑️
-                      </button>
+                      </AppButton>
                     </div>
                   </div>
                 );
@@ -1060,10 +1072,10 @@ export default function TodoBoard() {
                             <span style={{ flex: 1, fontWeight: 600, fontSize: 14, color: "#475569", textDecoration: "line-through" }}>
                               {card.titulo}
                             </span>
-                            <button className="btn btn-light" style={{ fontSize: 12, padding: "3px 10px" }} onClick={() => restoreTodo(card.id)}>
+                            <AppButton variant="secondary" style={{ fontSize: 12, padding: "3px 10px" }} onClick={() => restoreTodo(card.id)}>
                               Restaurar
-                            </button>
-                            <button className="btn-icon danger no-border" onClick={() => removeTodo(card.id)} aria-label="Excluir">{"🗑️"}</button>
+                            </AppButton>
+                            <AppButton variant="danger" className="icon-action-btn danger no-border" onClick={() => removeTodo(card.id)} aria-label="Excluir">{"🗑️"}</AppButton>
                           </div>
                         </div>
                       ))}
@@ -1118,9 +1130,10 @@ export default function TodoBoard() {
               >
                 {"✎"}
               </AppButton>
-              <button
+              <AppButton
                 type="button"
-                className="btn-icon danger no-border"
+                className="icon-action-btn danger no-border"
+                variant="danger"
                 style={{ padding: "2px 6px", minHeight: 24, fontSize: 11, lineHeight: 1 }}
                 disabled={categoriasComTodo.has(c.id)}
                 onClick={() => removeCategoria(c.id)}
@@ -1128,7 +1141,7 @@ export default function TodoBoard() {
                 title={categoriasComTodo.has(c.id) ? "Remova as tarefas dessa categoria para excluir." : "Excluir categoria"}
               >
                 🗑️
-              </button>
+              </AppButton>
             </span>
           ))}
         </div>
@@ -1271,7 +1284,7 @@ export default function TodoBoard() {
         )}
       </AppCard>
       {archivedCards.length > 0 && (
-        <div className="card-base" style={{ marginTop: 12, padding: 0, overflow: "hidden" }}>
+        <AppCard style={{ marginTop: 12, padding: 0, overflow: "hidden" }}>
           <button
             type="button"
             onClick={() => setArchivedOpen((o) => !o)}
@@ -1298,16 +1311,16 @@ export default function TodoBoard() {
                     <span className="todo-badge" style={{ padding: "2px 8px", borderRadius: 999, background: card.catColor, color: textColorFor(card.catColor), fontSize: 11, fontWeight: 800 }}>
                       {card.catNome}
                     </span>
-                    <button className="btn btn-light" style={{ fontSize: 12, padding: "3px 10px" }} onClick={() => restoreTodo(card.id)}>
+                    <AppButton variant="secondary" style={{ fontSize: 12, padding: "3px 10px" }} onClick={() => restoreTodo(card.id)}>
                       Restaurar
-                    </button>
-                    <button className="btn-icon danger no-border" onClick={() => removeTodo(card.id)} aria-label="Excluir">{"🗑️"}</button>
+                    </AppButton>
+                    <AppButton variant="danger" className="icon-action-btn danger no-border" onClick={() => removeTodo(card.id)} aria-label="Excluir">{"🗑️"}</AppButton>
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </div>
+        </AppCard>
       )}
         </>
       )}
@@ -1375,12 +1388,12 @@ export default function TodoBoard() {
                 {error && <div style={{ color: "#b91c1c" }}>{error}</div>}
               </div>
               <div className="modal-footer mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-                <button type="submit" className="btn btn-primary">
+                <AppButton type="submit" variant="primary">
                   Salvar
-                </button>
-                <button type="button" className="btn btn-light" onClick={() => setCreateOpen(false)}>
+                </AppButton>
+                <AppButton type="button" variant="secondary" onClick={() => setCreateOpen(false)}>
                   Cancelar
-                </button>
+                </AppButton>
               </div>
             </form>
           </div>
@@ -1444,12 +1457,12 @@ export default function TodoBoard() {
                 </div>
               </div>
               <div className="modal-footer mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-                <button type="submit" className="btn btn-primary">
+                <AppButton type="submit" variant="primary">
                   Salvar
-                </button>
-                <button type="button" className="btn btn-light" onClick={() => setCreateCategoryOpen(false)}>
+                </AppButton>
+                <AppButton type="button" variant="secondary" onClick={() => setCreateCategoryOpen(false)}>
                   Cancelar
-                </button>
+                </AppButton>
               </div>
             </form>
           </div>

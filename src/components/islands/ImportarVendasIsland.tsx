@@ -1,4 +1,8 @@
 import React, { useRef, useState } from "react";
+import AlertMessage from "../ui/AlertMessage";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
 function cleanEncoding(str: any): string {
   if (typeof str !== "string") return String(str ?? "");
@@ -47,19 +51,44 @@ export default function ImportarVendasIsland() {
   }
 
   return (
-    <div className="card-base card-config" style={{ maxWidth: 500, margin: "0 auto" }}>
-      <h2>Importar Vendas (Excel)</h2>
-      <form onSubmit={handleUpload}>
-        <input
-          type="file"
-          accept=".xlsx"
-          ref={inputRef}
-          onChange={e => setFile(e.target.files?.[0] || null)}
-          style={{ marginBottom: 12 }}
-        />
-        <button className="btn btn-primary" type="submit">Importar</button>
-      </form>
-      {status && <div style={{ marginTop: 12 }}>{status}</div>}
-    </div>
+    <AppPrimerProvider>
+      <div style={{ maxWidth: 560, margin: "0 auto" }}>
+        <AppCard
+          tone="config"
+          title="Importar vendas (Excel)"
+          subtitle="Selecione um arquivo .xlsx para processar os dados."
+        >
+          <form onSubmit={handleUpload} className="space-y-3">
+            <div className="form-group m-0">
+              <label htmlFor="importar-vendas-file" className="font-semibold">
+                Arquivo
+              </label>
+              <input
+                id="importar-vendas-file"
+                type="file"
+                accept=".xlsx"
+                ref={inputRef}
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+              />
+            </div>
+
+            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-start" }}>
+              <AppButton type="submit" variant="primary">
+                Importar
+              </AppButton>
+            </div>
+          </form>
+
+          {status && (
+            <AlertMessage
+              variant={status.toLowerCase().includes("erro") ? "error" : "success"}
+              className="mt-3"
+            >
+              {status}
+            </AlertMessage>
+          )}
+        </AppCard>
+      </div>
+    </AppPrimerProvider>
   );
 }

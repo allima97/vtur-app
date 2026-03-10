@@ -2,6 +2,11 @@ import { useState, useEffect, useRef, useCallback, useId, useMemo } from "react"
 import { exportRoteiroPdf } from "../../lib/quote/roteiroPdf";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import { extractPlainTextFromFile } from "../../lib/documentosViagens/extractPlainTextFromFile";
+import AlertMessage from "../ui/AlertMessage";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type RotHotel = {
@@ -348,10 +353,10 @@ function RowActions({
 }) {
   return (
     <td style={{ ...tdSt, whiteSpace: "nowrap" }}>
-      <button onClick={onUp} style={actionBtnSt} title="Subir">▲</button>{" "}
-      <button onClick={onDown} style={actionBtnSt} title="Descer">▼</button>{" "}
-      <button onClick={onAdd} style={actionBtnSt} title="Adicionar abaixo">+</button>{" "}
-      <button onClick={onDelete} style={{ ...actionBtnSt, color: "#dc2626", borderColor: "#fca5a5" }} title="Excluir">🗑</button>
+      <AppButton type="button" onClick={onUp} variant="secondary" style={actionBtnSt} title="Subir">▲</AppButton>{" "}
+      <AppButton type="button" onClick={onDown} variant="secondary" style={actionBtnSt} title="Descer">▼</AppButton>{" "}
+      <AppButton type="button" onClick={onAdd} variant="secondary" style={actionBtnSt} title="Adicionar abaixo">+</AppButton>{" "}
+      <AppButton type="button" onClick={onDelete} variant="danger" style={{ ...actionBtnSt, borderColor: "#fca5a5" }} title="Excluir">🗑</AppButton>
     </td>
   );
 }
@@ -772,10 +777,29 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div style={{ padding: "0 0 60px" }}>
-      <div style={{ padding: "12px 0 0" }}>
+    <AppPrimerProvider>
+      <div style={{ padding: "0 0 60px" }}>
+        <AppToolbar
+          className="mb-3"
+          sticky
+          tone="info"
+          title={isNew ? "Novo roteiro personalizado" : "Editar roteiro personalizado"}
+          subtitle="Gerencie hotéis, passeios, transporte, itinerário, investimento e pagamento."
+          actions={(
+            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+              <AppButton
+                type="button"
+                onClick={() => (window.location.href = "/orcamentos/personalizados")}
+                variant="secondary"
+              >
+                Voltar para lista
+              </AppButton>
+            </div>
+          )}
+        />
+        <div style={{ padding: "12px 0 0" }}>
         {/* ─── Informações do Roteiro ──────────────────────────────────── */}
-        <div style={cardSt}>
+        <AppCard tone="config">
           <div className="form-row mobile-stack roteiro-info-row" style={{ gap: 12 }}>
             <div>
               <label style={labelSt}>Nome *</label>
@@ -819,73 +843,43 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
             </div>
             <div className="mobile-stack-buttons roteiro-info-actions">
               {saveMsg && (
-                <span style={{ color: "#16a34a", fontSize: 13, padding: "6px 0" }}>{saveMsg}</span>
+                <AlertMessage variant="success" className="mb-0">
+                  {saveMsg}
+                </AlertMessage>
               )}
-              <button
+              <AppButton
+                type="button"
                 onClick={() => (window.location.href = "/orcamentos/personalizados")}
-                style={{
-                  padding: "7px 16px",
-                  background: "#f3f4f6",
-                  color: "#374151",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  fontWeight: 600,
-                  fontSize: 13,
-                }}
+                variant="secondary"
               >
                 Cancelar
-              </button>
+              </AppButton>
 
-              <button
+              <AppButton
+                type="button"
                 onClick={handlePreviewPdf}
                 disabled={pdfBusy}
-                style={{
-                  padding: "7px 16px",
-                  background: "#f3f4f6",
-                  color: "#374151",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 6,
-                  cursor: pdfBusy ? "not-allowed" : "pointer",
-                  fontWeight: 600,
-                  fontSize: 13,
-                }}
+                variant="secondary"
               >
                 {previewingPdf ? "Abrindo prévia..." : "Visualizar PDF"}
-              </button>
+              </AppButton>
 
-              <button
+              <AppButton
+                type="button"
                 onClick={handleSave}
                 disabled={saving}
-                style={{
-                  padding: "7px 16px",
-                  background: "#7c3aed",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 6,
-                  cursor: saving ? "not-allowed" : "pointer",
-                  fontWeight: 600,
-                  fontSize: 13,
-                }}
+                variant="primary"
               >
                 {saving ? "Salvando..." : "Salvar"}
-              </button>
+              </AppButton>
 
-              <button
+              <AppButton
+                type="button"
                 onClick={() => setShowGerarModal(true)}
-                style={{
-                  padding: "7px 16px",
-                  background: "#059669",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  fontWeight: 600,
-                  fontSize: 13,
-                }}
+                variant="primary"
               >
                 Gerar Orçamento
-              </button>
+              </AppButton>
             </div>
           </div>
 
@@ -900,26 +894,17 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
               />
             </div>
             <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-              <button
+              <AppButton
                 type="button"
                 onClick={handleImportRoteiroFile}
                 disabled={!importFile || importingFile}
-                style={{
-                  padding: "7px 16px",
-                  background: "#f3f4f6",
-                  color: "#374151",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 6,
-                  cursor: !importFile || importingFile ? "not-allowed" : "pointer",
-                  fontWeight: 600,
-                  fontSize: 13,
-                }}
+                variant="secondary"
               >
                 {importingFile ? "Importando..." : "Importar"}
-              </button>
+              </AppButton>
             </div>
           </div>
-        </div>
+        </AppCard>
 
         {/* ─── Tab Strip ───────────────────────────────────────────────── */}
         <div style={{
@@ -1653,6 +1638,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </AppPrimerProvider>
   );
 }

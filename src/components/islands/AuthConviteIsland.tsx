@@ -1,6 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { SYSTEM_NAME } from "../../lib/systemName";
+import AlertMessage from "../ui/AlertMessage";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
 function parseHashTokens(hash: string) {
   const params = new URLSearchParams((hash || "").replace(/^#/, ""));
@@ -19,8 +24,6 @@ export default function AuthConviteIsland() {
   const [loading, setLoading] = useState(false);
   const [validLink, setValidLink] = useState(false);
   const [inviteId, setInviteId] = useState("");
-  const [mostrarSenha, setMostrarSenha] = useState(false);
-  const [mostrarConfirmacao, setMostrarConfirmacao] = useState(false);
 
   const inviteIdLabel = useMemo(() => (inviteId ? `#${inviteId.slice(0, 8)}` : ""), [inviteId]);
 
@@ -150,103 +153,80 @@ export default function AuthConviteIsland() {
   }
 
   return (
-    <div className="auth-container">
-      <div className="auth-card auth-card-lg">
-        <div className="auth-header">
-          <div className="auth-icon">
-            <i className="fa-solid fa-user-plus"></i>
-          </div>
-          <h1>Aceitar convite</h1>
-          <h2 className="auth-subtitle">
-            Defina uma senha para acessar o {SYSTEM_NAME}. {inviteIdLabel}
-          </h2>
-        </div>
-
-        {erro && (
-          <div className="alert alert-danger" style={{ marginBottom: 16 }}>
-            {erro}
-          </div>
-        )}
-        {ok && (
-          <div className="alert alert-success" style={{ marginBottom: 16 }}>
-            Convite aceito! Redirecionando...
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div className="form-group">
-            <label htmlFor="senha">
-              <i className="fa-solid fa-lock"></i> Nova senha
-            </label>
-            <div className="password-field">
-              <input
-                type={mostrarSenha ? "text" : "password"}
-                id="senha"
-                className="form-input"
-                placeholder="Mínimo 6 caracteres"
-                required
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setMostrarSenha((prev) => !prev)}
-                aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
-                aria-pressed={mostrarSenha}
-                tabIndex={loading ? -1 : 0}
-              >
-                <i className={`fa-solid ${mostrarSenha ? "fa-eye-slash" : "fa-eye"}`} />
-              </button>
+    <AppPrimerProvider>
+      <div className="auth-container">
+        <AppCard
+          className="auth-card auth-card-lg"
+          title="Aceitar convite"
+          subtitle={`Defina uma senha para acessar o ${SYSTEM_NAME}. ${inviteIdLabel}`}
+        >
+          <div className="auth-header">
+            <div className="auth-icon">
+              <i className="fa-solid fa-user-plus"></i>
             </div>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="confirmar">
-              <i className="fa-solid fa-lock"></i> Confirmar senha
-            </label>
-            <div className="password-field">
-              <input
-                type={mostrarConfirmacao ? "text" : "password"}
-                id="confirmar"
-                className="form-input"
-                placeholder="Repita a senha"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                disabled={loading}
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setMostrarConfirmacao((prev) => !prev)}
-                aria-label={mostrarConfirmacao ? "Ocultar senha" : "Mostrar senha"}
-                aria-pressed={mostrarConfirmacao}
-                tabIndex={loading ? -1 : 0}
-              >
-                <i className={`fa-solid ${mostrarConfirmacao ? "fa-eye-slash" : "fa-eye"}`} />
-              </button>
-            </div>
-          </div>
+          {erro && (
+            <AlertMessage variant="error" className="mb-3">
+              {erro}
+            </AlertMessage>
+          )}
+          {ok && (
+            <AlertMessage variant="success" className="mb-3">
+              Convite aceito! Redirecionando...
+            </AlertMessage>
+          )}
 
-          <div className="auth-actions">
-            <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
-              <i className="fa-solid fa-check"></i>
-              {loading ? " Salvando..." : " Definir senha e continuar"}
-            </button>
-            <div className="auth-divider">
-              <span>ou</span>
+          <form onSubmit={handleSubmit} className="auth-form">
+            <AppField
+              as="input"
+              type="password"
+              id="senha"
+              label={
+                <>
+                  <i className="fa-solid fa-lock"></i> Nova senha
+                </>
+              }
+              placeholder="Minimo 6 caracteres"
+              required
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+            />
+
+            <AppField
+              as="input"
+              type="password"
+              id="confirmar"
+              label={
+                <>
+                  <i className="fa-solid fa-lock"></i> Confirmar senha
+                </>
+              }
+              placeholder="Repita a senha"
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              disabled={loading}
+            />
+
+            <div className="auth-actions">
+              <AppButton type="submit" variant="primary" block disabled={loading}>
+                <i className="fa-solid fa-check"></i>
+                {loading ? " Salvando..." : " Definir senha e continuar"}
+              </AppButton>
+              <div className="auth-divider">
+                <span>ou</span>
+              </div>
+              <AppButton as="a" href="/auth/login" variant="secondary" block>
+                <i className="fa-solid fa-right-to-bracket"></i>
+                Ir para login
+              </AppButton>
             </div>
-            <a href="/auth/login" className="btn btn-secondary btn-block">
-              <i className="fa-solid fa-right-to-bracket"></i>
-              Ir para login
-            </a>
-          </div>
-        </form>
+          </form>
+        </AppCard>
       </div>
-    </div>
+    </AppPrimerProvider>
   );
 }
-

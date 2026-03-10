@@ -167,9 +167,9 @@ export default function AuthRecoverIsland() {
               <div className="auth-divider">
                 <span>ou</span>
               </div>
-              <a href="/auth/login" className="btn btn-secondary btn-block">
+              <AppButton as="a" href="/auth/login" variant="secondary" block>
                 Voltar ao login
-              </a>
+              </AppButton>
             </div>
           </form>
         </AppCard>

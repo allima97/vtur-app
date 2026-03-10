@@ -6,6 +6,9 @@ import AlertMessage from "../ui/AlertMessage";
 import EmptyState from "../ui/EmptyState";
 import TableActions from "../ui/TableActions";
 import SearchInput from "../ui/SearchInput";
+import AppButton from "../ui/primer/AppButton";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type Roteiro = {
   id: string;
@@ -65,146 +68,155 @@ export default function RoteiroListIsland() {
   }, [roteiros, busca]);
 
   return (
-    <div className="page-content-wrap orcamentos-consulta-page">
-      <div className="card-base card-purple mb-3 list-toolbar-sticky">
-        <div
-          className="form-row mobile-stack"
-          style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
+    <AppPrimerProvider>
+      <div className="page-content-wrap orcamentos-consulta-page">
+        <AppToolbar
+          className="mb-3"
+          sticky
+          tone="info"
+          title="Roteiros personalizados"
+          subtitle="Busque, edite e remova roteiros salvos."
+          actions={(
+            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+              <AppButton as="a" href="/orcamentos/personalizados/novo" variant="primary">
+                Novo Roteiro
+              </AppButton>
+              <AppButton as="a" href="/orcamentos/consulta" variant="secondary">
+                Voltar
+              </AppButton>
+            </div>
+          )}
         >
-          <div style={{ flex: "1 1 320px" }}>
-            <SearchInput
-              label="Buscar"
-              value={busca}
-              onChange={setBusca}
-              placeholder="Nome do roteiro..."
-              wrapperClassName="m-0"
-            />
+          <div
+            className="form-row mobile-stack"
+            style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
+          >
+            <div style={{ flex: "1 1 320px" }}>
+              <SearchInput
+                label="Buscar"
+                value={busca}
+                onChange={setBusca}
+                placeholder="Nome do roteiro..."
+                wrapperClassName="m-0"
+              />
+            </div>
           </div>
+        </AppToolbar>
 
-          <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-            <a className="btn btn-primary" href="/orcamentos/personalizados/novo">
-              Novo Roteiro
-            </a>
-            <a className="btn btn-light" href="/orcamentos/consulta">
-              Voltar
-            </a>
-          </div>
-        </div>
-      </div>
+        {error && (
+          <AlertMessage variant="error" className="mb-3">
+            <strong>{error}</strong>
+          </AlertMessage>
+        )}
 
-      {error && (
-        <AlertMessage variant="error" className="mb-3">
-          <strong>{error}</strong>
-        </AlertMessage>
-      )}
+        {!loading && filtered.length === 0 && (
+          <EmptyState
+            icon={<span aria-hidden>📋</span>}
+            title="Nenhum roteiro encontrado"
+            description="Ajuste a busca ou crie um novo roteiro."
+            action={
+              <AppButton as="a" href="/orcamentos/personalizados/novo" variant="primary">
+                Criar primeiro roteiro
+              </AppButton>
+            }
+          />
+        )}
 
-      {!loading && filtered.length === 0 && (
-        <EmptyState
-          icon={<span aria-hidden>📋</span>}
-          title="Nenhum roteiro encontrado"
-          description="Ajuste a busca ou crie um novo roteiro."
-          action={
-            <a className="btn btn-primary" href="/orcamentos/personalizados/novo">
-              Criar primeiro roteiro
-            </a>
-          }
-        />
-      )}
-
-      {(loading || filtered.length > 0) && (
-        <div className="table-container overflow-x-auto" style={{ maxHeight: "65vh", overflowY: "auto" }}>
-          <table className="table-default table-header-purple table-mobile-cards min-w-[900px]">
-            <thead style={{ position: "sticky", top: 0, zIndex: 1 }}>
-              <tr>
-                <th>Nome</th>
-                <th>Duração</th>
-                <th>Origem → Destino</th>
-                <th>Criado em</th>
-                <th className="th-actions" style={{ width: 150, textAlign: "center" }}>
-                  Ações
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
+        {(loading || filtered.length > 0) && (
+          <div className="table-container overflow-x-auto" style={{ maxHeight: "65vh", overflowY: "auto" }}>
+            <table className="table-default table-header-purple table-mobile-cards min-w-[900px]">
+              <thead style={{ position: "sticky", top: 0, zIndex: 1 }}>
                 <tr>
-                  <td colSpan={5}>Carregando...</td>
+                  <th>Nome</th>
+                  <th>Duração</th>
+                  <th>Origem → Destino</th>
+                  <th>Criado em</th>
+                  <th className="th-actions" style={{ width: 150, textAlign: "center" }}>
+                    Ações
+                  </th>
                 </tr>
-              )}
-
-              {!loading &&
-                filtered.map((r) => (
-                  <tr key={r.id}>
-                    <td data-label="Nome">
-                      <strong>{r.nome}</strong>
-                    </td>
-                    <td data-label="Duração">{r.duracao ? `${r.duracao} dias` : "-"}</td>
-                    <td data-label="Origem → Destino">
-                      {r.inicio_cidade && r.fim_cidade
-                        ? `${r.inicio_cidade} → ${r.fim_cidade}`
-                        : r.inicio_cidade || r.fim_cidade || "-"}
-                    </td>
-                    <td data-label="Criado em">{r.created_at ? formatDateBR(r.created_at) : "-"}</td>
-                    <td className="th-actions" data-label="Ações">
-                      <TableActions
-                        className="orcamentos-actions"
-                        actions={[
-                          {
-                            key: "view",
-                            label: "Visualizar",
-                            icon: "👁️",
-                            onClick: () => {
-                              window.location.href = `/orcamentos/personalizados/visualizar/${r.id}`;
-                            },
-                          },
-                          {
-                            key: "edit",
-                            label: "Editar",
-                            icon: "✏️",
-                            onClick: () => {
-                              window.location.href = `/orcamentos/personalizados/${r.id}`;
-                            },
-                          },
-                          {
-                            key: "delete",
-                            label: "Excluir",
-                            icon: "🗑️",
-                            variant: "danger",
-                            onClick: () => setRoteiroParaExcluir(r),
-                          },
-                        ]}
-                      />
-                    </td>
+              </thead>
+              <tbody>
+                {loading && (
+                  <tr>
+                    <td colSpan={5}>Carregando...</td>
                   </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                )}
 
-      <ConfirmDialog
-        open={Boolean(roteiroParaExcluir)}
-        title="Excluir roteiro?"
-        message={
-          <>
-            Esta ação não pode ser desfeita. O roteiro{" "}
-            {roteiroParaExcluir?.nome ? <strong>{roteiroParaExcluir.nome}</strong> : null}
-            {" "}e todos os seus dados serão removidos.
-          </>
-        }
-        confirmLabel={deleting ? "Excluindo..." : "Excluir"}
-        cancelLabel="Cancelar"
-        confirmVariant="danger"
-        confirmDisabled={deleting}
-        onCancel={() => {
-          if (deleting) return;
-          setRoteiroParaExcluir(null);
-        }}
-        onConfirm={() => {
-          if (!roteiroParaExcluir) return;
-          void handleDelete(roteiroParaExcluir.id);
-        }}
-      />
-    </div>
+                {!loading &&
+                  filtered.map((r) => (
+                    <tr key={r.id}>
+                      <td data-label="Nome">
+                        <strong>{r.nome}</strong>
+                      </td>
+                      <td data-label="Duração">{r.duracao ? `${r.duracao} dias` : "-"}</td>
+                      <td data-label="Origem → Destino">
+                        {r.inicio_cidade && r.fim_cidade
+                          ? `${r.inicio_cidade} → ${r.fim_cidade}`
+                          : r.inicio_cidade || r.fim_cidade || "-"}
+                      </td>
+                      <td data-label="Criado em">{r.created_at ? formatDateBR(r.created_at) : "-"}</td>
+                      <td className="th-actions" data-label="Ações">
+                        <TableActions
+                          className="orcamentos-actions"
+                          actions={[
+                            {
+                              key: "view",
+                              label: "Visualizar",
+                              icon: "👁️",
+                              onClick: () => {
+                                window.location.href = `/orcamentos/personalizados/visualizar/${r.id}`;
+                              },
+                            },
+                            {
+                              key: "edit",
+                              label: "Editar",
+                              icon: "✏️",
+                              onClick: () => {
+                                window.location.href = `/orcamentos/personalizados/${r.id}`;
+                              },
+                            },
+                            {
+                              key: "delete",
+                              label: "Excluir",
+                              icon: "🗑️",
+                              variant: "danger",
+                              onClick: () => setRoteiroParaExcluir(r),
+                            },
+                          ]}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <ConfirmDialog
+          open={Boolean(roteiroParaExcluir)}
+          title="Excluir roteiro?"
+          message={
+            <>
+              Esta ação não pode ser desfeita. O roteiro{" "}
+              {roteiroParaExcluir?.nome ? <strong>{roteiroParaExcluir.nome}</strong> : null}
+              {" "}e todos os seus dados serão removidos.
+            </>
+          }
+          confirmLabel={deleting ? "Excluindo..." : "Excluir"}
+          cancelLabel="Cancelar"
+          confirmVariant="danger"
+          confirmDisabled={deleting}
+          onCancel={() => {
+            if (deleting) return;
+            setRoteiroParaExcluir(null);
+          }}
+          onConfirm={() => {
+            if (!roteiroParaExcluir) return;
+            void handleDelete(roteiroParaExcluir.id);
+          }}
+        />
+      </div>
+    </AppPrimerProvider>
   );
 }
