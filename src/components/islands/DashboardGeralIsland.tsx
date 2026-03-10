@@ -1,3 +1,4 @@
+import { Dialog, Select } from "@primer/react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { buildQueryLiteKey, queryLite } from "../../lib/queryLite";
@@ -31,6 +32,14 @@ import {
   Legend,
 } from "recharts";
 import IslandErrorBoundary from "../ui/IslandErrorBoundary";
+import AlertMessage from "../ui/AlertMessage";
+import DataTable from "../ui/DataTable";
+import TableActions from "../ui/TableActions";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 // ----------------- TIPOS -----------------
 
@@ -1313,131 +1322,165 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
     "follow_up",
   ];
 
+  const renderChartSelect = (
+    value: ChartType,
+    onChange: (next: ChartType) => void,
+    options: Array<{ value: ChartType; label: string }>
+  ) => (
+    <Select
+      aria-label="Selecionar tipo de grafico"
+      value={value}
+      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onChange(e.target.value as ChartType)}
+      className="vtur-dashboard-select"
+    >
+      {options.map((option) => (
+        <Select.Option key={option.value} value={option.value}>
+          {option.label}
+        </Select.Option>
+      ))}
+    </Select>
+  );
+
   const renderWidget = (
     id: WidgetId,
     options?: { hideTitle?: boolean; variant?: "default" | "plain" }
   ) => {
     const hideTitle = options?.hideTitle;
-    const isPlain = options?.variant === "plain";
     switch (id) {
       case "kpis":
         return (
-          <div className="card-base card-purple mb-3" style={{ paddingBottom: 12 }}>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-                gap: 10,
-              }}
-            >
+          <AppCard
+            title={hideTitle ? undefined : "Indicadores do periodo"}
+            subtitle={hideTitle ? undefined : "KPIs configuraveis para vendas, metas e produtos comissionaveis."}
+            tone="info"
+          >
+            <div className="vtur-dashboard-kpi-grid">
               {kpiOrderEffective
                 .filter((id) => kpiVisibleEffective[id] !== false)
                 .map((id) => {
                   if (id === "kpi_vendas_total") {
                     return (
                       <div
-                        className="kpi-card"
+                        className="vtur-dashboard-kpi-card"
                         key={id}
-                        style={{ display: "flex", flexDirection: "column", gap: 4, color: "#ca8a04" }}
+                        style={{ color: "#ca8a04" }}
                       >
-                        <div className="kpi-label">Vendas no período</div>
-                        <div className="kpi-value">{formatCurrency(totalVendas)}</div>
+                        <div className="vtur-dashboard-kpi-copy">
+                          <div className="vtur-dashboard-kpi-label">Vendas no periodo</div>
+                          <div className="vtur-dashboard-kpi-value">{formatCurrency(totalVendas)}</div>
+                        </div>
                       </div>
                     );
                   }
                   if (id === "kpi_qtd_vendas") {
                     return (
                       <div
-                        className="kpi-card"
+                        className="vtur-dashboard-kpi-card"
                         key={id}
-                        style={{ display: "flex", flexDirection: "column", gap: 4, color: "#0ea5e9" }}
+                        style={{ color: "#0ea5e9" }}
                       >
-                        <div className="kpi-label">Qtd. vendas</div>
-                        <div className="kpi-value">{qtdVendas}</div>
+                        <div className="vtur-dashboard-kpi-copy">
+                          <div className="vtur-dashboard-kpi-label">Qtd. vendas</div>
+                          <div className="vtur-dashboard-kpi-value">{qtdVendas}</div>
+                        </div>
                       </div>
                     );
                   }
                   if (id === "kpi_ticket_medio") {
                     return (
                       <div
-                        className="kpi-card"
+                        className="vtur-dashboard-kpi-card"
                         key={id}
-                        style={{ display: "flex", flexDirection: "column", gap: 4, color: "#0ea5e9" }}
+                        style={{ color: "#0ea5e9" }}
                       >
-                        <div className="kpi-label">Ticket médio</div>
-                        <div className="kpi-value">{formatCurrency(ticketMedio)}</div>
+                        <div className="vtur-dashboard-kpi-copy">
+                          <div className="vtur-dashboard-kpi-label">Ticket medio</div>
+                          <div className="vtur-dashboard-kpi-value">{formatCurrency(ticketMedio)}</div>
+                        </div>
                       </div>
                     );
                   }
                   if (id === "kpi_orcamentos") {
                     return (
                       <div
-                        className="kpi-card"
+                        className="vtur-dashboard-kpi-card"
                         key={id}
-                        style={{ display: "flex", flexDirection: "column", gap: 4, color: "#16a34a" }}
+                        style={{ color: "#16a34a" }}
                       >
-                        <div className="kpi-label">Orçamentos</div>
-                        <div className="kpi-value">{totalOrcamentos}</div>
+                        <div className="vtur-dashboard-kpi-copy">
+                          <div className="vtur-dashboard-kpi-label">Orcamentos</div>
+                          <div className="vtur-dashboard-kpi-value">{totalOrcamentos}</div>
+                        </div>
                       </div>
                     );
                   }
                   if (id === "kpi_conversao") {
                     return (
                       <div
-                        className="kpi-card"
+                        className="vtur-dashboard-kpi-card"
                         key={id}
-                        style={{ display: "flex", flexDirection: "column", gap: 4, color: "#c2410c" }}
+                        style={{ color: "#c2410c" }}
                       >
-                        <div className="kpi-label">Conv. Orç → Vendas</div>
-                        <div className="kpi-value">{conversao.toFixed(1)}%</div>
+                        <div className="vtur-dashboard-kpi-copy">
+                          <div className="vtur-dashboard-kpi-label">Conv. Orc → Vendas</div>
+                          <div className="vtur-dashboard-kpi-value">{conversao.toFixed(1)}%</div>
+                        </div>
                       </div>
                     );
                   }
                   if (id === "kpi_meta") {
                     return (
                       <div
-                        className="kpi-card"
+                        className="vtur-dashboard-kpi-card"
                         key={id}
-                        style={{ display: "flex", flexDirection: "column", gap: 4, color: "#16a34a" }}
+                        style={{ color: "#16a34a" }}
                       >
-                        <div className="kpi-label">Meta do mês</div>
-                        <div className="kpi-value">{formatCurrency(metaSomada)}</div>
+                        <div className="vtur-dashboard-kpi-copy">
+                          <div className="vtur-dashboard-kpi-label">Meta do mes</div>
+                          <div className="vtur-dashboard-kpi-value">{formatCurrency(metaSomada)}</div>
+                        </div>
                       </div>
                     );
                   }
                   if (id === "kpi_meta_diaria") {
                     return (
                       <div
-                        className="kpi-card"
+                        className="vtur-dashboard-kpi-card"
                         key={id}
-                        style={{ display: "flex", flexDirection: "column", gap: 4, color: "#0ea5e9" }}
+                        style={{ color: "#0ea5e9" }}
                       >
-                        <div className="kpi-label">Meta diária</div>
-                        <div className="kpi-value">{formatCurrency(metaDiaria)}</div>
+                        <div className="vtur-dashboard-kpi-copy">
+                          <div className="vtur-dashboard-kpi-label">Meta diaria</div>
+                          <div className="vtur-dashboard-kpi-value">{formatCurrency(metaDiaria)}</div>
+                        </div>
                       </div>
                     );
                   }
                   if (id === "kpi_atingimento") {
                     return (
                       <div
-                        className="kpi-card"
+                        className="vtur-dashboard-kpi-card"
                         key={id}
-                        style={{ display: "flex", flexDirection: "column", gap: 4, color: "#c2410c" }}
+                        style={{ color: "#c2410c" }}
                       >
-                        <div className="kpi-label">Atingimento meta</div>
-                        <div className="kpi-value">{atingimentoMeta.toFixed(1)}%</div>
+                        <div className="vtur-dashboard-kpi-copy">
+                          <div className="vtur-dashboard-kpi-label">Atingimento meta</div>
+                          <div className="vtur-dashboard-kpi-value">{atingimentoMeta.toFixed(1)}%</div>
+                        </div>
                       </div>
                     );
                   }
                   if (id === "kpi_dias_restantes") {
                     return (
                       <div
-                        className="kpi-card"
+                        className="vtur-dashboard-kpi-card"
                         key={id}
-                        style={{ display: "flex", flexDirection: "column", gap: 4, color: "#2563eb" }}
+                        style={{ color: "#2563eb" }}
                       >
-                        <div className="kpi-label">Dias restantes</div>
-                        <div className="kpi-value">{diasRestantes}</div>
+                        <div className="vtur-dashboard-kpi-copy">
+                          <div className="vtur-dashboard-kpi-label">Dias restantes</div>
+                          <div className="vtur-dashboard-kpi-value">{diasRestantes}</div>
+                        </div>
                       </div>
                     );
                   }
@@ -1448,44 +1491,39 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
                     const isSeguroViagem = titulo.toLowerCase().includes("seguro viagem");
                     return (
                       <div
-                        className="kpi-card"
+                        className="vtur-dashboard-kpi-card"
                         key={id}
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 4,
-                          ...(isSeguroViagem ? { color: "#6d28d9" } : {}),
-                        }}
+                        style={isSeguroViagem ? { color: "#6d28d9" } : undefined}
                       >
-                        <div className="kpi-label">{titulo}</div>
-                        <div className="kpi-value">{formatCurrency(valor)}</div>
+                        <div className="vtur-dashboard-kpi-copy">
+                          <div className="vtur-dashboard-kpi-label">{titulo}</div>
+                          <div className="vtur-dashboard-kpi-value">{formatCurrency(valor)}</div>
+                        </div>
                       </div>
                     );
                   }
                   return null;
                 })}
             </div>
-          </div>
+          </AppCard>
         );
-      case "vendas_destino":
+      case "vendas_destino": {
         const tituloDestino =
           chartPrefsEffective.vendas_destino === "bar"
-            ? "Vendas por Destino (Visão Completa)"
+            ? "Vendas por Destino (Visao completa)"
             : "Vendas por destino (Top 5)";
         return (
-          <div className="card-base card-purple mb-3">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h3 style={{ marginBottom: 8 }}>{tituloDestino}</h3>
-              <select
-                className="form-select"
-                style={{ maxWidth: 160 }}
-                value={chartPrefsEffective.vendas_destino || "bar"}
-                onChange={(e) => alterarChart("vendas_destino", e.target.value as ChartType)}
-              >
-                <option value="bar">Barras</option>
-                {!isMobile && <option value="pie">Pizza</option>}
-              </select>
-            </div>
+          <AppCard
+            title={hideTitle ? undefined : tituloDestino}
+            subtitle={hideTitle ? undefined : "Compare distribuicao geografica das vendas no periodo."}
+            tone="info"
+            actions={
+              renderChartSelect(chartPrefsEffective.vendas_destino || "bar", (next) => alterarChart("vendas_destino", next), [
+                { value: "bar", label: "Barras" },
+                ...(!isMobile ? [{ value: "pie" as ChartType, label: "Pizza" }] : []),
+              ])
+            }
+          >
             <div style={{ width: "100%", height: 260 }}>
               {vendasPorDestinoFull.length === 0 ? (
                 <div style={{ fontSize: "0.9rem" }}>Sem dados para o período.</div>
@@ -1562,23 +1600,22 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
                 </div>
               )}
             </div>
-          </div>
+          </AppCard>
         );
+      }
       case "vendas_produto":
         return (
-          <div className="card-base card-purple mb-3">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h3 style={{ marginBottom: 8 }}>Vendas por produto</h3>
-              <select
-                className="form-select"
-                style={{ maxWidth: 160 }}
-                value={chartPrefsEffective.vendas_produto || "bar"}
-                onChange={(e) => alterarChart("vendas_produto", e.target.value as ChartType)}
-              >
-                <option value="bar">Barras</option>
-                {!isMobile && <option value="pie">Pizza</option>}
-              </select>
-            </div>
+          <AppCard
+            title={hideTitle ? undefined : "Vendas por produto"}
+            subtitle={hideTitle ? undefined : "Distribuicao de receita por tipo de produto vendido."}
+            tone="info"
+            actions={
+              renderChartSelect(chartPrefsEffective.vendas_produto || "bar", (next) => alterarChart("vendas_produto", next), [
+                { value: "bar", label: "Barras" },
+                ...(!isMobile ? [{ value: "pie" as ChartType, label: "Pizza" }] : []),
+              ])
+            }
+          >
             <div style={{ width: "100%", height: 260 }}>
               {vendasPorProduto.length === 0 ? (
                 <div style={{ fontSize: "0.9rem" }}>Sem dados para o período.</div>
@@ -1654,23 +1691,19 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
                 </ResponsiveContainer>
               )}
             </div>
-          </div>
+          </AppCard>
         );
       case "timeline":
         return (
-          <div className="card-base card-purple mb-3">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h3 style={{ marginBottom: 8 }}>Evolução das vendas no período</h3>
-              <select
-                className="form-select"
-                style={{ maxWidth: 160 }}
-                value={chartPrefs.timeline || "line"}
-                onChange={(e) => alterarChart("timeline", e.target.value as ChartType)}
-              >
-                <option value="line">Linha</option>
-                <option value="bar">Barras</option>
-              </select>
-            </div>
+          <AppCard
+            title={hideTitle ? undefined : "Evolucao das vendas no periodo"}
+            subtitle={hideTitle ? undefined : "Linha temporal para acompanhar o ritmo comercial."}
+            tone="info"
+            actions={renderChartSelect(chartPrefs.timeline || "line", (next) => alterarChart("timeline", next), [
+              { value: "line", label: "Linha" },
+              { value: "bar", label: "Barras" },
+            ])}
+          >
             <div style={{ width: "100%", height: 260 }}>
               {vendasTimeline.length === 0 ? (
                 <div style={{ fontSize: "0.9rem" }}>Sem dados para o período.</div>
@@ -1698,7 +1731,7 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
                 </ResponsiveContainer>
               )}
             </div>
-          </div>
+          </AppCard>
         );
       case "aniversariantes_clientes": {
         const monthNames = [
@@ -1725,373 +1758,404 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
         });
 
         const shouldScroll = items.length > 6;
-        const conteudo = (
-          <>
-            {!hideTitle && (
-              <h3 style={{ marginBottom: 8 }}>
-                Aniversariantes (clientes e acompanhantes) — {monthLabel} ({items.length})
-              </h3>
-            )}
-            <div
-              className="table-container overflow-x-auto"
-              style={{
+        return (
+          <AppCard
+            title={hideTitle ? undefined : `Aniversariantes - ${monthLabel} (${items.length})`}
+            subtitle={hideTitle ? undefined : "Clientes e acompanhantes com aniversario neste mes."}
+            tone="info"
+          >
+            <DataTable
+              headers={
+                <tr>
+                  <th>Cliente</th>
+                  <th>Nascimento</th>
+                  <th>Telefone</th>
+                  <th className="th-actions">Acoes</th>
+                </tr>
+              }
+              empty={items.length === 0}
+              emptyMessage="Nenhum aniversariante de cliente/acompanhante este mes."
+              colSpan={4}
+              className="table-mobile-cards table-header-purple min-w-[640px]"
+              containerStyle={{
                 maxHeight: shouldScroll ? tableScrollMaxHeight : undefined,
                 overflowY: shouldScroll ? "auto" : "visible",
               }}
             >
-              <table className="table-default table-mobile-cards min-w-[640px]">
-                <thead>
-                  <tr>
-                    <th>Cliente</th>
-                    <th>Nascimento</th>
-                    <th>Telefone</th>
-                    <th className="th-actions">Ações</th>
+              {items.map((c) => {
+                const cardUrl = construirUrlCartaoAniversario(c.nome, assinaturaUsuario);
+                const mensagemBase = montarMensagemAniversario(c.nome, assinaturaUsuario);
+                const mensagem = cardUrl ? `${mensagemBase}\n\nCartão: ${cardUrl}` : mensagemBase;
+                const whatsappLink = construirLinkWhatsAppComTexto(c.telefone, mensagem, "55");
+                return (
+                  <tr key={c.id}>
+                    <td data-label="Cliente">
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <span aria-hidden="true">{c.pessoa_tipo === "acompanhante" ? "🧑‍🤝‍🧑" : "👤"}</span>
+                        <span>{c.nome || "-"}</span>
+                      </span>
+                    </td>
+                    <td data-label="Nascimento">
+                      {c.nascimento ? formatarDataParaExibicao(c.nascimento) : "-"}
+                    </td>
+                    <td data-label="Telefone">{c.telefone || "-"}</td>
+                    <td className="th-actions" data-label="Acoes">
+                      <TableActions
+                        actions={[
+                          ...(whatsappLink
+                            ? [
+                                {
+                                  key: "whatsapp",
+                                  label: "WhatsApp",
+                                  title: "Enviar cartão de aniversario no WhatsApp",
+                                  onClick: () => window.open(whatsappLink, "_blank", "noopener,noreferrer"),
+                                  icon: "🎂",
+                                  variant: "ghost" as const,
+                                },
+                              ]
+                            : []),
+                          ...(c.cliente_id
+                            ? [
+                                {
+                                  key: "cliente",
+                                  label: "Cliente",
+                                  title:
+                                    c.pessoa_tipo === "acompanhante"
+                                      ? "Ver cliente titular do acompanhante"
+                                      : "Ver cliente",
+                                  onClick: () => {
+                                    window.location.href = `/clientes/cadastro?id=${c.cliente_id}`;
+                                  },
+                                  icon: "👤",
+                                  variant: "ghost" as const,
+                                },
+                              ]
+                            : []),
+                        ]}
+                      />
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {items.length === 0 && (
-                    <tr>
-                      <td colSpan={4}>Nenhum aniversariante de cliente/acompanhante este mês.</td>
-                    </tr>
-                  )}
-                  {items.map((c) => {
-                    const cardUrl = construirUrlCartaoAniversario(c.nome, assinaturaUsuario);
-                    const mensagemBase = montarMensagemAniversario(c.nome, assinaturaUsuario);
-                    const mensagem = cardUrl ? `${mensagemBase}\n\nCartão: ${cardUrl}` : mensagemBase;
-                    const whatsappLink = construirLinkWhatsAppComTexto(c.telefone, mensagem, "55");
-                    return (
-                    <tr key={c.id}>
-                      <td data-label="Cliente">
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                          <span aria-hidden="true">{c.pessoa_tipo === "acompanhante" ? "🧑‍🤝‍🧑" : "👤"}</span>
-                          <span>{c.nome || "-"}</span>
-                        </span>
-                      </td>
-                      <td data-label="Nascimento">
-                        {c.nascimento ? formatarDataParaExibicao(c.nascimento) : "-"}
-                      </td>
-                      <td data-label="Telefone">{c.telefone || "-"}</td>
-                      <td className="th-actions" data-label="Ações">
-                        <div className="action-buttons">
-                          {whatsappLink ? (
-                            <a className="btn-icon" href={whatsappLink} target="_blank" rel="noreferrer" title="Enviar cartão de aniversário no WhatsApp">
-                              🎂
-                            </a>
-                          ) : (
-                            "-"
-                          )}
-                          {c.cliente_id ? (
-                            <a
-                              className="btn-icon"
-                              href={`/clientes/cadastro?id=${c.cliente_id}`}
-                              title={
-                                c.pessoa_tipo === "acompanhante"
-                                  ? "Ver cliente titular do acompanhante"
-                                  : "Ver cliente"
-                              }
-                            >
-                              👤
-                            </a>
-                          ) : (
-                            "-"
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </>
+                );
+              })}
+            </DataTable>
+          </AppCard>
         );
-
-        return isPlain ? <div className="mb-3">{conteudo}</div> : <div className="card-base card-purple mb-3">{conteudo}</div>;
       }
       case "orcamentos": {
         const shouldScrollOrcamentos = orcamentosRecentes.length > 3;
-        const conteudo = (
-          <>
-            {!hideTitle && (
-              <h3 style={{ marginBottom: 8 }}>Orçamentos recentes ({orcamentosRecentes.length})</h3>
-            )}
-            <div
-              className="table-container overflow-x-auto"
-              style={{
+        return (
+          <AppCard
+            title={hideTitle ? undefined : `Orcamentos recentes (${orcamentosRecentes.length})`}
+            subtitle={hideTitle ? undefined : "Ultimas propostas comerciais do periodo."}
+            tone="info"
+          >
+            <DataTable
+              headers={
+                <tr>
+                  <th>Data</th>
+                  <th>Cliente</th>
+                  <th>Destino</th>
+                  <th>Status</th>
+                  <th>Valor</th>
+                  <th className="th-actions">Acoes</th>
+                </tr>
+              }
+              empty={orcamentosRecentes.length === 0}
+              emptyMessage="Nenhum orcamento no periodo."
+              colSpan={6}
+              className="table-mobile-cards table-header-purple min-w-[680px]"
+              containerStyle={{
                 maxHeight: shouldScrollOrcamentos ? tableScrollMaxHeight : undefined,
                 overflowY: shouldScrollOrcamentos ? "auto" : "visible",
               }}
             >
-              <table className="table-default table-mobile-cards min-w-[680px]">
-                <thead>
-                  <tr>
-                    <th>Data</th>
-                    <th>Cliente</th>
-                    <th>Destino</th>
-                    <th>Status</th>
-                    <th>Valor</th>
-                    <th className="th-actions">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orcamentosRecentes.length === 0 && (
-                    <tr>
-                      <td colSpan={6}>Nenhum orçamento no período.</td>
-                    </tr>
-                  )}
-                  {orcamentosRecentes.map((o) => (
-                    <tr key={o.id}>
-                      <td data-label="Data">{formatarDataParaExibicao(o.created_at)}</td>
-                      <td data-label="Cliente">{o.cliente?.nome || "-"}</td>
-                      <td data-label="Destino">{getOrcamentoDestino(o)}</td>
-                      <td data-label="Status">{o.status_negociacao || o.status || "-"}</td>
-                      <td data-label="Valor">{formatCurrency(Number(o.total || 0))}</td>
-                      <td className="th-actions" data-label="Ver">
-                        <div className="action-buttons">
-                          <button className="btn-icon" onClick={() => setOrcamentoSelecionado(o)} title="Ver detalhes">
-                            👁️
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
+              {orcamentosRecentes.map((o) => (
+                <tr key={o.id}>
+                  <td data-label="Data">{formatarDataParaExibicao(o.created_at)}</td>
+                  <td data-label="Cliente">{o.cliente?.nome || "-"}</td>
+                  <td data-label="Destino">{getOrcamentoDestino(o)}</td>
+                  <td data-label="Status">{o.status_negociacao || o.status || "-"}</td>
+                  <td data-label="Valor">{formatCurrency(Number(o.total || 0))}</td>
+                  <td className="th-actions" data-label="Acoes">
+                    <TableActions
+                      actions={[
+                        {
+                          key: "ver",
+                          label: "Ver",
+                          title: "Ver detalhes",
+                          onClick: () => setOrcamentoSelecionado(o),
+                          icon: "👁️",
+                          variant: "ghost",
+                        },
+                      ]}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </DataTable>
+          </AppCard>
         );
-        return isPlain ? <div className="mb-3">{conteudo}</div> : <div className="card-base card-purple mb-3">{conteudo}</div>;
       }
       case "consultorias": {
         const shouldScrollConsultorias = lembretesDashboard.length > 3;
-        const conteudo = (
-          <>
-            {!hideTitle && (
-              <h3 style={{ marginBottom: 8 }}>Lembretes de consultoria ({lembretesDashboard.length})</h3>
-            )}
+        return (
+          <AppCard
+            title={hideTitle ? undefined : `Lembretes de consultoria (${lembretesDashboard.length})`}
+            subtitle={hideTitle ? undefined : "Agendamentos futuros com janela de lembrete ativa."}
+            tone="info"
+          >
             {!podeVerConsultoria ? (
-              <div>Você não possui acesso ao módulo de Consultoria.</div>
+              <AlertMessage variant="warning">Voce nao possui acesso ao modulo de Consultoria.</AlertMessage>
             ) : (
-              <div
-                className="table-container overflow-x-auto"
-                style={{
+              <DataTable
+                headers={
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Lembrete</th>
+                    <th>Agendamento</th>
+                    <th>Destino</th>
+                    <th className="th-actions">Acoes</th>
+                  </tr>
+                }
+                empty={lembretesDashboard.length === 0}
+                emptyMessage="Nenhum lembrete de consultoria."
+                colSpan={5}
+                className="table-mobile-cards table-header-purple min-w-[720px]"
+                containerStyle={{
                   maxHeight: shouldScrollConsultorias ? tableScrollMaxHeight : undefined,
                   overflowY: shouldScrollConsultorias ? "auto" : "visible",
                 }}
               >
-                <table className="table-default table-mobile-cards min-w-[720px]">
-                  <thead>
-                    <tr>
-                      <th>Cliente</th>
-                      <th>Lembrete</th>
-                      <th>Agendamento</th>
-                      <th>Destino</th>
-                      <th className="th-actions">Ver</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lembretesDashboard.length === 0 && (
-                      <tr>
-                        <td colSpan={5}>Nenhum lembrete de consultoria.</td>
-                      </tr>
-                    )}
-                    {lembretesDashboard.map((item) => (
-                      <tr key={item.storageKey}>
-                        <td data-label="Cliente">{item.clienteNome}</td>
-                        <td data-label="Lembrete">
-                          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                            <span>{item.lembreteLabel}</span>
-                            <small>{item.lembreteAtLocal}</small>
-                            <small>{item.statusLabel}</small>
-                          </div>
-                        </td>
-                        <td data-label="Agendamento">
-                          {item.dataHoraLocal}
-                          <br />
-                          <small>
-                            <a className="link" href={`/api/consultorias/ics?id=${item.id}`} target="_blank" rel="noreferrer">
-                              Adicionar ao calendario
-                            </a>
-                          </small>
-                        </td>
-                        <td data-label="Destino">{item.destino || "-"}</td>
-                        <td className="th-actions" data-label="Ver">
-                          <div className="action-buttons">
-                            {item.orcamentoId ? (
-                              <a className="btn-icon" href={`/orcamentos/${item.orcamentoId}`} title="Abrir orçamento">
-                                👁️
-                              </a>
-                            ) : (
-                              <a className="btn-icon" href="/consultoria-online" title="Abrir consultorias">
-                                📅
-                              </a>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                {lembretesDashboard.map((item) => (
+                  <tr key={item.storageKey}>
+                    <td data-label="Cliente">{item.clienteNome}</td>
+                    <td data-label="Lembrete">
+                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        <span>{item.lembreteLabel}</span>
+                        <small>{item.lembreteAtLocal}</small>
+                        <small>{item.statusLabel}</small>
+                      </div>
+                    </td>
+                    <td data-label="Agendamento">
+                      {item.dataHoraLocal}
+                      <br />
+                      <small>
+                        <a className="link" href={`/api/consultorias/ics?id=${item.id}`} target="_blank" rel="noreferrer">
+                          Adicionar ao calendario
+                        </a>
+                      </small>
+                    </td>
+                    <td data-label="Destino">{item.destino || "-"}</td>
+                    <td className="th-actions" data-label="Acoes">
+                      <TableActions
+                        actions={[
+                          item.orcamentoId
+                            ? {
+                                key: "orcamento",
+                                label: "Orcamento",
+                                title: "Abrir orçamento",
+                                onClick: () => {
+                                  window.location.href = `/orcamentos/${item.orcamentoId}`;
+                                },
+                                icon: "👁️",
+                                variant: "ghost" as const,
+                              }
+                            : {
+                                key: "consultoria",
+                                label: "Consultoria",
+                                title: "Abrir consultorias",
+                                onClick: () => {
+                                  window.location.href = "/consultoria-online";
+                                },
+                                icon: "📅",
+                                variant: "ghost" as const,
+                              },
+                        ]}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </DataTable>
             )}
-          </>
+          </AppCard>
         );
-        return isPlain ? <div className="mb-3">{conteudo}</div> : <div className="card-base card-purple mb-3">{conteudo}</div>;
       }
       case "viagens": {
         const shouldScrollViagens = proximasViagensAgrupadas.length > 3;
-        const conteudo = (
-          <>
-            {!hideTitle && (
-              <h3 style={{ marginBottom: 8 }}>
-                Próximas viagens ({proximasViagensAgrupadas.length})
-              </h3>
-            )}
+        return (
+          <AppCard
+            title={hideTitle ? undefined : `Proximas viagens (${proximasViagensAgrupadas.length})`}
+            subtitle={hideTitle ? undefined : "Embarques futuros agrupados por venda."}
+            tone="info"
+          >
             {!podeVerOperacao ? (
-              <div>Você não possui acesso ao módulo de Operação/Viagens.</div>
+              <AlertMessage variant="warning">Voce nao possui acesso ao modulo de Operacao/Viagens.</AlertMessage>
             ) : (
-              <div
-                className="table-container overflow-x-auto"
-                style={{
+              <DataTable
+                headers={
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Servicos</th>
+                    <th>Embarque</th>
+                    <th>Destino</th>
+                    <th className="th-actions">Acoes</th>
+                  </tr>
+                }
+                empty={proximasViagensAgrupadas.length === 0}
+                emptyMessage="Nenhuma viagem futura."
+                colSpan={5}
+                className="table-mobile-cards table-header-purple min-w-[760px]"
+                containerStyle={{
                   maxHeight: shouldScrollViagens ? tableScrollMaxHeight : undefined,
                   overflowY: shouldScrollViagens ? "auto" : "visible",
                 }}
-                ref={viagensScrollRef}
+                containerClassName="vtur-dashboard-scroll-table"
               >
-                <table className="table-default table-mobile-cards min-w-[760px]">
-                  <thead>
-                    <tr>
-                      <th>Cliente</th>
-                      <th>Serviços</th>
-                      <th>Embarque</th>
-                      <th>Destino</th>
-                      <th className="th-actions">Ver</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {proximasViagensAgrupadas.length === 0 && (
-                      <tr>
-                        <td colSpan={5}>Nenhuma viagem futura.</td>
-                      </tr>
-                    )}
-                    {proximasViagensAgrupadas.map((v) => (
-                      <tr key={v.key}>
-                        <td data-label="Cliente">{v.clienteNome || "-"}</td>
-                        <td data-label="Serviços">
-                          {v.produtos.length === 0 ? (
-                            "-"
-                          ) : (
-                            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                              {v.produtos.map((p, idx) => (
-                                <span key={`${v.key}-prod-${idx}`}>{p}</span>
-                              ))}
-                            </div>
-                          )}
-                        </td>
-                        <td data-label="Embarque">{formatarDataParaExibicao(v.dataInicio)}</td>
-                        <td data-label="Destino">{v.destino || "-"}</td>
-                        <td className="th-actions" data-label="Ver">
-                          <div className="action-buttons">
-                            {v.clienteId && (
-                              <a className="btn-icon" href={`/clientes/cadastro?id=${v.clienteId}`} title="Ver cliente">
-                                👤
-                              </a>
-                            )}
-                            <a className="btn-icon" href={`/operacao/viagens/${v.viagemId}`} title="Ver viagem">
-                              👁️
-                            </a>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                {proximasViagensAgrupadas.map((v) => (
+                  <tr key={v.key}>
+                    <td data-label="Cliente">{v.clienteNome || "-"}</td>
+                    <td data-label="Servicos">
+                      {v.produtos.length === 0 ? (
+                        "-"
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          {v.produtos.map((p, idx) => (
+                            <span key={`${v.key}-prod-${idx}`}>{p}</span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                    <td data-label="Embarque">{formatarDataParaExibicao(v.dataInicio)}</td>
+                    <td data-label="Destino">{v.destino || "-"}</td>
+                    <td className="th-actions" data-label="Acoes">
+                      <TableActions
+                        actions={[
+                          ...(v.clienteId
+                            ? [
+                                {
+                                  key: "cliente",
+                                  label: "Cliente",
+                                  title: "Ver cliente",
+                                  onClick: () => {
+                                    window.location.href = `/clientes/cadastro?id=${v.clienteId}`;
+                                  },
+                                  icon: "👤",
+                                  variant: "ghost" as const,
+                                },
+                              ]
+                            : []),
+                          {
+                            key: "viagem",
+                            label: "Viagem",
+                            title: "Ver viagem",
+                            onClick: () => {
+                              window.location.href = `/operacao/viagens/${v.viagemId}`;
+                            },
+                            icon: "👁️",
+                            variant: "ghost" as const,
+                          },
+                        ]}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </DataTable>
             )}
-          </>
+          </AppCard>
         );
-        return isPlain ? <div className="mb-3">{conteudo}</div> : <div className="card-base card-purple mb-3">{conteudo}</div>;
       }
       case "follow_up": {
         const shouldScrollFollowUp = followUpsRecentes.length > 3;
-        const conteudo = (
-          <>
-            {!hideTitle && (
-              <h3 style={{ marginBottom: 8 }}>Follow-Up ({followUpsRecentes.length})</h3>
-            )}
-            <div
-              className="table-container overflow-x-auto"
-              style={{
+        return (
+          <AppCard
+            title={hideTitle ? undefined : `Follow-Up (${followUpsRecentes.length})`}
+            subtitle={hideTitle ? undefined : "Clientes que ja retornaram e precisam de contato."}
+            tone="info"
+          >
+            <DataTable
+              headers={
+                <tr>
+                  <th>Cliente</th>
+                  <th>Destino</th>
+                  <th>Embarque</th>
+                  <th>Retorno</th>
+                  <th className="th-actions">Acoes</th>
+                </tr>
+              }
+              empty={followUpsRecentes.length === 0}
+              emptyMessage="Nenhum retorno no periodo."
+              colSpan={5}
+              className="table-mobile-cards table-header-purple min-w-[640px]"
+              containerStyle={{
                 maxHeight: shouldScrollFollowUp ? tableScrollMaxHeight : undefined,
                 overflowY: shouldScrollFollowUp ? "auto" : "visible",
               }}
             >
-              <table className="table-default table-mobile-cards min-w-[640px]">
-                <thead>
-                  <tr>
-                    <th>Cliente</th>
-                    <th>Destino</th>
-                    <th>Embarque</th>
-                    <th>Retorno</th>
-                    <th className="th-actions">Ações</th>
+              {followUpsRecentes.map((item) => {
+                const mensagem = montarMensagemFollowUp(item.venda?.clientes?.nome, assinaturaUsuario);
+                const whatsappLink = construirLinkWhatsAppComTexto(
+                  item.venda?.clientes?.whatsapp || item.venda?.clientes?.telefone || null,
+                  mensagem,
+                  "55"
+                );
+                return (
+                  <tr key={item.id}>
+                    <td data-label="Cliente">{item.venda?.clientes?.nome || "-"}</td>
+                    <td data-label="Destino">{item.venda?.destino_cidade?.nome || "-"}</td>
+                    <td data-label="Embarque">
+                      {formatarDataParaExibicao(item.data_inicio || item.venda?.data_embarque || "")}
+                    </td>
+                    <td data-label="Retorno">
+                      {formatarDataParaExibicao(item.data_fim || item.venda?.data_final || "")}
+                    </td>
+                    <td className="th-actions" data-label="Acoes">
+                      <TableActions
+                        actions={[
+                          ...(item.venda?.clientes?.id
+                            ? [
+                                {
+                                  key: "cliente",
+                                  label: "Cliente",
+                                  title: "Ver cliente",
+                                  onClick: () => {
+                                    window.location.href = `/clientes/cadastro?id=${item.venda?.clientes?.id}`;
+                                  },
+                                  icon: "👤",
+                                  variant: "ghost" as const,
+                                },
+                              ]
+                            : []),
+                          ...(whatsappLink
+                            ? [
+                                {
+                                  key: "whatsapp",
+                                  label: "WhatsApp",
+                                  title: "Enviar follow-up no WhatsApp",
+                                  onClick: () => window.open(whatsappLink, "_blank", "noopener,noreferrer"),
+                                  icon: "💬",
+                                  variant: "ghost" as const,
+                                },
+                              ]
+                            : []),
+                          {
+                            key: "viagem",
+                            label: "Viagem",
+                            title: "Ver viagem",
+                            onClick: () => {
+                              window.location.href = `/operacao/viagens/${item.id}`;
+                            },
+                            icon: "👁️",
+                            variant: "ghost" as const,
+                          },
+                        ]}
+                      />
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {followUpsRecentes.length === 0 && (
-                    <tr>
-                      <td colSpan={5}>Nenhum retorno no período.</td>
-                    </tr>
-                  )}
-                  {followUpsRecentes.map((item) => (
-                    <tr key={item.id}>
-                      <td data-label="Cliente">{item.venda?.clientes?.nome || "-"}</td>
-                      <td data-label="Destino">{item.venda?.destino_cidade?.nome || "-"}</td>
-                      <td data-label="Embarque">
-                        {formatarDataParaExibicao(item.data_inicio || item.venda?.data_embarque || "")}
-                      </td>
-                      <td data-label="Retorno">
-                        {formatarDataParaExibicao(item.data_fim || item.venda?.data_final || "")}
-                      </td>
-                      <td className="th-actions" data-label="Ações">
-                        <div className="action-buttons">
-                          {item.venda?.clientes?.id && (
-                            <a className="btn-icon" href={`/clientes/cadastro?id=${item.venda.clientes.id}`} title="Ver cliente">
-                              👤
-                            </a>
-                          )}
-                          {(() => {
-                            const mensagem = montarMensagemFollowUp(item.venda?.clientes?.nome, assinaturaUsuario);
-                            const whatsappLink = construirLinkWhatsAppComTexto(
-                              item.venda?.clientes?.whatsapp || item.venda?.clientes?.telefone || null,
-                              mensagem,
-                              "55"
-                            );
-                            if (!whatsappLink) return null;
-                            return (
-                              <a
-                                className="btn-icon"
-                                href={whatsappLink}
-                                target="_blank"
-                                rel="noreferrer"
-                                title="Enviar follow-up no WhatsApp"
-                              >
-                                💬
-                              </a>
-                            );
-                          })()}
-                          <a className="btn-icon" href={`/operacao/viagens/${item.id}`} title="Ver viagem">
-                            👁️
-                          </a>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
+                );
+              })}
+            </DataTable>
+          </AppCard>
         );
-        return isPlain ? <div className="mb-3">{conteudo}</div> : <div className="card-base card-purple mb-3">{conteudo}</div>;
       }
       default:
         return null;
@@ -2113,518 +2177,362 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
 
   if (!podeVerDashboard) {
     return (
-      <div>Você não possui acesso ao módulo de Dashboard.</div>
+      <AppPrimerProvider>
+        <div className="page-content-wrap dashboard-geral-page">
+          <AppCard tone="config">Voce nao possui acesso ao modulo de Dashboard.</AppCard>
+        </div>
+      </AppPrimerProvider>
     );
   }
 
 
   return (
-    <div className="dashboard-geral-page">
-      {/* CONTROLES DE PERÍODO */}
-      <div className="card-base card-purple mb-3">
-        <div className="flex flex-col gap-2 sm:hidden">
-          <button type="button" className="btn btn-light" onClick={() => setShowFilters(true)}>
-            Filtros
-          </button>
-          <button type="button" className="btn btn-primary" onClick={() => setShowCustomize(true)}>
-            Personalizar dashboard
-          </button>
-          {showRankingView && (
-            <a className="btn btn-light" href="/relatorios/ranking-vendas/view">
-              Ranking de vendas (view)
-            </a>
-          )}
-          <button type="button" className="btn btn-light" onClick={() => setShowCalculator(true)}>
-            Calculadora
-          </button>
-        </div>
-        <div className="hidden sm:block">
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 8,
-            marginBottom: 8,
-          }}
+    <AppPrimerProvider>
+      <div className="page-content-wrap dashboard-geral-page vtur-dashboard-shell">
+        <AppToolbar
+          title="Dashboard comercial"
+          subtitle="Acompanhe vendas, metas, orcamentos, consultorias, viagens e follow-up com personalizacao por widget."
+          tone="info"
+          sticky
+          actions={
+            <div className="vtur-dashboard-toolbar-actions">
+              <div className="sm:hidden">
+                <AppButton type="button" variant="secondary" onClick={() => setShowFilters(true)}>
+                  Filtros
+                </AppButton>
+              </div>
+              <AppButton type="button" variant="primary" onClick={() => setShowCustomize(true)}>
+                Personalizar dashboard
+              </AppButton>
+              {showRankingView && (
+                <AppButton as="a" href="/relatorios/ranking-vendas/view" variant="secondary">
+                  Ranking de vendas
+                </AppButton>
+              )}
+              <AppButton type="button" variant="secondary" onClick={() => setShowCalculator(true)}>
+                Calculadora
+              </AppButton>
+            </div>
+          }
         >
-          <button
-            type="button"
-            className="btn btn-light"
-            style={{
-              backgroundColor:
-                presetPeriodo === "mes_atual"
-                  ? "#4f46e5"
-                  : undefined,
-              color:
-                presetPeriodo === "mes_atual"
-                  ? "#e5e7eb"
-                  : undefined,
-            }}
-            onClick={() => aplicarPreset("mes_atual")}
-          >
-            Mês atual
-          </button>
-          <button
-            type="button"
-            className="btn btn-light"
-            style={{
-              backgroundColor:
-                presetPeriodo === "ultimos_30"
-                  ? "#4f46e5"
-                  : undefined,
-              color:
-                presetPeriodo === "ultimos_30"
-                  ? "#e5e7eb"
-                  : undefined,
-            }}
-            onClick={() => aplicarPreset("ultimos_30")}
-          >
-            Últimos 30 dias
-          </button>
-          <button
-            type="button"
-            className="btn btn-light"
-            style={{
-              backgroundColor:
-                presetPeriodo === "personalizado"
-                  ? "#4f46e5"
-                  : undefined,
-              color:
-                presetPeriodo === "personalizado"
-                  ? "#e5e7eb"
-                  : undefined,
-            }}
-            onClick={() => setPresetPeriodo("personalizado")}
-          >
-            Personalizado
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => setShowCustomize(true)}
-          >
-            Personalizar dashboard
-          </button>
-          {showRankingView && (
-            <a className="btn btn-light" href="/relatorios/ranking-vendas/view">
-              Ranking de vendas (view)
-            </a>
-          )}
-          <button
-            type="button"
-            className="btn btn-light"
-            style={{ marginLeft: "auto" }}
-            onClick={() => setShowCalculator(true)}
-          >
-            Calculadora
-          </button>
-        </div>
-
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Data início</label>
-            <input
-              type="date"
-              className="form-input"
-              value={inicio}
-              onFocus={selectAllInputOnFocus}
-              onChange={(e) => {
-                const nextInicio = e.target.value;
-                setPresetPeriodo("personalizado");
-                setInicio(nextInicio);
-                setFim((prev) => boundDateEndISO(nextInicio, prev));
-              }}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Data fim</label>
-            <input
-              type="date"
-              className="form-input"
-              value={fim}
-              min={inicio || undefined}
-              onFocus={selectAllInputOnFocus}
-              onChange={(e) => {
-                setPresetPeriodo("personalizado");
-                const nextFim = e.target.value;
-                setFim(boundDateEndISO(inicio, nextFim));
-              }}
-            />
-          </div>
-        </div>
-        </div>
-      </div>
-
-      {showFilters && (
-        <div className="mobile-drawer-backdrop" onClick={() => setShowFilters(false)}>
-          <div
-            className="mobile-drawer-panel"
-            role="dialog"
-            aria-modal="true"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <strong>Filtros</strong>
-              <button type="button" className="btn-ghost" onClick={() => setShowFilters(false)}>
-                ✕
-              </button>
-            </div>
-
-            <div className="form-group" style={{ marginTop: 12 }}>
-              <label className="form-label">Período</label>
-              <select
-                className="form-select"
-                value={presetPeriodo}
-                onChange={(e) => aplicarPreset(e.target.value as PresetPeriodo)}
-                style={{ width: "100%" }}
+          <div className="hidden sm:block">
+            <div className="vtur-dashboard-preset-row">
+              <AppButton
+                type="button"
+                variant={presetPeriodo === "mes_atual" ? "primary" : "secondary"}
+                onClick={() => aplicarPreset("mes_atual")}
               >
-                <option value="mes_atual">Mês atual</option>
-                <option value="ultimos_30">Últimos 30 dias</option>
-                <option value="personalizado">Personalizado</option>
-              </select>
+                Mes atual
+              </AppButton>
+              <AppButton
+                type="button"
+                variant={presetPeriodo === "ultimos_30" ? "primary" : "secondary"}
+                onClick={() => aplicarPreset("ultimos_30")}
+              >
+                Ultimos 30 dias
+              </AppButton>
+              <AppButton
+                type="button"
+                variant={presetPeriodo === "personalizado" ? "primary" : "secondary"}
+                onClick={() => setPresetPeriodo("personalizado")}
+              >
+                Personalizado
+              </AppButton>
             </div>
-
-            {presetPeriodo === "personalizado" && (
-              <>
-                <div className="form-group" style={{ marginTop: 12 }}>
-                  <label className="form-label">Data início</label>
-                  <input
-                    type="date"
-                    className="form-input"
-                    style={{ width: "100%" }}
-                    value={inicio}
-                    onFocus={selectAllInputOnFocus}
-                    onChange={(e) => {
-                      const nextInicio = e.target.value;
-                      setPresetPeriodo("personalizado");
-                      setInicio(nextInicio);
-                      setFim((prev) => boundDateEndISO(nextInicio, prev));
-                    }}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Data fim</label>
-                  <input
-                    type="date"
-                    className="form-input"
-                    style={{ width: "100%" }}
-                    value={fim}
-                    min={inicio || undefined}
-                    onFocus={selectAllInputOnFocus}
-                    onChange={(e) => {
-                      setPresetPeriodo("personalizado");
-                      const nextFim = e.target.value;
-                      setFim(boundDateEndISO(inicio, nextFim));
-                    }}
-                  />
-                </div>
-              </>
-            )}
-
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{ marginTop: 12, width: "100%" }}
-              onClick={() => setShowFilters(false)}
-            >
-              Aplicar filtros
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* KPIs em largura total */}
-      {widgetAtivo("kpis") && <div>{renderWidget("kpis")}</div>}
-
-      {/* Linha de gráficos */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
-          gap: 12,
-          alignItems: "start",
-        }}
-      >
-        {widgetOrder
-          .filter((id) => ["vendas_destino", "vendas_produto", "timeline"].includes(id) && widgetAtivo(id as WidgetId))
-          .map((id) => (
-            <div key={id}>{renderWidget(id as WidgetId)}</div>
-          ))}
-      </div>
-
-      {tableWidgets.length > 0 && (
-        <>
-          <div className="mobile-only">
-            <div style={{ display: "grid", gap: 12 }}>
-              {tableWidgets.map((id) => {
-                const meta = ALL_WIDGETS.find((w) => w.id === id);
-                const aberto = mobileWidgetOpen[id];
-                return (
-                  <div key={`mobile-widget-${id}`}>
-                    <button
-                      type="button"
-                      className={`btn w-full ${aberto ? "btn-primary" : "btn-light"}`}
-                      onClick={() => toggleMobileWidget(id as WidgetId)}
-                    >
-                      {meta?.titulo || id}
-                    </button>
-                    {aberto && (
-                      <div style={{ marginTop: 12 }}>
-                        {renderWidget(id as WidgetId, { hideTitle: true, variant: "plain" })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+            <div className="vtur-form-grid vtur-form-grid-2">
+              <AppField
+                label="Data inicio"
+                type="date"
+                value={inicio}
+                onFocus={selectAllInputOnFocus}
+                onChange={(e) => {
+                  const nextInicio = e.target.value;
+                  setPresetPeriodo("personalizado");
+                  setInicio(nextInicio);
+                  setFim((prev) => boundDateEndISO(nextInicio, prev));
+                }}
+              />
+              <AppField
+                label="Data fim"
+                type="date"
+                value={fim}
+                min={inicio || undefined}
+                onFocus={selectAllInputOnFocus}
+                onChange={(e) => {
+                  setPresetPeriodo("personalizado");
+                  const nextFim = e.target.value;
+                  setFim(boundDateEndISO(inicio, nextFim));
+                }}
+              />
             </div>
           </div>
+        </AppToolbar>
 
-          {/* Linha de tabelas/listas (desktop) */}
-          <div className="hidden sm:grid" style={{ gap: 12, alignItems: "start" }}>
-            {tableWidgets.map((id) => (
+        {showFilters && (
+          <Dialog
+            title="Filtros"
+            onClose={() => setShowFilters(false)}
+            footerButtons={[
+              {
+                content: "Aplicar filtros",
+                buttonType: "primary",
+                onClick: () => setShowFilters(false),
+              },
+            ]}
+          >
+            <div className="vtur-modal-body-stack">
+              <AppCard title="Periodo" subtitle="Defina rapidamente o recorte temporal do dashboard.">
+                <div className="vtur-form-grid vtur-form-grid-2">
+                  <AppField
+                    as="select"
+                    label="Preset"
+                    value={presetPeriodo}
+                    onChange={(e) => aplicarPreset(e.target.value as PresetPeriodo)}
+                    options={[
+                      { value: "mes_atual", label: "Mes atual" },
+                      { value: "ultimos_30", label: "Ultimos 30 dias" },
+                      { value: "personalizado", label: "Personalizado" },
+                    ]}
+                  />
+                  {presetPeriodo === "personalizado" && (
+                    <>
+                      <AppField
+                        label="Data inicio"
+                        type="date"
+                        value={inicio}
+                        onFocus={selectAllInputOnFocus}
+                        onChange={(e) => {
+                          const nextInicio = e.target.value;
+                          setPresetPeriodo("personalizado");
+                          setInicio(nextInicio);
+                          setFim((prev) => boundDateEndISO(nextInicio, prev));
+                        }}
+                      />
+                      <AppField
+                        label="Data fim"
+                        type="date"
+                        value={fim}
+                        min={inicio || undefined}
+                        onFocus={selectAllInputOnFocus}
+                        onChange={(e) => {
+                          setPresetPeriodo("personalizado");
+                          const nextFim = e.target.value;
+                          setFim(boundDateEndISO(inicio, nextFim));
+                        }}
+                      />
+                    </>
+                  )}
+                </div>
+              </AppCard>
+            </div>
+          </Dialog>
+        )}
+
+        {widgetAtivo("kpis") && <div>{renderWidget("kpis")}</div>}
+
+        <div className="vtur-dashboard-chart-grid">
+          {widgetOrder
+            .filter((id) => ["vendas_destino", "vendas_produto", "timeline"].includes(id) && widgetAtivo(id as WidgetId))
+            .map((id) => (
               <div key={id}>{renderWidget(id as WidgetId)}</div>
             ))}
-          </div>
-        </>
-      )}
+        </div>
 
-      {showCustomize && (
-        <div className="modal-backdrop">
-          <div
-            className="modal-panel"
-            style={{ maxWidth: 520, width: "95vw", background: "#f8fafc" }}
-          >
-            <div className="modal-header">
-              <div
-                className="modal-title"
-                style={{ color: "#6d28d9", fontSize: "1.1rem", fontWeight: 800 }}
-              >
-                Personalizar dashboard
-              </div>
-              <button className="btn-ghost" onClick={() => setShowCustomize(false)}>
-                ✖
-              </button>
-            </div>
-            <div className="modal-body">
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {widgetOrder.map((id, idx) => {
-                const meta = ALL_WIDGETS.find((w) => w.id === id);
-                if (!meta) return null;
-                return (
-                  <div
-                    key={id}
-                    style={{
-                      border: "1px solid #e2e8f0",
-                      borderRadius: 8,
-                      padding: 10,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      flexWrap: "wrap",
-                      background: "#fff",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={widgetAtivo(id)}
-                      onChange={() => toggleWidget(id)}
-                    />
-                    <div style={{ flex: 1 }}>{meta.titulo}</div>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button
+        {tableWidgets.length > 0 && (
+          <>
+            <div className="mobile-only">
+              <div className="vtur-dashboard-mobile-list">
+                {tableWidgets.map((id) => {
+                  const meta = ALL_WIDGETS.find((w) => w.id === id);
+                  const aberto = mobileWidgetOpen[id];
+                  return (
+                    <div key={`mobile-widget-${id}`}>
+                      <AppButton
                         type="button"
-                        className="btn-icon"
-                        onClick={() => moverWidget(id, "up")}
-                        disabled={idx === 0}
-                        aria-label="Mover para cima"
+                        variant={aberto ? "primary" : "secondary"}
+                        block
+                        onClick={() => toggleMobileWidget(id as WidgetId)}
                       >
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-icon"
-                        onClick={() => moverWidget(id, "down")}
-                        disabled={idx === widgetOrder.length - 1}
-                        aria-label="Mover para baixo"
-                      >
-                        ↓
-                      </button>
-                    </div>
-
-                    {id === "kpis" && widgetAtivo(id) && (
-                      <div
-                        style={{
-                          width: "100%",
-                          borderTop: "1px solid #e2e8f0",
-                          paddingTop: 8,
-                          marginTop: 8,
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 8,
-                        }}
-                      >
-                        <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>
-                          KPIs visíveis e ordem
+                        {meta?.titulo || id}
+                      </AppButton>
+                      {aberto && (
+                        <div style={{ marginTop: 12 }}>
+                          {renderWidget(id as WidgetId, { hideTitle: true, variant: "plain" })}
                         </div>
-                        {kpiOrderEffective.map((kid, kidx) => {
-                          const metaKpi = allKpis.find((k) => k.id === kid);
-                          if (!metaKpi) return null;
-                          return (
-                            <div
-                              key={kid}
-                              style={{
-                                border: "1px solid #e2e8f0",
-                                borderRadius: 8,
-                                padding: 10,
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                                flexWrap: "wrap",
-                                background: "#fff",
-                              }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={kpiVisibleEffective[kid] !== false}
-                                onChange={() => toggleKpi(kid)}
-                              />
-                              <div style={{ flex: 1 }}>{metaKpi.titulo}</div>
-                              <div style={{ display: "flex", gap: 6 }}>
-                                <button
-                                  type="button"
-                                  className="btn-icon"
-                                  onClick={() => moverKpi(kid, "up")}
-                                  disabled={kidx === 0}
-                                  aria-label="Mover KPI para cima"
-                                >
-                                  ↑
-                                </button>
-                                <button
-                                  type="button"
-                                  className="btn-icon"
-                                  onClick={() => moverKpi(kid, "down")}
-                                  disabled={kidx === kpiOrderEffective.length - 1}
-                                  aria-label="Mover KPI para baixo"
-                                >
-                                  ↓
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
+                      )}
+                    </div>
+                  );
                 })}
               </div>
             </div>
-          </div>
-        </div>
-      )}
 
-      <CalculatorModal
-        open={showCalculator}
-        onClose={() => setShowCalculator(false)}
-      />
+            <div className="hidden sm:grid" style={{ gap: 12, alignItems: "start" }}>
+              {tableWidgets.map((id) => (
+                <div key={id}>{renderWidget(id as WidgetId)}</div>
+              ))}
+            </div>
+          </>
+        )}
 
-      {/* MODAL ORÇAMENTO */}
-      {orcamentoSelecionado && (
-        <div className="modal-backdrop">
-          <div
-            className="modal-panel orcamento-detalhe-modal"
-            style={{ maxWidth: 820, width: "95vw", background: "#f8fafc" }}
+        {showCustomize && (
+          <Dialog
+            title="Personalizar dashboard"
+            width="large"
+            onClose={() => setShowCustomize(false)}
+            footerButtons={[
+              {
+                content: "Fechar",
+                buttonType: "primary",
+                onClick: () => setShowCustomize(false),
+              },
+            ]}
           >
-            <div className="modal-header">
-              <div className="orcamento-detalhe-header">
-                <div
-                  className="modal-title orcamento-detalhe-nome"
-                >
-                  {orcamentoSelecionado.cliente?.nome || "-"}
+            <div className="vtur-modal-body-stack">
+              <AppCard title="Widgets" subtitle="Defina a visibilidade e a ordem dos blocos.">
+                <div className="vtur-dashboard-config-list">
+                  {widgetOrder.map((id, idx) => {
+                    const meta = ALL_WIDGETS.find((w) => w.id === id);
+                    if (!meta) return null;
+                    return (
+                      <div key={id} className="vtur-dashboard-config-item">
+                        <label className="vtur-dashboard-checkbox-row">
+                          <input type="checkbox" checked={widgetAtivo(id)} onChange={() => toggleWidget(id)} />
+                          <span>{meta.titulo}</span>
+                        </label>
+                        <div className="vtur-dashboard-config-actions">
+                          <AppButton
+                            type="button"
+                            variant="ghost"
+                            onClick={() => moverWidget(id, "up")}
+                            disabled={idx === 0}
+                          >
+                            ↑
+                          </AppButton>
+                          <AppButton
+                            type="button"
+                            variant="ghost"
+                            onClick={() => moverWidget(id, "down")}
+                            disabled={idx === widgetOrder.length - 1}
+                          >
+                            ↓
+                          </AppButton>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="orcamento-detalhe-status">
-                  Status:{" "}
-                  {orcamentoSelecionado.status_negociacao || orcamentoSelecionado.status || "-"}
+              </AppCard>
+
+              <AppCard title="KPIs" subtitle="Escolha quais indicadores ficam visiveis e sua ordem.">
+                <div className="vtur-dashboard-config-list">
+                  {kpiOrderEffective.map((kid, kidx) => {
+                    const metaKpi = allKpis.find((k) => k.id === kid);
+                    if (!metaKpi) return null;
+                    return (
+                      <div key={kid} className="vtur-dashboard-config-item">
+                        <label className="vtur-dashboard-checkbox-row">
+                          <input
+                            type="checkbox"
+                            checked={kpiVisibleEffective[kid] !== false}
+                            onChange={() => toggleKpi(kid)}
+                          />
+                          <span>{metaKpi.titulo}</span>
+                        </label>
+                        <div className="vtur-dashboard-config-actions">
+                          <AppButton
+                            type="button"
+                            variant="ghost"
+                            onClick={() => moverKpi(kid, "up")}
+                            disabled={kidx === 0}
+                          >
+                            ↑
+                          </AppButton>
+                          <AppButton
+                            type="button"
+                            variant="ghost"
+                            onClick={() => moverKpi(kid, "down")}
+                            disabled={kidx === kpiOrderEffective.length - 1}
+                          >
+                            ↓
+                          </AppButton>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
-              <button className="btn-ghost" onClick={() => setOrcamentoSelecionado(null)}>
-                ✖
-              </button>
+              </AppCard>
             </div>
+          </Dialog>
+        )}
 
-            <div className="modal-body">
-              <div className="card-base" style={{ marginBottom: 12, textAlign: "center" }}>
-                <div className="orcamento-detalhe-subtitle">Visualizar orçamento</div>
-              </div>
-              <div className="card-base" style={{ marginBottom: 12 }}>
-                <div style={{ display: "grid", gap: 6, lineHeight: 1.4 }}>
-                <div>
-                  <strong>Destino:</strong> {getOrcamentoDestino(orcamentoSelecionado)}
-                </div>
-                <div>
-                  <strong>Criado em:</strong>{" "}
-                  {formatarDataParaExibicao(orcamentoSelecionado.created_at)}
-                </div>
-                <div>
-                  <strong>Status:</strong>{" "}
-                  {orcamentoSelecionado.status_negociacao || orcamentoSelecionado.status || "-"}
-                </div>
-                <div>
-                  <strong>Valor:</strong>{" "}
-                  {formatCurrency(Number(orcamentoSelecionado.total || 0))}
-                </div>
-              </div>
-              </div>
+        <CalculatorModal open={showCalculator} onClose={() => setShowCalculator(false)} />
 
-              <div className="card-base" style={{ marginBottom: 12 }}>
-                <h4 style={{ margin: 0, textAlign: "center" }}>Itens do orçamento</h4>
-              </div>
-              {(orcamentoSelecionado.quote_item || []).length === 0 ? (
-                <div style={{ color: "#64748b" }}>Nenhum item encontrado.</div>
-              ) : (
-                <div className="table-container overflow-x-auto">
-                  <table className="table-default table-compact table-mobile-cards table-header-purple">
-                    <thead>
-                      <tr>
-                        <th>Item</th>
-                        <th>Tipo</th>
-                        <th>Cidade</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(orcamentoSelecionado.quote_item || []).map((item, idx) => (
-                        <tr key={`${orcamentoSelecionado.id}-${item.id || idx}`}>
-                          <td data-label="Item">{item.title || item.product_name || "-"}</td>
-                          <td data-label="Tipo">{item.item_type || "-"}</td>
-                          <td data-label="Cidade">{item.city_name || "-"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            <div className="modal-footer mobile-stack-buttons">
-              <button
-                type="button"
-                className="btn btn-primary w-full sm:w-auto"
-                onClick={() => setOrcamentoSelecionado(null)}
+        {orcamentoSelecionado && (
+          <Dialog
+            title={orcamentoSelecionado.cliente?.nome || "-"}
+            width="large"
+            onClose={() => setOrcamentoSelecionado(null)}
+            footerButtons={[
+              {
+                content: "Fechar",
+                buttonType: "primary",
+                onClick: () => setOrcamentoSelecionado(null),
+              },
+            ]}
+          >
+            <div className="vtur-modal-body-stack">
+              <AppCard
+                tone="info"
+                title="Resumo do orcamento"
+                subtitle={`Status ${orcamentoSelecionado.status_negociacao || orcamentoSelecionado.status || "-"} · Total ${formatCurrency(Number(orcamentoSelecionado.total || 0))}`}
               >
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                <div className="vtur-dashboard-detail-grid">
+                  <div>
+                    <strong>Destino:</strong> {getOrcamentoDestino(orcamentoSelecionado)}
+                  </div>
+                  <div>
+                    <strong>Criado em:</strong> {formatarDataParaExibicao(orcamentoSelecionado.created_at)}
+                  </div>
+                  <div>
+                    <strong>Status:</strong> {orcamentoSelecionado.status_negociacao || orcamentoSelecionado.status || "-"}
+                  </div>
+                  <div>
+                    <strong>Valor:</strong> {formatCurrency(Number(orcamentoSelecionado.total || 0))}
+                  </div>
+                </div>
+              </AppCard>
 
-      {/* MODAL CLIENTE */}
-      {loadingDados && (
-        <div style={{ marginTop: 12, fontSize: "0.9rem" }}>
-          Carregando dados do dashboard...
-        </div>
-      )}
-    </div>
+              <AppCard title="Itens do orcamento" subtitle="Resumo dos itens vinculados a esta proposta.">
+                <DataTable
+                  headers={
+                    <tr>
+                      <th>Item</th>
+                      <th>Tipo</th>
+                      <th>Cidade</th>
+                    </tr>
+                  }
+                  empty={(orcamentoSelecionado.quote_item || []).length === 0}
+                  emptyMessage="Nenhum item encontrado."
+                  colSpan={3}
+                  className="table-mobile-cards table-header-purple"
+                >
+                  {(orcamentoSelecionado.quote_item || []).map((item, idx) => (
+                    <tr key={`${orcamentoSelecionado.id}-${item.id || idx}`}>
+                      <td data-label="Item">{item.title || item.product_name || "-"}</td>
+                      <td data-label="Tipo">{item.item_type || "-"}</td>
+                      <td data-label="Cidade">{item.city_name || "-"}</td>
+                    </tr>
+                  ))}
+                </DataTable>
+              </AppCard>
+            </div>
+          </Dialog>
+        )}
+
+        {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
+        {loadingDados && <AppCard tone="config">Carregando dados do dashboard...</AppCard>}
+      </div>
+    </AppPrimerProvider>
   );
 };
 

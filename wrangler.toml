@@ -15,6 +15,18 @@ PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_yO4zM8WFfmRTZKtBG1PaHw_9pLyVXMh"
 # Astro build output (injeta PUBLIC_* no processo de build)
 build = { command = "PUBLIC_SUPABASE_URL=$PUBLIC_SUPABASE_URL PUBLIC_SUPABASE_ANON_KEY=$PUBLIC_SUPABASE_ANON_KEY npm run build -- --force", cwd = "." }
 
+# Bindings do Worker default (workers.dev)
+# Mantidos alinhados ao ambiente atual para evitar erro de runtime em preview.
+[[kv_namespaces]]
+binding = "CACHE"
+id = "f89bc788ae7a4c619133ae6c2654d8cb"
+preview_id = "f89bc788ae7a4c619133ae6c2654d8cb"
+
+[[kv_namespaces]]
+binding = "SESSION"
+id = "60fa423718914712bec4f489d41c3dd6"
+preview_id = "60fa423718914712bec4f489d41c3dd6"
+
 # Mini-rate-limiting (optional, comment out if not needed)
 # [rate_limit]
 # simple = { limit = 600, period = 60 }

@@ -6,6 +6,7 @@
 export interface Env {
   // KV Namespace for caching
   CACHE: KVNamespace;
+  SESSION: KVNamespace;
 
   // Environment variables
   ENVIRONMENT?: "production" | "staging" | "development";

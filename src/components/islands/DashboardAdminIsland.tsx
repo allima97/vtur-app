@@ -2,6 +2,12 @@ import React, { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import AlertMessage from "../ui/AlertMessage";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 import PerformanceDashboardIsland from "./PerformanceDashboardIsland";
 
 type BillingRow = {
@@ -335,184 +341,177 @@ export default function DashboardAdminIsland() {
 
   // bloquear quem não é admin
   if (loadingPerm) return <LoadingUsuarioContext />;
-  if (!podeVer || !isAdmin)
+  if (!podeVer || !isAdmin) {
     return (
-      <div style={{ padding: 20 }}>
-        <h3>Apenas administradores podem acessar este dashboard.</h3>
-      </div>
+      <AppPrimerProvider>
+        <div className="page-content-wrap admin-dashboard-page">
+          <AppCard tone="config">Apenas administradores podem acessar este dashboard.</AppCard>
+        </div>
+      </AppPrimerProvider>
     );
+  }
 
   // =========================================================
   // UI PRINCIPAL
   // =========================================================
 
   return (
-    <div className="dashboard-admin-page admin-page admin-dashboard-page">
-      {/* INDICADOR */}
-      <div className="card-base card-red mb-3 list-toolbar-sticky">
-        <div className="form-row mobile-stack" style={{ gap: 12 }}>
-          <div className="form-group">
-            <h3 className="page-title">📊 Dashboard administrativo</h3>
-            <p className="page-subtitle">Controle geral do sistema e indicadores-chave.</p>
-          </div>
-        </div>
-      </div>
+    <AppPrimerProvider>
+      <div className="page-content-wrap dashboard-admin-page admin-page admin-dashboard-page vtur-dashboard-shell">
+        <AppToolbar
+          title="Dashboard administrativo"
+          subtitle="Controle geral do sistema, manutencao, cobrancas, atalhos operacionais e monitoramento de performance."
+          tone="config"
+          sticky
+        />
 
-      {/* RESUMO ADMINISTRATIVO */}
-      <div className="card-base card-red mb-3">
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h3 className="mb-0 font-semibold text-lg">Modo de manutencao</h3>
-            <p className="page-subtitle" style={{ marginTop: 4 }}>
-              Suspende o acesso do sistema e exibe a pagina de manutencao.
-            </p>
-          </div>
-          <a className="btn btn-light" href="/manutencao">
-            Abrir pagina de manutencao
-          </a>
-        </div>
-        {maintenanceError && <div className="auth-error" style={{ marginTop: 12 }}>{maintenanceError}</div>}
-        {maintenanceNotice && <div className="auth-success" style={{ marginTop: 12 }}>{maintenanceNotice}</div>}
-        <div className="form-row mobile-stack" style={{ gap: 16, marginTop: 12 }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <input
-              type="checkbox"
-              checked={maintenanceStatus.maintenance_enabled}
+        <AppCard
+          tone="config"
+          title="Modo de manutencao"
+          subtitle="Suspende o acesso do sistema e exibe a pagina de manutencao para todos os usuarios."
+          actions={
+            <AppButton as="a" href="/manutencao" variant="secondary">
+              Abrir pagina de manutencao
+            </AppButton>
+          }
+        >
+          <div className="vtur-dashboard-stack">
+            {maintenanceError && <AlertMessage variant="error">{maintenanceError}</AlertMessage>}
+            {maintenanceNotice && <AlertMessage variant="success">{maintenanceNotice}</AlertMessage>}
+            <div className="vtur-dashboard-inline-fields">
+              <label className="vtur-dashboard-checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={maintenanceStatus.maintenance_enabled}
+                  onChange={(e) =>
+                    setMaintenanceStatus((prev) => ({
+                      ...prev,
+                      maintenance_enabled: e.target.checked,
+                    }))
+                  }
+                  disabled={maintenanceLoading || maintenanceSaving}
+                />
+                <span>
+                  {maintenanceStatus.maintenance_enabled ? "Manutencao ativa" : "Manutencao desativada"}
+                </span>
+              </label>
+              <AppButton
+                type="button"
+                variant="primary"
+                onClick={salvarManutencao}
+                disabled={maintenanceLoading || maintenanceSaving}
+              >
+                {maintenanceSaving ? "Salvando..." : "Salvar"}
+              </AppButton>
+            </div>
+            <AppField
+              as="textarea"
+              label="Mensagem de manutencao"
+              rows={4}
+              value={maintenanceStatus.maintenance_message || ""}
               onChange={(e) =>
                 setMaintenanceStatus((prev) => ({
                   ...prev,
-                  maintenance_enabled: e.target.checked,
+                  maintenance_message: e.target.value,
                 }))
+              }
+              placeholder="Informe uma mensagem opcional para a pagina de manutencao."
+              caption={
+                maintenanceStatus.updated_at
+                  ? `Ultima atualizacao em ${new Date(maintenanceStatus.updated_at).toLocaleString("pt-BR")}.`
+                  : "Ainda nao houve atualizacao registrada."
               }
               disabled={maintenanceLoading || maintenanceSaving}
             />
-            {maintenanceStatus.maintenance_enabled ? "Manutencao ativa" : "Manutencao desativada"}
-          </label>
-          <button
-            className="btn btn-primary"
-            type="button"
-            onClick={salvarManutencao}
-            disabled={maintenanceLoading || maintenanceSaving}
-          >
-            {maintenanceSaving ? "Salvando..." : "Salvar"}
-          </button>
-        </div>
-      </div>
+          </div>
+        </AppCard>
 
-      <div className="card-base card-red mb-3">
-        <h3 className="mb-3 font-semibold text-lg">Resumo administrativo</h3>
-        <div
-          className="grid gap-3"
-          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
+        <AppCard
+          tone="config"
+          title="Resumo administrativo"
+          subtitle="Visao consolidada de empresas, usuarios, planos e cobrancas."
         >
-          {resumoCards.map((card) => (
-            <div
-              key={card.key}
-              className="kpi-card"
-              style={{
-                borderLeft: `4px solid ${card.color}`,
-                background: card.background,
-              }}
-            >
-              <div className="kpi-icon" style={{ color: card.color }}>
-                {card.icon}
-              </div>
-              <div>
-                <div className="kpi-label">{card.label}</div>
-                <div className="kpi-value">{card.value}</div>
-                {card.meta && (
-                  <div style={{ fontSize: "0.75rem", opacity: 0.75 }}>
-                    {card.meta}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="card-base card-red mb-3">
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <h3 className="mb-0 font-semibold text-lg">Status de cobrança</h3>
-          <a className="btn btn-light" href="/admin/financeiro">Ver financeiro</a>
-        </div>
-        <div
-          className="grid gap-3 mt-4"
-          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}
-        >
-          {cobrancaCards.map((card) => (
-            <div
-              key={card.key}
-              className="kpi-card"
-              style={{
-                background: card.background,
-                borderLeft: `4px solid ${card.color}`,
-              }}
-            >
-              <div>
-                <div className="kpi-label">{card.label}</div>
-                <div className="kpi-value">{card.value}</div>
-              </div>
+          <div className="vtur-dashboard-kpi-grid">
+            {resumoCards.map((card) => (
               <div
-                style={{
-                  marginLeft: "auto",
-                  width: 10,
-                  height: 10,
-                  borderRadius: 999,
-                  background: card.color,
-                }}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ATALHOS */}
-      <div className="card-base card-red mb-3">
-        <h3 className="mb-3 font-semibold text-lg">Atalhos rápidos</h3>
-        <div
-          className="grid gap-3"
-          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}
-        >
-          {atalhos.map((atalho) => (
-            <a
-              key={atalho.key}
-              href={atalho.href}
-              className="card-base"
-              style={{
-                textDecoration: "none",
-                color: "inherit",
-                border: "1px solid rgba(148, 163, 184, 0.4)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 12,
-                padding: "14px 16px",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: "1.5rem" }}>{atalho.icon}</span>
-                <div>
-                  <div style={{ fontWeight: 600 }}>{atalho.label}</div>
-                  <div style={{ fontSize: "0.8rem", opacity: 0.75 }}>
-                    {atalho.description}
-                  </div>
+                key={card.key}
+                className="vtur-dashboard-kpi-card"
+                style={{ borderLeft: `4px solid ${card.color}`, background: card.background }}
+              >
+                <div className="vtur-dashboard-kpi-icon" style={{ color: card.color }}>
+                  {card.icon}
+                </div>
+                <div className="vtur-dashboard-kpi-copy">
+                  <div className="vtur-dashboard-kpi-label">{card.label}</div>
+                  <div className="vtur-dashboard-kpi-value">{card.value}</div>
+                  {card.meta ? <div className="vtur-dashboard-kpi-meta">{card.meta}</div> : null}
                 </div>
               </div>
-              <span style={{ color: atalho.color, fontWeight: 700 }}>&gt;</span>
-            </a>
-          ))}
-        </div>
-      </div>
+            ))}
+          </div>
+        </AppCard>
 
-      {/* PERFORMANCE DASHBOARD */}
-      <div className="card-base card-red mb-3">
-        <h3 className="mb-4 font-semibold text-lg">⚡ Monitoramento de performance</h3>
-        <PerformanceDashboardIsland />
-      </div>
+        <AppCard
+          tone="config"
+          title="Status de cobranca"
+          subtitle="Acompanhe rapidamente contas ativas, em trial, atrasadas, suspensas e canceladas."
+          actions={
+            <AppButton as="a" href="/admin/financeiro" variant="secondary">
+              Ver financeiro
+            </AppButton>
+          }
+        >
+          <div className="vtur-dashboard-summary-grid">
+            {cobrancaCards.map((card) => (
+              <div
+                key={card.key}
+                className="vtur-dashboard-kpi-card"
+                style={{ background: card.background, borderLeft: `4px solid ${card.color}` }}
+              >
+                <div className="vtur-dashboard-kpi-copy">
+                  <div className="vtur-dashboard-kpi-label">{card.label}</div>
+                  <div className="vtur-dashboard-kpi-value">{card.value}</div>
+                </div>
+                <span className="vtur-dashboard-stat-dot" style={{ background: card.color }} />
+              </div>
+            ))}
+          </div>
+        </AppCard>
 
-      {erro && <div className="card-base card-config">{erro}</div>}
-      {loading && <div>Carregando dados...</div>}
-    </div>
+        <AppCard
+          tone="config"
+          title="Atalhos rapidos"
+          subtitle="Acesso direto aos paineis administrativos mais usados."
+        >
+          <div className="vtur-dashboard-link-grid">
+            {atalhos.map((atalho) => (
+              <a key={atalho.key} href={atalho.href} className="vtur-dashboard-link-card">
+                <div className="vtur-dashboard-link-copy">
+                  <span className="vtur-dashboard-link-icon">{atalho.icon}</span>
+                  <div>
+                    <div className="vtur-dashboard-link-title">{atalho.label}</div>
+                    <div className="vtur-dashboard-link-description">{atalho.description}</div>
+                  </div>
+                </div>
+                <span className="vtur-dashboard-link-arrow" style={{ color: atalho.color }}>
+                  &gt;
+                </span>
+              </a>
+            ))}
+          </div>
+        </AppCard>
+
+        <AppCard
+          tone="config"
+          title="Monitoramento de performance"
+          subtitle="Indicadores tecnicos e observabilidade do sistema."
+        >
+          <PerformanceDashboardIsland />
+        </AppCard>
+
+        {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
+        {loading && <AppCard tone="config">Carregando dados...</AppCard>}
+      </div>
+    </AppPrimerProvider>
   );
 }

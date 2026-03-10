@@ -214,6 +214,199 @@
   margin-top: 18px;
 }
 
+.vtur-dashboard-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.vtur-dashboard-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.vtur-dashboard-inline-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vtur-dashboard-checkbox-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--vtur-primer-ink);
+  font-weight: 600;
+}
+
+.vtur-dashboard-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.vtur-dashboard-preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.vtur-dashboard-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.vtur-dashboard-mobile-list {
+  display: grid;
+  gap: 12px;
+}
+
+.vtur-dashboard-kpi-grid,
+.vtur-dashboard-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.vtur-dashboard-kpi-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 108px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.98));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.vtur-dashboard-kpi-copy {
+  min-width: 0;
+}
+
+.vtur-dashboard-kpi-icon {
+  font-size: 1.75rem;
+}
+
+.vtur-dashboard-kpi-label {
+  font-size: 0.74rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--vtur-primer-muted);
+}
+
+.vtur-dashboard-kpi-value {
+  margin-top: 4px;
+  font-size: 1.28rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--vtur-primer-ink);
+}
+
+.vtur-dashboard-kpi-meta {
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: var(--vtur-primer-muted);
+}
+
+.vtur-dashboard-link-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.vtur-dashboard-link-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(255, 255, 255, 0.9);
+  color: inherit;
+  text-decoration: none;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.vtur-dashboard-link-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.08);
+  border-color: rgba(142, 40, 226, 0.24);
+}
+
+.vtur-dashboard-link-copy {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.vtur-dashboard-link-icon {
+  font-size: 1.5rem;
+}
+
+.vtur-dashboard-link-title {
+  font-weight: 700;
+  color: var(--vtur-primer-ink);
+}
+
+.vtur-dashboard-link-description {
+  font-size: 0.82rem;
+  color: var(--vtur-primer-muted);
+}
+
+.vtur-dashboard-link-arrow {
+  font-weight: 800;
+}
+
+.vtur-dashboard-stat-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  margin-left: auto;
+}
+
+.vtur-dashboard-config-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vtur-dashboard-config-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.vtur-dashboard-config-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.vtur-dashboard-select {
+  min-width: 150px;
+}
+
+.vtur-dashboard-detail-grid {
+  display: grid;
+  gap: 10px;
+  line-height: 1.5;
+}
+
 .vtur-sales-embedded-card {
   margin-top: 16px;
 }
@@ -1275,6 +1468,17 @@
   .vtur-commission-filters-grid {
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   }
+
+  .vtur-dashboard-inline-fields {
+    align-items: stretch;
+  }
+
+  .vtur-dashboard-kpi-grid,
+  .vtur-dashboard-summary-grid,
+  .vtur-dashboard-link-grid,
+  .vtur-dashboard-chart-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1334,5 +1538,28 @@
   .vtur-commission-kpi-grid,
   .vtur-commission-filters-grid {
     grid-template-columns: 1fr;
+  }
+
+  .vtur-dashboard-toolbar-actions,
+  .vtur-dashboard-preset-row,
+  .vtur-dashboard-config-actions {
+    width: 100%;
+  }
+
+  .vtur-dashboard-toolbar-actions .vtur-app-button,
+  .vtur-dashboard-preset-row .vtur-app-button,
+  .vtur-dashboard-config-actions .vtur-app-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .vtur-dashboard-link-card,
+  .vtur-dashboard-config-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vtur-dashboard-kpi-card {
+    min-height: 0;
   }
 }

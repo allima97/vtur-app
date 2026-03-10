@@ -15,6 +15,11 @@ export default defineConfig({
   // Middleware + Supabase SSR precisam de modo server/híbrido para evitar redirecionos durante o build.
   output: 'server',
   vite: {
+    ssr: {
+      // Primer injeta imports CSS internos no runtime SSR; sem bundlar o pacote,
+      // Node/Workers tenta carregar esses .css como módulo externo e quebra a rota.
+      noExternal: [/^@primer\//],
+    },
     // Evita falhas de "Outdated Optimize Dep" no dev ao carregar gráficos
     optimizeDeps: {
       // Vite pode reotimizar deps ao navegar entre telas e causar 504 "Outdated Optimize Dep".

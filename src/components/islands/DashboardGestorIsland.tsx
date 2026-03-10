@@ -1,3 +1,4 @@
+import { Dialog } from "@primer/react";
 import React, { useEffect, useMemo, useState } from "react";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { buildQueryLiteKey, queryLite } from "../../lib/queryLite";
@@ -7,6 +8,14 @@ import IslandErrorBoundary from "../ui/IslandErrorBoundary";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
 import { formatCurrencyBRL, formatDateBR } from "../../lib/format";
 import { useMasterScope } from "../../lib/useMasterScope";
+import AlertMessage from "../ui/AlertMessage";
+import DataTable from "../ui/DataTable";
+import TableActions from "../ui/TableActions";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 import {
   construirLinkWhatsAppComTexto,
   construirUrlCartaoAniversario,
@@ -878,107 +887,113 @@ function DashboardGestorIslandInner() {
 
     if (id === "kpis") {
       return (
-        <div className="card-base card-purple mb-3">
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(160px,1fr))",
-              gap: 10,
-            }}
-          >
+        <AppCard
+          title={hideTitle ? undefined : "Indicadores da equipe"}
+          subtitle={hideTitle ? undefined : "Resumo comercial consolidado do escopo atual."}
+          tone="info"
+        >
+          <div className="vtur-dashboard-kpi-grid">
             {kpiOrder
               .filter((kpiId) => kpiAtivo(kpiId))
               .map((kpiId) => {
                 if (kpiId === "kpi_vendas") {
                   return (
-                    <div className="kpi-card" key={kpiId}>
-                      <div className="kpi-label">Vendas da equipe</div>
-                      <div className="kpi-value">{formatCurrency(totalTeamSales)}</div>
+                    <div className="vtur-dashboard-kpi-card" key={kpiId}>
+                      <div className="vtur-dashboard-kpi-copy">
+                        <div className="vtur-dashboard-kpi-label">Vendas da equipe</div>
+                        <div className="vtur-dashboard-kpi-value">{formatCurrency(totalTeamSales)}</div>
+                      </div>
                     </div>
                   );
                 }
                 if (kpiId === "kpi_qtd_vendas") {
                   return (
-                    <div className="kpi-card" key={kpiId}>
-                      <div className="kpi-label">Qtd. Vendas</div>
-                      <div className="kpi-value">{totalTeamDeals}</div>
+                    <div className="vtur-dashboard-kpi-card" key={kpiId}>
+                      <div className="vtur-dashboard-kpi-copy">
+                        <div className="vtur-dashboard-kpi-label">Qtd. Vendas</div>
+                        <div className="vtur-dashboard-kpi-value">{totalTeamDeals}</div>
+                      </div>
                     </div>
                   );
                 }
                 if (kpiId === "kpi_ticket_medio") {
                   return (
-                    <div className="kpi-card" key={kpiId}>
-                      <div className="kpi-label">Ticket médio</div>
-                      <div className="kpi-value">{formatCurrency(ticketMedioEquipe)}</div>
+                    <div className="vtur-dashboard-kpi-card" key={kpiId}>
+                      <div className="vtur-dashboard-kpi-copy">
+                        <div className="vtur-dashboard-kpi-label">Ticket medio</div>
+                        <div className="vtur-dashboard-kpi-value">{formatCurrency(ticketMedioEquipe)}</div>
+                      </div>
                     </div>
                   );
                 }
                 if (kpiId === "kpi_meta") {
                   return (
-                    <div className="kpi-card" key={kpiId}>
-                      <div className="kpi-label">Meta da equipe</div>
-                      <div className="kpi-value">{formatCurrency(metaEquipe)}</div>
+                    <div className="vtur-dashboard-kpi-card" key={kpiId}>
+                      <div className="vtur-dashboard-kpi-copy">
+                        <div className="vtur-dashboard-kpi-label">Meta da equipe</div>
+                        <div className="vtur-dashboard-kpi-value">{formatCurrency(metaEquipe)}</div>
+                      </div>
                     </div>
                   );
                 }
                 if (kpiId === "kpi_atingimento") {
                   return (
-                    <div className="kpi-card" key={kpiId}>
-                      <div className="kpi-label">Atingimento</div>
-                      <div className="kpi-value">{atingimentoEquipe.toFixed(1)}%</div>
+                    <div className="vtur-dashboard-kpi-card" key={kpiId}>
+                      <div className="vtur-dashboard-kpi-copy">
+                        <div className="vtur-dashboard-kpi-label">Atingimento</div>
+                        <div className="vtur-dashboard-kpi-value">{atingimentoEquipe.toFixed(1)}%</div>
+                      </div>
                     </div>
                   );
                 }
                 return null;
               })}
           </div>
-        </div>
+        </AppCard>
       );
     }
 
     if (id === "ranking") {
       return (
-        <div className="card-base card-purple mb-3">
-          {!hideTitle && <h3 style={{ marginBottom: 8 }}>Ranking da equipe</h3>}
-
-          <div className="table-container overflow-x-auto">
-            <table className="table-default table-mobile-cards min-w-[480px]">
-              <thead>
-                <tr>
-                  <th>Vendedor</th>
-                  <th>Total vendido</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {rankingEquipe.length === 0 && (
-                  <tr>
-                    <td colSpan={2}>Sem vendas no período.</td>
-                  </tr>
-                )}
-
-                {rankingEquipe.map((item, idx) => (
-                  <tr key={item.vendedor_id}>
-                    <td data-label="Vendedor">
-                      #{idx + 1} — {item.nome}
-                    </td>
-                    <td data-label="Total vendido">{formatCurrency(item.total)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <AppCard
+          title={hideTitle ? undefined : "Ranking da equipe"}
+          subtitle={hideTitle ? undefined : `${rankingEquipe.length} consultor(es) no escopo selecionado.`}
+          tone="info"
+        >
+          <DataTable
+            headers={
+              <tr>
+                <th>Vendedor</th>
+                <th>Total vendido</th>
+              </tr>
+            }
+            empty={rankingEquipe.length === 0}
+            emptyMessage="Sem vendas no periodo."
+            colSpan={2}
+            className="table-mobile-cards table-header-purple min-w-[480px]"
+          >
+            {rankingEquipe.map((item, idx) => (
+              <tr key={item.vendedor_id}>
+                <td data-label="Vendedor">
+                  #{idx + 1} - {item.nome}
+                </td>
+                <td data-label="Total vendido">{formatCurrency(item.total)}</td>
+              </tr>
+            ))}
+          </DataTable>
+        </AppCard>
       );
     }
 
     if (id === "vendas_consultor") {
       return (
-        <div className="card-base card-purple mb-3">
-          {!hideTitle && <h3 style={{ marginBottom: 8 }}>Vendas por consultor</h3>}
+        <AppCard
+          title={hideTitle ? undefined : "Vendas por consultor"}
+          subtitle={hideTitle ? undefined : "Compare distribuicao da equipe em grafico de pizza e barras."}
+          tone="info"
+        >
           <div
-            className="grid gap-4"
-            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}
+            className="vtur-dashboard-chart-grid"
           >
             <div style={{ width: "100%", height: 260 }}>
               <ResponsiveContainer>
@@ -1012,19 +1027,17 @@ function DashboardGestorIslandInner() {
               </ResponsiveContainer>
             </div>
           </div>
-        </div>
+        </AppCard>
       );
     }
 
     if (id === "evolucao") {
       return (
-        <div className="card-base card-purple mb-3">
-          {!hideTitle && (
-            <h3 style={{ marginBottom: 8 }}>
-              Evolução de vendas da equipe
-            </h3>
-          )}
-
+        <AppCard
+          title={hideTitle ? undefined : "Evolucao de vendas da equipe"}
+          subtitle={hideTitle ? undefined : "Linha temporal de vendas consolidadas no periodo."}
+          tone="info"
+        >
           <div style={{ width: "100%", height: 260 }}>
             {evolucaoTimeline.length === 0 ? (
               <div style={{ fontSize: "0.9rem" }}>Sem dados para o período.</div>
@@ -1039,46 +1052,41 @@ function DashboardGestorIslandInner() {
               </ResponsiveContainer>
             )}
           </div>
-        </div>
+        </AppCard>
       );
     }
 
     if (id === "orcamentos") {
       return (
-        <div className="card-base card-purple mb-3">
-          {!hideTitle && (
-            <h3 style={{ marginBottom: 8 }}>
-              Orçamentos recentes ({orcamentosRecentes.length})
-            </h3>
-          )}
-          <div className="table-container overflow-x-auto">
-            <table className="table-default table-mobile-cards min-w-[520px]">
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Cliente</th>
-                  <th>Destino</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orcamentosRecentes.length === 0 && (
-                  <tr>
-                    <td colSpan={4}>Nenhum orçamento no período.</td>
-                  </tr>
-                )}
-                {orcamentosRecentes.map((o) => (
-                  <tr key={o.id}>
-                    <td data-label="Data">{formatarDataParaExibicao(o.created_at)}</td>
-                    <td data-label="Cliente">{o.cliente?.nome || "—"}</td>
-                    <td data-label="Destino">{getOrcamentoDestino(o)}</td>
-                    <td data-label="Total">{formatCurrency(Number(o.total || 0))}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <AppCard
+          title={hideTitle ? undefined : `Orcamentos recentes (${orcamentosRecentes.length})`}
+          subtitle={hideTitle ? undefined : "Ultimas propostas geradas pela equipe."}
+          tone="info"
+        >
+          <DataTable
+            headers={
+              <tr>
+                <th>Data</th>
+                <th>Cliente</th>
+                <th>Destino</th>
+                <th>Total</th>
+              </tr>
+            }
+            empty={orcamentosRecentes.length === 0}
+            emptyMessage="Nenhum orcamento no periodo."
+            colSpan={4}
+            className="table-mobile-cards table-header-purple min-w-[520px]"
+          >
+            {orcamentosRecentes.map((o) => (
+              <tr key={o.id}>
+                <td data-label="Data">{formatarDataParaExibicao(o.created_at)}</td>
+                <td data-label="Cliente">{o.cliente?.nome || "—"}</td>
+                <td data-label="Destino">{getOrcamentoDestino(o)}</td>
+                <td data-label="Total">{formatCurrency(Number(o.total || 0))}</td>
+              </tr>
+            ))}
+          </DataTable>
+        </AppCard>
       );
     }
 
@@ -1110,196 +1118,212 @@ function DashboardGestorIslandInner() {
         .slice(0, 20);
 
       return (
-        <div className="card-base card-purple mb-3">
-          {!hideTitle && (
-            <h3 style={{ marginBottom: 8 }}>
-              Aniversariantes (clientes e acompanhantes) — {monthLabel} ({items.length})
-            </h3>
-          )}
-          <div className="table-container overflow-x-auto">
-            <table className="table-default table-mobile-cards min-w-[520px]">
-              <thead>
-                <tr>
-                  <th>Cliente</th>
-                  <th>Nascimento</th>
-                  <th>Telefone</th>
-                  <th className="th-actions">Ações</th>
+        <AppCard
+          title={hideTitle ? undefined : `Aniversariantes - ${monthLabel} (${items.length})`}
+          subtitle={hideTitle ? undefined : "Clientes e acompanhantes do escopo atual."}
+          tone="info"
+        >
+          <DataTable
+            headers={
+              <tr>
+                <th>Cliente</th>
+                <th>Nascimento</th>
+                <th>Telefone</th>
+                <th className="th-actions">Acoes</th>
+              </tr>
+            }
+            empty={items.length === 0}
+            emptyMessage="Nenhum aniversariante de cliente/acompanhante este mes."
+            colSpan={4}
+            className="table-mobile-cards table-header-purple min-w-[520px]"
+          >
+            {items.map((c) => {
+              const cardUrl = construirUrlCartaoAniversario(c.nome, assinaturaUsuario);
+              const mensagemBase = montarMensagemAniversario(c.nome, assinaturaUsuario);
+              const mensagem = cardUrl ? `${mensagemBase}\n\nCartão: ${cardUrl}` : mensagemBase;
+              const whatsappLink = construirLinkWhatsAppComTexto(c.telefone, mensagem, "55");
+              return (
+                <tr key={c.id}>
+                  <td data-label="Cliente">
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <span aria-hidden="true">{c.pessoa_tipo === "acompanhante" ? "🧑‍🤝‍🧑" : "👤"}</span>
+                      <span>{c.nome || "-"}</span>
+                    </span>
+                  </td>
+                  <td data-label="Nascimento">
+                    {c.nascimento ? formatarDataParaExibicao(c.nascimento) : "-"}
+                  </td>
+                  <td data-label="Telefone">{c.telefone || "-"}</td>
+                  <td className="th-actions" data-label="Acoes">
+                    <TableActions
+                      actions={[
+                        ...(whatsappLink
+                          ? [
+                              {
+                                key: "whatsapp",
+                                label: "WhatsApp",
+                                title: "Enviar cartão de aniversario no WhatsApp",
+                                onClick: () => window.open(whatsappLink, "_blank", "noopener,noreferrer"),
+                                icon: "🎂",
+                                variant: "ghost" as const,
+                              },
+                            ]
+                          : []),
+                        ...(c.cliente_id
+                          ? [
+                              {
+                                key: "cliente",
+                                label: "Cliente",
+                                title:
+                                  c.pessoa_tipo === "acompanhante"
+                                    ? "Ver cliente titular do acompanhante"
+                                    : "Ver cliente",
+                                onClick: () => {
+                                  window.location.href = `/clientes/cadastro?id=${c.cliente_id}`;
+                                },
+                                icon: "👤",
+                                variant: "ghost" as const,
+                              },
+                            ]
+                          : []),
+                      ]}
+                    />
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {items.length === 0 && (
-                  <tr>
-                    <td colSpan={4}>Nenhum aniversariante de cliente/acompanhante este mês.</td>
-                  </tr>
-                )}
-                {items.map((c) => {
-                  const cardUrl = construirUrlCartaoAniversario(c.nome, assinaturaUsuario);
-                  const mensagemBase = montarMensagemAniversario(c.nome, assinaturaUsuario);
-                  const mensagem = cardUrl ? `${mensagemBase}\n\nCartão: ${cardUrl}` : mensagemBase;
-                  const whatsappLink = construirLinkWhatsAppComTexto(c.telefone, mensagem, "55");
-                  return (
-                  <tr key={c.id}>
-                    <td data-label="Cliente">
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                        <span aria-hidden="true">{c.pessoa_tipo === "acompanhante" ? "🧑‍🤝‍🧑" : "👤"}</span>
-                        <span>{c.nome || "-"}</span>
-                      </span>
-                    </td>
-                    <td data-label="Nascimento">
-                      {c.nascimento ? formatarDataParaExibicao(c.nascimento) : "-"}
-                    </td>
-                    <td data-label="Telefone">{c.telefone || "-"}</td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        {whatsappLink ? (
-                          <a className="btn-icon" href={whatsappLink} target="_blank" rel="noreferrer" title="Enviar cartão de aniversário no WhatsApp">
-                            🎂
-                          </a>
-                        ) : (
-                          "-"
-                        )}
-                        {c.cliente_id ? (
-                          <a
-                            className="btn-icon"
-                            href={`/clientes/cadastro?id=${c.cliente_id}`}
-                            title={
-                              c.pessoa_tipo === "acompanhante"
-                                ? "Ver cliente titular do acompanhante"
-                                : "Ver cliente"
-                            }
-                          >
-                            👤
-                          </a>
-                        ) : (
-                          "-"
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+              );
+            })}
+          </DataTable>
+        </AppCard>
       );
     }
 
     if (id === "viagens") {
       return (
-        <div className="card-base card-purple mb-3">
-          {!hideTitle && (
-            <h3 style={{ marginBottom: 8 }}>
-              Próximas viagens ({viagensProximas.length})
-            </h3>
-          )}
-          <div className="table-container overflow-x-auto">
-            <table className="table-default table-mobile-cards min-w-[520px]">
-              <thead>
-                <tr>
-                  <th>Início</th>
-                  <th>Cliente</th>
-                  <th>Destino</th>
-                  <th>Status</th>
-                  <th className="th-actions">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {viagensProximas.length === 0 && (
-                  <tr>
-                    <td colSpan={5}>Nenhuma viagem nos próximos dias.</td>
-                  </tr>
-                )}
-                {viagensProximas.map((v) => (
-                  <tr key={v.id}>
-                    <td data-label="Início">{formatarDataParaExibicao(v.data_inicio)}</td>
-                    <td data-label="Cliente">{v.clientes?.nome || "—"}</td>
-                    <td data-label="Destino">{v.destino || "—"}</td>
-                    <td data-label="Status">{v.status || "—"}</td>
-                    <td className="th-actions" data-label="Ver">
-                      <div className="action-buttons">
-                        {v.clientes?.id && (
-                          <a className="btn-icon" href={`/clientes/cadastro?id=${v.clientes.id}`} title="Ver cliente">
-                            👤
-                          </a>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <AppCard
+          title={hideTitle ? undefined : `Proximas viagens (${viagensProximas.length})`}
+          subtitle={hideTitle ? undefined : "Viagens futuras vinculadas ao escopo da equipe."}
+          tone="info"
+        >
+          <DataTable
+            headers={
+              <tr>
+                <th>Inicio</th>
+                <th>Cliente</th>
+                <th>Destino</th>
+                <th>Status</th>
+                <th className="th-actions">Acoes</th>
+              </tr>
+            }
+            empty={viagensProximas.length === 0}
+            emptyMessage="Nenhuma viagem nos proximos dias."
+            colSpan={5}
+            className="table-mobile-cards table-header-purple min-w-[520px]"
+          >
+            {viagensProximas.map((v) => (
+              <tr key={v.id}>
+                <td data-label="Inicio">{formatarDataParaExibicao(v.data_inicio)}</td>
+                <td data-label="Cliente">{v.clientes?.nome || "—"}</td>
+                <td data-label="Destino">{v.destino || "—"}</td>
+                <td data-label="Status">{v.status || "—"}</td>
+                <td className="th-actions" data-label="Acoes">
+                  <TableActions
+                    actions={
+                      v.clientes?.id
+                        ? [
+                            {
+                              key: "cliente",
+                              label: "Cliente",
+                              title: "Ver cliente",
+                              onClick: () => {
+                                window.location.href = `/clientes/cadastro?id=${v.clientes?.id}`;
+                              },
+                              icon: "👤",
+                              variant: "ghost",
+                            },
+                          ]
+                        : []
+                    }
+                  />
+                </td>
+              </tr>
+            ))}
+          </DataTable>
+        </AppCard>
       );
     }
 
     if (id === "follow_up") {
       return (
-        <div className="card-base card-purple mb-3">
-          {!hideTitle && (
-            <h3 style={{ marginBottom: 8 }}>
-              Follow-up ({followUpsRecentes.length})
-            </h3>
-          )}
-          <div className="table-container overflow-x-auto">
-            <table className="table-default table-mobile-cards min-w-[520px]">
-              <thead>
-                <tr>
-                  <th>Retorno</th>
-                  <th>Cliente</th>
-                  <th>Destino</th>
-                  <th className="th-actions">Ações</th>
+        <AppCard
+          title={hideTitle ? undefined : `Follow-up (${followUpsRecentes.length})`}
+          subtitle={hideTitle ? undefined : "Clientes que ja retornaram e demandam contato da equipe."}
+          tone="info"
+        >
+          <DataTable
+            headers={
+              <tr>
+                <th>Retorno</th>
+                <th>Cliente</th>
+                <th>Destino</th>
+                <th className="th-actions">Acoes</th>
+              </tr>
+            }
+            empty={followUpsRecentes.length === 0}
+            emptyMessage="Nenhum follow-up no periodo."
+            colSpan={4}
+            className="table-mobile-cards table-header-purple min-w-[520px]"
+          >
+            {followUpsRecentes.map((f) => {
+              const mensagem = montarMensagemFollowUp(f.venda?.clientes?.nome, assinaturaUsuario);
+              const whatsappLink = construirLinkWhatsAppComTexto(
+                f.venda?.clientes?.whatsapp || f.venda?.clientes?.telefone || null,
+                mensagem,
+                "55"
+              );
+              return (
+                <tr key={f.id}>
+                  <td data-label="Retorno">
+                    {formatarDataParaExibicao(f.data_fim || f.venda?.data_final || "")}
+                  </td>
+                  <td data-label="Cliente">{f.venda?.clientes?.nome || "—"}</td>
+                  <td data-label="Destino">{f.venda?.destino_cidade?.nome || "—"}</td>
+                  <td className="th-actions" data-label="Acoes">
+                    <TableActions
+                      actions={[
+                        ...(f.venda?.clientes?.id
+                          ? [
+                              {
+                                key: "cliente",
+                                label: "Cliente",
+                                title: "Ver cliente",
+                                onClick: () => {
+                                  window.location.href = `/clientes/cadastro?id=${f.venda?.clientes?.id}`;
+                                },
+                                icon: "👤",
+                                variant: "ghost" as const,
+                              },
+                            ]
+                          : []),
+                        ...(whatsappLink
+                          ? [
+                              {
+                                key: "whatsapp",
+                                label: "WhatsApp",
+                                title: "Enviar follow-up no WhatsApp",
+                                onClick: () => window.open(whatsappLink, "_blank", "noopener,noreferrer"),
+                                icon: "💬",
+                                variant: "ghost" as const,
+                              },
+                            ]
+                          : []),
+                      ]}
+                    />
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {followUpsRecentes.length === 0 && (
-                  <tr>
-                    <td colSpan={4}>Nenhum follow-up no período.</td>
-                  </tr>
-                )}
-                {followUpsRecentes.map((f) => (
-                  <tr key={f.id}>
-                    <td data-label="Retorno">
-                      {formatarDataParaExibicao(f.data_fim || f.venda?.data_final || "")}
-                    </td>
-                    <td data-label="Cliente">{f.venda?.clientes?.nome || "—"}</td>
-                    <td data-label="Destino">{f.venda?.destino_cidade?.nome || "—"}</td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        {f.venda?.clientes?.id && (
-                          <a className="btn-icon" href={`/clientes/cadastro?id=${f.venda.clientes.id}`} title="Ver cliente">
-                            👤
-                          </a>
-                        )}
-                        {(() => {
-                          const mensagem = montarMensagemFollowUp(f.venda?.clientes?.nome, assinaturaUsuario);
-                          const whatsappLink = construirLinkWhatsAppComTexto(
-                            f.venda?.clientes?.whatsapp || f.venda?.clientes?.telefone || null,
-                            mensagem,
-                            "55"
-                          );
-                          if (!whatsappLink) return null;
-                          return (
-                            <a
-                              className="btn-icon"
-                              href={whatsappLink}
-                              target="_blank"
-                              rel="noreferrer"
-                              title="Enviar follow-up no WhatsApp"
-                            >
-                              💬
-                            </a>
-                          );
-                        })()}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+              );
+            })}
+          </DataTable>
+        </AppCard>
       );
     }
 
@@ -1311,254 +1335,219 @@ function DashboardGestorIslandInner() {
   // =====================================================================
 
   if (loadingPerm) return <LoadingUsuarioContext />;
-  if (!podeVer) return <div>Você não possui acesso ao Dashboard.</div>;
+  if (!podeVer) {
+    return (
+      <AppPrimerProvider>
+        <div className="page-content-wrap dashboard-geral-page gestor-page">
+          <AppCard tone="config">Voce nao possui acesso ao Dashboard.</AppCard>
+        </div>
+      </AppPrimerProvider>
+    );
+  }
 
   if (papel !== "GESTOR" && papel !== "ADMIN" && papel !== "MASTER") {
     return (
-      <div style={{ padding: 20 }}>
-        <h3>Somente Gestores ou Masters podem acessar este dashboard.</h3>
-      </div>
+      <AppPrimerProvider>
+        <div className="page-content-wrap dashboard-geral-page gestor-page">
+          <AppCard tone="config">Somente Gestores ou Masters podem acessar este dashboard.</AppCard>
+        </div>
+      </AppPrimerProvider>
     );
   }
 
   return (
-    <div className="dashboard-geral-page gestor-page">
-
-      {/* INDICADOR */}
-      <div className="card-base card-purple mb-3 list-toolbar-sticky">
-        <div className="form-row mobile-stack" style={{ gap: 12, alignItems: "flex-end" }}>
-          <div className="form-group" style={{ flex: 1 }}>
-            <h3 className="page-title">
-              📊 Dashboard {isMaster ? "do master" : "do gestor"}
-            </h3>
-            <p className="page-subtitle">
-              Período: {formatDateBR(inicio)} até {formatDateBR(fim)}
-            </p>
-          </div>
-          <div className="form-group" style={{ alignItems: "flex-end" }}>
-            <button
-              type="button"
-              className="btn btn-primary w-full sm:w-auto"
-              onClick={() => setShowCustomize(true)}
-            >
+    <AppPrimerProvider>
+      <div className="page-content-wrap dashboard-geral-page gestor-page vtur-dashboard-shell">
+        <AppToolbar
+          title={`Dashboard ${isMaster ? "do master" : "do gestor"}`}
+          subtitle={`Periodo: ${formatDateBR(inicio)} ate ${formatDateBR(fim)}.`}
+          tone="info"
+          sticky
+          actions={
+            <AppButton type="button" variant="primary" onClick={() => setShowCustomize(true)}>
               Personalizar dashboard
-            </button>
-          </div>
-        </div>
-        {isMaster && (
-          <div className="form-row mobile-stack" style={{ gap: 12, marginTop: 12 }}>
-            <div className="form-group">
-              <label className="form-label">Filial</label>
-              <select
-                className="form-select"
-                value={masterScope.empresaSelecionada}
-                onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
-              >
-                <option value="all">Todas</option>
-                {masterScope.empresasAprovadas.map((empresa) => (
-                  <option key={empresa.id} value={empresa.id}>
-                    {empresa.nome_fantasia}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Equipe</label>
-              <select
-                className="form-select"
-                value={masterScope.gestorSelecionado}
-                onChange={(e) => masterScope.setGestorSelecionado(e.target.value)}
-              >
-                <option value="all">Todas</option>
-                {masterScope.gestoresDisponiveis.map((gestor) => (
-                  <option key={gestor.id} value={gestor.id}>
-                    {gestor.nome_completo}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Vendedor</label>
-              <select
-                className="form-select"
-                value={masterScope.vendedorSelecionado}
-                onChange={(e) => masterScope.setVendedorSelecionado(e.target.value)}
-              >
-                <option value="all">Todos</option>
-                {masterScope.vendedoresDisponiveis.map((vendedor) => (
-                  <option key={vendedor.id} value={vendedor.id}>
-                    {vendedor.nome_completo || "Vendedor"}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {widgetOrder.map((id) => {
-        const isMobileCollapsible =
-          id === "aniversariantes_clientes" || id === "orcamentos" || id === "viagens" || id === "follow_up";
-        const node = renderWidget(id);
-        if (!node) return null;
-
-        if (!isMobileCollapsible) {
-          return <React.Fragment key={id}>{node}</React.Fragment>;
-        }
-
-        const meta = GESTOR_WIDGETS.find((w) => w.id === id);
-        const aberto = mobileWidgetOpen[id];
-        const label = (() => {
-          if (id === "aniversariantes_clientes") {
-            return `Aniversariantes (clientes e acompanhantes) (${clientesAniversariantes.length})`;
+            </AppButton>
           }
-          if (id === "orcamentos") return `Orçamentos recentes (${orcamentosRecentes.length})`;
-          if (id === "viagens") return `Próximas viagens (${viagensProximas.length})`;
-          if (id === "follow_up") return `Follow-up (${followUpsRecentes.length})`;
-          return meta?.titulo || id;
-        })();
+        >
+          <div className="vtur-form-grid vtur-form-grid-4">
+            <AppField
+              label="Data inicio"
+              type="date"
+              value={inicio}
+              onChange={(e) => setInicio(e.target.value)}
+            />
+            <AppField
+              label="Data fim"
+              type="date"
+              min={inicio || undefined}
+              value={fim}
+              onChange={(e) => setFim(e.target.value)}
+            />
+            {isMaster && (
+              <>
+                <AppField
+                  as="select"
+                  label="Filial"
+                  value={masterScope.empresaSelecionada}
+                  onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
+                  options={[
+                    { value: "all", label: "Todas" },
+                    ...masterScope.empresasAprovadas.map((empresa) => ({
+                      value: empresa.id,
+                      label: empresa.nome_fantasia,
+                    })),
+                  ]}
+                />
+                <AppField
+                  as="select"
+                  label="Equipe"
+                  value={masterScope.gestorSelecionado}
+                  onChange={(e) => masterScope.setGestorSelecionado(e.target.value)}
+                  options={[
+                    { value: "all", label: "Todas" },
+                    ...masterScope.gestoresDisponiveis.map((gestor) => ({
+                      value: gestor.id,
+                      label: gestor.nome_completo,
+                    })),
+                  ]}
+                />
+                <AppField
+                  as="select"
+                  label="Vendedor"
+                  value={masterScope.vendedorSelecionado}
+                  onChange={(e) => masterScope.setVendedorSelecionado(e.target.value)}
+                  options={[
+                    { value: "all", label: "Todos" },
+                    ...masterScope.vendedoresDisponiveis.map((vendedor) => ({
+                      value: vendedor.id,
+                      label: vendedor.nome_completo || "Vendedor",
+                    })),
+                  ]}
+                />
+              </>
+            )}
+          </div>
+        </AppToolbar>
 
-        return (
-          <React.Fragment key={id}>
-            <div className="mobile-only">
-              <button
-                type="button"
-                className={`btn w-full ${aberto ? "btn-primary" : "btn-light"}`}
-                onClick={() => toggleMobileWidget(id)}
-              >
-                {label}
-              </button>
-              {aberto && <div style={{ marginTop: 12 }}>{renderWidget(id, { hideTitle: true })}</div>}
-            </div>
-            <div className="hidden sm:block">{node}</div>
-          </React.Fragment>
-        );
-      })}
+        {isMaster && masterScope.loading && (
+          <AppCard tone="config">Carregando escopo master...</AppCard>
+        )}
 
-      {showCustomize && (
-        <div className="modal-backdrop">
-          <div
-            className="modal-panel"
-            style={{ maxWidth: 520, width: "95vw", background: "#f8fafc" }}
+        {widgetOrder.map((id) => {
+          const isMobileCollapsible =
+            id === "aniversariantes_clientes" || id === "orcamentos" || id === "viagens" || id === "follow_up";
+          const node = renderWidget(id);
+          if (!node) return null;
+
+          if (!isMobileCollapsible) {
+            return <React.Fragment key={id}>{node}</React.Fragment>;
+          }
+
+          const meta = GESTOR_WIDGETS.find((w) => w.id === id);
+          const aberto = mobileWidgetOpen[id];
+          const label = (() => {
+            if (id === "aniversariantes_clientes") {
+              return `Aniversariantes (${clientesAniversariantes.length})`;
+            }
+            if (id === "orcamentos") return `Orcamentos recentes (${orcamentosRecentes.length})`;
+            if (id === "viagens") return `Proximas viagens (${viagensProximas.length})`;
+            if (id === "follow_up") return `Follow-up (${followUpsRecentes.length})`;
+            return meta?.titulo || id;
+          })();
+
+          return (
+            <React.Fragment key={id}>
+              <div className="mobile-only">
+                <AppButton type="button" variant={aberto ? "primary" : "secondary"} block onClick={() => toggleMobileWidget(id)}>
+                  {label}
+                </AppButton>
+                {aberto && <div style={{ marginTop: 12 }}>{renderWidget(id, { hideTitle: true })}</div>}
+              </div>
+              <div className="hidden sm:block">{node}</div>
+            </React.Fragment>
+          );
+        })}
+
+        {showCustomize && (
+          <Dialog
+            title="Personalizar dashboard"
+            width="large"
+            onClose={() => setShowCustomize(false)}
+            footerButtons={[
+              {
+                content: "Fechar",
+                buttonType: "primary",
+                onClick: () => setShowCustomize(false),
+              },
+            ]}
           >
-            <div className="modal-header">
-              <div
-                className="modal-title"
-                style={{ color: "#6d28d9", fontSize: "1.1rem", fontWeight: 800 }}
-              >
-                Personalizar dashboard
-              </div>
-              <button className="btn-ghost" onClick={() => setShowCustomize(false)}>
-                ✖
-              </button>
-            </div>
-            <div className="modal-body">
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {widgetOrder.map((id, idx) => {
-                  const meta = GESTOR_WIDGETS.find((w) => w.id === id);
-                  if (!meta) return null;
-                  return (
-                    <div
-                      key={id}
-                      style={{
-                        border: "1px solid #e2e8f0",
-                        borderRadius: 8,
-                        padding: 10,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        flexWrap: "wrap",
-                        background: "#fff",
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={widgetAtivo(id)}
-                        onChange={() => toggleWidget(id)}
-                      />
-                      <div style={{ flex: 1 }}>{meta.titulo}</div>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button
-                          type="button"
-                          className="btn-icon"
-                          disabled={idx === 0}
-                          onClick={() => moverWidget(id, "up")}
-                        >
-                          ↑
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-icon"
-                          disabled={idx === widgetOrder.length - 1}
-                          onClick={() => moverWidget(id, "down")}
-                        >
-                          ↓
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div style={{ marginTop: 16 }}>
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>KPIs</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {kpiOrder.map((id, idx) => {
-                    const meta = GESTOR_KPIS.find((k) => k.id === id);
+            <div className="vtur-modal-body-stack">
+              <AppCard title="Widgets" subtitle="Defina a visibilidade e a ordem dos blocos do dashboard.">
+                <div className="vtur-dashboard-config-list">
+                  {widgetOrder.map((id, idx) => {
+                    const meta = GESTOR_WIDGETS.find((w) => w.id === id);
                     if (!meta) return null;
                     return (
-                      <div
-                        key={id}
-                        style={{
-                          border: "1px solid #e2e8f0",
-                          borderRadius: 8,
-                          padding: 10,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                          flexWrap: "wrap",
-                          background: "#fff",
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={kpiAtivo(id)}
-                          onChange={() => toggleKpi(id)}
-                        />
-                        <div style={{ flex: 1 }}>{meta.titulo}</div>
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button
-                            type="button"
-                            className="btn-icon"
-                            disabled={idx === 0}
-                            onClick={() => moverKpi(id, "up")}
-                          >
+                      <div key={id} className="vtur-dashboard-config-item">
+                        <label className="vtur-dashboard-checkbox-row">
+                          <input type="checkbox" checked={widgetAtivo(id)} onChange={() => toggleWidget(id)} />
+                          <span>{meta.titulo}</span>
+                        </label>
+                        <div className="vtur-dashboard-config-actions">
+                          <AppButton type="button" variant="ghost" onClick={() => moverWidget(id, "up")} disabled={idx === 0}>
                             ↑
-                          </button>
-                          <button
+                          </AppButton>
+                          <AppButton
                             type="button"
-                            className="btn-icon"
-                            disabled={idx === kpiOrder.length - 1}
-                            onClick={() => moverKpi(id, "down")}
+                            variant="ghost"
+                            onClick={() => moverWidget(id, "down")}
+                            disabled={idx === widgetOrder.length - 1}
                           >
                             ↓
-                          </button>
+                          </AppButton>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              </div>
+              </AppCard>
+
+              <AppCard title="KPIs" subtitle="Escolha os indicadores exibidos no topo do dashboard.">
+                <div className="vtur-dashboard-config-list">
+                  {kpiOrder.map((id, idx) => {
+                    const meta = GESTOR_KPIS.find((k) => k.id === id);
+                    if (!meta) return null;
+                    return (
+                      <div key={id} className="vtur-dashboard-config-item">
+                        <label className="vtur-dashboard-checkbox-row">
+                          <input type="checkbox" checked={kpiAtivo(id)} onChange={() => toggleKpi(id)} />
+                          <span>{meta.titulo}</span>
+                        </label>
+                        <div className="vtur-dashboard-config-actions">
+                          <AppButton type="button" variant="ghost" onClick={() => moverKpi(id, "up")} disabled={idx === 0}>
+                            ↑
+                          </AppButton>
+                          <AppButton
+                            type="button"
+                            variant="ghost"
+                            onClick={() => moverKpi(id, "down")}
+                            disabled={idx === kpiOrder.length - 1}
+                          >
+                            ↓
+                          </AppButton>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </AppCard>
             </div>
-          </div>
-        </div>
-      )}
+          </Dialog>
+        )}
 
-      {loadingDados && <div>Carregando...</div>}
-
-      {erro && (
-        <div className="card-base card-config">{erro}</div>
-      )}
-    </div>
+        {loadingDados && <AppCard tone="config">Carregando dados...</AppCard>}
+        {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
+      </div>
+    </AppPrimerProvider>
   );
 }
