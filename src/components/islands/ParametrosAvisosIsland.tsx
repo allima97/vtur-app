@@ -6,6 +6,7 @@ import AlertMessage from "../ui/AlertMessage";
 import { renderTemplateText } from "../../lib/messageTemplates";
 import { construirLinkWhatsAppComTexto } from "../../lib/whatsapp";
 import AppCard from "../ui/primer/AppCard";
+import AppButton from "../ui/primer/AppButton";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 import AppToolbar from "../ui/primer/AppToolbar";
 import {
@@ -771,9 +772,9 @@ export default function ParametrosAvisosIsland() {
             <small style={{ color: "#475569", display: "block", marginBottom: 8 }}>
               Use isso só para instalar ou reinstalar a biblioteca padrão do sistema. Não é necessário na operação diária.
             </small>
-            <button type="button" className="btn btn-light" onClick={carregarBibliotecaPadrao} disabled={carregandoPadrao}>
+            <AppButton type="button" variant="secondary" onClick={carregarBibliotecaPadrao} disabled={carregandoPadrao}>
               {carregandoPadrao ? "Instalando biblioteca..." : "Instalar modelos padrao vtur"}
-            </button>
+            </AppButton>
           </div>
         </details>
       </AppCard>
@@ -838,12 +839,12 @@ export default function ParametrosAvisosIsland() {
             </div>
           </div>
           <div className="mobile-stack-buttons">
-            <button className="btn btn-primary" type="submit" disabled={salvandoTheme}>
+            <AppButton variant="primary" type="submit" disabled={salvandoTheme}>
               {salvandoTheme ? "Salvando..." : themeForm.id ? "Salvar arte" : "Cadastrar arte"}
-            </button>
-            <button className="btn btn-light" type="button" onClick={resetThemeForm} disabled={salvandoTheme}>
+            </AppButton>
+            <AppButton variant="secondary" type="button" onClick={resetThemeForm} disabled={salvandoTheme}>
               Nova arte
-            </button>
+            </AppButton>
           </div>
         </form>
 
@@ -889,15 +890,33 @@ export default function ParametrosAvisosIsland() {
                     <td data-label="Status">{theme.ativo ? "Ativo" : "Inativo"}</td>
                     <td className="th-actions" data-label="Ações">
                       <div className="action-buttons">
-                        <button className="btn-icon" type="button" onClick={() => editarTheme(theme)} title="Editar arte">
-                          <i className="pi pi-pencil" aria-hidden="true" />
-                        </button>
-                        <a className="btn-icon" href={resolvedThemeAsset.asset_url || theme.asset_url} target="_blank" rel="noreferrer" title="Visualizar arte">
-                          <i className="pi pi-eye" aria-hidden="true" />
-                        </a>
-                        <button className="btn-icon btn-danger" type="button" onClick={() => void removerTheme(theme.id)} title="Excluir arte">
-                          <i className="pi pi-trash" aria-hidden="true" />
-                        </button>
+                        <AppButton
+                          type="button"
+                          variant="ghost"
+                          icon="pi pi-pencil"
+                          className="p-button-rounded p-button-sm"
+                          onClick={() => editarTheme(theme)}
+                          title="Editar arte"
+                          aria-label="Editar arte"
+                        />
+                        <AppButton
+                          type="button"
+                          variant="ghost"
+                          icon="pi pi-eye"
+                          className="p-button-rounded p-button-sm"
+                          onClick={() => window.open(resolvedThemeAsset.asset_url || theme.asset_url, "_blank", "noopener,noreferrer")}
+                          title="Visualizar arte"
+                          aria-label="Visualizar arte"
+                        />
+                        <AppButton
+                          type="button"
+                          variant="danger"
+                          icon="pi pi-trash"
+                          className="p-button-rounded p-button-sm"
+                          onClick={() => void removerTheme(theme.id)}
+                          title="Excluir arte"
+                          aria-label="Excluir arte"
+                        />
                       </div>
                     </td>
                   </tr>
@@ -1080,14 +1099,14 @@ export default function ParametrosAvisosIsland() {
               Ajuste fonte, cor, tamanho e posição de cada bloco. O preview abaixo reflete as mudanças antes de salvar.
             </small>
             <div className="mobile-stack-buttons" style={{ marginTop: 12 }}>
-              <button
+              <AppButton
                 type="button"
-                className="btn btn-light"
+                variant="secondary"
                 onClick={() => aplicarPadraoVisual(form.theme_id)}
                 disabled={!form.theme_id}
               >
                 Restaurar padrão da arte
-              </button>
+              </AppButton>
             </div>
             <div className="parametros-avisos-style-grid" style={{ marginTop: 12 }}>
               {CARD_STYLE_SECTION_ORDER.map((section) => {
@@ -1169,16 +1188,16 @@ export default function ParametrosAvisosIsland() {
           </details>
 
           <div className="mobile-stack-buttons">
-            <button className="btn btn-primary" type="submit" disabled={salvando}>
+            <AppButton variant="primary" type="submit" disabled={salvando}>
               {salvando ? "Salvando..." : "Salvar configuração"}
-            </button>
-            <button className="btn btn-light" type="button" onClick={resetForm} disabled={salvando}>
+            </AppButton>
+            <AppButton variant="secondary" type="button" onClick={resetForm} disabled={salvando}>
               Nova configuração
-            </button>
+            </AppButton>
             {form.id ? (
               <>
-                <button
-                  className="btn btn-light"
+                <AppButton
+                  variant="secondary"
                   type="button"
                   onClick={() => {
                     const currentTemplate = templates.find((tpl) => tpl.id === form.id);
@@ -1187,10 +1206,10 @@ export default function ParametrosAvisosIsland() {
                   disabled={salvando}
                 >
                   Duplicar
-                </button>
-                <button className="btn btn-light" type="button" onClick={() => void removerConfiguracao(form.id)} disabled={salvando}>
+                </AppButton>
+                <AppButton variant="secondary" type="button" onClick={() => void removerConfiguracao(form.id)} disabled={salvando}>
                   Excluir
-                </button>
+                </AppButton>
               </>
             ) : null}
           </div>
@@ -1215,14 +1234,20 @@ export default function ParametrosAvisosIsland() {
           <>
             <img src={previewThemeSvgUrl} alt="Prévia do cartão" style={{ maxWidth: 320, borderRadius: 12, border: "1px solid #cbd5e1" }} />
             <div className="mobile-stack-buttons" style={{ marginTop: 8 }}>
-              <a className="btn btn-light" href={previewThemeSvgUrl} target="_blank" rel="noreferrer">Abrir SVG</a>
-              <a className="btn btn-light" href={previewThemePngUrl} target="_blank" rel="noreferrer">Abrir PNG</a>
+              <AppButton type="button" variant="secondary" onClick={() => window.open(previewThemeSvgUrl, "_blank", "noopener,noreferrer")}>
+                Abrir SVG
+              </AppButton>
+              <AppButton type="button" variant="secondary" onClick={() => window.open(previewThemePngUrl, "_blank", "noopener,noreferrer")}>
+                Abrir PNG
+              </AppButton>
               {previewWhatsappUrl ? (
-                <a className="btn btn-light" href={previewWhatsappUrl} target="_blank" rel="noreferrer">Abrir WhatsApp</a>
-              ) : (
-                <button type="button" className="btn btn-light" disabled title="Cliente sem WhatsApp/telefone">
+                <AppButton type="button" variant="secondary" onClick={() => window.open(previewWhatsappUrl, "_blank", "noopener,noreferrer")}>
                   Abrir WhatsApp
-                </button>
+                </AppButton>
+              ) : (
+                <AppButton type="button" variant="secondary" disabled title="Cliente sem WhatsApp/telefone">
+                  Abrir WhatsApp
+                </AppButton>
               )}
             </div>
           </>
