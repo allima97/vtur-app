@@ -464,7 +464,7 @@ export default function CommissionRulesIsland() {
                         <th>Ate (%)</th>
                         <th>Inc. Meta (%)</th>
                         <th>Inc. Comissao (%)</th>
-                        <th>Acoes</th>
+                        <th className="th-actions">Acoes</th>
                       </tr>
                     }
                     loading={false}
@@ -576,7 +576,7 @@ export default function CommissionRulesIsland() {
                   <th>Tipo</th>
                   <th>Ativo</th>
                   <th>Faixas</th>
-                  <th>Acoes</th>
+                  <th className="th-actions">Acoes</th>
                 </tr>
               }
               loading={loading}

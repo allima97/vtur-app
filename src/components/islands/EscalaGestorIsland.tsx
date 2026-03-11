@@ -1523,7 +1523,7 @@ export default function EscalaGestorIsland() {
                     <th>Data</th>
                     <th>Nome</th>
                     <th>Tipo</th>
-                    <th>Acoes</th>
+                    <th className="th-actions">Acoes</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1532,7 +1532,7 @@ export default function EscalaGestorIsland() {
                       <td data-label="Data">{formatarDataParaExibicao(f.data)}</td>
                       <td data-label="Nome">{f.nome}</td>
                       <td data-label="Tipo">{f.tipo}</td>
-                      <td data-label="Acoes">
+                      <td className="th-actions" data-label="Acoes">
                         <button
                           type="button"
                           className="btn btn-light"

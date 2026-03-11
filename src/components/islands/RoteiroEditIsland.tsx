@@ -347,7 +347,7 @@ function RowActions({
   onDown?: () => void;
 }) {
   return (
-    <td style={{ ...tdSt, whiteSpace: "nowrap" }}>
+    <td className="th-actions" style={{ ...tdSt, whiteSpace: "nowrap", textAlign: "center" }}>
       <button onClick={onUp} style={actionBtnSt} title="Subir">▲</button>{" "}
       <button onClick={onDown} style={actionBtnSt} title="Descer">▼</button>{" "}
       <button onClick={onAdd} style={actionBtnSt} title="Adicionar abaixo">+</button>{" "}

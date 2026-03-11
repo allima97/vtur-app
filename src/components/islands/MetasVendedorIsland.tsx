@@ -1448,7 +1448,7 @@ export default function MetasVendedorIsland() {
                       <th>Loja</th>
                       <th>Meta geral</th>
                       <th>Meta Produto Diferenciado</th>
-                      {usuarioPodeEditar && <th>Ações</th>}
+                      {usuarioPodeEditar && <th className="th-actions">Ações</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -1509,7 +1509,7 @@ export default function MetasVendedorIsland() {
                       <th>Vendedor</th>
                       <th>Meta Individual</th>
                       <th>Meta Produto Diferenciado</th>
-                      {usuarioPodeEditar && <th>Ações</th>}
+                      {usuarioPodeEditar && <th className="th-actions">Ações</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -1574,7 +1574,7 @@ export default function MetasVendedorIsland() {
                   <th>Meta Diferenciada</th>
                   <th>Produtos</th>
                   <th>Ativo</th>
-                  {usuarioPodeEditar && <th>Ações</th>}
+                  {usuarioPodeEditar && <th className="th-actions">Ações</th>}
                 </tr>
               </thead>
               <tbody>
