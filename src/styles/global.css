@@ -442,6 +442,24 @@ body {
   z-index: 20;
 }
 
+.vtur-relatorio-vendas-filters-mobile {
+  display: none;
+}
+
+.vtur-relatorio-vendas-filters-inline {
+  display: block;
+}
+
+@media (max-width: 640px) {
+  .vtur-relatorio-vendas-filters-mobile {
+    display: inline-flex;
+  }
+
+  .vtur-relatorio-vendas-filters-inline {
+    display: none;
+  }
+}
+
 .page-title {
   margin: 0 0 4px;
   font-size: clamp(1.15rem, 3.8vw, 1.45rem);
