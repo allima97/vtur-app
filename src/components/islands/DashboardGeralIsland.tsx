@@ -2375,7 +2375,7 @@ function toLineChartConfig(
             </div>
             <div className="vtur-form-grid vtur-form-grid-2">
               <AppField
-                label="Data inicio"
+                label="Data Início"
                 type="date"
                 value={inicio}
                 onFocus={selectAllInputOnFocus}
@@ -2387,7 +2387,7 @@ function toLineChartConfig(
                 }}
               />
               <AppField
-                label="Data fim"
+                label="Data Final"
                 type="date"
                 value={fim}
                 min={inicio || undefined}
@@ -2431,7 +2431,7 @@ function toLineChartConfig(
                   {presetPeriodo === "personalizado" && (
                     <>
                       <AppField
-                        label="Data inicio"
+                        label="Data Início"
                         type="date"
                         value={inicio}
                         onFocus={selectAllInputOnFocus}
@@ -2443,7 +2443,7 @@ function toLineChartConfig(
                         }}
                       />
                       <AppField
-                        label="Data fim"
+                        label="Data Final"
                         type="date"
                         value={fim}
                         min={inicio || undefined}

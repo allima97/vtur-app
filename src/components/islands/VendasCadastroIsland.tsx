@@ -1939,7 +1939,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                   </div>
 
                   <AppField
-                    label="Inicio *"
+                    label="Data Início *"
                     type="date"
                     value={r.data_inicio}
                     onFocus={selectAllInputOnFocus}
@@ -1948,7 +1948,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                   />
 
                   <AppField
-                    label="Fim *"
+                    label="Data Final *"
                     type="date"
                     value={r.data_fim}
                     min={r.data_inicio || undefined}

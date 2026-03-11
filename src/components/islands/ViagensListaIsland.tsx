@@ -575,7 +575,7 @@ export default function ViagensListaIsland() {
                 as="input"
                 type="date"
                 wrapperClassName="form-group"
-                label="Data inicio"
+                label="Data Início"
                 value={cadastroForm.data_inicio}
                 onFocus={selectAllInputOnFocus}
                 onChange={(e) =>
@@ -593,7 +593,7 @@ export default function ViagensListaIsland() {
                 as="input"
                 type="date"
                 wrapperClassName="form-group"
-                label="Data fim"
+                label="Data Final"
                 value={cadastroForm.data_fim}
                 min={cadastroForm.data_inicio || undefined}
                 onFocus={selectAllInputOnFocus}
@@ -688,7 +688,7 @@ export default function ViagensListaIsland() {
                     as="input"
                     type="date"
                     wrapperClassName="form-group"
-                    label="Inicio"
+                    label="Data Início"
                     value={inicio}
                     onFocus={selectAllInputOnFocus}
                     onChange={(e) => {
@@ -767,7 +767,7 @@ export default function ViagensListaIsland() {
                 as="input"
                 type="date"
                 wrapperClassName="form-group"
-                label="Inicio"
+                label="Data Início"
                 value={inicio}
                 onFocus={selectAllInputOnFocus}
                 onChange={(e) => {
@@ -818,8 +818,8 @@ export default function ViagensListaIsland() {
               headers={
                 <tr>
                   <th>Cliente</th>
-                  <th>Inicio</th>
-                  <th>Fim</th>
+                  <th>Data Início</th>
+                  <th>Data Final</th>
                   <th>Status</th>
                   <th>Produto</th>
                   <th>Valor</th>
@@ -854,8 +854,8 @@ export default function ViagensListaIsland() {
                 return (
                   <tr key={v.id}>
                     <td data-label="Cliente">{v.clientes?.nome || "-"}</td>
-                    <td data-label="Inicio">{formatarDataParaExibicao(v.data_inicio)}</td>
-                    <td data-label="Fim">{formatarDataParaExibicao(v.data_fim)}</td>
+                    <td data-label="Data Início">{formatarDataParaExibicao(v.data_inicio)}</td>
+                    <td data-label="Data Final">{formatarDataParaExibicao(v.data_fim)}</td>
                     <td data-label="Status">{statusLabel}</td>
                     <td data-label="Produto">{produtoLabel}</td>
                     <td data-label="Valor">{valorLabel}</td>

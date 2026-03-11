@@ -1108,7 +1108,7 @@ export default function ComissionamentoIsland() {
       />
 
       <AppField
-        label="Inicio"
+        label="Data Início"
         type={periodoEditavel ? "date" : "text"}
         value={periodoEditavel ? periodo.inicio : formatPeriodoLabel(periodo.inicio)}
         readOnly={!periodoEditavel}
@@ -1119,7 +1119,7 @@ export default function ComissionamentoIsland() {
       />
 
       <AppField
-        label="Fim"
+        label="Data Final"
         type={periodoEditavel ? "date" : "text"}
         value={periodoEditavel ? periodo.fim : formatPeriodoLabel(periodo.fim)}
         readOnly={!periodoEditavel}

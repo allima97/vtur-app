@@ -1194,6 +1194,7 @@ body {
 
 :root {
   --search-input-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23808a9b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
+  --date-input-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23808a9b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2v4'/%3E%3Cpath d='M16 2v4'/%3E%3Crect x='3' y='4.5' width='18' height='16.5' rx='2.5'/%3E%3Cpath d='M3 9.5h18'/%3E%3C/svg%3E");
 }
 
 .search-input-field,
@@ -1237,6 +1238,19 @@ input[aria-label*="Search"] {
   background-position: right 14px center;
   background-size: 18px 18px;
   padding-right: 42px;
+}
+
+input[type="date"] {
+  background-image: var(--date-input-icon);
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 18px 18px;
+  padding-right: 42px;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  cursor: pointer;
 }
 
 .quote-manual-client-row .form-label {
@@ -6397,7 +6411,7 @@ input[aria-label*="Search"] {
   .roteiro-edit-table-hoteis td:nth-child(1)::before { content: "Cidade"; }
   .roteiro-edit-table-hoteis td:nth-child(2)::before { content: "Hotel"; }
   .roteiro-edit-table-hoteis td:nth-child(3)::before { content: "Data Início"; }
-  .roteiro-edit-table-hoteis td:nth-child(4)::before { content: "Data Fim"; }
+  .roteiro-edit-table-hoteis td:nth-child(4)::before { content: "Data Final"; }
   .roteiro-edit-table-hoteis td:nth-child(5)::before { content: "Noites"; }
   .roteiro-edit-table-hoteis td:nth-child(6)::before { content: "Apto"; }
   .roteiro-edit-table-hoteis td:nth-child(7)::before { content: "Categoria"; }
@@ -6406,7 +6420,7 @@ input[aria-label*="Search"] {
   .roteiro-edit-table-passeios td:nth-child(1)::before { content: "Cidade"; }
   .roteiro-edit-table-passeios td:nth-child(2)::before { content: "Passeio"; }
   .roteiro-edit-table-passeios td:nth-child(3)::before { content: "Data Início"; }
-  .roteiro-edit-table-passeios td:nth-child(4)::before { content: "Data Fim"; }
+  .roteiro-edit-table-passeios td:nth-child(4)::before { content: "Data Final"; }
   .roteiro-edit-table-passeios td:nth-child(5)::before { content: "Tipo"; }
   .roteiro-edit-table-passeios td:nth-child(6)::before { content: "Ingressos"; }
 
@@ -6414,7 +6428,7 @@ input[aria-label*="Search"] {
   .roteiro-edit-table-transporte td:nth-child(2)::before { content: "Fornecedor"; }
   .roteiro-edit-table-transporte td:nth-child(3)::before { content: "Descrição"; }
   .roteiro-edit-table-transporte td:nth-child(4)::before { content: "Data Início"; }
-  .roteiro-edit-table-transporte td:nth-child(5)::before { content: "Data Fim"; }
+  .roteiro-edit-table-transporte td:nth-child(5)::before { content: "Data Final"; }
   .roteiro-edit-table-transporte td:nth-child(6)::before { content: "Categoria"; }
   .roteiro-edit-table-transporte td:nth-child(7)::before { content: "Observação"; }
 

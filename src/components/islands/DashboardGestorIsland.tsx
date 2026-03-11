@@ -1313,7 +1313,7 @@ function DashboardGestorIslandInner() {
           <DataTable
             headers={
               <tr>
-                <th>Inicio</th>
+                <th>Data Início</th>
                 <th>Cliente</th>
                 <th>Destino</th>
                 <th>Status</th>
@@ -1327,7 +1327,7 @@ function DashboardGestorIslandInner() {
           >
             {viagensProximas.map((v) => (
               <tr key={v.id}>
-                <td data-label="Inicio">{formatarDataParaExibicao(v.data_inicio)}</td>
+                <td data-label="Data Início">{formatarDataParaExibicao(v.data_inicio)}</td>
                 <td data-label="Cliente">{v.clientes?.nome || "—"}</td>
                 <td data-label="Destino">{v.destino || "—"}</td>
                 <td data-label="Status">{v.status || "—"}</td>
@@ -1477,13 +1477,13 @@ function DashboardGestorIslandInner() {
         >
           <div className="vtur-form-grid vtur-form-grid-4">
             <AppField
-              label="Data inicio"
+              label="Data Início"
               type="date"
               value={inicio}
               onChange={(e) => setInicio(e.target.value)}
             />
             <AppField
-              label="Data fim"
+              label="Data Final"
               type="date"
               min={inicio || undefined}
               value={fim}

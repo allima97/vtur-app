@@ -1305,7 +1305,7 @@ export default function VendasConsultaIsland() {
             {periodoPreset === "dia" && (
               <>
                 <AppField
-                  label="Data início"
+                  label="Data Início"
                   type="date"
                   value={periodoDia}
                   max={dateToISODateLocal(new Date())}
@@ -1319,7 +1319,7 @@ export default function VendasConsultaIsland() {
                   }}
                 />
                 <AppField
-                  label="Data fim"
+                  label="Data Final"
                   type="date"
                   value={periodoDiaFim}
                   min={periodoDia || undefined}
@@ -1772,8 +1772,8 @@ export default function VendasConsultaIsland() {
                       <th>Número</th>
                       <th>Reserva</th>
                       <th>Produto</th>
-                      <th style={{ textAlign: "center" }}>Início</th>
-                      <th style={{ textAlign: "center" }}>Fim</th>
+                      <th style={{ textAlign: "center" }}>Data Início</th>
+                      <th style={{ textAlign: "center" }}>Data Final</th>
                       <th>Valor</th>
                       <th>Taxas</th>
                       <th>Contrato</th>
@@ -1796,10 +1796,10 @@ export default function VendasConsultaIsland() {
                           <td data-label="Número">{r.numero_recibo || "-"}</td>
                           <td data-label="Reserva">{r.numero_reserva || "-"}</td>
                           <td data-label="Produto">{r.produto_nome || "-"}</td>
-                          <td data-label="Início" style={{ textAlign: "center" }}>
+                          <td data-label="Data Início" style={{ textAlign: "center" }}>
                             {formatarData(r.data_inicio)}
                           </td>
-                          <td data-label="Fim" style={{ textAlign: "center" }}>
+                          <td data-label="Data Final" style={{ textAlign: "center" }}>
                             {formatarData(r.data_fim)}
                           </td>
                           <td data-label="Valor">{valorFmt}</td>
