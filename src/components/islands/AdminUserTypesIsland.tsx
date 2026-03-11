@@ -507,7 +507,7 @@ export default function AdminUserTypesIsland() {
                           label: "Permissoes",
                           title: "Editar permissoes padrao",
                           onClick: () => abrirPermissoes(tipo),
-                          icon: "🔐",
+                          icon: <i className="pi pi-lock" aria-hidden="true" />,
                           variant: "primary",
                         },
                         {
@@ -515,7 +515,7 @@ export default function AdminUserTypesIsland() {
                           label: "Editar",
                           title: "Editar tipo",
                           onClick: () => abrirEdicaoTipo(tipo),
-                          icon: "✏️",
+                          icon: <i className="pi pi-pencil" aria-hidden="true" />,
                           variant: "ghost",
                         },
                         {
@@ -523,7 +523,7 @@ export default function AdminUserTypesIsland() {
                           label: "Excluir",
                           title: "Excluir tipo",
                           onClick: () => setDeleteTarget(tipo),
-                          icon: "🗑️",
+                          icon: <i className="pi pi-trash" aria-hidden="true" />,
                           variant: "danger",
                         },
                       ]}

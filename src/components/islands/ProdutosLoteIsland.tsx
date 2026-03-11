@@ -739,7 +739,7 @@ export default function ProdutosLoteIsland() {
                           title="Remover produto"
                           aria-label="Remover produto"
                         >
-                          🗑️
+                          <i className="pi pi-trash" aria-hidden="true" />
                         </AppButton>
                       </div>
                     </td>

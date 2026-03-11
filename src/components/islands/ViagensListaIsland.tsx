@@ -758,7 +758,7 @@ export default function ViagensListaIsland() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <strong>Filtros</strong>
                 <AppButton type="button" variant="ghost" onClick={() => setShowFilters(false)}>
-                  ✕
+                  <i className="pi pi-times" aria-hidden="true" />
                 </AppButton>
               </div>
               <AppField
@@ -872,7 +872,7 @@ export default function ViagensListaIsland() {
                           {
                             key: "view",
                             label: "Ver viagem",
-                            icon: "👁️",
+                            icon: <i className="pi pi-eye" aria-hidden="true" />,
                             onClick: () => {
                               window.location.href = `/operacao/viagens/${v.id}`;
                             },
@@ -882,7 +882,7 @@ export default function ViagensListaIsland() {
                                 {
                                   key: "whatsapp",
                                   label: "Enviar WhatsApp",
-                                  icon: "💬",
+                                  icon: <i className="pi pi-comments" aria-hidden="true" />,
                                   onClick: () => window.open(whatsappLink, "_blank", "noreferrer"),
                                 },
                               ]
@@ -892,7 +892,7 @@ export default function ViagensListaIsland() {
                                 {
                                   key: "edit",
                                   label: "Editar viagem",
-                                  icon: "✏️",
+                                  icon: <i className="pi pi-pencil" aria-hidden="true" />,
                                   onClick: () => {
                                     window.location.href = `/operacao/viagens/${v.id}?modo=editar`;
                                   },
@@ -904,7 +904,10 @@ export default function ViagensListaIsland() {
                                 {
                                   key: "delete",
                                   label: "Excluir viagem",
-                                  icon: deletandoViagemId === v.id ? "..." : "🗑️",
+                                  icon:
+                                    deletandoViagemId === v.id
+                                      ? "..."
+                                      : <i className="pi pi-trash" aria-hidden="true" />,
                                   variant: "danger",
                                   disabled: deletandoViagemId === v.id,
                                   onClick: () => solicitarExclusaoViagem(v),

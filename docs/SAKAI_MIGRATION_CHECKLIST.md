@@ -45,3 +45,4 @@ Atualizado em 2026-03-10.
 - [x] `ASTRO_TELEMETRY_DISABLED=1 npm run build`
 - [ ] Smoke test manual das telas alteradas (desktop + mobile)
 - [x] `npm run check:modulos`
+- [x] Auditoria global Prime/Sakai em `docs/PRIME_SAKAI_FULL_AUDIT.md`

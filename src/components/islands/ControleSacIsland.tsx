@@ -814,19 +814,19 @@ export default function ControleSacIsland() {
                         key: "view",
                         label: "Ver",
                         onClick: () => abrirVisualizacao(row),
-                        icon: "👁️",
+                        icon: <i className="pi pi-eye" aria-hidden="true" />,
                       },
                       {
                         key: "history",
                         label: "Historico",
                         onClick: () => abrirHistorico(row),
-                        icon: "🗂️",
+                        icon: <i className="pi pi-folder-open" aria-hidden="true" />,
                       },
                       {
                         key: "interacao",
                         label: "Registrar interacao",
                         onClick: () => abrirInteracao(row),
-                        icon: "📝",
+                        icon: <i className="pi pi-file-edit" aria-hidden="true" />,
                       },
                       ...(podeEditar
                         ? [
@@ -834,7 +834,7 @@ export default function ControleSacIsland() {
                               key: "edit",
                               label: "Editar",
                               onClick: () => abrirEditar(row),
-                              icon: "✏️",
+                              icon: <i className="pi pi-pencil" aria-hidden="true" />,
                             },
                           ]
                         : []),
@@ -844,7 +844,7 @@ export default function ControleSacIsland() {
                               key: "delete",
                               label: "Excluir",
                               onClick: () => excluirSac(row),
-                              icon: "🗑️",
+                              icon: <i className="pi pi-trash" aria-hidden="true" />,
                               variant: "danger",
                               disabled: excluindoId === row.id,
                             },

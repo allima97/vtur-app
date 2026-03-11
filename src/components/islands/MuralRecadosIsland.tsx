@@ -148,7 +148,7 @@ function buildRecadoPreview(recado?: RecadoRow | null) {
   const arquivos = (recado.arquivos || []) as RecadoArquivoRow[];
   if (arquivos.length > 0) {
     const first = arquivos[0];
-    const base = isImageMime(first.mime_type) ? "📷 Imagem" : `📎 ${first.file_name || "Arquivo"}`;
+    const base = isImageMime(first.mime_type) ? "Imagem" : `${first.file_name || "Arquivo"}`;
     return arquivos.length > 1 ? `${base} (+${arquivos.length - 1})` : base;
   }
   return "";
@@ -1156,7 +1156,9 @@ export default function MuralRecadosIsland() {
                                     rel="noreferrer"
                                     title={a.file_name}
                                   >
-                                    <span className="chat-attachment-file-icon">📎</span>
+                                    <span className="chat-attachment-file-icon">
+                                      <i className="pi pi-paperclip" aria-hidden="true" />
+                                    </span>
                                     <span className="chat-attachment-file-info">
                                       <span className="chat-attachment-file-name">{a.file_name}</span>
                                       {size ? <span className="chat-attachment-file-size">{size}</span> : null}
@@ -1241,7 +1243,9 @@ export default function MuralRecadosIsland() {
                   <div className="mural-attachments-preview" style={{ marginTop: 10 }}>
                     {anexos.map((file, idx) => (
                       <div key={`${file.name}-${file.size}-${file.lastModified}`} className="mural-attachment-chip">
-                        <span className="mural-attachment-chip-icon">{isImageMime(file.type) ? "🖼️" : "📎"}</span>
+                        <span className="mural-attachment-chip-icon">
+                          <i className={isImageMime(file.type) ? "pi pi-image" : "pi pi-paperclip"} aria-hidden="true" />
+                        </span>
                         <span className="mural-attachment-chip-name">{file.name}</span>
                         <span className="mural-attachment-chip-size">{formatBytes(file.size)}</span>
                         <button
@@ -1271,7 +1275,10 @@ export default function MuralRecadosIsland() {
                           : "Anexar arquivo"
                       }
                     >
-                      📎 Anexar
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <i className="pi pi-paperclip" aria-hidden="true" />
+                        <span>Anexar</span>
+                      </span>
                     </button>
                   )}
                   <button type="button" className="btn btn-light" onClick={clearMessageFields} disabled={enviando}>
@@ -1430,7 +1437,9 @@ export default function MuralRecadosIsland() {
                                       rel="noreferrer"
                                       title={a.file_name}
                                     >
-                                      <span className="chat-attachment-file-icon">📎</span>
+                                      <span className="chat-attachment-file-icon">
+                                        <i className="pi pi-paperclip" aria-hidden="true" />
+                                      </span>
                                       <span className="chat-attachment-file-info">
                                         <span className="chat-attachment-file-name">{a.file_name}</span>
                                         {size ? <span className="chat-attachment-file-size">{size}</span> : null}
@@ -1515,7 +1524,9 @@ export default function MuralRecadosIsland() {
                     <div className="mural-attachments-preview" style={{ marginTop: 10 }}>
                       {anexos.map((file, idx) => (
                         <div key={`${file.name}-${file.size}-${file.lastModified}`} className="mural-attachment-chip">
-                          <span className="mural-attachment-chip-icon">{isImageMime(file.type) ? "🖼️" : "📎"}</span>
+                          <span className="mural-attachment-chip-icon">
+                            <i className={isImageMime(file.type) ? "pi pi-image" : "pi pi-paperclip"} aria-hidden="true" />
+                          </span>
                           <span className="mural-attachment-chip-name">{file.name}</span>
                           <span className="mural-attachment-chip-size">{formatBytes(file.size)}</span>
                           <button
@@ -1545,7 +1556,10 @@ export default function MuralRecadosIsland() {
                             : "Anexar arquivo"
                         }
                       >
-                        📎 Anexar
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                          <i className="pi pi-paperclip" aria-hidden="true" />
+                          <span>Anexar</span>
+                        </span>
                       </button>
                     )}
                     <button type="button" className="btn btn-light" onClick={clearMessageFields} disabled={enviando}>

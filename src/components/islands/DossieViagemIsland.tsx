@@ -684,13 +684,24 @@ export default function DossieViagemIsland({ viagemId }: Props) {
       >
         {clienteTelefone || clienteWhatsapp ? (
           <div style={{ display: "flex", gap: 12, fontSize: 13, color: "#475569", flexWrap: "wrap" }}>
-            {clienteTelefone && <span>📞 {clienteTelefone}</span>}
+            {clienteTelefone && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <i className="pi pi-phone" aria-hidden="true" />
+                <span>{clienteTelefone}</span>
+              </span>
+            )}
             {clienteWhatsappLink ? (
               <a href={clienteWhatsappLink} target="_blank" rel="noreferrer" style={{ color: "#16a34a", textDecoration: "none" }}>
-                💬 {clienteWhatsapp || clienteTelefone}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <i className="pi pi-comments" aria-hidden="true" />
+                  <span>{clienteWhatsapp || clienteTelefone}</span>
+                </span>
               </a>
             ) : clienteWhatsapp ? (
-              <span>💬 {clienteWhatsapp}</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <i className="pi pi-comments" aria-hidden="true" />
+                <span>{clienteWhatsapp}</span>
+              </span>
             ) : null}
           </div>
         ) : null}
@@ -720,14 +731,23 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                 </div>
                 <div style={{ display: "flex", gap: 12, fontSize: 13, color: "#475569", flexWrap: "wrap" }}>
                   {clienteTelefone && (
-                    <span>📞 {clienteTelefone}</span>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <i className="pi pi-phone" aria-hidden="true" />
+                      <span>{clienteTelefone}</span>
+                    </span>
                   )}
                   {clienteWhatsappLink ? (
                     <a href={clienteWhatsappLink} target="_blank" rel="noreferrer" style={{ color: "#16a34a", textDecoration: "none" }}>
-                      💬 {clienteWhatsapp || clienteTelefone}
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <i className="pi pi-comments" aria-hidden="true" />
+                        <span>{clienteWhatsapp || clienteTelefone}</span>
+                      </span>
                     </a>
                   ) : clienteWhatsapp ? (
-                    <span>💬 {clienteWhatsapp}</span>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <i className="pi pi-comments" aria-hidden="true" />
+                      <span>{clienteWhatsapp}</span>
+                    </span>
                   ) : null}
                 </div>
               </div>
@@ -934,7 +954,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                                 onClick={() => iniciarEdicaoAcompanhante(a)}
                                 disabled={savingAcomp}
                               >
-                                ✏️
+                                <i className="pi pi-pencil" aria-hidden="true" />
                               </button>
                               <button
                                 className="btn-icon btn-danger"
@@ -943,7 +963,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                                 onClick={() => removerAcompanhante(a.id)}
                                 disabled={savingAcomp}
                               >
-                                🗑️
+                                <i className="pi pi-trash" aria-hidden="true" />
                               </button>
                             </div>
                           </td>
@@ -1580,7 +1600,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                                     disabled={removendoDocId === d.id}
                                     title="Remover"
                                   >
-                                    {removendoDocId === d.id ? "..." : "🗑️"}
+                                    {removendoDocId === d.id ? "..." : <i className="pi pi-trash" aria-hidden="true" />}
                                   </button>
                                 </div>
                               </td>

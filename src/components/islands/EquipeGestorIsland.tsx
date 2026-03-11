@@ -880,7 +880,11 @@ export default function EquipeGestorIsland() {
                     : ativo
                     ? "Remover da equipe"
                     : "Adicionar à equipe";
-                  const iconAcao = salvando ? "⏳" : ativo ? "➖" : "➕";
+                  const iconAcaoClass = salvando
+                    ? "pi pi-clock"
+                    : ativo
+                    ? "pi pi-minus-circle"
+                    : "pi pi-plus-circle";
                   return (
                     <tr key={u.id}>
                       <td data-label="Nome">{u.nome_completo || "—"}</td>
@@ -905,7 +909,9 @@ export default function EquipeGestorIsland() {
                               title={labelAcao}
                               aria-label={labelAcao}
                             >
-                              <span aria-hidden="true">{iconAcao}</span>
+                              <span aria-hidden="true">
+                                <i className={iconAcaoClass} />
+                              </span>
                               <span className="sr-only">{labelAcao}</span>
                             </AppButton>
                           </div>
@@ -1027,7 +1033,7 @@ export default function EquipeGestorIsland() {
                                           : "Detalhar dias úteis"
                                       }
                                     >
-                                      ⚙️
+                                      <i className="pi pi-cog" aria-hidden="true" />
                                     </AppButton>
                                   </div>
                                 </td>
@@ -1239,7 +1245,7 @@ export default function EquipeGestorIsland() {
                                         detalheAberto ? "Ocultar dias úteis" : "Detalhar dias úteis"
                                       }
                                     >
-                                      ⚙️
+                                      <i className="pi pi-cog" aria-hidden="true" />
                                     </AppButton>
                                   </div>
                                 </td>
