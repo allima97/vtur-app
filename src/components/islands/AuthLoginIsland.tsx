@@ -12,6 +12,7 @@ import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
 export default function AuthLoginIsland() {
+  const REMEMBER_EMAIL_KEY = "vtur-app:remembered-email";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [erro, setErro] = useState("");
@@ -19,6 +20,7 @@ export default function AuthLoginIsland() {
   const [loading, setLoading] = useState(false);
   const [modalSuspenso, setModalSuspenso] = useState(false);
   const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [lembrarEmail, setLembrarEmail] = useState(false);
 
   async function getIP() {
     try {
@@ -59,6 +61,15 @@ export default function AuthLoginIsland() {
       const newSearch = params.toString();
       const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : "");
       window.history.replaceState({}, "", newUrl);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const rememberedEmail = window.localStorage.getItem(REMEMBER_EMAIL_KEY) || "";
+    if (rememberedEmail) {
+      setEmail(rememberedEmail);
+      setLembrarEmail(true);
     }
   }, []);
 
@@ -216,6 +227,14 @@ export default function AuthLoginIsland() {
         ? "/dashboard/gestor"
         : "/dashboard";
 
+      if (typeof window !== "undefined") {
+        if (lembrarEmail) {
+          window.localStorage.setItem(REMEMBER_EMAIL_KEY, emailLimpo);
+        } else {
+          window.localStorage.removeItem(REMEMBER_EMAIL_KEY);
+        }
+      }
+
       clearPermissoesCache();
       await refreshPermissoes();
 
@@ -315,11 +334,28 @@ export default function AuthLoginIsland() {
                 </AppButton>
               </div>
             </div>
-            <div className="auth-links auth-links-forgot">
-              <a href="/auth/recover">Esqueceu a senha? Redefinir</a>
+            <div className="auth-meta-row">
+              <label className="auth-checkbox" htmlFor="login-remember">
+                <input
+                  id="login-remember"
+                  type="checkbox"
+                  checked={lembrarEmail}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setLembrarEmail(checked);
+                    if (!checked && typeof window !== "undefined") {
+                      window.localStorage.removeItem(REMEMBER_EMAIL_KEY);
+                    }
+                  }}
+                />
+                <span>Lembrar de mim</span>
+              </label>
+              <a className="auth-meta-link" href="/auth/recover">
+                Esqueceu a senha?
+              </a>
             </div>
             <div className="auth-actions">
-              <AppButton type="submit" variant="primary" disabled={loading}>
+              <AppButton type="submit" variant="primary" disabled={loading} block>
                 {loading ? "Entrando..." : "Entrar"}
               </AppButton>
               <AppButton as="a" href="/auth/register" variant="secondary" block>

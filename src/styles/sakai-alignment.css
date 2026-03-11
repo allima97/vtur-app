@@ -628,6 +628,18 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
 }
 
 @media (max-width: 640px) {
+  body.sakai-theme .vtur-data-table-shell {
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  body.sakai-theme .vtur-data-table-container {
+    background: transparent !important;
+  }
+
   body.sakai-theme .table-container::before,
   body.sakai-theme .table-container::after {
     display: none !important;
@@ -661,8 +673,14 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
     --table-card-divider: #e5e7eb !important;
   }
 
+  body.sakai-theme .table-mobile-cards tbody {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
   body.sakai-theme .table-mobile-cards tr {
-    margin-bottom: 12px;
+    margin-bottom: 0 !important;
     border-radius: 10px;
     border: 1px solid #e5e7eb !important;
     background: #ffffff !important;
@@ -671,12 +689,15 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
   }
 
   body.sakai-theme .table-mobile-cards td {
-    grid-template-columns: 100px 1fr;
+    grid-template-columns: minmax(84px, 96px) minmax(0, 1fr);
+    align-items: start;
     background: #ffffff !important;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
-  body.sakai-theme .table-mobile-cards tr:last-child {
-    margin-bottom: 0;
+  body.sakai-theme .table-mobile-cards td > * {
+    min-width: 0;
   }
 
   body.sakai-theme .table-mobile-cards td:last-child {
@@ -693,13 +714,16 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
   }
 
   body.sakai-theme .table-mobile-cards td.th-actions :is(.action-buttons, .vtur-table-actions, .action-buttons-quote, .action-buttons-center, .viagens-action-buttons) {
+    width: auto !important;
     justify-content: flex-end !important;
     flex-wrap: wrap !important;
     overflow-x: visible !important;
     gap: 0.35rem !important;
+    margin-left: auto !important;
   }
 
   body.sakai-theme .table-mobile-cards td.th-actions :is(.btn-icon, .vtur-table-action, .vtur-app-button, .p-button, button) {
+    flex: 0 0 auto;
     width: 2.25rem;
     min-width: 2.25rem;
     height: 2.25rem;

@@ -118,35 +118,84 @@
   flex-wrap: wrap;
 }
 
-.auth-links.auth-links-forgot {
-  justify-content: flex-end;
-  margin: 0;
-}
-
-.auth-links.auth-links-forgot a {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.auth-links a {
-  color: #2563eb;
+.auth-links a,
+.auth-meta-link {
+  color: #4f46e5;
   text-decoration: none;
 }
 
-.auth-actions {
+.auth-links a:hover,
+.auth-meta-link:hover {
+  color: #4338ca;
+}
+
+.auth-meta-row {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 2px 0 4px;
   flex-wrap: wrap;
 }
 
-.auth-actions .btn-block {
-  flex: 0 0 auto;
-  width: auto;
+.auth-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.92rem;
+  color: #64748b;
+  cursor: pointer;
+  user-select: none;
 }
 
-.auth-actions .w-full {
-  width: auto;
+.auth-checkbox input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: #6366f1;
+  cursor: pointer;
+}
+
+.auth-meta-link {
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.auth-actions {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+}
+
+.auth-actions .vtur-app-button,
+.auth-actions .p-button,
+.auth-actions .btn {
+  width: 100%;
+  min-height: 3.25rem;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.auth-actions .vtur-app-button .p-button-label,
+.auth-actions .p-button .p-button-label {
+  font-weight: 700;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #94a3b8;
+  font-size: 0.82rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  height: 1px;
+  flex: 1 1 auto;
+  background: #e2e8f0;
 }
 
 /* Basic form helpers if not defined already */
@@ -300,17 +349,11 @@
   }
 
   .auth-actions {
-    flex-wrap: wrap;
-  }
-
-  .auth-actions .btn {
-    flex: 0 0 auto;
-    width: auto;
+    gap: 12px;
   }
 
   .auth-divider {
-    flex: 0 0 100%;
-    text-align: center;
+    font-size: 0.86rem;
   }
 
   .btn {
@@ -319,7 +362,13 @@
     min-height: 36px;
   }
 
-  .auth-links {
+  .auth-links,
+  .auth-meta-link,
+  .auth-checkbox {
     font-size: 0.9rem;
+  }
+
+  .auth-meta-row {
+    align-items: flex-start;
   }
 }
