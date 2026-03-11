@@ -67,7 +67,7 @@ export default function AuthRegisterIsland() {
             />
 
             <div className="auth-actions">
-              <AppButton type="submit" variant="primary" disabled={registerForm.loading}>
+              <AppButton type="submit" variant="primary" disabled={registerForm.loading} block>
                 {registerForm.loading ? "Criando..." : "Criar conta"}
               </AppButton>
 

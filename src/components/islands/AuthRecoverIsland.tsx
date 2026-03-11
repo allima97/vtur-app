@@ -156,7 +156,7 @@ export default function AuthRecoverIsland() {
               onChange={(e) => setEmail(e.target.value.toLowerCase())}
             />
             <div className="auth-actions">
-              <AppButton type="submit" variant="primary" disabled={loading || cooldownSeconds > 0}>
+              <AppButton type="submit" variant="primary" disabled={loading || cooldownSeconds > 0} block>
                 {loading ? "Enviando..." : "Enviar link"}
               </AppButton>
               {cooldownSeconds > 0 && (
