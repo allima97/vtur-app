@@ -290,6 +290,114 @@ body.sakai-theme table:not(.vtur-data-table):not(.table-default):not(.ranking-ta
   color: #4b5563;
 }
 
+/* Escalas: manter grade operacional, mas com skin Sakai */
+body.sakai-theme .escala-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #ffffff;
+  font-size: 0.78rem;
+}
+
+body.sakai-theme .escala-table :is(th, td) {
+  border: 1px solid #e5e7eb;
+}
+
+body.sakai-theme .escala-table thead th {
+  padding: 0.45rem 0.35rem;
+  text-align: center;
+  font-weight: 700;
+  color: #374151;
+  background: #f8fafc;
+}
+
+body.sakai-theme .escala-table tbody td {
+  padding: 0.18rem 0.3rem;
+  color: #4b5563;
+  background: #ffffff;
+}
+
+body.sakai-theme .escala-table .escala-col-nome {
+  min-width: 220px;
+  text-align: left;
+  padding-left: 0.5rem;
+  font-weight: 700;
+  color: #334155;
+  background: #ffffff;
+}
+
+body.sakai-theme .escala-table .escala-col-total {
+  min-width: 110px;
+  text-align: center;
+  font-weight: 700;
+  color: #334155;
+  background: #f8fafc;
+}
+
+body.sakai-theme .escala-table .escala-col-weekend {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+body.sakai-theme .escala-table .escala-cell {
+  min-width: 26px;
+  height: 30px;
+}
+
+body.sakai-theme .escala-cell {
+  background: #ffffff;
+  color: #334155;
+  padding: 0;
+  text-align: center;
+  vertical-align: middle;
+}
+
+body.sakai-theme .escala-cell-content {
+  gap: 1px;
+  padding: 2px 0;
+}
+
+body.sakai-theme .escala-cell-selected {
+  outline: 2px solid #6366f1;
+  outline-offset: -2px;
+  box-shadow: inset 0 0 0 2px rgba(99, 102, 241, 0.24);
+}
+
+body.sakai-theme .escala-calendario {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+body.sakai-theme .escala-calendario th {
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #374151;
+  padding: 0.55rem 0.35rem;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+}
+
+body.sakai-theme .escala-calendario td {
+  border: 1px solid #e5e7eb;
+  vertical-align: top;
+  background: #ffffff;
+  padding: 0.25rem;
+}
+
+body.sakai-theme .escala-calendario .escala-cell {
+  min-height: 64px;
+}
+
 body.sakai-theme .table-default tbody tr:nth-child(even),
 body.sakai-theme .vtur-data-table tbody tr:nth-child(even),
 body.sakai-theme .ranking-table tbody tr:nth-child(even) {
