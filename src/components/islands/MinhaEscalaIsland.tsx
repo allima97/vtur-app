@@ -474,7 +474,7 @@ export default function MinhaEscalaIsland() {
       {activeTab === "minha" && !loadingDados && (
         <AppCard className="mb-3">
           <div className="table-container">
-            <table className="escala-calendario">
+            <table className="escala-calendario table-mobile-grid">
               <thead>
                 <tr>
                   {DIAS_SEMANA.map((label, i) => (
@@ -643,7 +643,7 @@ export default function MinhaEscalaIsland() {
       {activeTab === "equipe" && !loadingEquipe && (
         <AppCard className="mb-3">
           <div className="table-container">
-            <table className="escala-table">
+            <table className="escala-table table-mobile-grid">
               <thead>
                 <tr>
                   <th className="escala-col-nome">Usuário</th>

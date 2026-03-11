@@ -818,7 +818,7 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
               )}
 
               <div className="table-container">
-                <table className="ranking-table ranking-table-main">
+                <table className="ranking-table ranking-table-main table-mobile-cards">
                   <thead>
                     <tr>
                       <th>#</th>
@@ -849,24 +849,24 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
                         key={row.vendedor_id}
                         className={rowClass}
                       >
-                        <td className="rank-pos">{idx + 1}</td>
-                        <td>{row.nome}</td>
-                        <td>{formatCurrency(row.metaMensal)}</td>
-                        <td>{formatCurrency(row.totalBruto)}</td>
-                        <td>{formatCurrency(row.totalLiquido)}</td>
-                        <td>{row.metaDiaria != null ? formatCurrency(row.metaDiaria) : "—"}</td>
-                        <td>{formatPercent(row.atingimento)}</td>
+                        <td className="rank-pos" data-label="Posição">{idx + 1}</td>
+                        <td data-label="Vendedor">{row.nome}</td>
+                        <td data-label="Meta mensal">{formatCurrency(row.metaMensal)}</td>
+                        <td data-label="Total bruto">{formatCurrency(row.totalBruto)}</td>
+                        <td data-label="Total líquido">{formatCurrency(row.totalLiquido)}</td>
+                        <td data-label="Meta diária">{row.metaDiaria != null ? formatCurrency(row.metaDiaria) : "—"}</td>
+                        <td data-label="% atingimento">{formatPercent(row.atingimento)}</td>
                       </tr>
                       );
                     })}
                     {ranking.length > 0 && (
                       <tr className="total-row">
-                        <td colSpan={2}>TOTAL LOJA</td>
-                        <td>{formatCurrency(totalLoja.meta)}</td>
-                        <td>{formatCurrency(totalLoja.bruto)}</td>
-                        <td>{formatCurrency(totalLoja.liquido)}</td>
-                        <td>{totalLoja.metaDiaria != null ? formatCurrency(totalLoja.metaDiaria) : "—"}</td>
-                        <td>{formatPercent(totalLoja.atingimento)}</td>
+                        <td colSpan={2} data-label="Resumo">TOTAL LOJA</td>
+                        <td data-label="Meta mensal">{formatCurrency(totalLoja.meta)}</td>
+                        <td data-label="Total bruto">{formatCurrency(totalLoja.bruto)}</td>
+                        <td data-label="Total líquido">{formatCurrency(totalLoja.liquido)}</td>
+                        <td data-label="Meta diária">{totalLoja.metaDiaria != null ? formatCurrency(totalLoja.metaDiaria) : "—"}</td>
+                        <td data-label="% atingimento">{formatPercent(totalLoja.atingimento)}</td>
                       </tr>
                     )}
                   </tbody>
@@ -895,7 +895,7 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
                   )}
                 </div>
                 <div className="table-container">
-                  <table className="ranking-table ranking-table-side">
+                  <table className="ranking-table ranking-table-side table-mobile-cards">
                     <thead>
                       <tr>
                         <th>#</th>
@@ -922,16 +922,16 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
                           : "ranking-row-miss";
                         return (
                         <tr key={`${row.vendedor_id}-${idx}`} className={rowClass}>
-                          <td className="rank-pos">{idx + 1}</td>
-                          <td>{row.nome}</td>
-                          <td>{formatCurrency(row.total)}</td>
+                          <td className="rank-pos" data-label="Posição">{idx + 1}</td>
+                          <td data-label="Vendedor">{row.nome}</td>
+                          <td data-label="Total até o período">{formatCurrency(row.total)}</td>
                         </tr>
                         );
                       })}
                       {rankingProduto.length > 0 && (
                         <tr className="total-row">
-                          <td colSpan={2}>TOTAL LOJA</td>
-                          <td>{formatCurrency(totalProdutoGeral)}</td>
+                          <td colSpan={2} data-label="Resumo">TOTAL LOJA</td>
+                          <td data-label="Total até o período">{formatCurrency(totalProdutoGeral)}</td>
                         </tr>
                       )}
                     </tbody>
