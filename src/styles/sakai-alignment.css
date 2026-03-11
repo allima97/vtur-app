@@ -224,23 +224,26 @@ body.sakai-theme .vtur-data-table thead th,
 body.sakai-theme .ranking-table thead th {
   background: #f8fafc;
   color: #374151;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 700;
-  letter-spacing: 0;
-  text-transform: none;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  font-variant: normal;
   border-bottom: 1px solid #e5e7eb;
-  padding: 1rem;
-  line-height: 1.4;
+  padding: 1rem 1.25rem;
+  line-height: 1.45;
 }
 
 body.sakai-theme table:not(.vtur-data-table):not(.table-default):not(.ranking-table):not(.escala-table):not(.escala-calendario) thead th {
   background: #f8fafc;
   color: #374151;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 700;
   border-bottom: 1px solid #e5e7eb;
-  padding: 1rem;
-  line-height: 1.4;
+  padding: 1rem 1.25rem;
+  line-height: 1.45;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
 }
 
 body.sakai-theme .table-header-blue thead th,
@@ -275,19 +278,44 @@ body.sakai-theme .table-default tbody td,
 body.sakai-theme .vtur-data-table tbody td,
 body.sakai-theme .ranking-table tbody td {
   border-bottom: 1px solid #f1f5f9;
-  padding: 1rem;
-  font-size: 0.95rem;
-  line-height: 1.45;
+  padding: 1rem 1.25rem;
+  font-size: 1rem;
+  line-height: 1.5;
   color: #4b5563;
   font-weight: 500;
 }
 
 body.sakai-theme table:not(.vtur-data-table):not(.table-default):not(.ranking-table):not(.escala-table):not(.escala-calendario) tbody td {
   border-bottom: 1px solid #f1f5f9;
-  padding: 1rem;
-  font-size: 0.95rem;
-  line-height: 1.45;
+  padding: 1rem 1.25rem;
+  font-size: 1rem;
+  line-height: 1.5;
   color: #4b5563;
+}
+
+body.sakai-theme :is(.table-default, .vtur-data-table, .ranking-table) :is(thead th:first-child, tbody td:first-child) {
+  padding-left: 1.25rem !important;
+}
+
+body.sakai-theme :is(.table-default, .vtur-data-table, .ranking-table) :is(thead th:last-child, tbody td:last-child) {
+  padding-right: 1.25rem !important;
+}
+
+body.sakai-theme .quote-list-table thead th {
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-size: 0.95rem !important;
+}
+
+body.sakai-theme .quote-list-table tbody td {
+  padding: 1rem 1.25rem !important;
+  font-size: 1rem !important;
+  line-height: 1.5 !important;
+}
+
+body.sakai-theme .quote-list-table td[data-label="Status"] .form-input {
+  min-height: 2.6rem;
+  font-size: 1rem;
 }
 
 /* Escalas: manter grade operacional, mas com skin Sakai */
