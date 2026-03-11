@@ -9,29 +9,45 @@ body.sakai-theme :is(button, input, select, textarea) {
 }
 
 body.sakai-theme .app-shell {
-  display: block !important;
-  grid-template-columns: none !important;
+  display: grid !important;
+  grid-template-columns: 286px minmax(0, 1fr) !important;
+  grid-template-rows: auto 1fr !important;
+  gap: 0 1rem;
+  padding: 1rem;
+  align-items: start;
 }
 
 body.sakai-theme .app-topbar {
+  grid-column: 2;
+  grid-row: 1;
   height: 4.6rem;
   padding: 0 1.5rem;
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
   box-shadow: none;
+  border-radius: 12px;
 }
 
 body.sakai-theme .app-sidebar {
-  width: 286px;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  width: 100%;
   border-radius: 12px;
   border-color: #e5e7eb;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  background: #ffffff;
 }
 
 body.sakai-theme .app-main {
-  margin-left: calc(2rem + 286px + 1rem) !important;
-  padding-left: 0.75rem;
-  padding-top: 6.3rem;
+  grid-column: 2;
+  grid-row: 2;
+  margin-left: 0 !important;
+  padding: 1rem 0.25rem 1.25rem;
+  min-width: 0;
 }
 
 body.sakai-theme .sidebar-section-title {
@@ -108,7 +124,8 @@ body.sakai-theme .vtur-app-button-primary:hover {
 }
 
 body.sakai-theme .table-default,
-body.sakai-theme .vtur-data-table {
+body.sakai-theme .vtur-data-table,
+body.sakai-theme .ranking-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
@@ -119,14 +136,17 @@ body.sakai-theme .vtur-data-table {
 }
 
 body.sakai-theme .table-default thead th,
-body.sakai-theme .vtur-data-table thead th {
+body.sakai-theme .vtur-data-table thead th,
+body.sakai-theme .ranking-table thead th {
   background: #f8fafc;
-  color: #64748b;
-  font-size: 0.75rem;
+  color: #374151;
+  font-size: 0.9rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   border-bottom: 1px solid #e5e7eb;
+  padding: 1rem;
+  line-height: 1.4;
 }
 
 body.sakai-theme .table-header-blue thead th,
@@ -158,18 +178,48 @@ body.sakai-theme .table-mobile-cards.table-header-red {
 }
 
 body.sakai-theme .table-default tbody td,
-body.sakai-theme .vtur-data-table tbody td {
+body.sakai-theme .vtur-data-table tbody td,
+body.sakai-theme .ranking-table tbody td {
   border-bottom: 1px solid #f1f5f9;
+  padding: 1rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: #4b5563;
+  font-weight: 500;
 }
 
 body.sakai-theme .table-default tbody tr:nth-child(even),
-body.sakai-theme .vtur-data-table tbody tr:nth-child(even) {
+body.sakai-theme .vtur-data-table tbody tr:nth-child(even),
+body.sakai-theme .ranking-table tbody tr:nth-child(even) {
   background: #ffffff;
 }
 
 body.sakai-theme .table-default tbody tr:hover,
-body.sakai-theme .vtur-data-table tbody tr:hover {
+body.sakai-theme .vtur-data-table tbody tr:hover,
+body.sakai-theme .ranking-table tbody tr:hover {
   background: #f8fafc;
+}
+
+body.sakai-theme .table-compact :is(th, td),
+body.sakai-theme .clientes-table :is(th, td),
+body.sakai-theme .fornecedores-table :is(th, td) {
+  padding: 1rem !important;
+}
+
+body.sakai-theme .ranking-table thead th,
+body.sakai-theme .ranking-table .rank-pos,
+body.sakai-theme .ranking-table .total-row td {
+  text-transform: none;
+  color: #374151;
+  background: #f8fafc;
+  border-color: #e5e7eb;
+}
+
+body.sakai-theme .ranking-table tbody tr,
+body.sakai-theme .ranking-table tbody tr.ranking-row-hit,
+body.sakai-theme .ranking-table tbody tr.ranking-row-miss,
+body.sakai-theme .ranking-table tbody tr.ranking-row-gestor {
+  background: #ffffff;
 }
 
 body.sakai-theme .th-actions .action-buttons {
@@ -266,9 +316,25 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
 }
 
 @media (max-width: 1024px) {
+  body.sakai-theme .app-shell {
+    display: block !important;
+    padding: 0;
+    gap: 0;
+  }
+
+  body.sakai-theme .app-sidebar {
+    position: fixed;
+    top: 0;
+    max-height: 100vh;
+  }
+
+  body.sakai-theme .app-topbar {
+    border-radius: 0;
+  }
+
   body.sakai-theme .app-main {
     margin-left: 0 !important;
-    padding-top: calc(5.4rem + env(safe-area-inset-top));
+    padding: calc(5.4rem + env(safe-area-inset-top)) 1rem calc(1.2rem + env(safe-area-inset-bottom));
   }
 }
 
