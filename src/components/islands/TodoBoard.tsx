@@ -971,7 +971,7 @@ export default function TodoBoard() {
 
           <div
             className="todo-mobile-sectionbar"
-            style={{ background: mobilePanel === "categorias" ? "#7c3aed" : mobileStatusCol.color }}
+            style={{ background: mobilePanel === "categorias" ? "#2563eb" : mobileStatusCol.color }}
           >
             <span className="todo-mobile-sectionbar-title">
               {mobilePanel === "categorias" ? "Categorias" : mobileStatusCol.label}

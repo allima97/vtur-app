@@ -154,6 +154,30 @@ body.sakai-theme .table-default tbody tr:nth-child(even) {
   background: #f8fafc;
 }
 
+body.sakai-theme .table-header-purple thead th,
+body.sakai-theme .table-mobile-cards.table-header-purple thead th {
+  color: #1d4ed8;
+}
+
+body.sakai-theme .table-mobile-cards.table-header-purple {
+  --table-card-border: #bfdbfe;
+  --table-card-divider: #bfdbfe;
+  --table-card-gap: #eff6ff;
+}
+
+body.sakai-theme .card-purple {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+body.sakai-theme .btn-purple {
+  background: #2563eb;
+}
+
+body.sakai-theme .kpi-meta {
+  color: #1d4ed8;
+}
+
 @media (max-width: 1024px) {
   body.sakai-theme .app-sidebar {
     top: 0;

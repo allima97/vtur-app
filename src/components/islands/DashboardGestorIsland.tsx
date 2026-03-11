@@ -167,7 +167,7 @@ function getMonthBounds() {
   return { inicio: toISO(start), fim: toISO(end) };
 }
 
-const COLORS = ["#7c3aed", "#a855f7", "#818cf8", "#ec4899", "#22c55e"];
+const COLORS = ["#2563eb", "#3b82f6", "#818cf8", "#ec4899", "#22c55e"];
 const GESTOR_WIDGETS: { id: GestorWidgetId; titulo: string }[] = [
   { id: "kpis", titulo: "KPIs principais" },
   { id: "ranking", titulo: "Ranking da equipe" },
@@ -1022,7 +1022,7 @@ function DashboardGestorIslandInner() {
                   <Tooltip
                     formatter={(value: any) => formatCurrency(Number(value || 0))}
                   />
-                  <Bar dataKey="total" fill="#a855f7" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="total" fill="#3b82f6" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -1047,7 +1047,7 @@ function DashboardGestorIslandInner() {
                   <XAxis dataKey="label" />
                   <YAxis />
                   <Tooltip formatter={(value: any) => formatCurrency(Number(value || 0))} />
-                  <Line type="monotone" dataKey="value" stroke="#a855f7" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             )}

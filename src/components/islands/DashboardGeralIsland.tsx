@@ -315,7 +315,7 @@ function readWidgetVisibilityFromStorage(storageKey: string, ids: WidgetId[]) {
   }
 }
 
-const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
+const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
 
 // ----------------- COMPONENTE -----------------
 
@@ -1726,7 +1726,7 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
                     <XAxis dataKey="label" />
                     <YAxis />
                     <Tooltip formatter={(value: any) => formatCurrency(Number(value || 0))} />
-                    <Line type="monotone" dataKey="value" stroke="#a855f7" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               )}
