@@ -3268,6 +3268,36 @@ body {
   gap: 18px;
 }
 
+/* Dashboard tables: lighter CRM typography (single sans-serif + limited weights) */
+.vtur-dashboard-shell {
+  --vtur-dashboard-table-data-size: 12px;
+  --vtur-dashboard-table-head-size: 13px;
+  --vtur-dashboard-table-line-height: 1.45;
+}
+
+.vtur-dashboard-shell :is(.table-default, .vtur-data-table, .ranking-table) {
+  font-family: var(--vtur-font-family);
+  color: #0f172a;
+}
+
+.vtur-dashboard-shell :is(.table-default, .vtur-data-table, .ranking-table) thead th {
+  font-size: var(--vtur-dashboard-table-head-size);
+  font-weight: 700;
+  line-height: var(--vtur-dashboard-table-line-height);
+  color: #0f172a;
+}
+
+.vtur-dashboard-shell :is(.table-default, .vtur-data-table, .ranking-table) tbody td {
+  font-size: var(--vtur-dashboard-table-data-size);
+  font-weight: 400;
+  line-height: var(--vtur-dashboard-table-line-height);
+  color: #0f172a;
+}
+
+.vtur-dashboard-shell .ranking-table :is(.rank-pos, .total-row td) {
+  font-weight: 700;
+}
+
 @media (max-width: 900px) {
   .dashboard-two-columns {
     grid-template-columns: minmax(0,1fr);
