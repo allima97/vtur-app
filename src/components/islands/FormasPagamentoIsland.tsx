@@ -286,6 +286,8 @@ export default function FormasPagamentoIsland() {
                           <AppButton
                             type="button"
                             variant="ghost"
+                            title="Editar"
+                            aria-label="Editar"
                             onClick={() => {
                               setEditId(f.id);
                               setForm({
@@ -298,7 +300,7 @@ export default function FormasPagamentoIsland() {
                               });
                             }}
                           >
-                            Editar
+                            <i className="pi pi-pencil" aria-hidden="true" />
                           </AppButton>
                         )}
                         {podeExcluir && (
@@ -306,9 +308,11 @@ export default function FormasPagamentoIsland() {
                             type="button"
                             variant="danger"
                             disabled={excluindoId === f.id}
+                            title={excluindoId === f.id ? "Excluindo" : "Excluir"}
+                            aria-label={excluindoId === f.id ? "Excluindo" : "Excluir"}
                             onClick={() => setDeleteTarget(f)}
                           >
-                            {excluindoId === f.id ? "Excluindo..." : "Excluir"}
+                            <i className={excluindoId === f.id ? "pi pi-spin pi-spinner" : "pi pi-trash"} aria-hidden="true" />
                           </AppButton>
                         )}
                       </div>

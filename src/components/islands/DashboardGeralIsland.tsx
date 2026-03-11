@@ -1770,7 +1770,7 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                   <th>Cliente</th>
                   <th>Nascimento</th>
                   <th>Telefone</th>
-                  <th className="th-actions">Acoes</th>
+                  <th className="th-actions">Ações</th>
                 </tr>
               }
               empty={items.length === 0}
@@ -1801,7 +1801,7 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                       {c.nascimento ? formatarDataParaExibicao(c.nascimento) : "-"}
                     </td>
                     <td data-label="Telefone">{c.telefone || "-"}</td>
-                    <td className="th-actions" data-label="Acoes">
+                    <td className="th-actions" data-label="Ações">
                       <TableActions
                         actions={[
                           ...(whatsappLink
@@ -1859,7 +1859,7 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                   <th>Destino</th>
                   <th>Status</th>
                   <th>Valor</th>
-                  <th className="th-actions">Acoes</th>
+                  <th className="th-actions">Ações</th>
                 </tr>
               }
               empty={orcamentosRecentes.length === 0}
@@ -1878,7 +1878,7 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                   <td data-label="Destino">{getOrcamentoDestino(o)}</td>
                   <td data-label="Status">{o.status_negociacao || o.status || "-"}</td>
                   <td data-label="Valor">{formatCurrency(Number(o.total || 0))}</td>
-                  <td className="th-actions" data-label="Acoes">
+                  <td className="th-actions" data-label="Ações">
                     <TableActions
                       actions={[
                         {
@@ -1916,7 +1916,7 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                     <th>Lembrete</th>
                     <th>Agendamento</th>
                     <th>Destino</th>
-                    <th className="th-actions">Acoes</th>
+                    <th className="th-actions">Ações</th>
                   </tr>
                 }
                 empty={lembretesDashboard.length === 0}
@@ -1948,7 +1948,7 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                       </small>
                     </td>
                     <td data-label="Destino">{item.destino || "-"}</td>
-                    <td className="th-actions" data-label="Acoes">
+                    <td className="th-actions" data-label="Ações">
                       <TableActions
                         actions={[
                           item.orcamentoId
@@ -2000,7 +2000,7 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                     <th>Servicos</th>
                     <th>Embarque</th>
                     <th>Destino</th>
-                    <th className="th-actions">Acoes</th>
+                    <th className="th-actions">Ações</th>
                   </tr>
                 }
                 empty={proximasViagensAgrupadas.length === 0}
@@ -2029,7 +2029,7 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                     </td>
                     <td data-label="Embarque">{formatarDataParaExibicao(v.dataInicio)}</td>
                     <td data-label="Destino">{v.destino || "-"}</td>
-                    <td className="th-actions" data-label="Acoes">
+                    <td className="th-actions" data-label="Ações">
                       <TableActions
                         actions={[
                           ...(v.clienteId
@@ -2081,7 +2081,7 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                   <th>Destino</th>
                   <th>Embarque</th>
                   <th>Retorno</th>
-                  <th className="th-actions">Acoes</th>
+                  <th className="th-actions">Ações</th>
                 </tr>
               }
               empty={followUpsRecentes.length === 0}
@@ -2110,7 +2110,7 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                     <td data-label="Retorno">
                       {formatarDataParaExibicao(item.data_fim || item.venda?.data_final || "")}
                     </td>
-                    <td className="th-actions" data-label="Acoes">
+                    <td className="th-actions" data-label="Ações">
                       <TableActions
                         actions={[
                           ...(item.venda?.clientes?.id

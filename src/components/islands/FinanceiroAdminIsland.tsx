@@ -377,7 +377,7 @@ const FinanceiroAdminIsland: React.FC = () => {
                   <th>Ult. pagamento</th>
                   <th>Prox. vencimento</th>
                   <th>Valor</th>
-                  <th className="th-actions">Acoes</th>
+                  <th className="th-actions">Ações</th>
                 </tr>
               }
               colSpan={8}
@@ -395,7 +395,7 @@ const FinanceiroAdminIsland: React.FC = () => {
                   <td data-label="Ult. pagamento">{formatarData(r.ultimo_pagamento)}</td>
                   <td data-label="Prox. vencimento">{formatarData(r.proximo_vencimento)}</td>
                   <td data-label="Valor">{formatarValor(r.valor_mensal)}</td>
-                  <td className="th-actions" data-label="Acoes">
+                  <td className="th-actions" data-label="Ações">
                     <div className="action-buttons">
                       <AppButton
                         type="button"
@@ -404,7 +404,7 @@ const FinanceiroAdminIsland: React.FC = () => {
                         title="Editar cobranca"
                         aria-label="Editar cobranca"
                       >
-                        Editar
+                        <i className="pi pi-pencil" aria-hidden="true" />
                       </AppButton>
                       <AppButton
                         type="button"
@@ -412,8 +412,10 @@ const FinanceiroAdminIsland: React.FC = () => {
                         onClick={() => atualizarStatus(r, "active")}
                         disabled={r.status === "active"}
                         style={{ color: statusColors.active }}
+                        title="Ativar cobrança"
+                        aria-label="Ativar cobrança"
                       >
-                        Ativar
+                        <i className="pi pi-check-circle" aria-hidden="true" />
                       </AppButton>
                       <AppButton
                         type="button"
@@ -421,8 +423,10 @@ const FinanceiroAdminIsland: React.FC = () => {
                         onClick={() => atualizarStatus(r, "past_due")}
                         disabled={r.status === "past_due"}
                         style={{ color: statusColors.past_due }}
+                        title="Marcar cobrança em atraso"
+                        aria-label="Marcar cobrança em atraso"
                       >
-                        Atrasar
+                        <i className="pi pi-clock" aria-hidden="true" />
                       </AppButton>
                       <AppButton
                         type="button"
@@ -430,16 +434,20 @@ const FinanceiroAdminIsland: React.FC = () => {
                         onClick={() => atualizarStatus(r, "suspended")}
                         disabled={r.status === "suspended"}
                         style={{ color: statusColors.suspended }}
+                        title="Suspender cobrança"
+                        aria-label="Suspender cobrança"
                       >
-                        Suspender
+                        <i className="pi pi-ban" aria-hidden="true" />
                       </AppButton>
                       <AppButton
                         type="button"
                         variant="danger"
                         onClick={() => atualizarStatus(r, "canceled")}
                         disabled={r.status === "canceled"}
+                        title="Cancelar cobrança"
+                        aria-label="Cancelar cobrança"
                       >
-                        Cancelar
+                        <i className="pi pi-times-circle" aria-hidden="true" />
                       </AppButton>
                     </div>
                   </td>

@@ -415,7 +415,7 @@ export default function AdminPermissoesIsland() {
                 <th>Nome</th>
                 <th>E-mail</th>
                 <th>Status</th>
-                <th className="th-actions">Acoes</th>
+                <th className="th-actions">Ações</th>
               </tr>
             }
             empty={usuariosFiltrados.length === 0}
@@ -428,7 +428,7 @@ export default function AdminPermissoesIsland() {
                 <td data-label="Nome">{u.nome_completo}</td>
                 <td data-label="E-mail">{u.email || "-"}</td>
                 <td data-label="Status">{u.active ? "Ativo" : "Bloqueado"}</td>
-                <td className="th-actions" data-label="Acoes">
+                <td className="th-actions" data-label="Ações">
                   <TableActions
                     actions={[
                       {

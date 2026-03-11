@@ -644,11 +644,13 @@ export default function MasterUsuariosIsland() {
                     <td className="th-actions" data-label="Ações">
                       <div className="action-buttons">
                         <AppButton
-                          variant="secondary"
+                          variant={ativo ? "danger" : "secondary"}
                           onClick={() => toggleEquipe(v.id)}
                           disabled={!gestorEquipeId || salvandoId === v.id || Boolean(gestorEquipeBaseId)}
+                          title={ativo ? "Remover da equipe" : "Adicionar à equipe"}
+                          aria-label={ativo ? "Remover da equipe" : "Adicionar à equipe"}
                         >
-                          {ativo ? "Remover" : "Adicionar"}
+                          <i className={ativo ? "pi pi-minus-circle" : "pi pi-plus-circle"} aria-hidden="true" />
                         </AppButton>
                       </div>
                     </td>

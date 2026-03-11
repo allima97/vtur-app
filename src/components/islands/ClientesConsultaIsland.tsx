@@ -441,7 +441,7 @@ export default function ClientesConsultaIsland() {
                   <th>CPF</th>
                   <th>Telefone</th>
                   <th>E-mail</th>
-                  <th className="th-actions" style={{ textAlign: "center" }}>Acoes</th>
+                  <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>
                 </tr>
               }
               loading={loading}
@@ -483,7 +483,7 @@ export default function ClientesConsultaIsland() {
                     <td data-label="CPF">{c.cpf}</td>
                     <td data-label="Telefone">{c.telefone || "-"}</td>
                     <td data-label="E-mail">{c.email || "-"}</td>
-                    <td className="th-actions" data-label="Acoes">
+                    <td className="th-actions" data-label="Ações">
                       <div className="action-buttons vtur-table-actions">
                         {whatsappLink ? (
                           <AppButton
@@ -497,7 +497,7 @@ export default function ClientesConsultaIsland() {
                             title="Abrir WhatsApp"
                             aria-label="Abrir WhatsApp"
                           >
-                            WhatsApp
+                            <i className="pi pi-whatsapp" aria-hidden="true" />
                           </AppButton>
                         ) : null}
                         <TableActions actions={actions} />

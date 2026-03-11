@@ -464,7 +464,7 @@ export default function CommissionRulesIsland() {
                         <th>Ate (%)</th>
                         <th>Inc. Meta (%)</th>
                         <th>Inc. Comissao (%)</th>
-                        <th>Acoes</th>
+                        <th>Ações</th>
                       </tr>
                     }
                     loading={false}
@@ -524,7 +524,7 @@ export default function CommissionRulesIsland() {
                             wrapperClassName="mb-0"
                           />
                         </td>
-                        <td className="th-actions" data-label="Acoes">
+                        <td className="th-actions" data-label="Ações">
                           <TableActions
                             show={podeEditar}
                             actions={[
@@ -576,7 +576,7 @@ export default function CommissionRulesIsland() {
                   <th>Tipo</th>
                   <th>Ativo</th>
                   <th>Faixas</th>
-                  <th>Acoes</th>
+                  <th>Ações</th>
                 </tr>
               }
               loading={loading}
@@ -603,7 +603,7 @@ export default function CommissionRulesIsland() {
                   <td data-label="Tipo">{r.tipo}</td>
                   <td data-label="Ativo">{r.ativo ? "Sim" : "Nao"}</td>
                   <td data-label="Faixas">{r.commission_tier?.length || 0}</td>
-                  <td className="th-actions" data-label="Acoes">
+                  <td className="th-actions" data-label="Ações">
                     <TableActions
                       actions={[
                         {

@@ -1119,7 +1119,7 @@ export default function ProdutosIsland() {
                   <th>Nivel de preco</th>
                   <th>Ativo</th>
                   <th>Criado em</th>
-                  <th className="th-actions">Acoes</th>
+                  <th className="th-actions">Ações</th>
                 </tr>
               }
               loading={loading}
@@ -1153,7 +1153,7 @@ export default function ProdutosIsland() {
                   <td data-label="Nivel de preco">{nivelPrecoLabel(produto.nivel_preco) || "-"}</td>
                   <td data-label="Ativo">{produto.ativo ? "Sim" : "Nao"}</td>
                   <td data-label="Criado em">{produto.created_at ? formatDateBR(produto.created_at) : "-"}</td>
-                  <td className="th-actions" data-label="Acoes">
+                  <td className="th-actions" data-label="Ações">
                     <TableActions
                       show={!modoSomenteLeitura || podeExcluir}
                       actions={[

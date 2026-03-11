@@ -346,7 +346,7 @@ export default function ParametrosCambiosIsland() {
                     <th>Valor (R$)</th>
                     <th>Cadastrado por</th>
                     <th>Criado em</th>
-                    {podeExcluir && <th className="th-actions">Acoes</th>}
+                    {podeExcluir && <th className="th-actions">Ações</th>}
                   </tr>
                 }
                 colSpan={podeExcluir ? 6 : 5}
@@ -365,25 +365,27 @@ export default function ParametrosCambiosIsland() {
                         : "—"}
                     </td>
                     {podeExcluir && (
-                      <td className="th-actions" data-label="Acoes">
+                      <td className="th-actions" data-label="Ações">
                         <div className="action-buttons">
                           {podeEscrever && (
                             <AppButton
                               type="button"
                               variant="ghost"
                               title="Editar cambio"
+                              aria-label="Editar câmbio"
                               onClick={() => handleEdit(cambio)}
                             >
-                              Editar
+                              <i className="pi pi-pencil" aria-hidden="true" />
                             </AppButton>
                           )}
                           <AppButton
                             type="button"
                             variant="danger"
                             title="Excluir cambio"
+                            aria-label="Excluir câmbio"
                             onClick={() => solicitarExclusao(cambio)}
                           >
-                            Excluir
+                            <i className="pi pi-trash" aria-hidden="true" />
                           </AppButton>
                         </div>
                       </td>

@@ -391,7 +391,7 @@ const EmpresasAdminIsland: React.FC = () => {
                   <th>Ult. Pagamento</th>
                   <th>Prox. Vencimento</th>
                   <th>Valor</th>
-                  <th className="th-actions">Acoes</th>
+                  <th className="th-actions">Ações</th>
                 </tr>
               }
               colSpan={9}
@@ -425,19 +425,43 @@ const EmpresasAdminIsland: React.FC = () => {
                       ? `R$ ${e.billing.valor_mensal.toFixed(2)}`
                       : "—"}
                   </td>
-                  <td className="th-actions" data-label="Acoes">
+                  <td className="th-actions" data-label="Ações">
                     <div className="action-buttons">
-                      <AppButton type="button" variant="secondary" onClick={() => atualizarStatus(e.id, "active")}>
-                        Ativar
+                      <AppButton
+                        type="button"
+                        variant="secondary"
+                        onClick={() => atualizarStatus(e.id, "active")}
+                        title="Ativar empresa"
+                        aria-label="Ativar empresa"
+                      >
+                        <i className="pi pi-check-circle" aria-hidden="true" />
                       </AppButton>
-                      <AppButton type="button" variant="secondary" onClick={() => atualizarStatus(e.id, "past_due")}>
-                        Atraso
+                      <AppButton
+                        type="button"
+                        variant="secondary"
+                        onClick={() => atualizarStatus(e.id, "past_due")}
+                        title="Marcar empresa em atraso"
+                        aria-label="Marcar empresa em atraso"
+                      >
+                        <i className="pi pi-clock" aria-hidden="true" />
                       </AppButton>
-                      <AppButton type="button" variant="secondary" onClick={() => atualizarStatus(e.id, "suspended")}>
-                        Suspender
+                      <AppButton
+                        type="button"
+                        variant="secondary"
+                        onClick={() => atualizarStatus(e.id, "suspended")}
+                        title="Suspender empresa"
+                        aria-label="Suspender empresa"
+                      >
+                        <i className="pi pi-ban" aria-hidden="true" />
                       </AppButton>
-                      <AppButton type="button" variant="danger" onClick={() => atualizarStatus(e.id, "canceled")}>
-                        Cancelar
+                      <AppButton
+                        type="button"
+                        variant="danger"
+                        onClick={() => atualizarStatus(e.id, "canceled")}
+                        title="Cancelar empresa"
+                        aria-label="Cancelar empresa"
+                      >
+                        <i className="pi pi-times-circle" aria-hidden="true" />
                       </AppButton>
                     </div>
                   </td>
@@ -525,7 +549,7 @@ const EmpresasAdminIsland: React.FC = () => {
                     <th>Status</th>
                     <th>Solicitado</th>
                     <th>Aprovado</th>
-                    <th className="th-actions">Acoes</th>
+                    <th className="th-actions">Ações</th>
                   </tr>
                 }
                 colSpan={6}
@@ -544,16 +568,34 @@ const EmpresasAdminIsland: React.FC = () => {
                     <td data-label="Aprovado">
                       {v.approved_at ? formatDateBR(v.approved_at) : "—"}
                     </td>
-                    <td className="th-actions" data-label="Acoes">
+                    <td className="th-actions" data-label="Ações">
                       <div className="action-buttons">
-                        <AppButton type="button" variant="secondary" onClick={() => atualizarVinculo(v.id, "approved")}>
-                          Aprovar
+                        <AppButton
+                          type="button"
+                          variant="secondary"
+                          onClick={() => atualizarVinculo(v.id, "approved")}
+                          title="Aprovar vínculo"
+                          aria-label="Aprovar vínculo"
+                        >
+                          <i className="pi pi-check-circle" aria-hidden="true" />
                         </AppButton>
-                        <AppButton type="button" variant="secondary" onClick={() => atualizarVinculo(v.id, "rejected")}>
-                          Rejeitar
+                        <AppButton
+                          type="button"
+                          variant="secondary"
+                          onClick={() => atualizarVinculo(v.id, "rejected")}
+                          title="Rejeitar vínculo"
+                          aria-label="Rejeitar vínculo"
+                        >
+                          <i className="pi pi-times-circle" aria-hidden="true" />
                         </AppButton>
-                        <AppButton type="button" variant="danger" onClick={() => removerVinculoMaster(v.id)}>
-                          Remover
+                        <AppButton
+                          type="button"
+                          variant="danger"
+                          onClick={() => removerVinculoMaster(v.id)}
+                          title="Remover vínculo"
+                          aria-label="Remover vínculo"
+                        >
+                          <i className="pi pi-trash" aria-hidden="true" />
                         </AppButton>
                       </div>
                     </td>

@@ -1098,8 +1098,10 @@ export default function EquipeGestorIsland() {
                                 variant="primary"
                                 onClick={() => salvarHorarioUsuario(u.id)}
                                 disabled={!podeEditarHorarios || salvando}
+                                title={salvando ? "Salvando horário" : "Salvar horário"}
+                                aria-label={salvando ? "Salvando horário" : "Salvar horário"}
                               >
-                                {salvando ? "Salvando..." : "Salvar"}
+                                <i className={salvando ? "pi pi-spin pi-spinner" : "pi pi-save"} aria-hidden="true" />
                               </AppButton>
                             </div>
                           </td>
@@ -1310,8 +1312,10 @@ export default function EquipeGestorIsland() {
                                 variant="primary"
                                 onClick={() => salvarHorarioUsuario(u.id)}
                                 disabled={!podeEditarHorarios || salvando}
+                                title={salvando ? "Salvando horário" : "Salvar horário"}
+                                aria-label={salvando ? "Salvando horário" : "Salvar horário"}
                               >
-                                {salvando ? "Salvando..." : "Salvar"}
+                                <i className={salvando ? "pi pi-spin pi-spinner" : "pi pi-save"} aria-hidden="true" />
                               </AppButton>
                             </div>
                           </td>

@@ -767,7 +767,7 @@ export default function FornecedoresIsland() {
                     <th>WhatsApp</th>
                     <th>Telefone emergencia</th>
                     <th>Servicos</th>
-                    <th className="th-actions" style={{ textAlign: "center" }}>Acoes</th>
+                    <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>
                   </tr>
                 }
                 loading={loading}

@@ -385,7 +385,7 @@ export default function SubdivisoesIsland() {
               <th>Pais</th>
               <th>Tipo</th>
               <th>Criado em</th>
-              <th className="th-actions">Acoes</th>
+              <th className="th-actions">Ações</th>
             </tr>
           }
           loading={loading}
@@ -412,7 +412,7 @@ export default function SubdivisoesIsland() {
               <td data-label="Criado em">
                 {s.created_at ? formatDateBR(s.created_at) : "-"}
               </td>
-              <td className="th-actions" data-label="Acoes">
+              <td className="th-actions" data-label="Ações">
                 <TableActions
                   show={!modoSomenteLeitura}
                   actions={[

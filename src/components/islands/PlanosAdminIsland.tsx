@@ -190,7 +190,7 @@ const PlanosAdminIsland: React.FC = () => {
                 <th>Valor mensal</th>
                 <th>Moeda</th>
                 <th>Ativo</th>
-                <th className="th-actions">Acoes</th>
+                <th className="th-actions">Ações</th>
               </tr>
             }
             colSpan={6}
@@ -209,13 +209,25 @@ const PlanosAdminIsland: React.FC = () => {
                 >
                   {p.ativo ? "Sim" : "Nao"}
                 </td>
-                <td className="th-actions" data-label="Acoes">
+                <td className="th-actions" data-label="Ações">
                   <div className="action-buttons">
-                    <AppButton type="button" variant="ghost" onClick={() => openModal(p)}>
-                      Editar
+                    <AppButton
+                      type="button"
+                      variant="ghost"
+                      onClick={() => openModal(p)}
+                      title="Editar plano"
+                      aria-label="Editar plano"
+                    >
+                      <i className="pi pi-pencil" aria-hidden="true" />
                     </AppButton>
-                    <AppButton type="button" variant="secondary" onClick={() => toggleStatus(p)}>
-                      {p.ativo ? "Desativar" : "Ativar"}
+                    <AppButton
+                      type="button"
+                      variant="secondary"
+                      onClick={() => toggleStatus(p)}
+                      title={p.ativo ? "Desativar plano" : "Ativar plano"}
+                      aria-label={p.ativo ? "Desativar plano" : "Ativar plano"}
+                    >
+                      <i className={p.ativo ? "pi pi-times-circle" : "pi pi-check-circle"} aria-hidden="true" />
                     </AppButton>
                   </div>
                 </td>

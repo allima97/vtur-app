@@ -573,7 +573,7 @@ const UsuariosAdminIsland: React.FC = () => {
                   <th>Uso</th>
                   <th>Status</th>
                   <th className="th-actions">Aviso</th>
-                  <th className="th-actions">Acoes</th>
+                  <th className="th-actions">Ações</th>
                 </tr>
               }
               colSpan={8}
@@ -649,12 +649,12 @@ const UsuariosAdminIsland: React.FC = () => {
                         }
                         aria-label="Enviar aviso"
                       >
-                        Aviso
+                        <i className="pi pi-send" aria-hidden="true" />
                       </AppButton>
                     </div>
                   </td>
 
-                  <td className="th-actions" data-label="Acoes">
+                  <td className="th-actions" data-label="Ações">
                     <div className="action-buttons">
                       <AppButton
                         type="button"
@@ -663,7 +663,7 @@ const UsuariosAdminIsland: React.FC = () => {
                         title="Redefinir senha"
                         aria-label="Redefinir senha"
                       >
-                        Senha
+                        <i className="pi pi-key" aria-hidden="true" />
                       </AppButton>
                       <AppButton
                         type="button"
@@ -672,7 +672,7 @@ const UsuariosAdminIsland: React.FC = () => {
                         title={u.active ? "Desativar" : "Ativar"}
                         aria-label={u.active ? "Desativar" : "Ativar"}
                       >
-                        {u.active ? "Desativar" : "Ativar"}
+                        <i className={u.active ? "pi pi-times-circle" : "pi pi-check-circle"} aria-hidden="true" />
                       </AppButton>
                     </div>
                   </td>

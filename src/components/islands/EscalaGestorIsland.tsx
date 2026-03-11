@@ -1457,7 +1457,7 @@ export default function EscalaGestorIsland() {
                     <th>Data</th>
                     <th>Nome</th>
                     <th>Tipo</th>
-                    <th>Acoes</th>
+                    <th>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1466,7 +1466,7 @@ export default function EscalaGestorIsland() {
                       <td data-label="Data">{formatarDataParaExibicao(f.data)}</td>
                       <td data-label="Nome">{f.nome}</td>
                       <td data-label="Tipo">{f.tipo}</td>
-                      <td data-label="Acoes">
+                      <td data-label="Ações">
                         <AppButton
                           type="button"
                           variant="secondary"

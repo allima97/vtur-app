@@ -502,7 +502,7 @@ export default function DestinosIsland() {
                 <th>Nivel de preco</th>
                 <th>Ativo</th>
                 <th>Criado em</th>
-                <th className="th-actions">Acoes</th>
+                <th className="th-actions">Ações</th>
               </tr>
             }
             loading={loading}
@@ -531,7 +531,7 @@ export default function DestinosIsland() {
                 <td data-label="Criado em">
                   {d.created_at ? formatDateBR(d.created_at) : "-"}
                 </td>
-                <td className="th-actions" data-label="Acoes">
+                <td className="th-actions" data-label="Ações">
                   <TableActions
                     show={!modoSomenteLeitura || podeExcluir}
                     actions={[

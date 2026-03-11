@@ -1129,7 +1129,7 @@ function DashboardGestorIslandInner() {
                 <th>Cliente</th>
                 <th>Nascimento</th>
                 <th>Telefone</th>
-                <th className="th-actions">Acoes</th>
+                <th className="th-actions">Ações</th>
               </tr>
             }
             empty={items.length === 0}
@@ -1156,7 +1156,7 @@ function DashboardGestorIslandInner() {
                     {c.nascimento ? formatarDataParaExibicao(c.nascimento) : "-"}
                   </td>
                   <td data-label="Telefone">{c.telefone || "-"}</td>
-                  <td className="th-actions" data-label="Acoes">
+                  <td className="th-actions" data-label="Ações">
                     <TableActions
                       actions={[
                         ...(whatsappLink
@@ -1213,7 +1213,7 @@ function DashboardGestorIslandInner() {
                 <th>Cliente</th>
                 <th>Destino</th>
                 <th>Status</th>
-                <th className="th-actions">Acoes</th>
+                <th className="th-actions">Ações</th>
               </tr>
             }
             empty={viagensProximas.length === 0}
@@ -1227,7 +1227,7 @@ function DashboardGestorIslandInner() {
                 <td data-label="Cliente">{v.clientes?.nome || "—"}</td>
                 <td data-label="Destino">{v.destino || "—"}</td>
                 <td data-label="Status">{v.status || "—"}</td>
-                <td className="th-actions" data-label="Acoes">
+                <td className="th-actions" data-label="Ações">
                   <TableActions
                     actions={
                       v.clientes?.id
@@ -1267,7 +1267,7 @@ function DashboardGestorIslandInner() {
                 <th>Retorno</th>
                 <th>Cliente</th>
                 <th>Destino</th>
-                <th className="th-actions">Acoes</th>
+                <th className="th-actions">Ações</th>
               </tr>
             }
             empty={followUpsRecentes.length === 0}
@@ -1289,7 +1289,7 @@ function DashboardGestorIslandInner() {
                   </td>
                   <td data-label="Cliente">{f.venda?.clientes?.nome || "—"}</td>
                   <td data-label="Destino">{f.venda?.destino_cidade?.nome || "—"}</td>
-                  <td className="th-actions" data-label="Acoes">
+                  <td className="th-actions" data-label="Ações">
                     <TableActions
                       actions={[
                         ...(f.venda?.clientes?.id

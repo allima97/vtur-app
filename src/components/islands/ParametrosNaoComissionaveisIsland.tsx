@@ -203,7 +203,7 @@ export default function ParametrosNaoComissionaveisIsland() {
               <tr>
                 <th>Termo</th>
                 <th>Ativo</th>
-                <th className="th-actions">Acoes</th>
+                <th className="th-actions">Ações</th>
               </tr>
             }
             colSpan={3}
@@ -213,13 +213,14 @@ export default function ParametrosNaoComissionaveisIsland() {
               <tr key={t.id}>
                 <td data-label="Termo">{t.termo}</td>
                 <td data-label="Ativo">{t.ativo ? "Sim" : "Nao"}</td>
-                <td className="th-actions" data-label="Acoes">
+                <td className="th-actions" data-label="Ações">
                   <div className="action-buttons">
                     {podeEditar && (
                       <AppButton
                         type="button"
                         variant="ghost"
                         title="Editar"
+                        aria-label="Editar"
                         onClick={() => {
                           setEditId(t.id);
                           setForm({
@@ -228,7 +229,7 @@ export default function ParametrosNaoComissionaveisIsland() {
                           });
                         }}
                       >
-                        Editar
+                        <i className="pi pi-pencil" aria-hidden="true" />
                       </AppButton>
                     )}
                     {podeEditar && (
@@ -236,9 +237,11 @@ export default function ParametrosNaoComissionaveisIsland() {
                         type="button"
                         variant="danger"
                         disabled={excluindoId === t.id}
+                        title={excluindoId === t.id ? "Excluindo" : "Excluir"}
+                        aria-label={excluindoId === t.id ? "Excluindo" : "Excluir"}
                         onClick={() => excluir(t.id)}
                       >
-                        {excluindoId === t.id ? "Excluindo..." : "Excluir"}
+                        <i className={excluindoId === t.id ? "pi pi-spin pi-spinner" : "pi pi-trash"} aria-hidden="true" />
                       </AppButton>
                     )}
                   </div>
