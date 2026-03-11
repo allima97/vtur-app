@@ -1,4 +1,4 @@
-import { Dialog } from "@primer/react";
+import { Dialog } from "../ui/primer/legacyCompat";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import pdfWorkerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { supabase } from "../../lib/supabase";

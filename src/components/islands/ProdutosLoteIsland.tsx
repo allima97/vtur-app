@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Select, Textarea, TextInput } from "@primer/react";
+import { Select, Textarea, TextInput } from "../ui/primer/legacyCompat";
 import { supabase } from "../../lib/supabase";
 import { normalizeText } from "../../lib/normalizeText";
 import { usePermissoesStore } from "../../lib/permissoesStore";

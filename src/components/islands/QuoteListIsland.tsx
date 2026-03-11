@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Dialog } from "@primer/react";
+import { Dialog } from "../ui/primer/legacyCompat";
 import { normalizeText } from "../../lib/normalizeText";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import AlertMessage from "../ui/AlertMessage";

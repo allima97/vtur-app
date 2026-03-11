@@ -1,5 +1,4 @@
 import React from "react";
-import { Flash } from "@primer/react";
 
 type AlertVariant = "success" | "error" | "warning" | "info";
 
@@ -9,11 +8,11 @@ type AlertMessageProps = {
   children: React.ReactNode;
 };
 
-const variantMap: Record<AlertVariant, "success" | "danger" | "warning" | "default"> = {
-  success: "success",
-  error: "danger",
-  warning: "warning",
-  info: "default",
+const variantMap: Record<AlertVariant, { severity: "success" | "error" | "warn" | "info"; icon: string }> = {
+  success: { severity: "success", icon: "pi pi-check-circle" },
+  error: { severity: "error", icon: "pi pi-times-circle" },
+  warning: { severity: "warn", icon: "pi pi-exclamation-triangle" },
+  info: { severity: "info", icon: "pi pi-info-circle" },
 };
 
 export default function AlertMessage({
@@ -22,9 +21,15 @@ export default function AlertMessage({
   children,
 }: AlertMessageProps) {
   if (!children) return null;
+  const config = variantMap[variant] || variantMap.info;
   return (
-    <Flash variant={variantMap[variant] || "default"} className={`vtur-alert ${className}`.trim()}>
-      {children}
-    </Flash>
+    <div className={`vtur-alert ${className}`.trim()}>
+      <div className={`p-message p-component p-message-${config.severity}`}>
+        <div className="p-message-wrapper">
+          <span className={`p-message-icon ${config.icon}`} />
+          <div className="p-message-text">{children}</div>
+        </div>
+      </div>
+    </div>
   );
 }

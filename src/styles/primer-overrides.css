@@ -1,17 +1,27 @@
 :root {
-  --vtur-primer-accent: #8e28e2;
-  --vtur-primer-accent-strong: #7c1fd4;
+  --vtur-primer-accent: #6366f1;
+  --vtur-primer-accent-strong: #4f46e5;
   --vtur-primer-ink: #0f172a;
   --vtur-primer-muted: #475569;
   --vtur-primer-surface: #ffffff;
-  --vtur-primer-surface-alt: #f8fafc;
+  --vtur-primer-surface-alt: #f6f8fb;
   --vtur-primer-border: rgba(148, 163, 184, 0.24);
   --vtur-primer-sidebar-hover: rgba(255, 255, 255, 0.08);
 }
 
 .vtur-primer-scope {
+  font-family: "Inter", "Segoe UI", "Nunito Sans", sans-serif;
+  color: var(--vtur-primer-ink);
+}
+
+.vtur-primer-scope .p-component {
   font-family: inherit;
-  color: inherit;
+}
+
+.vtur-primer-scope .p-inputtext,
+.vtur-primer-scope .p-button,
+.vtur-primer-scope .p-message {
+  border-radius: 12px;
 }
 
 .vtur-page-header {
@@ -173,21 +183,60 @@
 
 .vtur-app-button-primary {
   background: linear-gradient(135deg, var(--vtur-primer-accent) 0%, var(--vtur-primer-accent-strong) 100%);
+  border-color: var(--vtur-primer-accent-strong);
+  color: #fff;
+}
+
+.vtur-app-button-secondary {
+  border-color: rgba(99, 102, 241, 0.3);
+  color: #4338ca;
+}
+
+.vtur-app-button-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border-color: #dc2626;
+  color: #fff;
 }
 
 .vtur-app-field {
   gap: 8px;
+  display: flex;
+  flex-direction: column;
 }
 
-.vtur-app-field [data-component="FormControlLabel"] {
+.vtur-app-field-label {
   color: var(--vtur-primer-ink);
   font-weight: 700;
+  font-size: 0.9rem;
 }
 
 .vtur-app-field input,
 .vtur-app-field select,
 .vtur-app-field textarea {
   border-radius: 14px;
+  border: 1px solid #d6d9e7;
+  padding: 0.65rem 0.75rem;
+}
+
+.vtur-app-field-caption {
+  color: var(--vtur-primer-muted);
+  font-size: 0.78rem;
+}
+
+.vtur-app-field-validation {
+  font-size: 0.8rem;
+}
+
+.vtur-app-field-validation-error {
+  color: #dc2626;
+}
+
+.vtur-app-field-validation-success {
+  color: #16a34a;
+}
+
+.vtur-alert .p-message {
+  width: 100%;
 }
 
 .vtur-form-grid {

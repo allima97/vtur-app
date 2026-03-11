@@ -1,6 +1,6 @@
 import React from "react";
-import { PageHeader } from "@primer/react";
 import AppPrimerProvider from "./AppPrimerProvider";
+import AppToolbar from "./AppToolbar";
 
 type AppPageHeaderProps = {
   title: React.ReactNode;
@@ -21,7 +21,7 @@ export default function AppPageHeader({
 }: AppPageHeaderProps) {
   return (
     <AppPrimerProvider>
-      <PageHeader
+      <AppToolbar
         className={[
           "vtur-page-header",
           `vtur-page-header-${color}`,
@@ -29,20 +29,10 @@ export default function AppPageHeader({
         ]
           .filter(Boolean)
           .join(" ")}
-        hasBorder={false}
-      >
-        <PageHeader.TitleArea variant="large">
-          <PageHeader.Title>{title}</PageHeader.Title>
-          {subtitleHtml ? (
-            <PageHeader.Description>
-              <span dangerouslySetInnerHTML={{ __html: subtitleHtml }} />
-            </PageHeader.Description>
-          ) : subtitle ? (
-            <PageHeader.Description>{subtitle}</PageHeader.Description>
-          ) : null}
-        </PageHeader.TitleArea>
-        {children ? <PageHeader.Actions>{children}</PageHeader.Actions> : null}
-      </PageHeader>
+        title={title}
+        subtitle={subtitleHtml ? <span dangerouslySetInnerHTML={{ __html: subtitleHtml }} /> : subtitle}
+        actions={children}
+      />
     </AppPrimerProvider>
   );
 }

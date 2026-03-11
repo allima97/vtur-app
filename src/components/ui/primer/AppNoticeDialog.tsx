@@ -1,6 +1,7 @@
 import React from "react";
-import { Dialog, Text } from "@primer/react";
+import { Dialog } from "primereact/dialog";
 import AppPrimerProvider from "./AppPrimerProvider";
+import AppButton from "./AppButton";
 
 type AppNoticeDialogProps = {
   open: boolean;
@@ -24,25 +25,25 @@ export default function AppNoticeDialog({
   return (
     <AppPrimerProvider>
       <Dialog
-        title={
+        header={
           <span className="vtur-app-dialog-title">
             {icon ? <span className="vtur-app-dialog-icon">{icon}</span> : null}
             <span>{title}</span>
           </span>
         }
-        width="medium"
-        role="alertdialog"
-        onClose={() => onClose()}
-        footerButtons={[
-          {
-            content: closeLabel,
-            buttonType: "primary",
-            onClick: onClose,
-          },
-        ]}
+        visible={open}
+        style={{ width: "min(36rem, 95vw)" }}
+        onHide={onClose}
+        footer={
+          <div className="vtur-form-actions">
+            <AppButton variant="primary" type="button" onClick={onClose}>
+              {closeLabel}
+            </AppButton>
+          </div>
+        }
       >
         <div className="vtur-app-dialog-body">
-          {typeof message === "string" ? <Text as="p">{message}</Text> : message}
+          {typeof message === "string" ? <p>{message}</p> : message}
         </div>
       </Dialog>
     </AppPrimerProvider>

@@ -1,6 +1,7 @@
 import React from "react";
-import { Dialog, Text } from "@primer/react";
+import { Dialog } from "primereact/dialog";
 import AppPrimerProvider from "./AppPrimerProvider";
+import AppButton from "./AppButton";
 
 type AppDialogProps = {
   open: boolean;
@@ -38,39 +39,37 @@ export default function AppDialog({
   return (
     <AppPrimerProvider>
       <Dialog
-        title={
+        header={
           <span className="vtur-app-dialog-title">
             {icon && <span className="vtur-app-dialog-icon">{icon}</span>}
             <span style={titleColor ? { color: titleColor } : undefined}>{title}</span>
           </span>
         }
-        width="large"
-        role="alertdialog"
-        onClose={() => onCancel()}
-        footerButtons={[
-          {
-            content: cancelLabel,
-            buttonType: "default",
-            onClick: onCancel,
-          },
-          {
-            content: confirmLabel,
-            buttonType: confirmVariant === "danger" ? "danger" : "primary",
-            onClick: onConfirm,
-            disabled: confirmDisabled,
-            loading: confirmLoading,
-          },
-        ]}
+        visible={open}
+        style={{ width: "min(42rem, 95vw)" }}
+        onHide={onCancel}
+        footer={
+          <div className="vtur-form-actions">
+            <AppButton variant="secondary" type="button" onClick={onCancel}>
+              {cancelLabel}
+            </AppButton>
+            <AppButton
+              variant={confirmVariant === "danger" ? "danger" : "primary"}
+              type="button"
+              onClick={onConfirm}
+              disabled={confirmDisabled}
+              loading={confirmLoading}
+            >
+              {confirmLabel}
+            </AppButton>
+          </div>
+        }
       >
         <div className="vtur-app-dialog-body">
           {children ? (
             children
           ) : message ? (
-            typeof message === "string" ? (
-              <Text as="p">{message}</Text>
-            ) : (
-              message
-            )
+            typeof message === "string" ? <p>{message}</p> : message
           ) : null}
         </div>
       </Dialog>

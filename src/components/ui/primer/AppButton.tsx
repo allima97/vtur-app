@@ -1,7 +1,7 @@
 import React from "react";
-import { Button as PrimerButton } from "@primer/react";
+import { Button as PrimeButton } from "primereact/button";
 
-type PrimerButtonProps = React.ComponentProps<typeof PrimerButton>;
+type PrimeButtonProps = React.ComponentProps<typeof PrimeButton>;
 
 type AppButtonVariant =
   | "default"
@@ -11,32 +11,46 @@ type AppButtonVariant =
   | "ghost"
   | "link";
 
-type AppButtonProps = Omit<PrimerButtonProps, "variant"> & {
+type AppButtonProps = Omit<PrimeButtonProps, "severity" | "outlined" | "text" | "link" | "label"> & {
   variant?: AppButtonVariant;
   block?: boolean;
+  children?: React.ReactNode;
 };
 
-const variantMap: Record<AppButtonVariant, NonNullable<PrimerButtonProps["variant"]>> = {
-  default: "default",
-  primary: "primary",
-  secondary: "default",
-  danger: "danger",
-  ghost: "invisible",
-  link: "link",
+const variantClassMap: Record<AppButtonVariant, string> = {
+  default: "",
+  primary: "",
+  secondary: "p-button-outlined",
+  danger: "p-button-danger",
+  ghost: "p-button-text",
+  link: "p-button-link",
 };
 
 export default function AppButton({
   variant = "default",
   block = false,
   className,
+  children,
   ...props
 }: AppButtonProps) {
+  const isPrimitiveChild = typeof children === "string" || typeof children === "number";
+  const resolvedLabel = isPrimitiveChild ? String(children) : undefined;
+
   return (
-    <PrimerButton
+    <PrimeButton
       {...props}
-      block={block}
-      variant={variantMap[variant]}
-      className={["vtur-app-button", `vtur-app-button-${variant}`, className].filter(Boolean).join(" ")}
-    />
+      label={resolvedLabel}
+      className={[
+        "vtur-app-button",
+        `vtur-app-button-${variant}`,
+        variantClassMap[variant],
+        block ? "w-full" : "",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      {isPrimitiveChild ? null : children}
+    </PrimeButton>
   );
 }

@@ -1,5 +1,4 @@
 import React from "react";
-import { Heading, Text } from "@primer/react";
 
 type EmptyStateProps = {
   title?: string;
@@ -22,14 +21,14 @@ export default function EmptyState({
     <div className={`empty-state vtur-empty-state ${className || ""}`.trim()}>
       {icon && <div className="empty-state-icon vtur-empty-state-icon">{icon}</div>}
       {title && (
-        <Heading as="h3" className="empty-state-title vtur-empty-state-title">
+        <h3 className="empty-state-title vtur-empty-state-title">
           {title}
-        </Heading>
+        </h3>
       )}
       {description && (
-        <Text as="p" className="empty-state-description vtur-empty-state-description">
+        <p className="empty-state-description vtur-empty-state-description">
           {description}
-        </Text>
+        </p>
       )}
       {action && <div className="empty-state-actions vtur-empty-state-actions">{action}</div>}
     </div>
