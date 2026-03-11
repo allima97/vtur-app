@@ -103,9 +103,83 @@ body.sakai-theme .vtur-app-toolbar,
 body.sakai-theme .card-base,
 body.sakai-theme .vtur-surface-panel {
   border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  border-radius: 6px;
   background: #ffffff;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  box-shadow: none;
+}
+
+body.sakai-theme .vtur-app-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+body.sakai-theme .vtur-app-card .vtur-app-card-header {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+body.sakai-theme .vtur-app-card .vtur-app-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+body.sakai-theme .vtur-app-card .vtur-app-card-subtitle {
+  margin-top: 0.35rem;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+body.sakai-theme .vtur-app-card .vtur-app-card-body {
+  padding: 1.25rem;
+}
+
+body.sakai-theme :is(.p-inputtext, .p-inputtextarea, .form-input, .form-select, .form-textarea) {
+  font-size: 1rem;
+  color: #4b5563;
+  background: #ffffff;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+body.sakai-theme :is(.p-inputtext, .p-inputtextarea, .form-input, .form-textarea)::placeholder {
+  color: #9ca3af;
+}
+
+body.sakai-theme :is(.p-inputtext, .p-inputtextarea, .form-input, .form-select, .form-textarea):enabled:hover {
+  border-color: #6366f1;
+}
+
+body.sakai-theme :is(.p-inputtext, .p-inputtextarea, .form-input, .form-select, .form-textarea):enabled:focus,
+body.sakai-theme .p-dropdown:not(.p-disabled).p-focus,
+body.sakai-theme .p-calendar:not(.p-disabled).p-focus > .p-inputtext {
+  outline: 0;
+  outline-offset: 0;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 0.2rem #c7d2fe;
+}
+
+body.sakai-theme :is(.p-inputtext, .p-inputtextarea, .form-input, .form-select, .form-textarea)[aria-invalid="true"],
+body.sakai-theme :is(.p-inputtext, .p-inputtextarea, .p-dropdown, .p-calendar, .form-input, .form-select, .form-textarea).p-invalid,
+body.sakai-theme :is(.p-dropdown, .p-calendar).p-invalid .p-inputtext {
+  border-color: #e24c4c !important;
+}
+
+body.sakai-theme :is(.p-inputtext, .p-inputtextarea, .form-input, .form-select, .form-textarea).p-invalid:enabled:focus,
+body.sakai-theme :is(.p-inputtext, .p-inputtextarea, .form-input, .form-select, .form-textarea)[aria-invalid="true"]:enabled:focus,
+body.sakai-theme :is(.p-dropdown, .p-calendar).p-invalid.p-focus,
+body.sakai-theme :is(.p-dropdown, .p-calendar).p-invalid.p-focus .p-inputtext {
+  box-shadow: 0 0 0 0.2rem #fecaca !important;
+}
+
+body.sakai-theme .vtur-app-field .vtur-app-field-validation-error,
+body.sakai-theme .p-error {
+  color: #e24c4c;
+  font-weight: 500;
 }
 
 body.sakai-theme .vtur-app-button {
