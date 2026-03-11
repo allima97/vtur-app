@@ -1,6 +1,6 @@
 # Prime/Sakai Full Audit
 
-Gerado em: 2026-03-11T02:33:32.206Z
+Gerado em: 2026-03-11T02:34:49.157Z
 
 ## Resumo
 
@@ -10,7 +10,7 @@ Gerado em: 2026-03-11T02:33:32.206Z
 - form-input: 141
 - form-select: 33
 - table-default: 33
-- classes btn*: 21
+- classes btn*: 0
 - raw <input>: 201
 - raw <select>: 42
 - raw <textarea>: 20
@@ -107,10 +107,7 @@ Gerado em: 2026-03-11T02:33:32.206Z
 
 ### btn class
 
-- src/components/islands/TodoBoard.tsx: 15
-- src/components/islands/MuralRecadosIsland.tsx: 4
-- src/components/islands/AgendaCalendar.tsx: 1
-- src/components/islands/MasterUsuariosIsland.tsx: 1
+Nenhuma ocorrência.
 
 ### raw <input>
 

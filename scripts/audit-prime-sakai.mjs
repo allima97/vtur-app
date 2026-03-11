@@ -99,7 +99,10 @@ for (const file of uiFiles) {
   const fileFormInput = countMatches(content, /class(Name)?\s*=\s*["'`][^"'`]*form-input/g);
   const fileFormSelect = countMatches(content, /class(Name)?\s*=\s*["'`][^"'`]*form-select/g);
   const fileTableDefault = countMatches(content, /table-default/g);
-  const fileBtnClass = countMatches(content, /class(Name)?\s*=\s*["'`][^"'`]*\bbtn\b/g);
+  const fileBtnClass = countMatches(
+    content,
+    /class(Name)?\s*=\s*["'`](?:btn\b|[^"'`]*\sbtn\b)[^"'`]*["'`]/g
+  );
   const fileRawInput = countMatches(content, /<input\b/g);
   const fileRawSelect = countMatches(content, /<select\b/g);
   const fileRawTextarea = countMatches(content, /<textarea\b/g);
