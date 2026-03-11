@@ -5,8 +5,9 @@ Atualizado em 2026-03-11.
 ## Resultado da varredura
 
 - `@primer/react` em `src/`: **0**
-- Emojis visíveis em UI fora de mapeamentos internos (`Menu`, `DashboardAdmin`, `PerformanceDashboard`): **0**
+- Emojis fora da allowlist de mapeamentos internos (`Menu`, `DashboardAdmin`, `PerformanceDashboard`): **0**
 - Imports de `legacyCompat` ainda ativos: **18** (compatibilidade temporária)
+- Check automatizado: `npm run audit:prime-sakai` (**OK**)
 
 ## Padronização aplicada nesta rodada
 
@@ -24,6 +25,12 @@ Atualizado em 2026-03-11.
 - Reforço global de compatibilidade visual Prime/Sakai para classes legadas em:
   - `src/styles/primer-overrides.css`
   - Cobertura: `.form-input`, `.form-select`, `.btn*`, `.table-default`, `.btn-icon`.
+- Normalização adicional de logs/títulos técnicos sem emoji em:
+  - `src/lib/performanceMetrics.ts`
+  - `src/lib/quote/roteiroPdf.ts`
+  - `src/pages/api/v1/agenda/range.ts`
+  - `src/lib/vendas/viagaComManager.ts`
+  - `src/lib/vendas/reciboReservaValidator.ts`
 
 ## Pendências técnicas (código legado, já com visual compatível)
 

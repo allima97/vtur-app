@@ -29,7 +29,7 @@ export async function criarVinculosViajaComAutomaticos(params: {
     return 0;
   }
   
-  console.log(`🔗 Criando vínculos "Viaja Com" para ${recibosRelacionados.length} recibo(s) relacionado(s)`);
+  console.log(`Criando vinculos "Viaja Com" para ${recibosRelacionados.length} recibo(s) relacionado(s)`);
   
   let vinculosCriados = 0;
   
@@ -87,7 +87,7 @@ export async function criarVinculosViajaComAutomaticos(params: {
         }
         
         vinculosCriados += 2;
-        console.log(`  ✓ Vínculo criado: Reserva ${reciboNovo.numero_reserva} (${reciboNovo.id} ↔ ${relacionado.id})`);
+        console.log(`  Vinculo criado: Reserva ${reciboNovo.numero_reserva} (${reciboNovo.id} <-> ${relacionado.id})`);
         
       } catch (error) {
         console.error("Erro ao criar vínculo 'Viaja Com':", error);
@@ -95,7 +95,7 @@ export async function criarVinculosViajaComAutomaticos(params: {
     }
   }
   
-  console.log(`✓ Total de ${vinculosCriados} vínculos criados automaticamente`);
+  console.log(`Total de ${vinculosCriados} vinculos criados automaticamente`);
   return vinculosCriados;
 }
 

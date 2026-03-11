@@ -284,7 +284,7 @@ export async function GET({ request }: { request: Request }) {
             if (dateISO < inicio || dateISO > fim) continue;
             birthdayEvents.push({
               id: `birthday:${userId}:${dateISO}`,
-              title: `🎂 ${nome}`,
+              title: `Aniversario: ${nome}`,
               start: dateISO,
               end: null,
               descricao: "Aniversário",

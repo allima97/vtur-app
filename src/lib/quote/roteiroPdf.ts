@@ -633,11 +633,11 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
       doc.setLineWidth(1.2);
       doc.setDrawColor(60);
       if (kind === "check") {
-        // ✓
+        // checked
         doc.line(x + 2, y + 6, x + 4.3, y + 8.5);
         doc.line(x + 4.3, y + 8.5, x + 8.5, y + 2.5);
       } else {
-        // ✗
+        // unchecked
         doc.line(x + 2.2, y + 2.2, x + 8, y + 8);
         doc.line(x + 8, y + 2.2, x + 2.2, y + 8);
       }

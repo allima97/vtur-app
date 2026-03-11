@@ -311,6 +311,52 @@
   justify-content: center;
 }
 
+.sakai-theme form input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+.sakai-theme form select,
+.sakai-theme form textarea {
+  border: 1px solid #d6d9e7;
+  border-radius: 12px;
+  padding: 0.62rem 0.72rem;
+  background: #fff;
+  color: var(--vtur-primer-ink);
+}
+
+.sakai-theme form input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):focus,
+.sakai-theme form select:focus,
+.sakai-theme form textarea:focus {
+  outline: 0;
+  border-color: rgba(99, 102, 241, 0.7);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.sakai-theme form button,
+.sakai-theme form [type="submit"],
+.sakai-theme form [type="button"] {
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.sakai-theme table:not(.vtur-data-table):not(.table-default):not(.ranking-table):not(.escala-table):not(.escala-calendario) {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--vtur-primer-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.sakai-theme table:not(.vtur-data-table):not(.table-default):not(.ranking-table):not(.escala-table):not(.escala-calendario) th,
+.sakai-theme table:not(.vtur-data-table):not(.table-default):not(.ranking-table):not(.escala-table):not(.escala-calendario) td {
+  padding: 0.62rem 0.7rem;
+  border-bottom: 1px solid #eef2f7;
+  text-align: left;
+}
+
+.sakai-theme table:not(.vtur-data-table):not(.table-default):not(.ranking-table):not(.escala-table):not(.escala-calendario) th {
+  background: #f8fafc;
+  font-weight: 700;
+}
+
 .vtur-alert .p-message {
   width: 100%;
 }

@@ -161,7 +161,7 @@ export async function ensureReciboReservaUnicos(params: {
   // Se tem recibos relacionados, retorna info para criar vínculo
   // (não lança erro - permite a importação)
   if (duplicado.tipo === "reserva" && duplicado.recibos_relacionados) {
-    console.log(`✓ Reserva duplicada permitida: ${duplicado.valor} (contratantes diferentes)`);
+    console.log(`Reserva duplicada permitida: ${duplicado.valor} (contratantes diferentes)`);
     return duplicado.recibos_relacionados;
   }
   
