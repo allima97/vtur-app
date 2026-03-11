@@ -1768,8 +1768,15 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
             tone="info"
             style={{ marginTop: 18 }}
             actions={
-              <AppButton type="button" variant="secondary" onClick={() => setShowCalculator(true)}>
-                Calculadora
+              <AppButton
+                type="button"
+                variant="secondary"
+                className="btn-calculator-trigger"
+                onClick={() => setShowCalculator(true)}
+                aria-label="Calculadora"
+                title="Calculadora"
+              >
+                <i className="pi pi-calculator" aria-hidden="true" />
               </AppButton>
             }
           >
@@ -1821,7 +1828,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                   <div className="form-group min-w-[220px]">
                     <label className="form-label">Produto *</label>
                     <input
-                      className="form-input"
+                      className="form-input search-input-field"
                       list={`listaProdutos-${i}`}
                       placeholder={placeholderProduto}
                       value={

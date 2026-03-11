@@ -1174,6 +1174,71 @@ body {
   background: #fff1f2;
 }
 
+.btn-calculator-trigger {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+
+.btn-calculator-trigger .pi {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+:root {
+  --search-input-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23808a9b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
+}
+
+.search-input-field,
+input[placeholder*="Buscar"],
+input[placeholder*="buscar"],
+input[placeholder*="Busque"],
+input[placeholder*="busque"],
+input[placeholder*="Search"],
+input[placeholder*="Nome ou e-mail"],
+input[placeholder*="Nome, CPF ou e-mail"],
+input[placeholder*="Nome, CPF/CNPJ ou e-mail"],
+input[placeholder*="Nome, subdivisao ou pais"],
+input[placeholder*="Nome, subdivisão ou país"],
+input[placeholder*="Nome do cliente"],
+input[placeholder*="Nome do vendedor"],
+input[placeholder*="Nome do produto"],
+input[placeholder*="Nome do produto..."],
+input[placeholder*="Produto do recibo"],
+input[placeholder*="Nome, destino, produto ou recibo"],
+input[placeholder*="Cliente, item, status"],
+input[placeholder*="Cliente ou produto"],
+input[placeholder*="Destino ou cidade"],
+input[placeholder*="Destino, data ou ID"],
+input[placeholder*="Numero do recibo"],
+input[placeholder*="Número do recibo"],
+input[placeholder*="Número, cliente ou destino"],
+input[placeholder*="Recibo, tour, contratante, motivo"],
+input[placeholder*="Digite a cidade"],
+input[placeholder*="Digite o nome da cidade"],
+input[placeholder*="Digite ou selecione um produto"],
+input[placeholder*="Digite o produto do recibo"],
+input[placeholder*="Selecione um cliente"],
+input[placeholder*="Ex.: Vendedor, Financeiro"],
+input[placeholder*="Ex.: Vendas, Agenda"],
+input[placeholder*="Digite o nome..."],
+input[aria-label*="Buscar"],
+input[aria-label*="buscar"],
+input[aria-label*="Search"] {
+  background-image: var(--search-input-icon);
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 18px 18px;
+  padding-right: 42px;
+}
+
 .quote-manual-client-row .form-label {
   display: block;
 }
@@ -2141,6 +2206,16 @@ body {
     min-height: 44px;
     line-height: 1.2;
     padding: 10px 14px;
+  }
+
+  .btn-calculator-trigger.vtur-app-button,
+  .mobile-stack-buttons .btn-calculator-trigger.vtur-app-button,
+  .mobile-actionbar .btn-calculator-trigger.vtur-app-button {
+    width: 44px !important;
+    min-width: 44px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    text-align: center !important;
   }
 
   .mobile-actionbar {
@@ -6408,5 +6483,46 @@ body {
 
   .ranking-vendas-page .ranking-table.table-mobile-cards td[colspan] {
     text-align: center;
+  }
+}
+
+.todo-board .todo-action-btn.btn-icon {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.todo-board .todo-action-btn.btn-icon .pi {
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.todo-board .todo-expand-btn.btn-icon .pi {
+  font-size: 0.95rem;
+}
+
+.todo-board .todo-inline-icon {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+@media (max-width: 640px) {
+  .todo-board .todo-action-btn.btn-icon {
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    min-height: 30px;
+  }
+
+  .todo-board .todo-card-actions .todo-action-btn.btn-icon {
+    min-width: 30px;
+    min-height: 30px;
   }
 }

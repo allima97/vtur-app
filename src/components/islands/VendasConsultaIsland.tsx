@@ -1270,6 +1270,7 @@ export default function VendasConsultaIsland() {
             />
             <AppField
               label="Buscar venda"
+              className="w-full search-input-field"
               placeholder={placeholderBusca}
               value={busca}
               onChange={(e) => setBusca(e.target.value)}

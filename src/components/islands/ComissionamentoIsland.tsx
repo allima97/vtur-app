@@ -1145,8 +1145,15 @@ export default function ComissionamentoIsland() {
               <AppButton type="button" variant="secondary" className="sm:hidden" onClick={() => setShowFilters(true)}>
                 Filtros
               </AppButton>
-              <AppButton type="button" variant="secondary" onClick={() => setShowCalculator(true)}>
-                Calculadora
+              <AppButton
+                type="button"
+                variant="secondary"
+                className="btn-calculator-trigger"
+                onClick={() => setShowCalculator(true)}
+                aria-label="Calculadora"
+                title="Calculadora"
+              >
+                <i className="pi pi-calculator" aria-hidden="true" />
               </AppButton>
             </div>
           }
