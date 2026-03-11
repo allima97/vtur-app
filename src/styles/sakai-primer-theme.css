@@ -187,7 +187,7 @@ body.sakai-theme .table-mobile-cards.table-header-purple thead th {
 body.sakai-theme .table-mobile-cards.table-header-purple {
   --table-card-border: #bfdbfe;
   --table-card-divider: #bfdbfe;
-  --table-card-gap: #eff6ff;
+  --table-card-gap: transparent;
 }
 
 body.sakai-theme .card-purple {
