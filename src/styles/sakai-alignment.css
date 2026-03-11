@@ -2,6 +2,9 @@ body.sakai-theme {
   background: #f5f7fb;
   color: #334155;
   font-family: var(--vtur-font-family, "Inter var", sans-serif);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  font-variation-settings: normal;
+  font-weight: 400;
 }
 
 body.sakai-theme :is(button, input, select, textarea) {
@@ -9,44 +12,43 @@ body.sakai-theme :is(button, input, select, textarea) {
 }
 
 body.sakai-theme .app-shell {
-  display: grid !important;
-  grid-template-columns: 286px minmax(0, 1fr) !important;
-  grid-template-rows: auto 1fr !important;
-  gap: 0 1rem;
-  padding: 1rem;
-  align-items: start;
+  display: block !important;
+  padding: 0;
 }
 
 body.sakai-theme .app-topbar {
-  grid-column: 2;
-  grid-row: 1;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 997;
   height: 4.6rem;
   padding: 0 1.5rem;
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
   box-shadow: none;
-  border-radius: 12px;
+  border-radius: 0;
 }
 
 body.sakai-theme .app-sidebar {
-  grid-column: 1;
-  grid-row: 1 / span 2;
-  width: 100%;
+  position: fixed;
+  top: 5.6rem;
+  left: 1rem;
+  z-index: 999;
+  width: 286px;
+  height: calc(100vh - 6.6rem);
   border-radius: 12px;
   border-color: #e5e7eb;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
-  position: sticky;
-  top: 1rem;
-  max-height: calc(100vh - 2rem);
+  max-height: none;
   overflow-y: auto;
   background: #ffffff;
 }
 
 body.sakai-theme .app-main {
-  grid-column: 2;
-  grid-row: 2;
-  margin-left: 0 !important;
-  padding: 1rem 0.25rem 1.25rem;
+  margin-left: calc(1rem + 286px + 1rem) !important;
+  padding: calc(4.6rem + 1rem) 1rem 1.25rem 0.75rem;
+  min-height: 100vh;
   min-width: 0;
 }
 
@@ -282,7 +284,7 @@ body.sakai-theme .ranking-table tbody td {
   font-size: 1rem;
   line-height: 1.5;
   color: #4b5563;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 body.sakai-theme table:not(.vtur-data-table):not(.table-default):not(.ranking-table):not(.escala-table):not(.escala-calendario) tbody td {
