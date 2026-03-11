@@ -1,7 +1,7 @@
 body.sakai-theme {
   background: #f5f7fb;
   color: #334155;
-  font-family: "Inter var", Inter, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--vtur-font-family, "Inter var", sans-serif);
 }
 
 body.sakai-theme :is(button, input, select, textarea) {
@@ -558,7 +558,7 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
 
 .auth-body {
   background: #f5f7fb;
-  font-family: "Inter var", Inter, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--vtur-font-family, "Inter var", sans-serif);
 }
 
 .auth-container {

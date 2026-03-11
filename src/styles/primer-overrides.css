@@ -10,7 +10,7 @@
 }
 
 .vtur-primer-scope {
-  font-family: "Inter var", Inter, "Segoe UI", "Nunito Sans", sans-serif;
+  font-family: var(--vtur-font-family, "Inter var", sans-serif);
   color: var(--vtur-primer-ink);
 }
 
