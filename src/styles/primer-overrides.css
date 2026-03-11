@@ -10,7 +10,7 @@
 }
 
 .vtur-primer-scope {
-  font-family: "Inter", "Segoe UI", "Nunito Sans", sans-serif;
+  font-family: "Inter var", Inter, "Segoe UI", "Nunito Sans", sans-serif;
   color: var(--vtur-primer-ink);
 }
 
@@ -682,6 +682,24 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.vtur-legacy-navlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.vtur-legacy-navitem {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.vtur-legacy-nav-leading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .vtur-sidebar-nav .vtur-sidebar-nav-item {
