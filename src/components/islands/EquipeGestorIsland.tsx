@@ -863,7 +863,7 @@ export default function EquipeGestorIsland() {
                   <th>E-mail</th>
                   <th>Tipo</th>
                   <th>Status</th>
-                  {podeAlterarEquipe && <th className="th-actions">Ação</th>}
+                  {podeAlterarEquipe && <th className="th-actions">Ações</th>}
                 </tr>
               </thead>
               <tbody>
@@ -899,7 +899,7 @@ export default function EquipeGestorIsland() {
                         </span>
                       </td>
                       {podeAlterarEquipe && (
-                        <td className="th-actions" data-label="Ação">
+                        <td className="th-actions" data-label="Ações">
                           <div className="action-buttons">
                             <AppButton
                               variant={ativo ? "danger" : "ghost"}

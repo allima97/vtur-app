@@ -184,6 +184,21 @@ body.sakai-theme .th-actions .p-button {
   border-radius: 8px;
 }
 
+/* Coluna Ações: padrão icon-only (sem texto visível) */
+body.sakai-theme td.th-actions :is(button, .vtur-app-button, .p-button) {
+  font-size: 0 !important;
+  line-height: 0 !important;
+}
+
+body.sakai-theme td.th-actions :is(button, .vtur-app-button, .p-button) :is(i, svg, .pi, [aria-hidden="true"]) {
+  font-size: 1rem !important;
+  line-height: 1 !important;
+}
+
+body.sakai-theme td.th-actions .sr-only {
+  font-size: 0 !important;
+}
+
 body.sakai-theme .vtur-dashboard-shell .recharts-wrapper text,
 body.sakai-theme .vtur-dashboard-shell .recharts-text {
   fill: #64748b;
