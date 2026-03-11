@@ -318,6 +318,39 @@ body.sakai-theme .quote-list-table td[data-label="Status"] .form-input {
   font-size: 1rem;
 }
 
+@media (min-width: 641px) {
+  body.sakai-theme :is(.table-default, .vtur-data-table, .ranking-table) thead th {
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    line-height: 1.45 !important;
+    padding: 1rem 1.25rem !important;
+    color: #374151 !important;
+  }
+
+  body.sakai-theme :is(.table-default, .vtur-data-table, .ranking-table) tbody td {
+    font-size: 1rem !important;
+    line-height: 1.5 !important;
+    padding: 1rem 1.25rem !important;
+    color: #4b5563 !important;
+  }
+
+  body.sakai-theme :is(.table-default, .vtur-data-table, .ranking-table)
+    :is(thead th:first-child, tbody td:first-child) {
+    padding-left: 1.5rem !important;
+  }
+
+  body.sakai-theme :is(.table-default, .vtur-data-table, .ranking-table)
+    :is(thead th:last-child, tbody td:last-child) {
+    padding-right: 1.5rem !important;
+  }
+
+  body.sakai-theme :is(.table-default, .vtur-data-table) :is(select, .form-input, .p-inputtext) {
+    font-size: 1rem !important;
+  }
+}
+
 /* Escalas: manter grade operacional, mas com skin Sakai */
 body.sakai-theme .escala-table {
   width: 100%;
