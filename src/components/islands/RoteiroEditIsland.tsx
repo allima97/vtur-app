@@ -960,7 +960,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                 <thead>
                   <tr style={{ background: "#f8fafc" }}>
-                    {["Cidade *", "Hotel *", "Data Início", "Data Fim", "Noites", "Apto *", "Categoria *", "Regime", ""].map((h) => (
+                    {["Cidade *", "Hotel *", "Data Início", "Data Final", "Noites", "Apto *", "Categoria *", "Regime", ""].map((h) => (
                       <th key={h} style={{ padding: "7px 8px", textAlign: "left", color: "#374151", fontWeight: 600, whiteSpace: "nowrap", borderBottom: "1px solid #e5e7eb" }}>{h}</th>
                     ))}
                   </tr>
@@ -1073,7 +1073,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                 <thead>
                   <tr style={{ background: "#f8fafc" }}>
-                    {["Cidade *", "Passeio *", "Data Início", "Data Fim", "Tipo", "Ingressos", ""].map((h) => (
+                    {["Cidade *", "Passeio *", "Data Início", "Data Final", "Tipo", "Ingressos", ""].map((h) => (
                       <th key={h} style={{ padding: "7px 8px", textAlign: "left", color: "#374151", fontWeight: 600, whiteSpace: "nowrap", borderBottom: "1px solid #e5e7eb" }}>{h}</th>
                     ))}
                   </tr>
@@ -1165,7 +1165,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                 <thead>
                   <tr style={{ background: "#f8fafc" }}>
-                    {["Tipo *", "Fornecedor *", "Descrição *", "Data Início", "Data Fim", "Categoria *", "Observação", ""].map((h) => (
+                    {["Tipo *", "Fornecedor *", "Descrição *", "Data Início", "Data Final", "Categoria *", "Observação", ""].map((h) => (
                       <th key={h} style={{ padding: "7px 8px", textAlign: "left", color: "#374151", fontWeight: 600, whiteSpace: "nowrap", borderBottom: "1px solid #e5e7eb" }}>{h}</th>
                     ))}
                   </tr>

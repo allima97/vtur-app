@@ -2222,7 +2222,7 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
 
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label">Data início</label>
+            <label className="form-label">Data Início</label>
             <input
               type="date"
               className="form-input"
@@ -2237,7 +2237,7 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
             />
           </div>
           <div className="form-group">
-            <label className="form-label">Data fim</label>
+            <label className="form-label">Data Final</label>
             <input
               type="date"
               className="form-input"
@@ -2287,7 +2287,7 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
             {presetPeriodo === "personalizado" && (
               <>
                 <div className="form-group" style={{ marginTop: 12 }}>
-                  <label className="form-label">Data início</label>
+                  <label className="form-label">Data Início</label>
                   <input
                     type="date"
                     className="form-input"
@@ -2303,7 +2303,7 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Data fim</label>
+                  <label className="form-label">Data Final</label>
                   <input
                     type="date"
                     className="form-input"

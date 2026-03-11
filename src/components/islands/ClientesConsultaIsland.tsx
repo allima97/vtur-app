@@ -554,7 +554,7 @@ export default function ClientesConsultaIsland() {
                   <DataTable
                     headers={
                       <tr>
-                        <th>Data Lancamento</th>
+                        <th>Data Lançamento</th>
                         <th>Destino</th>
                         <th>Embarque</th>
                         <th>Valor</th>
@@ -568,7 +568,7 @@ export default function ClientesConsultaIsland() {
                   >
                     {historicoVendas.map((v) => (
                       <tr key={v.id}>
-                        <td data-label="Data Lancamento">
+                        <td data-label="Data Lançamento">
                           {v.data_lancamento
                             ? new Date(v.data_lancamento).toLocaleDateString("pt-BR")
                             : "-"}

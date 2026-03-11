@@ -43,13 +43,18 @@ export default function AppField(props: AppFieldProps) {
   const generatedId = useId();
   const controlId = id || generatedId;
   const validationStatus = validation ? validationVariant : undefined;
+  const inputProps = rest as React.InputHTMLAttributes<HTMLInputElement>;
+  const isDateInput = as === "input" && inputProps.type === "date";
+  const { className: inputClassName, ...textInputProps } = inputProps;
 
   return (
     <FormControl
       id={controlId}
       required={required}
       disabled={disabled}
-      className={["vtur-app-field", wrapperClassName].filter(Boolean).join(" ")}
+      className={["vtur-app-field", isDateInput ? "vtur-app-field-date" : "", wrapperClassName]
+        .filter(Boolean)
+        .join(" ")}
     >
       <FormControl.Label>{label}</FormControl.Label>
 
@@ -84,7 +89,8 @@ export default function AppField(props: AppFieldProps) {
           disabled={disabled}
           required={required}
           validationStatus={validationStatus}
-          {...(rest as React.InputHTMLAttributes<HTMLInputElement>)}
+          className={[inputClassName, isDateInput ? "vtur-date-input" : ""].filter(Boolean).join(" ")}
+          {...textInputProps}
         />
       )}
 

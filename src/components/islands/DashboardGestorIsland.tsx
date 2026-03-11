@@ -1197,7 +1197,7 @@ function DashboardGestorIslandInner() {
             <table className="table-default table-mobile-cards min-w-[520px]">
               <thead>
                 <tr>
-                  <th>Início</th>
+                  <th>Data Início</th>
                   <th>Cliente</th>
                   <th>Destino</th>
                   <th>Status</th>
@@ -1212,7 +1212,7 @@ function DashboardGestorIslandInner() {
                 )}
                 {viagensProximas.map((v) => (
                   <tr key={v.id}>
-                    <td data-label="Início">{formatarDataParaExibicao(v.data_inicio)}</td>
+                    <td data-label="Data Início">{formatarDataParaExibicao(v.data_inicio)}</td>
                     <td data-label="Cliente">{v.clientes?.nome || "—"}</td>
                     <td data-label="Destino">{v.destino || "—"}</td>
                     <td data-label="Status">{v.status || "—"}</td>

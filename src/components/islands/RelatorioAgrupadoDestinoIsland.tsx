@@ -716,7 +716,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
     <>
       <div className="vtur-commission-filters-grid">
         <AppField
-          label="Data inicio"
+          label="Data Início"
           type="date"
           value={dataInicio}
           onFocus={selectAllInputOnFocus}
@@ -730,7 +730,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
           }}
         />
         <AppField
-          label="Data fim"
+          label="Data Final"
           type="date"
           value={dataFim}
           min={dataInicio || undefined}

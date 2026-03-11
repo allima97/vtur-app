@@ -1255,7 +1255,7 @@ export default function EscalaGestorIsland() {
               </select>
             </div>
             <div className="form-group">
-              <label className="form-label">Inicio</label>
+              <label className="form-label">Início</label>
               <input
                 type="time"
                 className="form-input"
@@ -1578,7 +1578,7 @@ export default function EscalaGestorIsland() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Inicio</label>
+                  <label className="form-label">Início</label>
                   <input
                     type="time"
                     className="form-input"

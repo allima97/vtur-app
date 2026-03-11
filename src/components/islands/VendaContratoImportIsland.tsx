@@ -1401,8 +1401,8 @@ export default function VendaContratoImportIsland() {
                                           <div>Serviço: {formatLabelValue(f.servico || null)}</div>
                                           <div>Transporte aéreo: {formatLabelValue(f.transporte_aereo || null)}</div>
                                           <div>Trecho: {formatLabelValue(f.trecho || null)}</div>
-                                          <div>Data inicial: {formatDate(f.data_inicial || null)}</div>
-                                          <div>Data final: {formatDate(f.data_final || null)}</div>
+                                          <div>Data Início: {formatDate(f.data_inicial || null)}</div>
+                                          <div>Data Final: {formatDate(f.data_final || null)}</div>
                                         </div>
                                       );
                                     })}

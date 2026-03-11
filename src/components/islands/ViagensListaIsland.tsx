@@ -568,7 +568,7 @@ export default function ViagensListaIsland() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Data início</label>
+                  <label className="form-label">Data Início</label>
                   <input
                     type="date"
                     className="form-input w-full"
@@ -587,7 +587,7 @@ export default function ViagensListaIsland() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Data fim</label>
+                  <label className="form-label">Data Final</label>
                   <input
                     type="date"
                     className="form-input w-full"
@@ -688,7 +688,7 @@ export default function ViagensListaIsland() {
                     </select>
                   </div>
                   <div className="form-group" style={compactDateFieldStyle}>
-                    <label className="form-label">Inicio</label>
+                    <label className="form-label">Data Início</label>
                     <input
                       type="date"
                       className="form-input w-full"
@@ -772,7 +772,7 @@ export default function ViagensListaIsland() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Inicio</label>
+                  <label className="form-label">Data Início</label>
                   <input
                     type="date"
                     className="form-input w-full"
@@ -833,8 +833,8 @@ export default function ViagensListaIsland() {
               <thead>
                 <tr>
                   <th>Cliente</th>
-                  <th>Início</th>
-                  <th>Fim</th>
+                  <th>Data Início</th>
+                  <th>Data Final</th>
                   <th>Status</th>
                   <th>Produto</th>
                   <th>Valor</th>
@@ -868,8 +868,8 @@ export default function ViagensListaIsland() {
                   return (
                     <tr key={v.id}>
                       <td data-label="Cliente">{v.clientes?.nome || "-"}</td>
-                      <td data-label="Início">{formatarDataParaExibicao(v.data_inicio)}</td>
-                      <td data-label="Fim">{formatarDataParaExibicao(v.data_fim)}</td>
+                      <td data-label="Data Início">{formatarDataParaExibicao(v.data_inicio)}</td>
+                      <td data-label="Data Final">{formatarDataParaExibicao(v.data_fim)}</td>
                       <td data-label="Status">{statusLabel}</td>
                       <td data-label="Produto">{produtoLabel}</td>
                       <td data-label="Valor">{valorLabel}</td>

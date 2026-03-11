@@ -1642,7 +1642,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
               </div>
 
               <AppField
-                label="Lancada em"
+                label="Lançado em"
                 wrapperClassName="min-w-[180px]"
                 type="date"
                 value={formVenda.data_lancamento}
@@ -1696,7 +1696,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
               />
 
               <AppField
-                label="Data final"
+                label="Data Final"
                 wrapperClassName="min-w-[180px]"
                 type="date"
                 value={formVenda.data_final}
@@ -1933,7 +1933,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                   </div>
 
                   <AppField
-                    label="Inicio *"
+                    label="Data Início *"
                     type="date"
                     value={r.data_inicio}
                     onFocus={selectAllInputOnFocus}
@@ -1942,7 +1942,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                   />
 
                   <AppField
-                    label="Fim *"
+                    label="Data Final *"
                     type="date"
                     value={r.data_fim}
                     min={r.data_inicio || undefined}

@@ -841,7 +841,7 @@ export default function AgendaCalendar() {
                 </div>
                 <div className="form-row mobile-stack" style={{ gap: 8 }}>
                   <div className="form-group" style={{ minWidth: 150 }}>
-                    <label className="form-label">Início</label>
+                    <label className="form-label">Data Início</label>
                     <input
                       type="date"
                       className="form-input"
@@ -859,7 +859,7 @@ export default function AgendaCalendar() {
                     />
                   </div>
                   <div className="form-group" style={{ minWidth: 150 }}>
-                    <label className="form-label">Fim</label>
+                    <label className="form-label">Data Final</label>
                     <input
                       type="date"
                       className="form-input"
@@ -970,7 +970,7 @@ export default function AgendaCalendar() {
                   </div>
                   <div className="form-row mobile-stack" style={{ gap: 8 }}>
                     <div className="form-group" style={{ minWidth: 150 }}>
-                      <label className="form-label">Início</label>
+                      <label className="form-label">Data Início</label>
                       <input
                         type="date"
                         className="form-input"
@@ -991,7 +991,7 @@ export default function AgendaCalendar() {
                       />
                     </div>
                     <div className="form-group" style={{ minWidth: 150 }}>
-                      <label className="form-label">Fim</label>
+                      <label className="form-label">Data Final</label>
                       <input
                         type="date"
                         className="form-input"

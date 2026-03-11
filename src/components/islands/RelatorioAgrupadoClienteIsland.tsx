@@ -666,7 +666,7 @@ export default function RelatorioAgrupadoClienteIsland() {
         <div className="hidden sm:block">
           <div className="form-row">
           <div className="form-group">
-            <label className="form-label">Data início</label>
+            <label className="form-label">Data Início</label>
             <input
               type="date"
               className="form-input"
@@ -683,7 +683,7 @@ export default function RelatorioAgrupadoClienteIsland() {
             />
           </div>
           <div className="form-group">
-            <label className="form-label">Data fim</label>
+            <label className="form-label">Data Final</label>
             <input
               type="date"
               className="form-input"

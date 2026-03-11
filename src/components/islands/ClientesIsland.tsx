@@ -2684,7 +2684,7 @@ export default function ClientesIsland() {
                 <DataTable
                   headers={
                     <tr>
-                      <th>Data Lancamento</th>
+                      <th>Data Lançamento</th>
                       <th>Destino</th>
                       <th>Embarque</th>
                       <th>Vinculo</th>
@@ -2700,7 +2700,7 @@ export default function ClientesIsland() {
                 >
                   {historicoVendas.map((v) => (
                     <tr key={v.id}>
-                      <td data-label="Data Lancamento">{v.data_lancamento ? formatDateBR(v.data_lancamento) : "-"}</td>
+                      <td data-label="Data Lançamento">{v.data_lancamento ? formatDateBR(v.data_lancamento) : "-"}</td>
                       <td data-label="Destino">{v.destino_cidade_nome || "-"}</td>
                       <td data-label="Embarque">{v.data_embarque ? formatDateBR(v.data_embarque) : "-"}</td>
                       <td data-label="Vinculo">{v.origem_vinculo === "passageiro" ? "Passageiro" : "Titular"}</td>
@@ -2791,7 +2791,7 @@ export default function ClientesIsland() {
             <div className="vtur-modal-detail-grid">
               <div><strong>Recibo:</strong> {detalheRecibos.length > 0 ? detalheRecibos.map((r) => r.numero_recibo || "-").join(", ") : "—"}</div>
               <div><strong>Destino:</strong> {detalheVenda.destino_cidade_nome || "-"}</div>
-              <div><strong>Lancamento:</strong> {formatDateBR(detalheVenda.data_lancamento)}</div>
+              <div><strong>Lançamento:</strong> {formatDateBR(detalheVenda.data_lancamento)}</div>
               <div><strong>Embarque:</strong> {detalheVenda.data_embarque ? formatDateBR(detalheVenda.data_embarque) : "-"}</div>
               <div><strong>Valor:</strong> {formatCurrencyBRL(detalheVenda.valor_total)}</div>
               <div><strong>Taxas:</strong> {detalheVenda.valor_taxas === 0 ? "-" : formatCurrencyBRL(detalheVenda.valor_taxas)}</div>
@@ -2807,8 +2807,8 @@ export default function ClientesIsland() {
                   <tr>
                     <th>Numero</th>
                     <th>Produto</th>
-                    <th style={{ textAlign: "center" }}>Inicio</th>
-                    <th style={{ textAlign: "center" }}>Fim</th>
+                    <th style={{ textAlign: "center" }}>Data Início</th>
+                    <th style={{ textAlign: "center" }}>Data Final</th>
                     <th>Valor</th>
                     <th>Taxas</th>
                   </tr>
@@ -2824,8 +2824,8 @@ export default function ClientesIsland() {
                     <tr key={idx}>
                       <td data-label="Numero">{r.numero_recibo || "-"}</td>
                       <td data-label="Produto">{r.produto_nome || "-"}</td>
-                      <td data-label="Inicio" style={{ textAlign: "center" }}>{formatarData(r.data_inicio)}</td>
-                      <td data-label="Fim" style={{ textAlign: "center" }}>{formatarData(r.data_fim)}</td>
+                      <td data-label="Data Início" style={{ textAlign: "center" }}>{formatarData(r.data_inicio)}</td>
+                      <td data-label="Data Final" style={{ textAlign: "center" }}>{formatarData(r.data_fim)}</td>
                       <td data-label="Valor">{formatCurrencyBRL(r.valor_total || 0)}</td>
                       <td data-label="Taxas">{formatCurrencyBRL(r.valor_taxas || 0)}</td>
                     </tr>
