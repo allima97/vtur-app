@@ -18,6 +18,7 @@ body.sakai-theme .app-shell {
   min-height: 100vh;
   min-height: 100svh;
   background: var(--sakai-surface-ground);
+  display: block;
 }
 
 body.sakai-theme .app-topbar {
@@ -113,8 +114,8 @@ body.sakai-theme .vtur-sidebar-action-note {
 
 body.sakai-theme .app-main {
   min-height: 100vh;
-  margin-left: 300px;
-  padding: 7rem 2rem 2rem 4rem;
+  margin-left: calc(2rem + 300px + 1rem);
+  padding: 7rem 2rem 2rem 1.25rem;
   background: transparent;
 }
 
