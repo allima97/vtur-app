@@ -1,5 +1,6 @@
 @import "./sgtur-tailwind.css";
 @import "./sakai-primer-theme.css";
+@import url("https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -38,8 +39,10 @@
 /* Mantém todas formatações +40% performance */
 
 :root {
-  --vtur-font-family: "Inter var", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --vtur-font-family: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --vtur-font-weight: 400;
+  --vtur-font-size: 14px;
+  --vtur-line-height: 1.45;
   /* Shadows consolidados (removidas 50+ repetições) */
   --sgtur-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --sgtur-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -149,8 +152,8 @@ body {
   margin: 0;
   font-family: var(--vtur-font-family);
   font-weight: var(--vtur-font-weight);
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-  font-variation-settings: normal;
+  font-size: var(--vtur-font-size);
+  line-height: var(--vtur-line-height);
   background: #f8fafc;
   color: #0f172a;
   overflow-x: hidden;
