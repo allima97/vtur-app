@@ -525,8 +525,8 @@ export default function MinhasPreferenciasIsland() {
               />
 
               {mostrarSugestoesCidade && (buscandoCidade || cidadeBusca.trim().length >= 2) && (
-                <div
-                  className="card-base card-config"
+                <AppCard
+                  className="card-config"
                   style={{
                     position: "absolute",
                     top: "100%",
@@ -548,18 +548,19 @@ export default function MinhasPreferenciasIsland() {
 
                   {!buscandoCidade &&
                     resultadosCidade.map((c) => (
-                      <button
+                      <AppButton
                         key={c.id}
                         type="button"
+                        variant="ghost"
                         className="w-full text-left"
                         style={{ padding: "6px 12px" }}
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => selecionarCidade(c)}
                       >
                         {c.nome}
-                      </button>
+                      </AppButton>
                     ))}
-                </div>
+                </AppCard>
               )}
             </div>
           </div>
@@ -747,9 +748,9 @@ export default function MinhasPreferenciasIsland() {
           >
             <div className="modal-header">
               <div className="modal-title">Compartilhar</div>
-              <button className="btn-ghost" onClick={() => setSharePrefId(null)} aria-label="Fechar">
+              <AppButton variant="ghost" onClick={() => setSharePrefId(null)} aria-label="Fechar">
                 x
-              </button>
+              </AppButton>
             </div>
             <div className="modal-body">
               {sharePrefItem && (sharePrefItem.shares || []).length > 0 && (
@@ -770,14 +771,14 @@ export default function MinhasPreferenciasIsland() {
                             {String(s.status || "").toUpperCase()}
                           </div>
                         </div>
-                        <button
+                        <AppButton
                           type="button"
-                          className="btn btn-light"
+                          variant="secondary"
                           onClick={() => revogarShare(s.id)}
                           disabled={revokingShareId === s.id || !podeEditar}
                         >
                           {revokingShareId === s.id ? "Revogando..." : "Revogar"}
-                        </button>
+                        </AppButton>
                       </div>
                     ))}
                   </div>

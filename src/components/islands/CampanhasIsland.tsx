@@ -545,19 +545,20 @@ export default function CampanhasIsland() {
         <div className="vtur-campaign-media">
           {anexoUrl ? (
             anexoKind === "image" ? (
-              <button type="button" className="vtur-campaign-media-button" onClick={openPreview} title="Pre-visualizar anexo">
+              <AppButton type="button" variant="ghost" className="vtur-campaign-media-button" onClick={openPreview} title="Pre-visualizar anexo">
                 <img src={anexoUrl} alt={campanha.titulo} className="vtur-campaign-media-image" />
-              </button>
+              </AppButton>
             ) : (
-              <button
+              <AppButton
                 type="button"
+                variant="ghost"
                 className="vtur-campaign-media-button vtur-campaign-media-file"
                 onClick={openPreview}
                 title={anexoKind === "pdf" ? "Pre-visualizar PDF" : "Pre-visualizar anexo"}
               >
                 <span className="vtur-campaign-file-icon">{anexoKind === "pdf" ? "PDF" : "Anexo"}</span>
                 <span className="vtur-campaign-file-name">{anexoNome}</span>
-              </button>
+              </AppButton>
             )
           ) : (
             <div className="vtur-campaign-media-empty">Sem anexo</div>

@@ -1,4 +1,5 @@
 ---
+import "../styles/global.css";
 import BrandHead from "../components/BrandHead.astro";
 import { SYSTEM_NAME } from "../lib/systemName";
 
@@ -13,14 +14,12 @@ const pageTitle = `Acesso Negado - ${SYSTEM_NAME}`;
     <BrandHead title={pageTitle} canonicalPath={Astro.url.pathname} noindex={true} />
     <title>{pageTitle}</title>
   </head>
-  <body
-    style="min-height:100vh; margin:0; display:flex; align-items:center; justify-content:center; background-color:#030712;"
-  >
-    <div style="padding:40px; text-align:center; color:#e2e8f0;">
+  <body class="sakai-theme" style="min-height:100vh; margin:0; display:flex; align-items:center; justify-content:center;">
+    <div style="padding:40px; text-align:center; color:#0f172a; background:#fff; border:1px solid #e2e8f0; border-radius:16px; box-shadow:0 20px 48px rgba(15, 23, 42, 0.12);">
       <h1 style="font-size:2rem; margin-bottom:10px;">🚫 Acesso Negado</h1>
       <p>Você não possui permissão para acessar este módulo.</p>
 
-      <a href="/dashboard" style="color:#38bdf8; font-size:1.2rem;">
+      <a href="/dashboard" style="color:#2563eb; font-size:1.05rem; font-weight:700;">
         Voltar ao Dashboard
       </a>
     </div>

@@ -1,5 +1,7 @@
 ---
+import "../../../../styles/global.css";
 import { supabaseServer as supabase } from "../../../../lib/supabaseServer";
+import Button from "../../../../components/ui/Button.astro";
 
 const saleId = Astro.params.id;
 
@@ -59,8 +61,48 @@ async function cancelar(formData: FormData) {
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
+    <style>
+      body {
+        font-family: Inter, "Segoe UI", Roboto, sans-serif;
+        margin: 0;
+        padding: 24px;
+      }
+
+      .page {
+        max-width: 920px;
+        margin: 0 auto;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12);
+        padding: 24px;
+      }
+
+      h1, h2 {
+        color: #0f172a;
+      }
+
+      p, li, label {
+        color: #334155;
+      }
+
+      form {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+      }
+
+      input {
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        padding: 8px 10px;
+        min-height: 36px;
+      }
+    </style>
   </head>
-  <body>
+  <body class="sakai-theme">
+    <div class="page">
     <h1>Estorno / Cancelamento</h1>
 
     <p>
@@ -90,7 +132,7 @@ async function cancelar(formData: FormData) {
         name="reason"
         placeholder="Motivo do estorno"
       />
-      <button type="submit">Registrar estorno</button>
+      <Button type="submit">Registrar estorno</Button>
     </form>
 
     <hr />
@@ -109,9 +151,9 @@ async function cancelar(formData: FormData) {
         name="penalty"
         placeholder="Multa (se houver)"
       />
-      <button type="submit">
+      <Button type="submit">
         Cancelar venda
-      </button>
+      </Button>
     </form>
 
     <hr />
@@ -119,5 +161,6 @@ async function cancelar(formData: FormData) {
     <p>
       <a href={`/admin/sales/${saleId}`}>⬅ Voltar para a venda</a>
     </p>
+    </div>
   </body>
 </html>

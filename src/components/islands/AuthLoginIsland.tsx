@@ -303,15 +303,16 @@ export default function AuthLoginIsland() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
-                <button
+                <AppButton
                   type="button"
+                  variant="ghost"
                   className="password-toggle"
                   onClick={() => setMostrarSenha((prev) => !prev)}
                   aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
                   aria-pressed={mostrarSenha}
                 >
                   <i className={`fa-solid ${mostrarSenha ? "fa-eye-slash" : "fa-eye"}`} />
-                </button>
+                </AppButton>
               </div>
             </div>
             <div className="auth-links auth-links-forgot">
@@ -321,9 +322,9 @@ export default function AuthLoginIsland() {
               <AppButton type="submit" variant="primary" disabled={loading}>
                 {loading ? "Entrando..." : "Entrar"}
               </AppButton>
-              <a href="/auth/register" className="btn btn-secondary btn-block">
+              <AppButton as="a" href="/auth/register" variant="secondary" block>
                 Criar nova conta
-              </a>
+              </AppButton>
             </div>
           </form>
         </AppCard>

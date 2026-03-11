@@ -550,15 +550,16 @@ export default function MasterUsuariosIsland() {
                   </td>
                   <td className="th-actions" data-label="Ações">
                     <div className="action-buttons">
-                      <button
-                        className="btn-icon icon-action-btn"
+                      <AppButton
+                        variant="ghost"
+                        className="icon-action-btn"
                         onClick={() => toggleAtivo(u, !u.active)}
                         title={u.active ? "Desativar" : "Ativar"}
                         aria-label={u.active ? "Desativar" : "Ativar"}
                       >
                         <span aria-hidden="true">{u.active ? "⏸️" : "✅"}</span>
                         <span className="sr-only">{u.active ? "Desativar" : "Ativar"}</span>
-                      </button>
+                      </AppButton>
                     </div>
                   </td>
                 </tr>
@@ -640,13 +641,13 @@ export default function MasterUsuariosIsland() {
                     <td data-label="Status">{ativo ? "Na equipe" : "Fora da equipe"}</td>
                     <td className="th-actions" data-label="Ações">
                       <div className="action-buttons">
-                        <button
-                          className="btn btn-light"
+                        <AppButton
+                          variant="secondary"
                           onClick={() => toggleEquipe(v.id)}
                           disabled={!gestorEquipeId || salvandoId === v.id || Boolean(gestorEquipeBaseId)}
                         >
                           {ativo ? "Remover" : "Adicionar"}
-                        </button>
+                        </AppButton>
                       </div>
                     </td>
                   </tr>
@@ -705,7 +706,7 @@ export default function MasterUsuariosIsland() {
       {createModalOpen && (
         <div className="fixed inset-0 z-40 bg-black/50 flex justify-center items-center p-4">
           <form
-            className="card-base card-config w-full max-w-xl vtur-modal-form"
+            className="card-config w-full max-w-xl vtur-modal-form"
             onSubmit={(e) => {
               e.preventDefault();
               setMensagemConvite(null);

@@ -453,9 +453,9 @@ export default function DocumentationPortalIsland() {
                             <AppButton
                               type="button"
                               variant="secondary"
+                              size="small"
                               onClick={() => restoreVersion(item.id)}
                               disabled={Boolean(restoringId)}
-                              className="btn-xs"
                             >
                               {restoringId === item.id ? "Restaurando..." : "Restaurar"}
                             </AppButton>

@@ -1140,7 +1140,7 @@ export default function ConciliacaoIsland() {
                   />
                 }
                 colSpan={9}
-                className="table-header-purple table-mobile-cards min-w-[920px]"
+                className="table-header-blue table-mobile-cards min-w-[920px]"
               >
                 {changeGroups.map((group) => {
                   const hasPending = group.count_pendentes > 0;

@@ -1161,7 +1161,7 @@ export default function EscalaGestorIsland() {
       )}
 
       {!loadingEscala && !precisaFiltroMaster && (
-        <div className="card-base card-config mb-3">
+        <AppCard className="card-config mb-3">
           <div className="form-row mobile-stack" style={{ gap: 12, alignItems: "flex-end" }}>
             <div className="form-group" style={{ minWidth: 220 }}>
               <label className="form-label">Selecao multipla</label>
@@ -1239,11 +1239,11 @@ export default function EscalaGestorIsland() {
               {multiErro}
             </div>
           )}
-        </div>
+        </AppCard>
       )}
 
       {!loadingEscala && !precisaFiltroMaster && (
-        <div className="card-base escala-grid-card mb-3">
+        <AppCard className="escala-grid-card mb-3">
           <div className="table-container">
             <table className="escala-table">
               <thead>
@@ -1389,11 +1389,11 @@ export default function EscalaGestorIsland() {
               </ul>
             </div>
           )}
-        </div>
+        </AppCard>
       )}
 
       {!precisaFiltroMaster && (
-        <div className="card-base card-blue">
+        <AppCard className="card-blue">
           <div className="escala-feriados-header">Feriados locais</div>
           <form className="escala-feriados-form" onSubmit={adicionarFeriado}>
             <div className="form-group">
@@ -1434,13 +1434,13 @@ export default function EscalaGestorIsland() {
               </select>
             </div>
             <div className="form-group">
-              <button
+              <AppButton
                 type="submit"
-                className="btn btn-primary"
+                variant="primary"
                 disabled={salvandoFeriado || !podeEditar}
               >
                 {salvandoFeriado ? "Salvando..." : "Adicionar"}
-              </button>
+              </AppButton>
             </div>
           </form>
 
@@ -1467,14 +1467,14 @@ export default function EscalaGestorIsland() {
                       <td data-label="Nome">{f.nome}</td>
                       <td data-label="Tipo">{f.tipo}</td>
                       <td data-label="Acoes">
-                        <button
+                        <AppButton
                           type="button"
-                          className="btn btn-light"
+                          variant="secondary"
                           onClick={() => removerFeriado(f.id)}
                           disabled={!podeEditar}
                         >
                           Remover
-                        </button>
+                        </AppButton>
                       </td>
                     </tr>
                   ))}
@@ -1482,7 +1482,7 @@ export default function EscalaGestorIsland() {
               </table>
             </div>
           )}
-        </div>
+        </AppCard>
       )}
 
       {celulaSelecionada && (
@@ -1549,25 +1549,25 @@ export default function EscalaGestorIsland() {
               )}
             </div>
             <div className="modal-footer">
-              <button
+              <AppButton
                 type="button"
-                className="btn btn-light"
+                variant="secondary"
                 onClick={removerCelula}
                 disabled={salvandoCelula || !celulaSelecionada.registro || !podeEditar}
               >
                 Remover
-              </button>
-              <button type="button" className="btn btn-light" onClick={fecharCelula}>
+              </AppButton>
+              <AppButton type="button" variant="secondary" onClick={fecharCelula}>
                 Fechar
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
-                className="btn btn-primary"
+                variant="primary"
                 onClick={salvarCelula}
                 disabled={salvandoCelula || !podeEditar}
               >
                 {salvandoCelula ? "Salvando..." : "Salvar"}
-              </button>
+              </AppButton>
             </div>
           </div>
         </div>

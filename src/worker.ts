@@ -17,6 +17,31 @@ type Env = {
   };
 };
 
+function ensureSSRDomGlobals() {
+  const g = globalThis as any;
+
+  if (typeof g.HTMLElement === "undefined") {
+    g.HTMLElement = class HTMLElement {};
+  }
+  if (typeof g.Element === "undefined") {
+    g.Element = g.HTMLElement;
+  }
+  if (typeof g.Node === "undefined") {
+    g.Node = class Node {};
+  }
+  if (typeof g.customElements === "undefined") {
+    const registry = new Map<string, any>();
+    g.customElements = {
+      define: (name: string, ctor: any) => {
+        if (!registry.has(name)) registry.set(name, ctor);
+      },
+      get: (name: string) => registry.get(name),
+      whenDefined: async (_name: string) => undefined,
+      upgrade: (_root: unknown) => undefined,
+    };
+  }
+}
+
 function logUncaughtError(params: {
   error: unknown;
   request: Request;
@@ -55,6 +80,7 @@ export function createExports(manifest: SSRManifest) {
     env: Env,
     context: ExecutionContext
   ) => {
+    ensureSSRDomGlobals();
     // Expose env to SSR/API modules that don't receive env directly
     (globalThis as any).env = env;
     try {

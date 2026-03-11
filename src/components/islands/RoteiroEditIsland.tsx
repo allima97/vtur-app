@@ -2,6 +2,11 @@ import { useState, useEffect, useRef, useCallback, useId, useMemo } from "react"
 import { exportRoteiroPdf } from "../../lib/quote/roteiroPdf";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import { extractPlainTextFromFile } from "../../lib/documentosViagens/extractPlainTextFromFile";
+import AlertMessage from "../ui/AlertMessage";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type RotHotel = {
@@ -348,10 +353,10 @@ function RowActions({
 }) {
   return (
     <td style={{ ...tdSt, whiteSpace: "nowrap" }}>
-      <button onClick={onUp} style={actionBtnSt} title="Subir">▲</button>{" "}
-      <button onClick={onDown} style={actionBtnSt} title="Descer">▼</button>{" "}
-      <button onClick={onAdd} style={actionBtnSt} title="Adicionar abaixo">+</button>{" "}
-      <button onClick={onDelete} style={{ ...actionBtnSt, color: "#dc2626", borderColor: "#fca5a5" }} title="Excluir">🗑</button>
+      <AppButton type="button" onClick={onUp} variant="secondary" style={actionBtnSt} title="Subir">▲</AppButton>{" "}
+      <AppButton type="button" onClick={onDown} variant="secondary" style={actionBtnSt} title="Descer">▼</AppButton>{" "}
+      <AppButton type="button" onClick={onAdd} variant="secondary" style={actionBtnSt} title="Adicionar abaixo">+</AppButton>{" "}
+      <AppButton type="button" onClick={onDelete} variant="danger" style={{ ...actionBtnSt, borderColor: "#fca5a5" }} title="Excluir">🗑</AppButton>
     </td>
   );
 }
@@ -772,10 +777,29 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div style={{ padding: "0 0 60px" }}>
-      <div style={{ padding: "12px 0 0" }}>
+    <AppPrimerProvider>
+      <div style={{ padding: "0 0 60px" }}>
+        <AppToolbar
+          className="mb-3"
+          sticky
+          tone="info"
+          title={isNew ? "Novo roteiro personalizado" : "Editar roteiro personalizado"}
+          subtitle="Gerencie hotéis, passeios, transporte, itinerário, investimento e pagamento."
+          actions={(
+            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+              <AppButton
+                type="button"
+                onClick={() => (window.location.href = "/orcamentos/personalizados")}
+                variant="secondary"
+              >
+                Voltar para lista
+              </AppButton>
+            </div>
+          )}
+        />
+        <div style={{ padding: "12px 0 0" }}>
         {/* ─── Informações do Roteiro ──────────────────────────────────── */}
-        <div style={cardSt}>
+        <AppCard tone="config">
           <div className="form-row mobile-stack roteiro-info-row" style={{ gap: 12 }}>
             <div>
               <label style={labelSt}>Nome *</label>
@@ -819,73 +843,43 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
             </div>
             <div className="mobile-stack-buttons roteiro-info-actions">
               {saveMsg && (
-                <span style={{ color: "#16a34a", fontSize: 13, padding: "6px 0" }}>{saveMsg}</span>
+                <AlertMessage variant="success" className="mb-0">
+                  {saveMsg}
+                </AlertMessage>
               )}
-              <button
+              <AppButton
+                type="button"
                 onClick={() => (window.location.href = "/orcamentos/personalizados")}
-                style={{
-                  padding: "7px 16px",
-                  background: "#f3f4f6",
-                  color: "#374151",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  fontWeight: 600,
-                  fontSize: 13,
-                }}
+                variant="secondary"
               >
                 Cancelar
-              </button>
+              </AppButton>
 
-              <button
+              <AppButton
+                type="button"
                 onClick={handlePreviewPdf}
                 disabled={pdfBusy}
-                style={{
-                  padding: "7px 16px",
-                  background: "#f3f4f6",
-                  color: "#374151",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 6,
-                  cursor: pdfBusy ? "not-allowed" : "pointer",
-                  fontWeight: 600,
-                  fontSize: 13,
-                }}
+                variant="secondary"
               >
                 {previewingPdf ? "Abrindo prévia..." : "Visualizar PDF"}
-              </button>
+              </AppButton>
 
-              <button
+              <AppButton
+                type="button"
                 onClick={handleSave}
                 disabled={saving}
-                style={{
-                  padding: "7px 16px",
-                  background: "#7c3aed",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 6,
-                  cursor: saving ? "not-allowed" : "pointer",
-                  fontWeight: 600,
-                  fontSize: 13,
-                }}
+                variant="primary"
               >
                 {saving ? "Salvando..." : "Salvar"}
-              </button>
+              </AppButton>
 
-              <button
+              <AppButton
+                type="button"
                 onClick={() => setShowGerarModal(true)}
-                style={{
-                  padding: "7px 16px",
-                  background: "#059669",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  fontWeight: 600,
-                  fontSize: 13,
-                }}
+                variant="primary"
               >
                 Gerar Orçamento
-              </button>
+              </AppButton>
             </div>
           </div>
 
@@ -900,26 +894,17 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
               />
             </div>
             <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-              <button
+              <AppButton
                 type="button"
                 onClick={handleImportRoteiroFile}
                 disabled={!importFile || importingFile}
-                style={{
-                  padding: "7px 16px",
-                  background: "#f3f4f6",
-                  color: "#374151",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 6,
-                  cursor: !importFile || importingFile ? "not-allowed" : "pointer",
-                  fontWeight: 600,
-                  fontSize: 13,
-                }}
+                variant="secondary"
               >
                 {importingFile ? "Importando..." : "Importar"}
-              </button>
+              </AppButton>
             </div>
           </div>
-        </div>
+        </AppCard>
 
         {/* ─── Tab Strip ───────────────────────────────────────────────── */}
         <div style={{
@@ -931,25 +916,27 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
           WebkitOverflowScrolling: "touch" as any,
         }}>
           {ABAS.map((aba) => (
-            <button
+            <AppButton
               key={aba.id}
+              type="button"
+              variant="ghost"
               onClick={() => setAbaAtiva(aba.id)}
               style={{
                 padding: "10px 16px",
                 background: "transparent",
                 border: "none",
-                borderBottom: abaAtiva === aba.id ? "3px solid #7c3aed" : "3px solid transparent",
+                borderBottom: abaAtiva === aba.id ? "3px solid #2563eb" : "3px solid transparent",
                 cursor: "pointer",
                 fontWeight: abaAtiva === aba.id ? 700 : 500,
                 fontSize: 13,
-                color: abaAtiva === aba.id ? "#7c3aed" : "#6b7280",
+                color: abaAtiva === aba.id ? "#2563eb" : "#6b7280",
                 whiteSpace: "nowrap",
                 transition: "color 0.15s, border-color 0.15s",
                 marginBottom: -2,
               }}
             >
               {aba.label}
-            </button>
+            </AppButton>
           ))}
         </div>
 
@@ -1060,7 +1047,9 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                 </tbody>
               </table>
               {hoteis.length === 0 && (
-                <button onClick={() => setHoteis([newHotel(0)])} style={{ marginTop: 8, ...actionBtnSt }}>+ Adicionar hotel</button>
+                <AppButton type="button" variant="secondary" onClick={() => setHoteis([newHotel(0)])} style={{ marginTop: 8, ...actionBtnSt }}>
+                  + Adicionar hotel
+                </AppButton>
               )}
             </div>
           </div>
@@ -1152,7 +1141,9 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                 </tbody>
               </table>
               {passeios.length === 0 && (
-                <button onClick={() => setPasseios([newPasseio(0)])} style={{ marginTop: 8, ...actionBtnSt }}>+ Adicionar passeio</button>
+                <AppButton type="button" variant="secondary" onClick={() => setPasseios([newPasseio(0)])} style={{ marginTop: 8, ...actionBtnSt }}>
+                  + Adicionar passeio
+                </AppButton>
               )}
             </div>
           </div>
@@ -1260,7 +1251,9 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                 </tbody>
               </table>
               {transportes.length === 0 && (
-                <button onClick={() => setTransportes([newTransporte(0)])} style={{ marginTop: 8, ...actionBtnSt }}>+ Adicionar transporte</button>
+                <AppButton type="button" variant="secondary" onClick={() => setTransportes([newTransporte(0)])} style={{ marginTop: 8, ...actionBtnSt }}>
+                  + Adicionar transporte
+                </AppButton>
               )}
             </div>
           </div>
@@ -1273,12 +1266,14 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
               <div style={{ fontSize: 13, color: "#6b7280" }}>
                 {dias.length} dia(s) cadastrado(s)
               </div>
-              <button
+              <AppButton
+                type="button"
+                variant="primary"
                 onClick={() => setShowDiasBusca(true)}
-                style={{ fontSize: 12, fontWeight: 500, padding: "6px 12px", background: "#7c3aed", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}
+                style={{ fontSize: 12, fontWeight: 500, padding: "6px 12px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}
               >
                 🔍 Buscar no banco
-              </button>
+              </AppButton>
             </div>
             {dias.map((d, i) => (
               <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "flex-start", flexWrap: "wrap", padding: "8px", background: "#f8fafc", borderRadius: 6, border: "1px solid #e5e7eb" }}>
@@ -1322,15 +1317,15 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                   />
                 </div>
                 <div style={{ display: "flex", gap: 4, flexShrink: 0, paddingTop: 20 }}>
-                  <button onClick={() => diaOps.moveUp(i)} style={actionBtnSt} title="Subir">▲</button>
-                  <button onClick={() => diaOps.moveDown(i)} style={actionBtnSt} title="Descer">▼</button>
-                  <button onClick={() => diaOps.add(i)} style={actionBtnSt} title="Adicionar">+</button>
-                  <button onClick={() => diaOps.remove(i)} style={{ ...actionBtnSt, color: "#dc2626" }} title="Excluir">🗑</button>
+                  <AppButton type="button" variant="secondary" onClick={() => diaOps.moveUp(i)} style={actionBtnSt} title="Subir">▲</AppButton>
+                  <AppButton type="button" variant="secondary" onClick={() => diaOps.moveDown(i)} style={actionBtnSt} title="Descer">▼</AppButton>
+                  <AppButton type="button" variant="secondary" onClick={() => diaOps.add(i)} style={actionBtnSt} title="Adicionar">+</AppButton>
+                  <AppButton type="button" variant="danger" onClick={() => diaOps.remove(i)} style={{ ...actionBtnSt, color: "#dc2626" }} title="Excluir">🗑</AppButton>
                 </div>
               </div>
             ))}
             {dias.length === 0 && (
-              <button onClick={() => setDias([newDia(0)])} style={actionBtnSt}>+ Adicionar dia</button>
+              <AppButton type="button" variant="secondary" onClick={() => setDias([newDia(0)])} style={actionBtnSt}>+ Adicionar dia</AppButton>
             )}
           </div>
         )}
@@ -1399,11 +1394,13 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                 </tbody>
               </table>
               {investimentos.length === 0 && (
-                <button onClick={() => setInvestimentos([newInvestimento(0)])} style={{ marginTop: 8, ...actionBtnSt }}>+ Adicionar investimento</button>
+                <AppButton type="button" variant="secondary" onClick={() => setInvestimentos([newInvestimento(0)])} style={{ marginTop: 8, ...actionBtnSt }}>
+                  + Adicionar investimento
+                </AppButton>
               )}
             </div>
             {investimentos.length > 0 && (
-              <div style={{ textAlign: "right", fontWeight: 700, fontSize: 13, color: "#7c3aed", marginTop: 12 }}>
+              <div style={{ textAlign: "right", fontWeight: 700, fontSize: 13, color: "#2563eb", marginTop: 12 }}>
                 Total por pessoa: R$ {totalInvestimento.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
               </div>
             )}
@@ -1479,7 +1476,9 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                 </tbody>
               </table>
               {pagamentos.length === 0 && (
-                <button onClick={() => setPagamentos([newPagamento(0)])} style={{ marginTop: 8, ...actionBtnSt }}>+ Adicionar pagamento</button>
+                <AppButton type="button" variant="secondary" onClick={() => setPagamentos([newPagamento(0)])} style={{ marginTop: 8, ...actionBtnSt }}>
+                  + Adicionar pagamento
+                </AppButton>
               )}
             </div>
             {pagamentos.length > 0 && (
@@ -1556,9 +1555,9 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
             <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
               <input style={{ ...inputSt, flex: 1 }} value={diasBuscaCidade} onChange={(e) => setDiasBuscaCidade(e.target.value)} placeholder="Cidade (opcional)" />
               <input style={{ ...inputSt, flex: 2 }} value={diasBuscaQ} onChange={(e) => setDiasBuscaQ(e.target.value)} placeholder="Buscar por texto..." />
-              <button onClick={handleBuscarDias} disabled={diasBuscaLoading} style={{ padding: "6px 14px", background: "#7c3aed", color: "#fff", border: "none", borderRadius: 6, cursor: diasBuscaLoading ? "not-allowed" : "pointer", fontSize: 13 }}>
+              <AppButton type="button" variant="primary" onClick={handleBuscarDias} disabled={diasBuscaLoading} style={{ padding: "6px 14px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 6, cursor: diasBuscaLoading ? "not-allowed" : "pointer", fontSize: 13 }}>
                 {diasBuscaLoading ? "..." : "Buscar"}
-              </button>
+              </AppButton>
             </div>
             {diasBuscaResults.length === 0 && (
               <div style={{ color: "#6b7280", fontSize: 13, textAlign: "center", padding: 24 }}>
@@ -1573,13 +1572,13 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                 onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = "#f5f3ff")}
                 onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "")}
               >
-                <div style={{ fontWeight: 600, color: "#7c3aed", fontSize: 12, marginBottom: 4 }}>{d.cidade}</div>
+                <div style={{ fontWeight: 600, color: "#2563eb", fontSize: 12, marginBottom: 4 }}>{d.cidade}</div>
                 <div style={{ fontSize: 12, color: "#374151" }}>{d.descricao.slice(0, 140)}{d.descricao.length > 140 ? "..." : ""}</div>
               </div>
             ))}
-            <button onClick={() => setShowDiasBusca(false)} style={{ marginTop: 12, padding: "7px 16px", background: "#f3f4f6", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13 }}>
+            <AppButton type="button" variant="secondary" onClick={() => setShowDiasBusca(false)} style={{ marginTop: 12, padding: "7px 16px", background: "#f3f4f6", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13 }}>
               Fechar
-            </button>
+            </AppButton>
           </div>
         </div>
       )}
@@ -1598,7 +1597,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                   <div style={{ fontWeight: 600, fontSize: 14 }}>{gerarClienteSel.nome}</div>
                   {gerarClienteSel.whatsapp && <div style={{ fontSize: 12, color: "#6b7280" }}>{gerarClienteSel.whatsapp}</div>}
                 </div>
-                <button onClick={() => { setGerarClienteSel(null); setGerarClienteQ(""); setGerarClienteNome(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#7c3aed", fontSize: 13 }}>Trocar</button>
+                <AppButton type="button" variant="link" onClick={() => { setGerarClienteSel(null); setGerarClienteQ(""); setGerarClienteNome(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#2563eb", fontSize: 13 }}>Trocar</AppButton>
               </div>
             ) : (
               <div style={{ marginBottom: 14 }}>
@@ -1639,20 +1638,23 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
               </div>
             </div>
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button onClick={() => setShowGerarModal(false)} disabled={gerarLoading} style={{ padding: "8px 16px", background: "#f3f4f6", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 14 }}>
+              <AppButton type="button" variant="secondary" onClick={() => setShowGerarModal(false)} disabled={gerarLoading} style={{ padding: "8px 16px", background: "#f3f4f6", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 14 }}>
                 Cancelar
-              </button>
-              <button
+              </AppButton>
+              <AppButton
+                type="button"
+                variant="primary"
                 onClick={handleGerarOrcamento}
                 disabled={gerarLoading || (!gerarClienteSel && !gerarClienteNome.trim())}
                 style={{ padding: "8px 18px", background: "#059669", color: "#fff", border: "none", borderRadius: 6, cursor: gerarLoading ? "not-allowed" : "pointer", fontWeight: 600, fontSize: 14 }}
               >
                 {gerarLoading ? "Gerando..." : "Gerar Orçamento"}
-              </button>
+              </AppButton>
             </div>
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </AppPrimerProvider>
   );
 }

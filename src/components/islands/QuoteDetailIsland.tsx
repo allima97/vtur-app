@@ -742,7 +742,7 @@ export default function QuoteDetailIsland(props: {
           </div>
 
           <div className="table-container overflow-x-auto" style={{ marginTop: 16 }}>
-            <table className="table-default table-compact quote-items-table table-mobile-cards table-header-purple">
+            <table className="table-default table-compact quote-items-table table-mobile-cards table-header-blue">
               <thead>
                 <tr>
                   <th className="order-cell">Ordem</th>

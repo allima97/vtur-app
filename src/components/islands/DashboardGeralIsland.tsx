@@ -315,7 +315,7 @@ function readWidgetVisibilityFromStorage(storageKey: string, ids: WidgetId[]) {
   }
 }
 
-const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
+const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
 
 // ----------------- COMPONENTE -----------------
 
@@ -1726,7 +1726,7 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
                     <XAxis dataKey="label" />
                     <YAxis />
                     <Tooltip formatter={(value: any) => formatCurrency(Number(value || 0))} />
-                    <Line type="monotone" dataKey="value" stroke="#a855f7" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               )}
@@ -1776,7 +1776,7 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
               empty={items.length === 0}
               emptyMessage="Nenhum aniversariante de cliente/acompanhante este mes."
               colSpan={4}
-              className="table-mobile-cards table-header-purple min-w-[640px]"
+              className="table-mobile-cards table-header-blue min-w-[640px]"
               containerStyle={{
                 maxHeight: shouldScroll ? tableScrollMaxHeight : undefined,
                 overflowY: shouldScroll ? "auto" : "visible",
@@ -1863,7 +1863,7 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
               empty={orcamentosRecentes.length === 0}
               emptyMessage="Nenhum orcamento no periodo."
               colSpan={6}
-              className="table-mobile-cards table-header-purple min-w-[680px]"
+              className="table-mobile-cards table-header-blue min-w-[680px]"
               containerStyle={{
                 maxHeight: shouldScrollOrcamentos ? tableScrollMaxHeight : undefined,
                 overflowY: shouldScrollOrcamentos ? "auto" : "visible",
@@ -1920,7 +1920,7 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
                 empty={lembretesDashboard.length === 0}
                 emptyMessage="Nenhum lembrete de consultoria."
                 colSpan={5}
-                className="table-mobile-cards table-header-purple min-w-[720px]"
+                className="table-mobile-cards table-header-blue min-w-[720px]"
                 containerStyle={{
                   maxHeight: shouldScrollConsultorias ? tableScrollMaxHeight : undefined,
                   overflowY: shouldScrollConsultorias ? "auto" : "visible",
@@ -2004,7 +2004,7 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
                 empty={proximasViagensAgrupadas.length === 0}
                 emptyMessage="Nenhuma viagem futura."
                 colSpan={5}
-                className="table-mobile-cards table-header-purple min-w-[760px]"
+                className="table-mobile-cards table-header-blue min-w-[760px]"
                 containerStyle={{
                   maxHeight: shouldScrollViagens ? tableScrollMaxHeight : undefined,
                   overflowY: shouldScrollViagens ? "auto" : "visible",
@@ -2085,7 +2085,7 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
               empty={followUpsRecentes.length === 0}
               emptyMessage="Nenhum retorno no periodo."
               colSpan={5}
-              className="table-mobile-cards table-header-purple min-w-[640px]"
+              className="table-mobile-cards table-header-blue min-w-[640px]"
               containerStyle={{
                 maxHeight: shouldScrollFollowUp ? tableScrollMaxHeight : undefined,
                 overflowY: shouldScrollFollowUp ? "auto" : "visible",
@@ -2514,7 +2514,7 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
                   empty={(orcamentoSelecionado.quote_item || []).length === 0}
                   emptyMessage="Nenhum item encontrado."
                   colSpan={3}
-                  className="table-mobile-cards table-header-purple"
+                  className="table-mobile-cards table-header-blue"
                 >
                   {(orcamentoSelecionado.quote_item || []).map((item, idx) => (
                     <tr key={`${orcamentoSelecionado.id}-${item.id || idx}`}>

@@ -972,7 +972,7 @@ const UsuariosAdminIsland: React.FC = () => {
             </div>
 
             {isMasterSelecionado && (
-              <div className="card-base card-config mt-3">
+              <AppCard className="card-config mt-3">
                 <h5 className="mb-2">Documentos do Master</h5>
                 {docErro && (
                   <div className="mb-2">
@@ -1030,7 +1030,7 @@ const UsuariosAdminIsland: React.FC = () => {
                     </small>
                   </div>
                 </div>
-              </div>
+              </AppCard>
             )}
 
             <div className="flex gap-2 flex-wrap mt-3 mobile-stack-buttons">

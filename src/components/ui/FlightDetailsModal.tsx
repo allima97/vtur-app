@@ -1,4 +1,5 @@
 import React from "react";
+import AppButton from "./primer/AppButton";
 
 export type FlightLeg = {
   departure_time?: string;
@@ -67,9 +68,9 @@ export default function FlightDetailsModal({ details, title, onClose }: FlightDe
               <div style={{ fontSize: "0.9rem", color: "#475569" }}>{details.route}</div>
             )}
           </div>
-          <button className="btn-ghost" onClick={onClose}>
+          <AppButton variant="ghost" onClick={onClose}>
             ✖
-          </button>
+          </AppButton>
         </div>
         <div className="modal-body" style={{ display: "grid", gap: 12 }}>
           {(details.airline || details.cabin) && (
@@ -201,9 +202,9 @@ export default function FlightDetailsModal({ details, title, onClose }: FlightDe
           )}
         </div>
         <div className="modal-footer">
-          <button className="btn btn-primary" onClick={onClose}>
+          <AppButton variant="primary" onClick={onClose}>
             Fechar
-          </button>
+          </AppButton>
         </div>
       </div>
     </div>

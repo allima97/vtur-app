@@ -234,7 +234,7 @@ try {
       }
     </style>
   </head>
-  <body>
+  <body class="sakai-theme">
     <div class="app-shell">
       <!-- Islands (hidratam só quando necessário) -->
       <PermissoesProvider client:load />
@@ -245,6 +245,12 @@ try {
       {showNetMetricsPanel && <NetMetricsPanelIsland client:load />}
 
       <!-- Conteúdo principal -->
+      <header class="app-topbar">
+        <a href="/" class="app-topbar-logo" aria-label="VTUR início">
+          <img src="/brand/vtur-symbol.svg" alt="VTUR" />
+          <span>VTUR</span>
+        </a>
+      </header>
       <main class={`app-main ${moduleClass}`.trim()}>
         <slot />
       </main>

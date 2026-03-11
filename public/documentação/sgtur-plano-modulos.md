@@ -806,7 +806,7 @@ CREATE POLICY viagens_del ON public.viagens
 - **Parâmetros como fonte única**: `usar_taxas_na_meta` + `foco_valor` guiam tanto o atingimento de meta quanto a base de comissão (bruto x líquido).
 - **Produtos globais**: a disponibilidade global agora é controlada por `produtos.todas_as_cidades` (cidade nula) e as vendas armazenam `destino_cidade_id`, de forma que se reutiliza o mesmo produto global para quaisquer cidades sem duplicar cadastros nem relacionar o produto à cidade escolhida.
 - **Orçamentos**: lista + KPIs com filtros em linha, tabela dentro de card, timeline de interações, alerta de follow-up, envio/compartilhamento e Kanban opcional; evento `orcamento-criado` deve disparar atualização; mensagens legíveis.
-- **UI padrão**: tabelas sempre em `card-base`, botões primários/secondary/light padronizados, espaçamentos consistentes (filtros, formulários e KPIs).
+- **UI padrão**: tabelas em cards Primer (`AppCard`/`vtur-app-card`), ações com `AppButton`/`vtur-app-button` e espaçamentos consistentes (filtros, formulários e KPIs).
 
 ---
 

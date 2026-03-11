@@ -1594,7 +1594,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
                 />
               }
               colSpan={4}
-              className="table-header-purple table-mobile-cards min-w-[620px]"
+              className="table-header-blue table-mobile-cards min-w-[620px]"
             >
               {linhasExibidas.map((linha, idx) => (
                 <tr key={linha.produto_id ?? `sem-${idx}`}>
@@ -1653,7 +1653,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
                   />
                 }
                 colSpan={7}
-                className="table-header-purple table-mobile-cards min-w-[720px]"
+                className="table-header-blue table-mobile-cards min-w-[720px]"
               >
                 {recibosExibidos.map((recibo) => {
                   const dataLabel = recibo.dataVenda ? recibo.dataVenda.split("T")[0] : "-";

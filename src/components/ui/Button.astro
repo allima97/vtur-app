@@ -1,7 +1,10 @@
 ---
 const { variant = "primary", type = "button" } = Astro.props;
+const classes = ["vtur-app-button", variant === "primary" ? "vtur-app-button-primary" : ""]
+  .filter(Boolean)
+  .join(" ");
 ---
 
-<button type={type} class={`btn btn-${variant}`}>
+<button type={type} class={classes}>
   <slot />
 </button>

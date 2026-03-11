@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import AppButton from "./primer/AppButton";
 
 type PaginationControlsProps = {
   page: number;
@@ -59,25 +60,25 @@ export default function PaginationControls({
         )}
 
         <div className="pagination-controls__pager">
-          <button
+          <AppButton
             type="button"
-            className="btn btn-light"
+            variant="secondary"
             onClick={() => onPageChange(clamp(safePage - 1, 1, totalPages))}
             disabled={safePage <= 1}
           >
             Anterior
-          </button>
+          </AppButton>
           <div className="pagination-controls__page-label">
             Pagina {safePage} de {totalPages}
           </div>
-          <button
+          <AppButton
             type="button"
-            className="btn btn-light"
+            variant="secondary"
             onClick={() => onPageChange(clamp(safePage + 1, 1, totalPages))}
             disabled={safePage >= totalPages}
           >
             Proxima
-          </button>
+          </AppButton>
         </div>
       </div>
     </div>

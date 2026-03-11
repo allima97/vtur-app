@@ -228,7 +228,7 @@ export default function DashboardAdminIsland() {
       description: "Guias e instruções",
       href: "/documentacao",
       icon: "📚",
-      color: "#7c3aed",
+      color: "#2563eb",
     },
   ];
 
