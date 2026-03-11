@@ -1,5 +1,6 @@
 import React, { useId } from "react";
-import { FormControl, Select, Textarea, TextInput } from "@primer/react";
+import { InputText } from "primereact/inputtext";
+import { InputTextarea } from "primereact/inputtextarea";
 
 type AppFieldOption = {
   label: React.ReactNode;
@@ -45,51 +46,51 @@ export default function AppField(props: AppFieldProps) {
   const validationStatus = validation ? validationVariant : undefined;
 
   return (
-    <FormControl
-      id={controlId}
-      required={required}
-      disabled={disabled}
-      className={["vtur-app-field", wrapperClassName].filter(Boolean).join(" ")}
-    >
-      <FormControl.Label>{label}</FormControl.Label>
+    <div className={["vtur-app-field", wrapperClassName].filter(Boolean).join(" ")}>
+      <label htmlFor={controlId} className="vtur-app-field-label">
+        {label}
+      </label>
 
       {as === "textarea" ? (
-        <Textarea
+        <InputTextarea
           id={controlId}
-          block={block}
+          className={block ? "w-full" : undefined}
           disabled={disabled}
           required={required}
-          validationStatus={validationStatus}
+          invalid={validationStatus === "error"}
           {...(rest as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
         />
       ) : as === "select" ? (
-        <Select
+        <select
           id={controlId}
-          block={block}
+          className={["p-inputtext p-component", block ? "w-full" : ""].filter(Boolean).join(" ")}
           disabled={disabled}
           required={required}
-          validationStatus={validationStatus}
           {...(rest as React.SelectHTMLAttributes<HTMLSelectElement>)}
         >
           {options.map((option) => (
-            <Select.Option key={option.value} value={option.value} disabled={option.disabled}>
+            <option key={option.value} value={option.value} disabled={option.disabled}>
               {option.label}
-            </Select.Option>
+            </option>
           ))}
-        </Select>
+        </select>
       ) : (
-        <TextInput
+        <InputText
           id={controlId}
-          block={block}
+          className={block ? "w-full" : undefined}
           disabled={disabled}
           required={required}
-          validationStatus={validationStatus}
+          invalid={validationStatus === "error"}
           {...(rest as React.InputHTMLAttributes<HTMLInputElement>)}
         />
       )}
 
-      {caption && <FormControl.Caption>{caption}</FormControl.Caption>}
-      {validation && <FormControl.Validation variant={validationVariant}>{validation}</FormControl.Validation>}
-    </FormControl>
+      {caption && <small className="vtur-app-field-caption">{caption}</small>}
+      {validation && (
+        <small className={`vtur-app-field-validation vtur-app-field-validation-${validationVariant}`}>
+          {validation}
+        </small>
+      )}
+    </div>
   );
 }

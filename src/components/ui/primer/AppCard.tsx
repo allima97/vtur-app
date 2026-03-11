@@ -1,5 +1,4 @@
 import React from "react";
-import { Heading, Text } from "@primer/react";
 
 type AppCardProps = React.HTMLAttributes<HTMLElement> & {
   title?: React.ReactNode;
@@ -26,14 +25,14 @@ export default function AppCard({
         <div className="vtur-app-card-header">
           <div className="vtur-app-card-copy">
             {title && (
-              <Heading as="h3" className="vtur-app-card-title">
+              <h3 className="vtur-app-card-title">
                 {title}
-              </Heading>
+              </h3>
             )}
             {subtitle && (
-              <Text as="p" className="vtur-app-card-subtitle">
+              <p className="vtur-app-card-subtitle">
                 {subtitle}
-              </Text>
+              </p>
             )}
           </div>
           {actions && <div className="vtur-app-card-actions">{actions}</div>}

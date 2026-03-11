@@ -1,5 +1,5 @@
 import React from "react";
-import { Spinner } from "@primer/react";
+import { ProgressSpinner } from "primereact/progressspinner";
 
 type DataTableProps = {
   className?: string;
@@ -45,7 +45,12 @@ export default function DataTable({
               <tr>
                 <td colSpan={colSpan} className="table-loading-cell vtur-data-table-message-cell">
                   <div className="vtur-data-table-message" role="status" aria-live="polite">
-                    <Spinner size="small" srText={null} />
+                    <ProgressSpinner
+                      style={{ width: "1rem", height: "1rem" }}
+                      strokeWidth="8"
+                      fill="transparent"
+                      animationDuration=".8s"
+                    />
                     <span>{loadingMessage}</span>
                   </div>
                 </td>

@@ -19,6 +19,34 @@ import AppToolbar from "../ui/primer/AppToolbar";
 
 type Tab = "live" | "historical" | "recommendations";
 
+const PERFORMANCE_ICON_MAP: Record<string, string> = {
+  "📊": "pi pi-chart-bar",
+  "📈": "pi pi-chart-line",
+  "📅": "pi pi-calendar",
+  "✅": "pi pi-check-circle",
+  "🔴": "pi pi-circle-fill",
+  "💡": "pi pi-lightbulb",
+  "⚡": "pi pi-bolt",
+  "🛑": "pi pi-stop-circle",
+  "🎯": "pi pi-bullseye",
+  "💾": "pi pi-download",
+  "🗑️": "pi pi-trash",
+  "📡": "pi pi-wifi",
+  "🔄": "pi pi-sync",
+  "🏆": "pi pi-trophy",
+  "📱": "pi pi-mobile",
+  "🗄️": "pi pi-database",
+  "ℹ️": "pi pi-info-circle",
+  "⚠️": "pi pi-exclamation-triangle",
+  "📋": "pi pi-list",
+};
+
+function renderPerformanceIcon(icon: string, extraClassName = "") {
+  const iconClass = PERFORMANCE_ICON_MAP[icon];
+  if (!iconClass) return icon;
+  return <i className={`${iconClass} ${extraClassName}`.trim()} aria-hidden="true" />;
+}
+
 const BEFORE_METRICS = {
   vendas: { requests: 8, icon: "📊" },
   dashboard: { requests: 15, icon: "📈" },
@@ -147,9 +175,9 @@ export default function PerformanceDashboardIsland() {
       <AppCard tone="config">
         <div className="flex flex-wrap gap-2">
         {[
-          { id: "live", label: "🔴 Metricas ao vivo", icon: "●" },
-          { id: "historical", label: "📊 Historico", icon: "📈" },
-          { id: "recommendations", label: "💡 Recomendacoes", icon: "⚡" },
+          { id: "live", label: "Metricas ao vivo", icon: "🔴" },
+          { id: "historical", label: "Historico", icon: "📈" },
+          { id: "recommendations", label: "Recomendacoes", icon: "💡" },
         ].map((tab) => (
           <AppButton
             key={tab.id}
@@ -158,7 +186,10 @@ export default function PerformanceDashboardIsland() {
             variant={activeTab === tab.id ? "primary" : "secondary"}
             className="text-xs sm:text-sm"
           >
-            {tab.label}
+            <span className="inline-flex items-center gap-2">
+              {renderPerformanceIcon(tab.icon)}
+              <span>{tab.label}</span>
+            </span>
           </AppButton>
         ))}
         </div>
@@ -176,7 +207,10 @@ export default function PerformanceDashboardIsland() {
                 onClick={toggleRecording}
                 variant={isRecording ? "danger" : "primary"}
               >
-                {isRecording ? "🛑 Parar gravacao" : "🎯 Iniciar gravacao"}
+                <span className="inline-flex items-center gap-2">
+                  {renderPerformanceIcon(isRecording ? "🛑" : "🎯")}
+                  <span>{isRecording ? "Parar gravacao" : "Iniciar gravacao"}</span>
+                </span>
               </AppButton>
               <span className="text-sm text-gray-600">
                 Capturas: <strong>{snapshotCount}</strong>
@@ -189,7 +223,10 @@ export default function PerformanceDashboardIsland() {
                 disabled={snapshotCount === 0}
                 variant="primary"
               >
-                💾 Exportar
+                <span className="inline-flex items-center gap-2">
+                  {renderPerformanceIcon("💾")}
+                  <span>Exportar</span>
+                </span>
               </AppButton>
               <AppButton
                 type="button"
@@ -197,7 +234,10 @@ export default function PerformanceDashboardIsland() {
                 disabled={snapshotCount === 0}
                 variant="secondary"
               >
-                🗑️ Limpar
+                <span className="inline-flex items-center gap-2">
+                  {renderPerformanceIcon("🗑️")}
+                  <span>Limpar</span>
+                </span>
               </AppButton>
             </div>
             </div>
@@ -240,7 +280,7 @@ export default function PerformanceDashboardIsland() {
                 };
                 return (
                   <div key={i} className={`${colorMap[card.color]} border p-4 rounded-lg`}>
-                    <div className="text-3xl mb-1">{card.icon}</div>
+                    <div className="text-3xl mb-1">{renderPerformanceIcon(card.icon)}</div>
                     <div className="text-sm text-gray-600">{card.label}</div>
                     <div className="text-2xl font-bold">{card.value}</div>
                   </div>
@@ -252,7 +292,7 @@ export default function PerformanceDashboardIsland() {
           {/* Requests Timeline Chart */}
           {timelineData.length > 0 && (
             <div className="bg-white border rounded-lg p-4">
-              <h3 className="font-semibold mb-3">📊 Linha do tempo (ultimas 30 capturas)</h3>
+              <h3 className="font-semibold mb-3">Linha do tempo (ultimas 30 capturas)</h3>
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={timelineData}>
                   <XAxis dataKey="time" angle={-45} textAnchor="end" height={80} />
@@ -270,7 +310,7 @@ export default function PerformanceDashboardIsland() {
           {/* Top Endpoints */}
           {liveMetrics && liveMetrics.topEndpoints.length > 0 && (
             <div className="bg-white border rounded-lg p-4">
-              <h3 className="font-semibold mb-3">🏆 Top endpoints</h3>
+              <h3 className="font-semibold mb-3">Top endpoints</h3>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {liveMetrics.topEndpoints.map((ep, i) => (
                   <div key={i} className="flex items-center justify-between text-sm">
@@ -321,7 +361,7 @@ export default function PerformanceDashboardIsland() {
                   },
                 ].map((card, i) => (
                   <div key={i} className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 p-4 rounded-lg">
-                    <div className="text-2xl mb-1">{card.icon}</div>
+                    <div className="text-2xl mb-1">{renderPerformanceIcon(card.icon)}</div>
                     <div className="text-xs text-gray-600">{card.label}</div>
                     <div className="text-xl font-bold text-blue-700">{card.value}</div>
                   </div>
@@ -330,7 +370,7 @@ export default function PerformanceDashboardIsland() {
 
               {/* Before/After Comparison */}
               <div className="bg-white border rounded-lg p-4">
-                <h3 className="font-semibold mb-4">📈 Comparativo antes x depois</h3>
+                <h3 className="font-semibold mb-4">Comparativo antes x depois</h3>
                 <div className="grid md:grid-cols-2 gap-4">
                   {Object.entries(AFTER_METRICS).map(([key, after]) => {
                     const before = BEFORE_METRICS[key as keyof typeof BEFORE_METRICS];
@@ -338,7 +378,10 @@ export default function PerformanceDashboardIsland() {
                       <div key={key} className="border rounded-lg p-4 bg-gradient-to-r from-red-50 to-green-50">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="font-semibold text-lg capitalize">
-                            {before.icon} {key}
+                            <span className="inline-flex items-center gap-2">
+                              {renderPerformanceIcon(before.icon)}
+                              <span>{key}</span>
+                            </span>
                           </h4>
                           <span className="text-xs bg-green-500 text-white px-2 py-1 rounded-full font-bold">
                             {after.improvement} ↓
@@ -363,7 +406,7 @@ export default function PerformanceDashboardIsland() {
 
               {/* Improvement Chart */}
               <div className="bg-white border rounded-lg p-4">
-                <h3 className="font-semibold mb-3">📊 Melhoria % por tela</h3>
+                <h3 className="font-semibold mb-3">Melhoria % por tela</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={improvementData}>
                     <XAxis dataKey="name" />
@@ -379,7 +422,7 @@ export default function PerformanceDashboardIsland() {
               {/* By Screen Breakdown */}
               {Object.keys(screenMetrics).length > 0 && (
                 <div className="bg-white border rounded-lg p-4">
-                  <h3 className="font-semibold mb-3">📱 Resumo por tela</h3>
+                  <h3 className="font-semibold mb-3">Resumo por tela</h3>
                   <div className="space-y-3">
                     {Object.entries(screenMetrics).map(([screen, metrics]) => (
                       <div key={screen} className="border rounded p-3">
@@ -413,7 +456,7 @@ export default function PerformanceDashboardIsland() {
           {!historicalSummary && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
               <p className="text-yellow-800">
-                📊 Ainda nao existem dados historicos. Va em <strong>Metricas ao vivo</strong> e
+                Ainda nao existem dados historicos. Va em <strong>Metricas ao vivo</strong> e
                 clique em <strong>Iniciar gravacao</strong> para coletar dados.
               </p>
             </div>
@@ -427,7 +470,7 @@ export default function PerformanceDashboardIsland() {
           {/* Performance Status */}
           <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-6">
             <div className="flex items-start gap-4">
-              <div className="text-4xl">✅</div>
+              <div className="text-4xl">{renderPerformanceIcon("✅")}</div>
               <div>
                 <h3 className="font-bold text-lg text-green-700">Otimizacao de performance concluida!</h3>
                 <p className="text-green-600 mt-1">
@@ -439,19 +482,22 @@ export default function PerformanceDashboardIsland() {
 
           {/* Migration Status */}
           <div className="bg-white border rounded-lg p-4">
-            <h3 className="font-semibold mb-3">🗄️ Migracoes de banco</h3>
+            <h3 className="font-semibold mb-3">Migracoes de banco</h3>
             <div className="space-y-2">
               {[
-                { name: "Indices de performance", file: "20260217_perf_indexes_bff.sql", status: "✅ Aplicada" },
-                { name: "RPC: KPIs de vendas", file: "20260217_rpc_vendas_kpis.sql", status: "✅ Aplicada" },
-                { name: "RPC: Resumo do dashboard", file: "20260218_rpc_dashboard_vendas_summary.sql", status: "✅ Aplicada" },
+                { name: "Indices de performance", file: "20260217_perf_indexes_bff.sql", status: "Aplicada" },
+                { name: "RPC: KPIs de vendas", file: "20260217_rpc_vendas_kpis.sql", status: "Aplicada" },
+                { name: "RPC: Resumo do dashboard", file: "20260218_rpc_dashboard_vendas_summary.sql", status: "Aplicada" },
               ].map((m, i) => (
                 <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded">
                   <div>
                     <div className="font-medium">{m.name}</div>
                     <div className="text-xs text-gray-500 font-mono">{m.file}</div>
                   </div>
-                  <span className="text-green-600 font-bold">{m.status}</span>
+                  <span className="text-green-600 font-bold inline-flex items-center gap-2">
+                    {renderPerformanceIcon("✅")}
+                    <span>{m.status}</span>
+                  </span>
                 </div>
               ))}
             </div>
@@ -459,7 +505,7 @@ export default function PerformanceDashboardIsland() {
 
           {/* Alerts & Recommendations */}
           <div className="bg-white border rounded-lg p-4">
-            <h3 className="font-semibold mb-3">⚡ Alertas e recomendacoes</h3>
+            <h3 className="font-semibold mb-3">Alertas e recomendacoes</h3>
             <div className="space-y-3">
               {[
                 {
@@ -495,7 +541,7 @@ export default function PerformanceDashboardIsland() {
                 return (
                   <div key={i} className={`${colors[alert.severity]} border rounded-lg p-3`}>
                     <div className="flex gap-2">
-                      <span className="text-lg">{alert.icon}</span>
+                      <span className="text-lg">{renderPerformanceIcon(alert.icon)}</span>
                       <div>
                         <div className="font-semibold">{alert.title}</div>
                         <div className="text-sm opacity-90">{alert.desc}</div>
@@ -509,7 +555,7 @@ export default function PerformanceDashboardIsland() {
 
           {/* Next Steps */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-semibold mb-2">📋 Proximos passos</h3>
+            <h3 className="font-semibold mb-2">Proximos passos</h3>
             <ol className="list-decimal list-inside space-y-1 text-sm text-blue-900">
               <li>Acompanhar metricas em producao por este painel</li>
               <li>Ativar gravacao em horarios de pico para medir uso real</li>

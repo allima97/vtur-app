@@ -1,4 +1,4 @@
-import { Dialog, Select } from "@primer/react";
+import { Dialog, Select } from "../ui/primer/legacyCompat";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { buildQueryLiteKey, queryLite } from "../../lib/queryLite";
@@ -1791,7 +1791,9 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                   <tr key={c.id}>
                     <td data-label="Cliente">
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                        <span aria-hidden="true">{c.pessoa_tipo === "acompanhante" ? "🧑‍🤝‍🧑" : "👤"}</span>
+                        <span aria-hidden="true">
+                          <i className={c.pessoa_tipo === "acompanhante" ? "pi pi-users" : "pi pi-user"} />
+                        </span>
                         <span>{c.nome || "-"}</span>
                       </span>
                     </td>
@@ -1809,7 +1811,7 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                                   label: "WhatsApp",
                                   title: "Enviar cartão de aniversario no WhatsApp",
                                   onClick: () => window.open(whatsappLink, "_blank", "noopener,noreferrer"),
-                                  icon: "🎂",
+                                  icon: <i className="pi pi-gift" aria-hidden="true" />,
                                   variant: "ghost" as const,
                                 },
                               ]
@@ -1826,7 +1828,7 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                                   onClick: () => {
                                     window.location.href = `/clientes/cadastro?id=${c.cliente_id}`;
                                   },
-                                  icon: "👤",
+                                  icon: <i className="pi pi-user" aria-hidden="true" />,
                                   variant: "ghost" as const,
                                 },
                               ]
@@ -1884,7 +1886,7 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                           label: "Ver",
                           title: "Ver detalhes",
                           onClick: () => setOrcamentoSelecionado(o),
-                          icon: "👁️",
+                          icon: <i className="pi pi-eye" aria-hidden="true" />,
                           variant: "ghost",
                         },
                       ]}
@@ -1957,7 +1959,7 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                                 onClick: () => {
                                   window.location.href = `/orcamentos/${item.orcamentoId}`;
                                 },
-                                icon: "👁️",
+                                icon: <i className="pi pi-eye" aria-hidden="true" />,
                                 variant: "ghost" as const,
                               }
                             : {
@@ -1967,7 +1969,7 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                                 onClick: () => {
                                   window.location.href = "/consultoria-online";
                                 },
-                                icon: "📅",
+                                icon: <i className="pi pi-calendar" aria-hidden="true" />,
                                 variant: "ghost" as const,
                               },
                         ]}
@@ -2039,7 +2041,7 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                                   onClick: () => {
                                     window.location.href = `/clientes/cadastro?id=${v.clienteId}`;
                                   },
-                                  icon: "👤",
+                                  icon: <i className="pi pi-user" aria-hidden="true" />,
                                   variant: "ghost" as const,
                                 },
                               ]
@@ -2051,7 +2053,7 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                             onClick: () => {
                               window.location.href = `/operacao/viagens/${v.viagemId}`;
                             },
-                            icon: "👁️",
+                            icon: <i className="pi pi-eye" aria-hidden="true" />,
                             variant: "ghost" as const,
                           },
                         ]}
@@ -2120,7 +2122,7 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                                   onClick: () => {
                                     window.location.href = `/clientes/cadastro?id=${item.venda?.clientes?.id}`;
                                   },
-                                  icon: "👤",
+                                  icon: <i className="pi pi-user" aria-hidden="true" />,
                                   variant: "ghost" as const,
                                 },
                               ]
@@ -2132,7 +2134,7 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                                   label: "WhatsApp",
                                   title: "Enviar follow-up no WhatsApp",
                                   onClick: () => window.open(whatsappLink, "_blank", "noopener,noreferrer"),
-                                  icon: "💬",
+                                  icon: <i className="pi pi-comments" aria-hidden="true" />,
                                   variant: "ghost" as const,
                                 },
                               ]
@@ -2144,7 +2146,7 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                             onClick: () => {
                               window.location.href = `/operacao/viagens/${item.id}`;
                             },
-                            icon: "👁️",
+                            icon: <i className="pi pi-eye" aria-hidden="true" />,
                             variant: "ghost" as const,
                           },
                         ]}

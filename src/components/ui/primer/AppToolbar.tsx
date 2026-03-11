@@ -1,5 +1,4 @@
 import React from "react";
-import { Heading, Text } from "@primer/react";
 
 type AppToolbarProps = React.HTMLAttributes<HTMLElement> & {
   title?: React.ReactNode;
@@ -35,14 +34,14 @@ export default function AppToolbar({
         <div className="vtur-app-toolbar-head">
           <div className="vtur-app-toolbar-copy">
             {title && (
-              <Heading as="h2" className="vtur-app-toolbar-title">
+              <h2 className="vtur-app-toolbar-title">
                 {title}
-              </Heading>
+              </h2>
             )}
             {subtitle && (
-              <Text as="p" className="vtur-app-toolbar-subtitle">
+              <p className="vtur-app-toolbar-subtitle">
                 {subtitle}
-              </Text>
+              </p>
             )}
           </div>
           {actions && <div className="vtur-app-toolbar-actions">{actions}</div>}

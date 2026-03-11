@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Dialog } from "@primer/react";
+import { Dialog } from "../ui/primer/legacyCompat";
 import { matchesCpfSearch } from "../../lib/searchNormalization";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { useMasterScope } from "../../lib/useMasterScope";

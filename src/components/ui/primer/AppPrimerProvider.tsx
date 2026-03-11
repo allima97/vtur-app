@@ -1,5 +1,9 @@
 import React from "react";
-import { BaseStyles, ThemeProvider } from "@primer/react";
+import { PrimeReactProvider } from "primereact/api";
+import "primereact/resources/themes/lara-light-indigo/theme.css";
+import "primereact/resources/primereact.min.css";
+import "primeicons/primeicons.css";
+import "primeflex/primeflex.css";
 
 type AppPrimerProviderProps = {
   children: React.ReactNode;
@@ -13,12 +17,10 @@ export default function AppPrimerProvider({
   style,
 }: AppPrimerProviderProps) {
   return (
-    <ThemeProvider colorMode="light" dayScheme="light" preventSSRMismatch>
-      <BaseStyles>
-        <div className={["vtur-primer-scope", className].filter(Boolean).join(" ")} style={style}>
-          {children}
-        </div>
-      </BaseStyles>
-    </ThemeProvider>
+    <PrimeReactProvider>
+      <div className={["vtur-primer-scope", className].filter(Boolean).join(" ")} style={style}>
+        {children}
+      </div>
+    </PrimeReactProvider>
   );
 }

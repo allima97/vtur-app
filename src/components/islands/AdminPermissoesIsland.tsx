@@ -1,4 +1,4 @@
-import { Select } from "@primer/react";
+import { Select } from "../ui/primer/legacyCompat";
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { registrarLog } from "../../lib/logs";

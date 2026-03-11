@@ -1,4 +1,4 @@
-import { Dialog } from "@primer/react";
+import { Dialog } from "../ui/primer/legacyCompat";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   extractContratosFromPdf,

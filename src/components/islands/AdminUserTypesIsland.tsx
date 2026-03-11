@@ -1,4 +1,4 @@
-import { Dialog, Select } from "@primer/react";
+import { Dialog, Select } from "../ui/primer/legacyCompat";
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";

@@ -41,8 +41,8 @@ export default function TableActions({
   deleteLabel = "Excluir",
   editDisabled = false,
   deleteDisabled = false,
-  editIcon = "✏️",
-  deleteIcon = "🗑️",
+  editIcon = <i className="pi pi-pencil" aria-hidden="true" />,
+  deleteIcon = <i className="pi pi-trash" aria-hidden="true" />,
   className = "",
 }: TableActionsProps) {
   if (!show) return null;
