@@ -8,7 +8,7 @@
     radial-gradient(circle at 8% -10%, rgba(59, 130, 246, 0.2), transparent 36%),
     radial-gradient(circle at 100% 0%, rgba(20, 184, 166, 0.16), transparent 30%),
     #f5f6fa;
-  font-family: Inter, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--vtur-font-family, "Inter var", sans-serif);
   --color-form-label: #334155;
 }
 

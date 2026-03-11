@@ -9,7 +9,7 @@ body.sakai-theme {
   --sakai-primary-strong: #2563eb;
   --sakai-shadow-sm: 0 3px 5px rgba(0, 0, 0, 0.02), 0 0 2px rgba(0, 0, 0, 0.05), 0 1px 4px rgba(0, 0, 0, 0.08);
   --sakai-radius: 12px;
-  font-family: "Inter var", Inter, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--vtur-font-family, "Inter var", sans-serif);
   background: var(--sakai-surface-ground);
   color: var(--sakai-text-main);
 }
