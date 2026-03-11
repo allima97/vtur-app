@@ -24,7 +24,6 @@ import AppField from "../ui/primer/AppField";
 import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 import AppToolbar from "../ui/primer/AppToolbar";
-import { AlertTriangle } from "lucide-react";
 
 type CidadeSugestao = {
   id: string;
@@ -1705,7 +1704,7 @@ export default function VendaContratoImportIsland() {
         <AppNoticeDialog
           open={cvcModalOpen}
           title="ATENÇÃO!"
-          icon={<AlertTriangle size={20} strokeWidth={2} />}
+          icon={<i className="pi pi-exclamation-triangle" aria-hidden="true" />}
           onClose={() => setCvcModalOpen(false)}
           message={
             <div className="vtur-modal-body-stack">
@@ -1727,7 +1726,7 @@ export default function VendaContratoImportIsland() {
         <AppNoticeDialog
           open={roteiroAvisoAberto}
           title="ATENÇÃO!"
-          icon={<AlertTriangle size={20} strokeWidth={2} />}
+          icon={<i className="pi pi-exclamation-triangle" aria-hidden="true" />}
           onClose={() => setRoteiroAvisoAberto(false)}
           message={
             <div className="vtur-modal-body-stack">
@@ -1745,7 +1744,7 @@ export default function VendaContratoImportIsland() {
         <AppNoticeDialog
           open={Boolean(duplicadoModal)}
           title="ATENÇÃO!"
-          icon={<AlertTriangle size={20} strokeWidth={2} />}
+          icon={<i className="pi pi-exclamation-triangle" aria-hidden="true" />}
           onClose={() => setDuplicadoModal(null)}
           message={duplicadoModal?.mensagem || ""}
         />
@@ -1753,7 +1752,7 @@ export default function VendaContratoImportIsland() {
         <AppNoticeDialog
           open={Boolean(tipoPacoteModal)}
           title="ATENÇÃO!"
-          icon={<AlertTriangle size={20} strokeWidth={2} />}
+          icon={<i className="pi pi-exclamation-triangle" aria-hidden="true" />}
           onClose={() => setTipoPacoteModal(null)}
           message={tipoPacoteModal?.mensagem || ""}
         />

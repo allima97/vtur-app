@@ -258,7 +258,7 @@ const AvisosAdminIsland: React.FC = () => {
                 <th>Assunto</th>
                 <th>Remetente</th>
                 <th>Status</th>
-                <th className="th-actions">Acoes</th>
+                <th className="th-actions">Ações</th>
               </tr>
             }
             colSpan={5}
@@ -278,13 +278,25 @@ const AvisosAdminIsland: React.FC = () => {
                 >
                   {t.ativo ? "Ativo" : "Inativo"}
                 </td>
-                <td className="th-actions" data-label="Acoes">
+                <td className="th-actions" data-label="Ações">
                   <div className="action-buttons">
-                    <AppButton type="button" variant="ghost" onClick={() => openModal(t)}>
-                      Editar
+                    <AppButton
+                      type="button"
+                      variant="ghost"
+                      onClick={() => openModal(t)}
+                      title="Editar template"
+                      aria-label="Editar template"
+                    >
+                      <i className="pi pi-pencil" aria-hidden="true" />
                     </AppButton>
-                    <AppButton type="button" variant="secondary" onClick={() => toggleAtivo(t)}>
-                      {t.ativo ? "Desativar" : "Ativar"}
+                    <AppButton
+                      type="button"
+                      variant="secondary"
+                      onClick={() => toggleAtivo(t)}
+                      title={t.ativo ? "Desativar template" : "Ativar template"}
+                      aria-label={t.ativo ? "Desativar template" : "Ativar template"}
+                    >
+                      <i className={t.ativo ? "pi pi-times-circle" : "pi pi-check-circle"} aria-hidden="true" />
                     </AppButton>
                   </div>
                 </td>

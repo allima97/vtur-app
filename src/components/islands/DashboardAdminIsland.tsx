@@ -45,22 +45,9 @@ type MaintenanceStatus = {
   updated_at: string | null;
 };
 
-const DASHBOARD_ADMIN_ICON_MAP: Record<string, string> = {
-  "🏢": "pi pi-building",
-  "👥": "pi pi-users",
-  "💳": "pi pi-credit-card",
-  "⚠️": "pi pi-exclamation-triangle",
-  "💰": "pi pi-dollar",
-  "⚙️": "pi pi-cog",
-  "📣": "pi pi-megaphone",
-  "✉️": "pi pi-envelope",
-  "📜": "pi pi-file",
-  "📚": "pi pi-book",
-};
-
 function renderDashboardAdminIcon(icon: string) {
-  const iconClass = DASHBOARD_ADMIN_ICON_MAP[icon];
-  if (!iconClass) return icon;
+  const iconClass = String(icon || "").trim();
+  if (!iconClass.startsWith("pi ")) return icon;
   return <i className={iconClass} aria-hidden="true" />;
 }
 
@@ -107,7 +94,7 @@ export default function DashboardAdminIsland() {
       meta: `Ativas: ${adminKpis.empresasAtivas} · Inativas: ${adminKpis.empresasInativas}`,
       color: "#0ea5e9",
       background: "rgba(14, 165, 233, 0.08)",
-      icon: "🏢",
+      icon: "pi pi-building",
     },
     {
       key: "usuarios",
@@ -116,7 +103,7 @@ export default function DashboardAdminIsland() {
       meta: `Ativos: ${adminKpis.usuariosAtivos} · Inativos: ${adminKpis.usuariosInativos}`,
       color: "#6366f1",
       background: "rgba(99, 102, 241, 0.08)",
-      icon: "👥",
+      icon: "pi pi-users",
     },
     {
       key: "planos",
@@ -125,7 +112,7 @@ export default function DashboardAdminIsland() {
       meta: `Ativos: ${adminKpis.planosAtivos} · Inativos: ${adminKpis.planosInativos}`,
       color: "#14b8a6",
       background: "rgba(20, 184, 166, 0.08)",
-      icon: "💳",
+      icon: "pi pi-credit-card",
     },
     {
       key: "atrasos",
@@ -134,7 +121,7 @@ export default function DashboardAdminIsland() {
       meta: "Monitorar cobranças vencidas",
       color: "#f97316",
       background: "rgba(249, 115, 22, 0.08)",
-      icon: "⚠️",
+      icon: "pi pi-exclamation-triangle",
     },
   ];
 
@@ -182,7 +169,7 @@ export default function DashboardAdminIsland() {
       label: "Empresas",
       description: "Cadastro e status de contas",
       href: "/admin/empresas",
-      icon: "🏢",
+      icon: "pi pi-building",
       color: "#0ea5e9",
     },
     {
@@ -190,7 +177,7 @@ export default function DashboardAdminIsland() {
       label: "Usuários",
       description: "Perfis, cargos e acesso",
       href: "/admin/usuarios",
-      icon: "👥",
+      icon: "pi pi-users",
       color: "#6366f1",
     },
     {
@@ -198,7 +185,7 @@ export default function DashboardAdminIsland() {
       label: "Planos",
       description: "Catálogo e valores",
       href: "/admin/planos",
-      icon: "💳",
+      icon: "pi pi-credit-card",
       color: "#14b8a6",
     },
     {
@@ -206,7 +193,7 @@ export default function DashboardAdminIsland() {
       label: "Financeiro",
       description: "Status e cobranças",
       href: "/admin/financeiro",
-      icon: "💰",
+      icon: "pi pi-dollar",
       color: "#f59e0b",
     },
     {
@@ -214,7 +201,7 @@ export default function DashboardAdminIsland() {
       label: "Permissões",
       description: "Módulos e níveis de acesso",
       href: "/admin/permissoes",
-      icon: "⚙️",
+      icon: "pi pi-cog",
       color: "#475569",
     },
     {
@@ -222,7 +209,7 @@ export default function DashboardAdminIsland() {
       label: "Avisos",
       description: "Templates e notificações",
       href: "/admin/avisos",
-      icon: "📣",
+      icon: "pi pi-megaphone",
       color: "#ef4444",
     },
     {
@@ -230,7 +217,7 @@ export default function DashboardAdminIsland() {
       label: "E-mail (Envio)",
       description: "Configurar envio",
       href: "/admin/email",
-      icon: "✉️",
+      icon: "pi pi-envelope",
       color: "#0ea5e9",
     },
     {
@@ -238,7 +225,7 @@ export default function DashboardAdminIsland() {
       label: "Logs",
       description: "Auditoria do sistema",
       href: "/dashboard/logs",
-      icon: "📜",
+      icon: "pi pi-file",
       color: "#64748b",
     },
     {
@@ -246,7 +233,7 @@ export default function DashboardAdminIsland() {
       label: "Documentação",
       description: "Guias e instruções",
       href: "/documentacao",
-      icon: "📚",
+      icon: "pi pi-book",
       color: "#2563eb",
     },
   ];

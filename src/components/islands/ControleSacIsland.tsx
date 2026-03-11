@@ -727,7 +727,7 @@ export default function ControleSacIsland() {
             />
             <div className="form-group">
               <label className="form-label" style={{ visibility: "hidden" }}>
-                Acoes
+                Ações
               </label>
               <div className="sac-toolbar-actions mobile-stack-buttons">
                 <AppButton type="button" variant="secondary" onClick={aplicarBusca}>
@@ -782,7 +782,7 @@ export default function ControleSacIsland() {
                 <th className="min-w-[120px]">Status</th>
                 <th className="min-w-[140px]">Responsavel</th>
                 <th className="min-w-[120px]">Prazo</th>
-                <th className="th-actions">Acoes</th>
+                <th className="th-actions">Ações</th>
               </tr>
             }
             colSpan={10}
@@ -806,7 +806,7 @@ export default function ControleSacIsland() {
                 <td data-label="Prazo">
                   {row.prazo ? formatarDataParaExibicao(row.prazo) : "-"}
                 </td>
-                <td className="th-actions" data-label="Acoes">
+                <td className="th-actions" data-label="Ações">
                   <TableActions
                     className="sac-action-buttons"
                     actions={[

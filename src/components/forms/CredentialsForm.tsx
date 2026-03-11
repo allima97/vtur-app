@@ -40,7 +40,7 @@ export default function CredentialsForm({
       />
       <div className="form-group">
         <label htmlFor="cadastro-senha">
-          <i className="fa-solid fa-lock"></i> Senha
+          <i className="pi pi-lock"></i> Senha
         </label>
         <div className="password-field">
           <input
@@ -63,16 +63,16 @@ export default function CredentialsForm({
             aria-pressed={showPassword}
             tabIndex={disabled ? -1 : 0}
           >
-            <i className={`fa-solid ${showPassword ? "fa-eye-slash" : "fa-eye"}`} />
+            <i className={showPassword ? "pi pi-eye-slash" : "pi pi-eye"} />
           </AppButton>
         </div>
       </div>
       <p className="auth-hint">
-        <i className="fa-solid fa-info-circle"></i> A senha deve conter no mínimo 6 caracteres
+        <i className="pi pi-info-circle"></i> A senha deve conter no mínimo 6 caracteres
       </p>
       <div className="form-group">
         <label htmlFor="cadastro-confirmar">
-          <i className="fa-solid fa-lock"></i> Confirmar senha
+          <i className="pi pi-lock"></i> Confirmar senha
         </label>
         <div className="password-field">
           <input
@@ -94,7 +94,7 @@ export default function CredentialsForm({
             aria-pressed={showConfirmPassword}
             tabIndex={disabled ? -1 : 0}
           >
-            <i className={`fa-solid ${showConfirmPassword ? "fa-eye-slash" : "fa-eye"}`} />
+            <i className={showConfirmPassword ? "pi pi-eye-slash" : "pi pi-eye"} />
           </AppButton>
         </div>
       </div>

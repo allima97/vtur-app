@@ -484,7 +484,7 @@ export default function AdminUserTypesIsland() {
                   <th>Nome</th>
                   <th>Descricao</th>
                   <th>Permissoes padrao</th>
-                  <th className="th-actions">Acoes</th>
+                  <th className="th-actions">Ações</th>
                 </tr>
               }
               empty={tiposFiltrados.length === 0}
@@ -499,7 +499,7 @@ export default function AdminUserTypesIsland() {
                   <td data-label="Permissoes padrao">
                     {(defaultCounts[tipo.id] ?? 0) > 0 ? `${defaultCounts[tipo.id]} modulo(s)` : "Nenhuma"}
                   </td>
-                  <td className="th-actions" data-label="Acoes">
+                  <td className="th-actions" data-label="Ações">
                     <TableActions
                       actions={[
                         {

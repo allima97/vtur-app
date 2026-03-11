@@ -30,6 +30,7 @@
     "@supabase/supabase-js": "^2.0.0",
     "@toast-ui/editor": "^3.2.2",
     "astro": "^5.16.6",
+    "chart.js": "^4.5.1",
     "hono": "^4.11.9",
     "imapflow": "^1.0.175",
     "jspdf": "^4.0.0",

@@ -724,7 +724,7 @@ export default function ViagensListaIsland() {
                 </div>
                 <div className="form-group">
                   <label className="form-label" style={{ visibility: "hidden" }}>
-                    Acoes
+                    Ações
                   </label>
                   <div className="viagens-actions mobile-stack-buttons">
                     <AppButton type="button" variant="secondary" onClick={buscar} disabled={loading}>
@@ -829,7 +829,7 @@ export default function ViagensListaIsland() {
                   <th>Status</th>
                   <th>Produto</th>
                   <th>Valor</th>
-                  <th className="th-actions">Acoes</th>
+                  <th className="th-actions">Ações</th>
                 </tr>
               }
               loading={loading}
@@ -865,7 +865,7 @@ export default function ViagensListaIsland() {
                     <td data-label="Status">{statusLabel}</td>
                     <td data-label="Produto">{produtoLabel}</td>
                     <td data-label="Valor">{valorLabel}</td>
-                    <td className="th-actions" data-label="Acoes">
+                    <td className="th-actions" data-label="Ações">
                       <TableActions
                         className="viagens-action-buttons"
                         actions={[

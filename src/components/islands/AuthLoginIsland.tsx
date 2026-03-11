@@ -311,7 +311,7 @@ export default function AuthLoginIsland() {
                   aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
                   aria-pressed={mostrarSenha}
                 >
-                  <i className={`fa-solid ${mostrarSenha ? "fa-eye-slash" : "fa-eye"}`} />
+                  <i className={`pi ${mostrarSenha ? "pi-eye-slash" : "pi-eye"}`} aria-hidden="true" />
                 </AppButton>
               </div>
             </div>

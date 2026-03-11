@@ -846,7 +846,7 @@ export default function QuoteImportIsland() {
                                   {
                                     key: "up",
                                     label: "Mover para cima",
-                                    icon: "↑",
+                                    icon: "pi pi-arrow-up",
                                     variant: "ghost",
                                     onClick: () => moveItem(index, "up"),
                                     disabled: index === 0,
@@ -854,7 +854,7 @@ export default function QuoteImportIsland() {
                                   {
                                     key: "down",
                                     label: "Mover para baixo",
-                                    icon: "↓",
+                                    icon: "pi pi-arrow-down",
                                     variant: "ghost",
                                     onClick: () => moveItem(index, "down"),
                                     disabled: index === draft.items.length - 1,
@@ -1117,7 +1117,7 @@ export default function QuoteImportIsland() {
                                                 {
                                                   key: "up",
                                                   label: "Subir dia",
-                                                  icon: "↑",
+                                                  icon: "pi pi-arrow-up",
                                                   variant: "ghost",
                                                   onClick: () =>
                                                     updateCircuitSegments(index, (segments) => {
@@ -1132,7 +1132,7 @@ export default function QuoteImportIsland() {
                                                 {
                                                   key: "down",
                                                   label: "Descer dia",
-                                                  icon: "↓",
+                                                  icon: "pi pi-arrow-down",
                                                   variant: "ghost",
                                                   onClick: () =>
                                                     updateCircuitSegments(index, (segments) => {
@@ -1147,7 +1147,7 @@ export default function QuoteImportIsland() {
                                                 {
                                                   key: "remove",
                                                   label: "Remover dia",
-                                                  icon: "×",
+                                                  icon: "pi pi-times",
                                                   variant: "danger",
                                                   onClick: () =>
                                                     updateCircuitSegments(index, (segments) =>

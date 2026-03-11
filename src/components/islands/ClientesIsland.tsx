@@ -1929,7 +1929,7 @@ export default function ClientesIsland() {
               <th>Parentesco</th>
               <th>Ativo</th>
               {!modoVisualizacao && (podeEditar || podeExcluir) ? (
-                <th className="th-actions">Acoes</th>
+                <th className="th-actions">Ações</th>
               ) : null}
             </tr>
           }
@@ -1947,7 +1947,7 @@ export default function ClientesIsland() {
               <td data-label="Parentesco">{a.grau_parentesco || "-"}</td>
               <td data-label="Ativo">{a.ativo ? "Sim" : "Nao"}</td>
               {!modoVisualizacao && (podeEditar || podeExcluir) ? (
-                <td className="th-actions" data-label="Acoes">
+                <td className="th-actions" data-label="Ações">
                   <TableActions
                     actions={[
                       ...(podeEditar
@@ -2413,7 +2413,7 @@ export default function ClientesIsland() {
                   <th>E-mail</th>
                   {exibeColunaAcoes ? (
                     <th className="th-actions" style={{ textAlign: "center" }}>
-                      Acoes
+                      Ações
                     </th>
                   ) : null}
                 </tr>
@@ -2437,7 +2437,7 @@ export default function ClientesIsland() {
                   <td data-label="E-mail">{c.email || "-"}</td>
 
                   {exibeColunaAcoes ? (
-                    <td className="th-actions" data-label="Acoes">
+                    <td className="th-actions" data-label="Ações">
                       <TableActions
                         actions={[
                           ...(construirLinkWhatsApp(c.whatsapp)
@@ -2690,7 +2690,7 @@ export default function ClientesIsland() {
                       <th>Vinculo</th>
                       <th>Valor</th>
                       <th>Taxas</th>
-                      <th className="th-actions" style={{ textAlign: "center" }}>Acoes</th>
+                      <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>
                     </tr>
                   }
                   empty={historicoVendas.length === 0}
@@ -2706,7 +2706,7 @@ export default function ClientesIsland() {
                       <td data-label="Vinculo">{v.origem_vinculo === "passageiro" ? "Passageiro" : "Titular"}</td>
                       <td data-label="Valor">{formatCurrencyBRL(v.valor_total)}</td>
                       <td data-label="Taxas">{formatCurrencyBRL(v.valor_taxas)}</td>
-                      <td className="th-actions" data-label="Acoes">
+                      <td className="th-actions" data-label="Ações">
                         <TableActions
                           actions={[
                             {
@@ -2733,7 +2733,7 @@ export default function ClientesIsland() {
                       <th>Produto</th>
                       <th>Valor</th>
                       <th>Venda</th>
-                      <th className="th-actions" style={{ textAlign: "center" }}>Acoes</th>
+                      <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>
                     </tr>
                   }
                   empty={historicoOrcamentos.length === 0}
@@ -2751,7 +2751,7 @@ export default function ClientesIsland() {
                       <td data-label="Produto">{o.produto_nome || "-"}</td>
                       <td data-label="Valor">{formatCurrencyBRL(o.valor ?? 0)}</td>
                       <td data-label="Venda">{o.numero_venda || "-"}</td>
-                      <td className="th-actions" data-label="Acoes">
+                      <td className="th-actions" data-label="Ações">
                         <TableActions
                           actions={[
                             {

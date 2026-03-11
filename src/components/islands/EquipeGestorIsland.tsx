@@ -863,7 +863,7 @@ export default function EquipeGestorIsland() {
                   <th>E-mail</th>
                   <th>Tipo</th>
                   <th>Status</th>
-                  {podeAlterarEquipe && <th className="th-actions">Ação</th>}
+                  {podeAlterarEquipe && <th className="th-actions">Ações</th>}
                 </tr>
               </thead>
               <tbody>
@@ -899,7 +899,7 @@ export default function EquipeGestorIsland() {
                         </span>
                       </td>
                       {podeAlterarEquipe && (
-                        <td className="th-actions" data-label="Ação">
+                        <td className="th-actions" data-label="Ações">
                           <div className="action-buttons">
                             <AppButton
                               variant={ativo ? "danger" : "ghost"}
@@ -1098,8 +1098,10 @@ export default function EquipeGestorIsland() {
                                 variant="primary"
                                 onClick={() => salvarHorarioUsuario(u.id)}
                                 disabled={!podeEditarHorarios || salvando}
+                                title={salvando ? "Salvando horário" : "Salvar horário"}
+                                aria-label={salvando ? "Salvando horário" : "Salvar horário"}
                               >
-                                {salvando ? "Salvando..." : "Salvar"}
+                                <i className={salvando ? "pi pi-spin pi-spinner" : "pi pi-save"} aria-hidden="true" />
                               </AppButton>
                             </div>
                           </td>
@@ -1310,8 +1312,10 @@ export default function EquipeGestorIsland() {
                                 variant="primary"
                                 onClick={() => salvarHorarioUsuario(u.id)}
                                 disabled={!podeEditarHorarios || salvando}
+                                title={salvando ? "Salvando horário" : "Salvar horário"}
+                                aria-label={salvando ? "Salvando horário" : "Salvar horário"}
                               >
-                                {salvando ? "Salvando..." : "Salvar"}
+                                <i className={salvando ? "pi pi-spin pi-spinner" : "pi pi-save"} aria-hidden="true" />
                               </AppButton>
                             </div>
                           </td>

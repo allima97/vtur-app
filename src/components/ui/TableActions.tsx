@@ -30,6 +30,39 @@ type TableActionsProps = {
   className?: string;
 };
 
+function normalizeIconFromLabel(label: string): string {
+  const key = String(label || "").trim().toLowerCase();
+  if (!key) return "pi pi-cog";
+  if (key.includes("editar")) return "pi pi-pencil";
+  if (key.includes("excluir") || key.includes("remover")) return "pi pi-trash";
+  if (key.includes("abrir") || key.includes("visual") || key === "ver") return "pi pi-eye";
+  if (key.includes("whatsapp")) return "pi pi-whatsapp";
+  if (key.includes("intera")) return "pi pi-file-edit";
+  if (key.includes("senha")) return "pi pi-key";
+  if (key.includes("ativar") || key.includes("aprovar")) return "pi pi-check-circle";
+  if (key.includes("desativ") || key.includes("inativ") || key.includes("rejeitar")) return "pi pi-times-circle";
+  if (key.includes("suspender") || key.includes("bloquear")) return "pi pi-ban";
+  if (key.includes("atras")) return "pi pi-clock";
+  if (key.includes("adicionar")) return "pi pi-plus-circle";
+  return "pi pi-cog";
+}
+
+function resolveActionIcon(icon: React.ReactNode, label: string): React.ReactNode {
+  if (React.isValidElement(icon)) return icon;
+  if (typeof icon === "string") {
+    const raw = icon.trim();
+    if (!raw) return <i className={normalizeIconFromLabel(label)} aria-hidden="true" />;
+    if (raw.startsWith("pi ")) return <i className={raw} aria-hidden="true" />;
+    if (raw === "↑") return <i className="pi pi-arrow-up" aria-hidden="true" />;
+    if (raw === "↓") return <i className="pi pi-arrow-down" aria-hidden="true" />;
+    if (raw === "×" || raw.toLowerCase() === "x") return <i className="pi pi-times" aria-hidden="true" />;
+    if (raw === "+") return <i className="pi pi-plus" aria-hidden="true" />;
+    if (raw === "-") return <i className="pi pi-minus" aria-hidden="true" />;
+    return <i className={normalizeIconFromLabel(label)} aria-hidden="true" />;
+  }
+  return <i className={normalizeIconFromLabel(label)} aria-hidden="true" />;
+}
+
 export default function TableActions({
   show = true,
   actions,
@@ -52,6 +85,8 @@ export default function TableActions({
     return (
       <div className={`action-buttons vtur-table-actions ${className}`.trim()}>
         {normalizedActions.map((action) => {
+          const actionLabel = action.title || action.label;
+          const actionIcon = resolveActionIcon(action.icon, actionLabel);
           return (
             <AppButton
               key={action.key}
@@ -66,12 +101,13 @@ export default function TableActions({
                       : "ghost"
               }
               className={`vtur-table-action ${action.className || ""}`.trim()}
-              title={action.title || action.label}
-              aria-label={action.title || action.label}
+              title={actionLabel}
+              aria-label={actionLabel}
               onClick={action.onClick}
               disabled={action.disabled}
             >
-              {action.icon ?? action.label}
+              <span aria-hidden="true">{actionIcon}</span>
+              <span className="sr-only">{actionLabel}</span>
             </AppButton>
           );
         })}

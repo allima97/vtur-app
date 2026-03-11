@@ -553,7 +553,7 @@ export default function CommissionTemplatesIsland() {
                 <th>Nome</th>
                 <th>Modo</th>
                 <th>Ativo</th>
-                <th className="th-actions">Acoes</th>
+                <th className="th-actions">Ações</th>
               </tr>
             }
             loading={carregando}
@@ -576,7 +576,7 @@ export default function CommissionTemplatesIsland() {
                 <td data-label="Nome">{t.nome}</td>
                 <td data-label="Modo">{t.modo}</td>
                 <td data-label="Ativo">{t.ativo ? "Sim" : "Nao"}</td>
-                <td className="th-actions" data-label="Acoes">
+                <td className="th-actions" data-label="Ações">
                   <TableActions
                     actions={[
                       {

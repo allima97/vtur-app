@@ -162,7 +162,7 @@ export default function AuthConviteIsland() {
         >
           <div className="auth-header">
             <div className="auth-icon">
-              <i className="fa-solid fa-user-plus"></i>
+              <i className="pi pi-user-plus" />
             </div>
           </div>
 
@@ -184,7 +184,7 @@ export default function AuthConviteIsland() {
               id="senha"
               label={
                 <>
-                  <i className="fa-solid fa-lock"></i> Nova senha
+                  <i className="pi pi-lock" /> Nova senha
                 </>
               }
               placeholder="Minimo 6 caracteres"
@@ -201,7 +201,7 @@ export default function AuthConviteIsland() {
               id="confirmar"
               label={
                 <>
-                  <i className="fa-solid fa-lock"></i> Confirmar senha
+                  <i className="pi pi-lock" /> Confirmar senha
                 </>
               }
               placeholder="Repita a senha"
@@ -213,14 +213,14 @@ export default function AuthConviteIsland() {
 
             <div className="auth-actions">
               <AppButton type="submit" variant="primary" block disabled={loading}>
-                <i className="fa-solid fa-check"></i>
+                <i className="pi pi-check" />
                 {loading ? " Salvando..." : " Definir senha e continuar"}
               </AppButton>
               <div className="auth-divider">
                 <span>ou</span>
               </div>
               <AppButton as="a" href="/auth/login" variant="secondary" block>
-                <i className="fa-solid fa-right-to-bracket"></i>
+                <i className="pi pi-sign-in" />
                 Ir para login
               </AppButton>
             </div>

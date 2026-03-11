@@ -710,7 +710,7 @@ export default function CidadesIsland() {
               <th>Subdivisao</th>
               <th>Pais</th>
               <th>Criada em</th>
-              {(podeEditar || podeExcluir) && <th className="th-actions">Acoes</th>}
+              {(podeEditar || podeExcluir) && <th className="th-actions">Ações</th>}
             </tr>
           }
           loading={loading}
@@ -735,7 +735,7 @@ export default function CidadesIsland() {
               <td data-label="Pais">{(c as any).pais_nome || "-"}</td>
               <td data-label="Criada em">{c.created_at ? c.created_at.slice(0, 10) : "-"}</td>
               {(podeEditar || podeExcluir) && (
-                <td className="th-actions" data-label="Acoes">
+                <td className="th-actions" data-label="Ações">
                   <TableActions
                     show={podeEditar || podeExcluir}
                     actions={[

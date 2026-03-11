@@ -1333,16 +1333,24 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                             {podeExcluir && (
                               <td className="th-actions" data-label="Ações">
                                 <div className="action-buttons">
-                                  <AppButton variant="secondary" type="button" onClick={() => iniciarEdicaoServico(s)}>
-                                    Editar
+                                  <AppButton
+                                    variant="secondary"
+                                    type="button"
+                                    onClick={() => iniciarEdicaoServico(s)}
+                                    title="Editar serviço"
+                                    aria-label="Editar serviço"
+                                  >
+                                    <i className="pi pi-pencil" aria-hidden="true" />
                                   </AppButton>
                                   <AppButton
                                     variant="secondary"
                                     type="button"
                                     onClick={() => removerServico(s.id)}
                                     disabled={removendoServicoId === s.id}
+                                    title={removendoServicoId === s.id ? "Removendo serviço" : "Remover serviço"}
+                                    aria-label={removendoServicoId === s.id ? "Removendo serviço" : "Remover serviço"}
                                   >
-                                    {removendoServicoId === s.id ? "Removendo..." : "Remover"}
+                                    <i className={removendoServicoId === s.id ? "pi pi-spin pi-spinner" : "pi pi-trash"} aria-hidden="true" />
                                   </AppButton>
                                 </div>
                               </td>

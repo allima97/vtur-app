@@ -1457,7 +1457,7 @@ export default function EscalaGestorIsland() {
                     <th>Data</th>
                     <th>Nome</th>
                     <th>Tipo</th>
-                    <th>Acoes</th>
+                    <th className="th-actions">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1466,14 +1466,16 @@ export default function EscalaGestorIsland() {
                       <td data-label="Data">{formatarDataParaExibicao(f.data)}</td>
                       <td data-label="Nome">{f.nome}</td>
                       <td data-label="Tipo">{f.tipo}</td>
-                      <td data-label="Acoes">
+                      <td className="th-actions" data-label="Ações">
                         <AppButton
                           type="button"
-                          variant="secondary"
+                          variant="danger"
                           onClick={() => removerFeriado(f.id)}
                           disabled={!podeEditar}
+                          title="Remover feriado"
+                          aria-label="Remover feriado"
                         >
-                          Remover
+                          <i className="pi pi-trash" aria-hidden="true" />
                         </AppButton>
                       </td>
                     </tr>

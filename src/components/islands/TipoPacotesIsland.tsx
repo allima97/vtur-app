@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { AlertTriangle } from "lucide-react";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { normalizeText } from "../../lib/normalizeText";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
@@ -380,7 +379,7 @@ export default function TipoPacotesIsland() {
               <th>Meta nao</th>
               <th>Meta</th>
               <th>Super</th>
-              <th className="th-actions">Acoes</th>
+              <th className="th-actions">Ações</th>
             </tr>
           }
           loading={loadingTipos || loadingExtras}
@@ -407,7 +406,7 @@ export default function TipoPacotesIsland() {
                 <td data-label="Meta nao">{item.fix_meta_nao_atingida ?? "-"}</td>
                 <td data-label="Meta">{item.fix_meta_atingida ?? "-"}</td>
                 <td data-label="Super">{item.fix_super_meta ?? "-"}</td>
-                <td className="th-actions" data-label="Acoes">
+                <td className="th-actions" data-label="Ações">
                   <TableActions
                     onEdit={podeEditar ? () => iniciarEdicao(item) : undefined}
                     onDelete={podeExcluir ? () => solicitarExclusao(item) : undefined}
@@ -434,7 +433,7 @@ export default function TipoPacotesIsland() {
         <AppNoticeDialog
           open={Boolean(modalDuplicado)}
           title="ATENCAO"
-          icon={<AlertTriangle size={20} strokeWidth={2} />}
+          icon={<i className="pi pi-exclamation-triangle" aria-hidden="true" />}
           message={modalDuplicado ? `${modalDuplicado.entity} ja cadastrado.` : ""}
           onClose={() => setModalDuplicado(null)}
         />

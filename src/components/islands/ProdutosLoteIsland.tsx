@@ -644,7 +644,7 @@ export default function ProdutosLoteIsland() {
                   <th>Nivel de preco</th>
                   <th>Imagem (URL)</th>
                   <th>Info</th>
-                  <th className="th-actions">Acoes</th>
+                  <th className="th-actions">Ações</th>
                 </tr>
               }
               colSpan={7}
@@ -729,7 +729,7 @@ export default function ProdutosLoteIsland() {
                         {infosAbertos[produto.id] ? "-" : "+"}
                       </AppButton>
                     </td>
-                    <td className="th-actions" data-label="Acoes">
+                    <td className="th-actions" data-label="Ações">
                       <div className="action-buttons">
                         <AppButton
                           type="button"

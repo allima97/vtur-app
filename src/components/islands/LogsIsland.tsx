@@ -226,7 +226,7 @@ export default function LogsIsland() {
               <th>Acao</th>
               <th>Modulo</th>
               <th>IP</th>
-              <th className="th-actions">Ver</th>
+              <th className="th-actions">Ações</th>
             </tr>
           }
           colSpan={6}
@@ -241,10 +241,16 @@ export default function LogsIsland() {
               <td data-label="Acao">{l.acao}</td>
               <td data-label="Modulo">{l.modulo || "-"}</td>
               <td data-label="IP">{l.ip || "-"}</td>
-              <td className="th-actions" data-label="Ver">
+              <td className="th-actions" data-label="Ações">
                 <div className="action-buttons">
-                  <AppButton type="button" variant="secondary" onClick={() => setLogSelecionado(l)}>
-                    Ver
+                  <AppButton
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setLogSelecionado(l)}
+                    title="Ver detalhes"
+                    aria-label="Ver detalhes"
+                  >
+                    <i className="pi pi-eye" aria-hidden="true" />
                   </AppButton>
                 </div>
               </td>

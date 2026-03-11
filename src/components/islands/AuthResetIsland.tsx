@@ -132,7 +132,7 @@ export default function AuthResetIsland() {
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
             <label htmlFor="senha">
-              <i className="fa-solid fa-lock"></i> Nova senha
+              <i className="pi pi-lock"></i> Nova senha
             </label>
             <div className="password-field">
               <input
@@ -155,13 +155,13 @@ export default function AuthResetIsland() {
                 aria-pressed={mostrarSenha}
                 tabIndex={loading ? -1 : 0}
               >
-                <i className={`fa-solid ${mostrarSenha ? "fa-eye-slash" : "fa-eye"}`} />
+                <i className={mostrarSenha ? "pi pi-eye-slash" : "pi pi-eye"} />
               </AppButton>
             </div>
           </div>
           <div className="form-group">
             <label htmlFor="confirmar">
-              <i className="fa-solid fa-lock"></i> Confirmar nova senha
+              <i className="pi pi-lock"></i> Confirmar nova senha
             </label>
             <div className="password-field">
               <input
@@ -183,7 +183,7 @@ export default function AuthResetIsland() {
                 aria-pressed={mostrarConfirmacao}
                 tabIndex={loading ? -1 : 0}
               >
-                <i className={`fa-solid ${mostrarConfirmacao ? "fa-eye-slash" : "fa-eye"}`} />
+                <i className={mostrarConfirmacao ? "pi pi-eye-slash" : "pi pi-eye"} />
               </AppButton>
             </div>
           </div>

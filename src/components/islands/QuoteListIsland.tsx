@@ -346,7 +346,7 @@ export default function QuoteListIsland() {
                 <th>Criado</th>
                 <th>Ultima interacao</th>
                 <th className="th-actions" style={{ textAlign: "center" }}>
-                  Acoes
+                  Ações
                 </th>
               </tr>
             }
@@ -471,7 +471,7 @@ export default function QuoteListIsland() {
                   <td data-label="Ultima interacao">
                     {quote.last_interaction_at ? formatDate(quote.last_interaction_at) : "-"}
                   </td>
-                  <td className="th-actions th-actions-quote" data-label="Acoes">
+                  <td className="th-actions th-actions-quote" data-label="Ações">
                     <TableActions actions={actions} />
                   </td>
                 </tr>

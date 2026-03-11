@@ -16,26 +16,13 @@ import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 import AppToolbar from "../ui/primer/AppToolbar";
+import { Chart } from "primereact/chart";
 import {
   construirLinkWhatsAppComTexto,
   construirUrlCartaoAniversario,
   montarMensagemAniversario,
   montarMensagemFollowUp,
 } from "../../lib/whatsapp";
-
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  LineChart,
-  Line,
-} from "recharts";
 
 type Papel = "ADMIN" | "MASTER" | "GESTOR" | "VENDEDOR" | "OUTRO";
 type GestorWidgetId =
@@ -168,6 +155,133 @@ function getMonthBounds() {
 }
 
 const COLORS = ["#2563eb", "#3b82f6", "#818cf8", "#ec4899", "#22c55e"];
+
+function chartTokens() {
+  if (typeof window === "undefined") {
+    return {
+      text: "#475569",
+      textSecondary: "#64748b",
+      border: "#e2e8f0",
+    };
+  }
+  const ds = getComputedStyle(document.documentElement);
+  return {
+    text: ds.getPropertyValue("--text-color")?.trim() || "#475569",
+    textSecondary: ds.getPropertyValue("--text-color-secondary")?.trim() || "#64748b",
+    border: ds.getPropertyValue("--surface-border")?.trim() || "#e2e8f0",
+  };
+}
+
+function toPieChartConfig(items: Array<{ name: string; value: number }>) {
+  const tk = chartTokens();
+  return {
+    data: {
+      labels: items.map((item) => item.name),
+      datasets: [
+        {
+          data: items.map((item) => Number(item.value || 0)),
+          backgroundColor: items.map((_, idx) => COLORS[idx % COLORS.length]),
+          hoverBackgroundColor: items.map((_, idx) => COLORS[idx % COLORS.length]),
+        },
+      ],
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false, labels: { color: tk.text } },
+      },
+    },
+  };
+}
+
+function toBarChartConfig(
+  items: Array<{ label: string; value: number }>,
+  formatter: (value: number) => string
+) {
+  const tk = chartTokens();
+  return {
+    data: {
+      labels: items.map((item) => item.label),
+      datasets: [
+        {
+          data: items.map((item) => Number(item.value || 0)),
+          backgroundColor: items.map((_, idx) => COLORS[idx % COLORS.length]),
+          borderRadius: 6,
+          maxBarThickness: 28,
+        },
+      ],
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (context: any) => formatter(Number(context?.parsed?.y ?? context?.parsed ?? 0)),
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color: tk.textSecondary },
+          grid: { display: false },
+          border: { display: false },
+        },
+        y: {
+          ticks: { color: tk.textSecondary },
+          grid: { color: tk.border },
+          border: { display: false },
+        },
+      },
+    },
+  };
+}
+
+function toLineChartConfig(
+  items: Array<{ label: string; value: number }>,
+  formatter: (value: number) => string
+) {
+  const tk = chartTokens();
+  return {
+    data: {
+      labels: items.map((item) => item.label),
+      datasets: [
+        {
+          data: items.map((item) => Number(item.value || 0)),
+          borderColor: "#3b82f6",
+          backgroundColor: "rgba(59,130,246,0.15)",
+          borderWidth: 2,
+          tension: 0.4,
+          pointRadius: 0,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (context: any) => formatter(Number(context?.parsed?.y ?? context?.parsed ?? 0)),
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color: tk.textSecondary },
+          grid: { display: false },
+          border: { display: false },
+        },
+        y: {
+          ticks: { color: tk.textSecondary },
+          grid: { color: tk.border },
+          border: { display: false },
+        },
+      },
+    },
+  };
+}
 const GESTOR_WIDGETS: { id: GestorWidgetId; titulo: string }[] = [
   { id: "kpis", titulo: "KPIs principais" },
   { id: "ranking", titulo: "Ranking da equipe" },
@@ -986,6 +1100,12 @@ function DashboardGestorIslandInner() {
     }
 
     if (id === "vendas_consultor") {
+      const consultorChartData = rankingEquipe.map((r) => ({ name: r.nome, value: r.total }));
+      const consultorBarConfig = toBarChartConfig(
+        consultorChartData.map((item) => ({ label: item.name, value: item.value })),
+        formatCurrency
+      );
+      const consultorPieConfig = toPieChartConfig(consultorChartData);
       return (
         <AppCard
           title={hideTitle ? undefined : "Vendas por consultor"}
@@ -996,35 +1116,20 @@ function DashboardGestorIslandInner() {
             className="vtur-dashboard-chart-grid"
           >
             <div style={{ width: "100%", height: 260 }}>
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie
-                    data={rankingEquipe.map((r) => ({ name: r.nome, total: r.total }))}
-                    dataKey="total"
-                    nameKey="name"
-                    outerRadius={90}
-                  >
-                    {rankingEquipe.map((_, idx) => (
-                      <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: any) => formatCurrency(Number(value || 0))}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <Chart
+                type="pie"
+                data={consultorPieConfig.data}
+                options={consultorPieConfig.options as any}
+                style={{ width: "100%", height: "100%" }}
+              />
             </div>
             <div style={{ width: "100%", height: 260 }}>
-              <ResponsiveContainer>
-                <BarChart data={rankingEquipe.map((r) => ({ name: r.nome, total: r.total }))}>
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip
-                    formatter={(value: any) => formatCurrency(Number(value || 0))}
-                  />
-                  <Bar dataKey="total" fill="#3b82f6" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <Chart
+                type="bar"
+                data={consultorBarConfig.data}
+                options={consultorBarConfig.options as any}
+                style={{ width: "100%", height: "100%" }}
+              />
             </div>
           </div>
         </AppCard>
@@ -1032,6 +1137,7 @@ function DashboardGestorIslandInner() {
     }
 
     if (id === "evolucao") {
+      const evolucaoLineConfig = toLineChartConfig(evolucaoTimeline, formatCurrency);
       return (
         <AppCard
           title={hideTitle ? undefined : "Evolucao de vendas da equipe"}
@@ -1042,14 +1148,12 @@ function DashboardGestorIslandInner() {
             {evolucaoTimeline.length === 0 ? (
               <div style={{ fontSize: "0.9rem" }}>Sem dados para o período.</div>
             ) : (
-              <ResponsiveContainer>
-                <LineChart data={evolucaoTimeline}>
-                  <XAxis dataKey="label" />
-                  <YAxis />
-                  <Tooltip formatter={(value: any) => formatCurrency(Number(value || 0))} />
-                  <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
+              <Chart
+                type="line"
+                data={evolucaoLineConfig.data}
+                options={evolucaoLineConfig.options as any}
+                style={{ width: "100%", height: "100%" }}
+              />
             )}
           </div>
         </AppCard>
@@ -1129,7 +1233,7 @@ function DashboardGestorIslandInner() {
                 <th>Cliente</th>
                 <th>Nascimento</th>
                 <th>Telefone</th>
-                <th className="th-actions">Acoes</th>
+                <th className="th-actions">Ações</th>
               </tr>
             }
             empty={items.length === 0}
@@ -1156,7 +1260,7 @@ function DashboardGestorIslandInner() {
                     {c.nascimento ? formatarDataParaExibicao(c.nascimento) : "-"}
                   </td>
                   <td data-label="Telefone">{c.telefone || "-"}</td>
-                  <td className="th-actions" data-label="Acoes">
+                  <td className="th-actions" data-label="Ações">
                     <TableActions
                       actions={[
                         ...(whatsappLink
@@ -1213,7 +1317,7 @@ function DashboardGestorIslandInner() {
                 <th>Cliente</th>
                 <th>Destino</th>
                 <th>Status</th>
-                <th className="th-actions">Acoes</th>
+                <th className="th-actions">Ações</th>
               </tr>
             }
             empty={viagensProximas.length === 0}
@@ -1227,7 +1331,7 @@ function DashboardGestorIslandInner() {
                 <td data-label="Cliente">{v.clientes?.nome || "—"}</td>
                 <td data-label="Destino">{v.destino || "—"}</td>
                 <td data-label="Status">{v.status || "—"}</td>
-                <td className="th-actions" data-label="Acoes">
+                <td className="th-actions" data-label="Ações">
                   <TableActions
                     actions={
                       v.clientes?.id
@@ -1267,7 +1371,7 @@ function DashboardGestorIslandInner() {
                 <th>Retorno</th>
                 <th>Cliente</th>
                 <th>Destino</th>
-                <th className="th-actions">Acoes</th>
+                <th className="th-actions">Ações</th>
               </tr>
             }
             empty={followUpsRecentes.length === 0}
@@ -1289,7 +1393,7 @@ function DashboardGestorIslandInner() {
                   </td>
                   <td data-label="Cliente">{f.venda?.clientes?.nome || "—"}</td>
                   <td data-label="Destino">{f.venda?.destino_cidade?.nome || "—"}</td>
-                  <td className="th-actions" data-label="Acoes">
+                  <td className="th-actions" data-label="Ações">
                     <TableActions
                       actions={[
                         ...(f.venda?.clientes?.id
