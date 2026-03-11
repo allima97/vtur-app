@@ -85,6 +85,12 @@ export default function AuthRecoverIsland() {
     }
   }
 
+  function voltarAoLogin() {
+    if (typeof window !== "undefined") {
+      window.location.href = "/auth/login";
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErro("");
@@ -127,12 +133,10 @@ export default function AuthRecoverIsland() {
   return (
     <div className="auth-container">
       <div className="auth-card auth-card-lg">
-        <div className="auth-header">
-          <div className="auth-icon">
-            <i className="fa-solid fa-plane-departure"></i>
-          </div>
+        <div className="auth-header auth-header-brand">
+          <img className="auth-logo" src="/brand/vtur-symbol.svg" alt="VTUR" />
           <h1>Recuperar senha</h1>
-          <h2 className="auth-subtitle">Enviaremos um link para redefinir sua senha.</h2>
+          <p className="auth-subtitle">Enviaremos um link para redefinir sua senha.</p>
         </div>
         {erro && (
           <div className="alert alert-danger" style={{ marginBottom: 16 }}>
@@ -170,17 +174,14 @@ export default function AuthRecoverIsland() {
               {loading ? " Enviando..." : " Enviar link"}
             </button>
             {cooldownSeconds > 0 && (
-              <small className="text-muted" style={{ display: "block", marginTop: 6 }}>
+              <small className="text-muted auth-feedback">
                 Aguarde {cooldownSeconds} segundos antes de reenviar.
               </small>
             )}
-            <div className="auth-divider">
-              <span>ou</span>
-            </div>
-            <a href="/auth/login" className="btn btn-secondary btn-block">
+            <button type="button" className="btn btn-secondary btn-block" onClick={voltarAoLogin}>
               <i className="fa-solid fa-right-to-bracket"></i>
               Voltar ao login
-            </a>
+            </button>
           </div>
         </form>
       </div>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { registrarLog } from "../../lib/logs";
-import { SUPPORT_EMAIL, SYSTEM_NAME } from "../../lib/systemName";
+import { SUPPORT_EMAIL } from "../../lib/systemName";
 import { clearPermissoesCache } from "../../lib/permissoesCache";
 import { refreshPermissoes } from "../../lib/permissoesStore";
 
@@ -225,11 +225,9 @@ export default function AuthLoginIsland() {
   return (
     <div className="auth-container">
       <div className="auth-card auth-card-lg">
-        <div className="auth-header">
-          <div className="auth-icon">
-            <i className="fa-solid fa-plane-departure" aria-hidden />
-          </div>
-          <h1>{`Bem-vindo ao ${SYSTEM_NAME}`}</h1>
+        <div className="auth-header auth-header-brand">
+          <img className="auth-logo" src="/brand/vtur-symbol.svg" alt="VTUR" />
+          <h1>Bem-vindo!</h1>
           <p className="auth-subtitle">Use seu e-mail e senha para acessar ou faça seu cadastro</p>
         </div>
 

@@ -11,7 +11,7 @@
 
 .auth-container {
   width: 100%;
-  max-width: 420px;
+  max-width: 460px;
   margin: 0 auto;
   padding: 12px;
   display: flex;
@@ -44,6 +44,19 @@
   flex-direction: column;
   gap: 6px;
   margin-bottom: 12px;
+}
+
+.auth-header-brand {
+  align-items: center;
+  text-align: center;
+}
+
+.auth-logo {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  display: block;
+  margin-bottom: 4px;
 }
 
 .auth-header h1 {
@@ -133,17 +146,18 @@
 
 .auth-actions {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
 }
 
 .auth-actions .btn-block {
   flex: 0 0 auto;
-  width: auto;
+  width: 100%;
 }
 
 .auth-actions .w-full {
-  width: auto;
+  width: 100%;
 }
 
 /* Basic form helpers if not defined already */
@@ -235,14 +249,14 @@
 .btn {
   border-radius: 10px;
   border: none;
-  padding: 8px 14px;
+  padding: 10px 14px;
   font-size: 0.9rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 36px;
+  min-height: 44px;
 }
 
 .btn-primary {
@@ -263,6 +277,12 @@
 
 .w-full {
   width: 100%;
+}
+
+.auth-feedback {
+  display: block;
+  margin-top: -2px;
+  text-align: center;
 }
 
 @media (max-width: 720px) {
@@ -301,13 +321,13 @@
     border-radius: 12px;
   }
 
-  .auth-actions {
-    flex-wrap: wrap;
+  .auth-logo {
+    width: 64px;
+    height: 64px;
   }
 
   .auth-actions .btn {
-    flex: 0 0 auto;
-    width: auto;
+    width: 100%;
   }
 
   .auth-divider {
@@ -317,8 +337,8 @@
 
   .btn {
     font-size: 1rem;
-    padding: 8px 14px;
-    min-height: 36px;
+    padding: 10px 14px;
+    min-height: 44px;
   }
 
   .auth-links {

@@ -5969,6 +5969,70 @@ table .th-actions :is(.action-buttons, .sac-action-buttons, .viagens-action-butt
 }
 
 @media (max-width: 640px) {
+  .vtur-data-table-shell {
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  .vtur-data-table-container.table-container,
+  .table-container {
+    background: transparent !important;
+  }
+
+  .table-container::before,
+  .table-container::after {
+    display: none !important;
+  }
+
+  .table-mobile-cards,
+  .table-mobile-cards table,
+  .table-mobile-cards tbody,
+  .table-mobile-cards tr,
+  .table-mobile-cards td {
+    min-width: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .table-mobile-cards {
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .table-mobile-cards tbody {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .table-mobile-cards tr {
+    margin: 0 !important;
+    border: 1px solid var(--color-border) !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    border-radius: var(--radius-md) !important;
+    overflow: hidden !important;
+  }
+
+  .table-mobile-cards td {
+    background: #fff !important;
+  }
+
+  .table-mobile-cards tbody tr:nth-child(even),
+  .table-mobile-cards tbody tr:hover {
+    background: #fff !important;
+  }
+
+  .table-mobile-cards td:last-child {
+    border-bottom: 0 !important;
+  }
+
   .table-mobile-cards td:not(.th-actions):not([colspan]) {
     text-align: left !important;
     justify-items: start !important;
