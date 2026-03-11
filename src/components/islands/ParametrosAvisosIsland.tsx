@@ -2,8 +2,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import AlertMessage from "../ui/AlertMessage";
 import { renderTemplateText } from "../../lib/messageTemplates";
 import { construirLinkWhatsAppComTexto } from "../../lib/whatsapp";
+import AppCard from "../ui/primer/AppCard";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 import {
   OFFICIAL_CARD_THEME_DELETE_NAMES,
   OFFICIAL_CARD_THEME_NAMES,
@@ -739,16 +743,25 @@ export default function ParametrosAvisosIsland() {
   }
 
   if (loadPerm) return <LoadingUsuarioContext />;
-  if (!podeVer) return <div className="card-base card-config">Acesso negado.</div>;
+  if (!podeVer) {
+    return (
+      <AppPrimerProvider>
+        <AppCard tone="config">
+          <strong>Acesso negado.</strong>
+        </AppCard>
+      </AppPrimerProvider>
+    );
+  }
 
   return (
-    <div className="mt-6">
-      <div className="card-base card-blue mb-3">
-        <h3 className="page-title">📣 Avisos de relacionamento vtur</h3>
-        <p className="page-subtitle">
-          Suba a arte pronta por ocasião, vincule uma mensagem curta de WhatsApp e valide tudo em uma prévia real.
-          O card usa o primeiro nome do cliente e preserva o layout da arte.
-        </p>
+    <AppPrimerProvider>
+      <div className="page-content-wrap mt-6">
+        <AppToolbar
+          tone="info"
+          title="Avisos de relacionamento VTUR"
+          subtitle="Suba a arte por ocasião, vincule mensagem de WhatsApp e valide em prévia real."
+        />
+      <AppCard tone="info" className="mb-3">
         <div style={{ marginTop: 10, color: "#334155", fontSize: 14 }}>
           Marcadores úteis na mensagem: <strong>[PRIMEIRO_NOME]</strong> e <strong>[CONSULTOR]</strong>.
         </div>
@@ -763,12 +776,12 @@ export default function ParametrosAvisosIsland() {
             </button>
           </div>
         </details>
-      </div>
+      </AppCard>
 
       {(erro || msg) && (
-        <div className="card-base card-config mb-3">
-          {erro ? <strong style={{ color: "#b91c1c" }}>{erro}</strong> : <strong style={{ color: "#166534" }}>{msg}</strong>}
-        </div>
+        <AlertMessage variant={erro ? "error" : "success"}>
+          {erro || msg}
+        </AlertMessage>
       )}
 
       <datalist id="aviso-categorias-list">
@@ -777,7 +790,7 @@ export default function ParametrosAvisosIsland() {
         ))}
       </datalist>
 
-      <div className="card-base card-config mb-3">
+      <AppCard tone="config" className="mb-3">
         <h4 style={{ marginBottom: 8 }}>1. Artes / Temas por ocasião</h4>
         <small style={{ color: "#64748b", display: "block", marginBottom: 12 }}>
           A arte sobe praticamente pronta. O sistema só injeta o primeiro nome do cliente no ponto definido para o tema.
@@ -887,9 +900,9 @@ export default function ParametrosAvisosIsland() {
             </tbody>
           </table>
         </div>
-      </div>
+      </AppCard>
 
-      <div className="card-base card-config mb-3">
+      <AppCard tone="config" className="mb-3">
         <h4 style={{ marginBottom: 8 }}>2. Preview e mensagem de disparo</h4>
         <small style={{ color: "#64748b", display: "block", marginBottom: 12 }}>
           Cada configuração liga uma arte a uma mensagem curta de WhatsApp. Essa configuração é a mesma usada no disparo pelo cadastro do cliente.
@@ -1210,7 +1223,8 @@ export default function ParametrosAvisosIsland() {
         ) : (
           <small style={{ color: "#64748b" }}>Selecione uma arte e preencha a mensagem para pré-visualizar o cartão final.</small>
         )}
-      </div>
+      </AppCard>
     </div>
+    </AppPrimerProvider>
   );
 }

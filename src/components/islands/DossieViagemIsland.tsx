@@ -2,11 +2,17 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import AlertMessage from "../ui/AlertMessage";
+import EmptyState from "../ui/EmptyState";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
 import { formatCurrency, formatCurrencyBRL } from "../../lib/format";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import { construirLinkWhatsApp } from "../../lib/whatsapp";
 import { parentescoOptions } from "../../lib/parentescoOptions";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type ViagemAcompanhante = {
   id: string;
@@ -353,11 +359,29 @@ export default function DossieViagemIsland({ viagemId }: Props) {
   }
 
   if (!podeVer) {
-    return <div>Você não possui acesso ao módulo de Operação/Viagens.</div>;
+    return (
+      <AppPrimerProvider>
+        <AppCard tone="config">
+          <strong>Você não possui acesso ao módulo de Operação/Viagens.</strong>
+        </AppCard>
+      </AppPrimerProvider>
+    );
   }
 
   if (!viagemId) {
-    return <div>Nenhuma viagem selecionada.</div>;
+    return (
+      <AppPrimerProvider>
+        <EmptyState
+          title="Nenhuma viagem selecionada"
+          description="Selecione uma viagem para abrir o dossiê."
+          action={
+            <a className="btn btn-primary" href="/operacao/viagens">
+              Voltar para viagens
+            </a>
+          }
+        />
+      </AppPrimerProvider>
+    );
   }
 
   function iniciarEdicaoAcompanhante(acomp: ViagemAcompanhante) {
@@ -634,60 +658,45 @@ export default function DossieViagemIsland({ viagemId }: Props) {
   }
 
   return (
+    <AppPrimerProvider>
     <div className="page-content-wrap dossie-viagem-page">
-      <div className="card-base card-purple mb-3 list-toolbar-sticky hidden sm:block">
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-            flexWrap: "wrap",
-          }}
-        >
-          <div style={{ minWidth: 280, flex: "1 1 320px" }}>
-            {clienteNome ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", display: "flex", gap: 8 }}>
-                  <span style={{ color: "#1d4ed8" }}>Cliente:</span>
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {clienteNome}
-                  </span>
-                </div>
-                <div style={{ display: "flex", gap: 12, fontSize: 13, color: "#475569", flexWrap: "wrap" }}>
-                  {clienteTelefone && (
-                    <span>📞 {clienteTelefone}</span>
-                  )}
-                  {clienteWhatsappLink ? (
-                    <a href={clienteWhatsappLink} target="_blank" rel="noreferrer" style={{ color: "#16a34a", textDecoration: "none" }}>
-                      💬 {clienteWhatsapp || clienteTelefone}
-                    </a>
-                  ) : clienteWhatsapp ? (
-                    <span>💬 {clienteWhatsapp}</span>
-                  ) : null}
-                </div>
-              </div>
-            ) : (
-              <span style={{ color: "#64748b", fontSize: 14 }}> </span>
-            )}
-          </div>
+      <AppToolbar
+        tone="info"
+        className="mb-3 list-toolbar-sticky hidden sm:block"
+        title={clienteNome ? `Dossiê da viagem • ${clienteNome}` : "Dossiê da viagem"}
+        subtitle="Acompanhe recibos, acompanhantes, serviços, documentos e follow-up."
+        actions={
           <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
             <a className="btn btn-light w-full sm:w-auto" href="/operacao/viagens">
               Voltar
             </a>
-            <button
-              className="btn btn-primary w-full sm:w-auto"
+            <AppButton
+              variant="primary"
               type="button"
               onClick={carregar}
               disabled={loading}
+              className="w-full sm:w-auto"
             >
               {loading ? "Atualizando..." : "Atualizar"}
-            </button>
+            </AppButton>
           </div>
-        </div>
-      </div>
+        }
+      >
+        {clienteTelefone || clienteWhatsapp ? (
+          <div style={{ display: "flex", gap: 12, fontSize: 13, color: "#475569", flexWrap: "wrap" }}>
+            {clienteTelefone && <span>📞 {clienteTelefone}</span>}
+            {clienteWhatsappLink ? (
+              <a href={clienteWhatsappLink} target="_blank" rel="noreferrer" style={{ color: "#16a34a", textDecoration: "none" }}>
+                💬 {clienteWhatsapp || clienteTelefone}
+              </a>
+            ) : clienteWhatsapp ? (
+              <span>💬 {clienteWhatsapp}</span>
+            ) : null}
+          </div>
+        ) : null}
+      </AppToolbar>
 
-      {erro && <div style={{ color: "red", marginTop: 10 }}>{erro}</div>}
+      {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
 
       {!erro && viagem && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -1686,8 +1695,12 @@ export default function DossieViagemIsland({ viagemId }: Props) {
       )}
 
       {!erro && !viagem && !loading && (
-        <div style={{ marginTop: 12 }}>Viagem não encontrada ou sem permissão.</div>
+        <EmptyState
+          title="Viagem não encontrada"
+          description="A viagem pode não existir mais ou você não possui permissão para acessá-la."
+        />
       )}
     </div>
+    </AppPrimerProvider>
   );
 }

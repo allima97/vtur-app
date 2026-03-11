@@ -34,7 +34,7 @@ Objetivo: aplicar `@primer/react` em toda a experiencia do `vtur`, usando wrappe
 - [x] `QuoteDetailIsland`
 - [x] `QuoteListIsland`
 - [x] `ComissionamentoIsland`
-- [ ] `MetasVendedorIsland`
+- [x] `MetasVendedorIsland`
 - [x] `AuthLoginIsland`
 - [x] `AuthRecoverIsland`
 - [x] `AuthRegisterIsland`
@@ -92,7 +92,7 @@ Objetivo: aplicar `@primer/react` em toda a experiencia do `vtur`, usando wrappe
 - [x] `CommissionRulesIsland`
 - [x] `CommissionTemplatesIsland`
 - [x] `ParametrosCambiosIsland`
-- [ ] `ParametrosAvisosIsland`
+- [x] `ParametrosAvisosIsland`
 - [x] `ParametrosNaoComissionaveisIsland`
 - [x] `ParametrosSistemaIsland`
 - [x] `QuotePrintSettingsIsland`
@@ -111,12 +111,12 @@ Objetivo: aplicar `@primer/react` em toda a experiencia do `vtur`, usando wrappe
 - [x] `ConsultoriaOnlineIsland`
 - [x] `AgendaCalendar`
 - [x] `TodoBoard`
-- [ ] `MuralRecadosIsland`
+- [x] `MuralRecadosIsland`
 - [x] `ControleSacIsland`
 - [x] `CampanhasIsland`
 - [x] `ConciliacaoIsland`
 - [x] `DocumentosViagensIsland`
-- [ ] `DossieViagemIsland`
+- [x] `DossieViagemIsland`
 - [x] `ViagensListaIsland`
 - [x] `AniversariantesColaboradoresIsland`
 - [x] `PushNotificationsIsland`
@@ -135,16 +135,16 @@ Objetivo: aplicar `@primer/react` em toda a experiencia do `vtur`, usando wrappe
 
 ## Criterios de conclusao por modulo
 
-- [ ] toolbar principal em `AppToolbar`
-- [ ] cards estruturais em `AppCard`
-- [ ] campos em `AppField` ou componentes Primer equivalentes
-- [ ] botoes em `AppButton`
-- [ ] tabelas em `DataTable`
-- [ ] vazios em `EmptyState`
-- [ ] feedbacks em `AlertMessage`
-- [ ] modais/dialogos em `Dialog` ou `AppDialog`
-- [ ] estados de acesso/carregamento padronizados
-- [ ] responsividade revisada
+- [x] toolbar principal em `AppToolbar`
+- [x] cards estruturais em `AppCard`
+- [x] campos em `AppField` ou componentes Primer equivalentes
+- [x] botoes em `AppButton`
+- [x] tabelas em `DataTable`
+- [x] vazios em `EmptyState`
+- [x] feedbacks em `AlertMessage`
+- [x] modais/dialogos em `Dialog` ou `AppDialog`
+- [x] estados de acesso/carregamento padronizados
+- [x] responsividade revisada
 - [x] `npm run build` validado apos a rodada
 
 ## Ordem de fechamento recomendada

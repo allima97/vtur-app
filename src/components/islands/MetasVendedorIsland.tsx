@@ -3,7 +3,9 @@ import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import ConfirmDialog from "../ui/ConfirmDialog";
-import { buildMonthOptionsYYYYMM, formatCurrencyBRL, formatMonthYearBR, formatNumberBR } from "../../lib/format";
+import AlertMessage from "../ui/AlertMessage";
+import DataTable from "../ui/DataTable";
+import { buildMonthOptionsYYYYMM, formatCurrencyBRL, formatMonthYearBR } from "../../lib/format";
 import { fetchGestorEquipeVendedorIds } from "../../lib/gestorEquipe";
 import {
   formatMoneyForInput,
@@ -11,6 +13,11 @@ import {
   parseMoneyPtBR,
   sanitizeMoneyInput,
 } from "../../lib/inputNormalization";
+import AppButton from "../ui/primer/AppButton";
+import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type Usuario = {
   id: string;
@@ -927,7 +934,15 @@ export default function MetasVendedorIsland() {
   // =============================================
 
   if (loadingPerm || loadingMeta) return <LoadingUsuarioContext />;
-  if (!podeVer) return <div>Acesso ao módulo de Metas bloqueado.</div>;
+  if (!podeVer) {
+    return (
+      <AppPrimerProvider>
+        <AppCard tone="config">
+          <strong>Acesso ao módulo de Metas bloqueado.</strong>
+        </AppCard>
+      </AppPrimerProvider>
+    );
+  }
 
   const metasExibidas = isVendedorOnly ? listaMetas : listaMetas.slice(0, 5);
   const metaEquipeTotalNum = money(metaEquipeGeral);
@@ -936,210 +951,186 @@ export default function MetasVendedorIsland() {
   const metaPorVendedor =
     equipeCount > 0 ? (metaEquipeTotalNum - metaGestorNum) / equipeCount : 0;
   const formatarValor = (valor: number) => formatCurrencyBRL(valor);
+  const monthOptionsSelect = monthOptions.map((value) => ({
+    value,
+    label: formatMonthYearBR(value),
+  }));
+  const yesNoOptions = [
+    { value: "true", label: "Sim" },
+    { value: "false", label: "Não" },
+  ];
+  const simNaoOptions = [
+    { value: "sim", label: "Sim" },
+    { value: "nao", label: "Não" },
+  ];
+  const produtoSelectOptions = [
+    { value: "", label: "Selecione" },
+    ...produtos.map((p) => ({ value: p.id, label: p.nome })),
+  ];
 
   return (
-    <div className="min-h-screen bg-slate-50 p-2 md:p-6 metas-page">
-      {isVendedorOnly && (
-        <div className="card-base card-config mb-2">
-          Metas são definidas pelo gestor da equipe. Abaixo estão as metas atribuídas a você.
-        </div>
-      )}
-      {erro && !mostrarFormularioMeta && (
-        <div className="card-base card-config mb-3">
-          <strong>{erro}</strong>
-        </div>
-      )}
+    <AppPrimerProvider>
+      <div className="page-content-wrap metas-page">
+        <AppToolbar
+          tone="info"
+          title="Metas de vendas"
+          subtitle="Defina metas por vendedor e metas de equipe por período."
+        />
 
-      {podeGerenciarMetasEquipe && (
-        <div className="card-base card-blue mb-3">
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-end">
-            <h3 className="text-center sm:text-left">Meta da Loja</h3>
-            {usuarioPodeEditar && !mostrarFormularioMetaLoja && (
-              <button
-                type="button"
-                className="btn btn-primary w-full sm:w-auto"
-                onClick={() => {
-                  limparFormularioEquipe();
-                  setMostrarFormularioMeta(false);
-                  setMostrarFormularioMetaLoja(true);
-                }}
-              >
-                Adicionar Metas
-              </button>
-            )}
-          </div>
+        {isVendedorOnly && (
+          <AlertMessage variant="info">
+            Metas são definidas pelo gestor da equipe. Abaixo estão as metas atribuídas a você.
+          </AlertMessage>
+        )}
+        {erro && !mostrarFormularioMeta && <AlertMessage variant="error">{erro}</AlertMessage>}
 
-          {!mostrarFormularioMetaLoja && (
-            <p style={{ opacity: 0.8, marginTop: 8 }}>
-              Defina a meta total do período e, se desejar, divida igualmente entre os vendedores.
-            </p>
-          )}
-
-          {mostrarFormularioMetaLoja && (
-            <>
-              <p style={{ opacity: 0.8, marginBottom: 12, marginTop: 12 }}>
-                Defina a meta total do período e deixe o sistema dividir entre os vendedores (opcional).
-              </p>
+        {podeGerenciarMetasEquipe && (
+          <AppCard
+            tone="info"
+            title="Meta da loja"
+            subtitle="Defina a meta total do período e, se desejar, divida igualmente entre os vendedores."
+            actions={
+              usuarioPodeEditar && !mostrarFormularioMetaLoja ? (
+                <AppButton
+                  type="button"
+                  variant="primary"
+                  block
+                  className="sm:w-auto"
+                  onClick={() => {
+                    limparFormularioEquipe();
+                    setMostrarFormularioMeta(false);
+                    setMostrarFormularioMetaLoja(true);
+                  }}
+                >
+                  Adicionar metas
+                </AppButton>
+              ) : null
+            }
+          >
+            {mostrarFormularioMetaLoja ? (
               <form onSubmit={salvarMetaLoja}>
                 <div className={`meta-equipe-row${gestorParticipa ? " meta-equipe-row-gestor" : ""}`}>
-                  <div className="form-group">
-                    <label className="form-label">Período *</label>
-                    <select
-                      className="form-select w-full"
-                      value={periodoEquipe}
-                      onChange={(e) => setPeriodoEquipe(e.target.value)}
-                    >
-                      {monthOptions.map((value) => (
-                        <option key={value} value={value}>
-                          {formatMonthYearBR(value)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Meta geral (R$) *</label>
-                    <input
-                      className="form-input"
-                      type="text"
-                      value={metaEquipeGeral}
-                      onChange={(e) => setMetaEquipeGeral(sanitizeMoneyInput(e.target.value))}
-                      onBlur={() => setMetaEquipeGeral(normalizeMoneyInput(metaEquipeGeral))}
-                      inputMode="decimal"
-                      placeholder="0,00"
-                    />
-                  </div>
+                  <AppField
+                    as="select"
+                    label="Período *"
+                    value={periodoEquipe}
+                    onChange={(e) => setPeriodoEquipe(e.target.value)}
+                    options={monthOptionsSelect}
+                    block
+                  />
+                  <AppField
+                    label="Meta geral (R$) *"
+                    value={metaEquipeGeral}
+                    onChange={(e) => setMetaEquipeGeral(sanitizeMoneyInput(e.target.value))}
+                    onBlur={() => setMetaEquipeGeral(normalizeMoneyInput(metaEquipeGeral))}
+                    inputMode="decimal"
+                    placeholder="0,00"
+                    block
+                  />
 
                   {isGestorRole && (
-                    <div className="form-group">
-                      <label className="form-label">Gestor participa?</label>
-                      <select
-                        className="form-select"
-                        value={gestorParticipa ? "true" : "false"}
-                        onChange={(e) => setGestorParticipa(e.target.value === "true")}
-                      >
-                        <option value="false">Não</option>
-                        <option value="true">Sim</option>
-                      </select>
-                    </div>
+                    <AppField
+                      as="select"
+                      label="Gestor participa?"
+                      value={gestorParticipa ? "true" : "false"}
+                      onChange={(e) => setGestorParticipa(e.target.value === "true")}
+                      options={yesNoOptions}
+                      block
+                    />
                   )}
 
                   {isGestorRole && gestorParticipa && (
-                    <div className="form-group">
-                      <label className="form-label">Meta do gestor (R$)</label>
-                      <input
-                        className="form-input"
-                        type="text"
-                        value={metaGestor}
-                        onChange={(e) => setMetaGestor(sanitizeMoneyInput(e.target.value))}
-                        onBlur={() => setMetaGestor(normalizeMoneyInput(metaGestor))}
-                        inputMode="decimal"
-                        placeholder="0,00"
-                      />
-                    </div>
+                    <AppField
+                      label="Meta do gestor (R$)"
+                      value={metaGestor}
+                      onChange={(e) => setMetaGestor(sanitizeMoneyInput(e.target.value))}
+                      onBlur={() => setMetaGestor(normalizeMoneyInput(metaGestor))}
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      block
+                    />
                   )}
 
-                  <div className="form-group">
-                    <label className="form-label">Dividir a meta igualmente por vendedor?</label>
-                    <select
-                      className="form-select"
-                      value={dividirMetaIgual ? "true" : "false"}
-                      onChange={(e) => setDividirMetaIgual(e.target.value === "true")}
-                    >
-                      <option value="true">Sim</option>
-                      <option value="false">Não</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Ativa?</label>
-                    <select
-                      className="form-select"
-                      value={ativoEquipe ? "true" : "false"}
-                      onChange={(e) => setAtivoEquipe(e.target.value === "true")}
-                    >
-                      <option value="true">Sim</option>
-                      <option value="false">Não</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Metas diferenciadas por produto?</label>
-                    <select
-                      className="form-select"
-                      value={mostrarMetaEquipeProdutos ? "sim" : "nao"}
-                      onChange={(e) => {
-                        const next = e.target.value === "sim";
-                        setMostrarMetaEquipeProdutos(next);
-                        if (!next) setMetaEquipeProdutos([]);
-                      }}
-                    >
-                      <option value="nao">Não</option>
-                      <option value="sim">Sim</option>
-                    </select>
-                  </div>
+                  <AppField
+                    as="select"
+                    label="Dividir meta igualmente por vendedor?"
+                    value={dividirMetaIgual ? "true" : "false"}
+                    onChange={(e) => setDividirMetaIgual(e.target.value === "true")}
+                    options={yesNoOptions}
+                    block
+                  />
+                  <AppField
+                    as="select"
+                    label="Ativa?"
+                    value={ativoEquipe ? "true" : "false"}
+                    onChange={(e) => setAtivoEquipe(e.target.value === "true")}
+                    options={yesNoOptions}
+                    block
+                  />
+                  <AppField
+                    as="select"
+                    label="Metas diferenciadas por produto?"
+                    value={mostrarMetaEquipeProdutos ? "sim" : "nao"}
+                    onChange={(e) => {
+                      const next = e.target.value === "sim";
+                      setMostrarMetaEquipeProdutos(next);
+                      if (!next) setMetaEquipeProdutos([]);
+                    }}
+                    options={simNaoOptions}
+                    block
+                  />
                 </div>
 
                 {mostrarMetaEquipeProdutos && (
                   <div className="meta-produtos-section">
                     {metaEquipeProdutos.map((mp, idx) => (
                       <div className="meta-produtos-row" key={idx}>
-                        <div className="form-group min-w-[160px]">
-                          <label className="form-label">Produto</label>
-                          <select
-                            className="form-select"
-                            value={mp.produto_id}
-                            onChange={(e) => {
-                              const copia = [...metaEquipeProdutos];
-                              copia[idx] = { ...copia[idx], produto_id: e.target.value };
-                              setMetaEquipeProdutos(copia);
-                            }}
-                          >
-                            <option value="">Selecione</option>
-                            {produtos.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.nome}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="form-group min-w-[140px]">
-                          <label className="form-label">Meta (R$)</label>
-                          <input
-                            className="form-input"
-                            type="text"
-                            inputMode="decimal"
-                            value={mp.valor}
-                            onChange={(e) => {
-                              const copia = [...metaEquipeProdutos];
-                              copia[idx] = { ...copia[idx], valor: sanitizeMoneyInput(e.target.value) };
-                              setMetaEquipeProdutos(copia);
-                            }}
-                            onBlur={() => {
-                              const copia = [...metaEquipeProdutos];
-                              copia[idx] = { ...copia[idx], valor: normalizeMoneyInput(copia[idx]?.valor || "") };
-                              setMetaEquipeProdutos(copia);
-                            }}
-                            placeholder="0,00"
-                          />
-                        </div>
-                        <div className="form-group meta-produtos-remove">
-                          <button
+                        <AppField
+                          as="select"
+                          label="Produto"
+                          value={mp.produto_id}
+                          onChange={(e) => {
+                            const copia = [...metaEquipeProdutos];
+                            copia[idx] = { ...copia[idx], produto_id: e.target.value };
+                            setMetaEquipeProdutos(copia);
+                          }}
+                          options={produtoSelectOptions}
+                          wrapperClassName="min-w-[160px]"
+                        />
+                        <AppField
+                          label="Meta (R$)"
+                          value={mp.valor}
+                          onChange={(e) => {
+                            const copia = [...metaEquipeProdutos];
+                            copia[idx] = { ...copia[idx], valor: sanitizeMoneyInput(e.target.value) };
+                            setMetaEquipeProdutos(copia);
+                          }}
+                          onBlur={() => {
+                            const copia = [...metaEquipeProdutos];
+                            copia[idx] = { ...copia[idx], valor: normalizeMoneyInput(copia[idx]?.valor || "") };
+                            setMetaEquipeProdutos(copia);
+                          }}
+                          inputMode="decimal"
+                          placeholder="0,00"
+                          wrapperClassName="min-w-[140px]"
+                        />
+                        <div className="meta-produtos-remove">
+                          <AppButton
                             type="button"
-                            className="btn btn-light"
+                            variant="secondary"
                             onClick={() => {
                               setMetaEquipeProdutos(metaEquipeProdutos.filter((_, i) => i !== idx));
                             }}
                           >
                             Remover
-                          </button>
+                          </AppButton>
                         </div>
                       </div>
                     ))}
                     <div className="meta-produtos-actions">
-                      <button
+                      <AppButton
                         type="button"
-                        className="btn btn-primary"
+                        variant="primary"
                         onClick={() =>
                           setMetaEquipeProdutos([
                             ...metaEquipeProdutos,
@@ -1148,7 +1139,7 @@ export default function MetasVendedorIsland() {
                         }
                       >
                         + Adicionar produto
-                      </button>
+                      </AppButton>
                       <div className="meta-produtos-total">
                         Total diferenciada: {formatCurrencyBRL(totalMetaEquipeDiferenciada())}
                       </div>
@@ -1162,10 +1153,8 @@ export default function MetasVendedorIsland() {
                 )}
 
                 {dividirMetaIgual && (
-                  <div className="card-base card-config mt-3">
-                    <div style={{ fontWeight: 600 }}>
-                      Equipe: {equipeCount} vendedor(es)
-                    </div>
+                  <AppCard tone="config" className="mt-3">
+                    <div style={{ fontWeight: 600 }}>Equipe: {equipeCount} vendedor(es)</div>
                     <div style={{ fontSize: "0.85rem", opacity: 0.8 }}>
                       Meta por vendedor:{" "}
                       {Number.isFinite(metaPorVendedor) ? formatCurrencyBRL(metaPorVendedor) : "—"}
@@ -1178,29 +1167,22 @@ export default function MetasVendedorIsland() {
                         )}
                       </div>
                     )}
-                  </div>
+                  </AppCard>
                 )}
 
-                {erroEquipe && (
-                  <div className="card-base card-config mb-2 mt-2">
-                    <strong>{erroEquipe}</strong>
-                  </div>
-                )}
+                {erroEquipe && <AlertMessage variant="error">{erroEquipe}</AlertMessage>}
 
-                <div
-                  className="mobile-stack-buttons"
-                  style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}
-                >
-                  <button type="submit" className="btn btn-primary" disabled={salvandoEquipe}>
+                <div className="mobile-stack-buttons" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+                  <AppButton type="submit" variant="primary" disabled={salvandoEquipe}>
                     {salvandoEquipe
                       ? "Salvando..."
                       : editandoMetaEquipe
                       ? "Salvar alterações"
                       : "Salvar"}
-                  </button>
-                  <button
+                  </AppButton>
+                  <AppButton
                     type="button"
-                    className="btn btn-light"
+                    variant="secondary"
                     onClick={() => {
                       limparFormularioEquipe();
                       setMostrarFormularioMetaLoja(false);
@@ -1208,137 +1190,97 @@ export default function MetasVendedorIsland() {
                     disabled={salvandoEquipe}
                   >
                     Cancelar
-                  </button>
+                  </AppButton>
                 </div>
               </form>
-            </>
-          )}
-        </div>
-      )}
+            ) : null}
+          </AppCard>
+        )}
 
-      {usuarioPodeEditar && (
-        <div className={`card-base card-blue mb-3${mostrarFormularioMeta ? " form-card" : ""}`}>
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-end">
-            <h3 className="text-center sm:text-left">Metas individuais por vendedor</h3>
-            {!mostrarFormularioMeta && (
-              <button
-                type="button"
-                className="btn btn-primary w-full sm:w-auto"
-                onClick={abrirFormularioMeta}
-              >
-                Adicionar Metas
-              </button>
-            )}
-          </div>
-
-          {!mostrarFormularioMeta && (
-            <p style={{ opacity: 0.8, marginTop: 8 }}>
-              Cadastre metas individuais para um vendedor específico.
-            </p>
-          )}
-
-          {mostrarFormularioMeta && (
-            <form onSubmit={salvarMeta}>
-              <div className="flex flex-col md:flex-row gap-4">
-                {mostrarSelectVendedor && (
-                  <div className="form-group flex-1 min-w-[180px]">
-                    <label className="form-label">Vendedor *</label>
-                    <select
-                      className="form-select"
+        {usuarioPodeEditar && (
+          <AppCard
+            tone="info"
+            title="Metas individuais por vendedor"
+            subtitle="Cadastre metas individuais para um vendedor específico."
+            className={mostrarFormularioMeta ? "form-card" : undefined}
+            actions={
+              !mostrarFormularioMeta ? (
+                <AppButton type="button" variant="primary" block className="sm:w-auto" onClick={abrirFormularioMeta}>
+                  Adicionar metas
+                </AppButton>
+              ) : null
+            }
+          >
+            {mostrarFormularioMeta ? (
+              <form onSubmit={salvarMeta}>
+                <div className="flex flex-col md:flex-row gap-4">
+                  {mostrarSelectVendedor && (
+                    <AppField
+                      as="select"
+                      label="Vendedor *"
                       value={vendedorSelecionado}
                       onChange={(e) => setVendedorSelecionado(e.target.value)}
-                    >
-                      {vendedores.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.nome_completo}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <div className="form-group flex-1 min-w-[180px]">
-                  <label className="form-label">Período *</label>
-                  <select className="form-select w-full" value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
-                    {monthOptions.map((value) => (
-                      <option key={value} value={value}>
-                        {formatMonthYearBR(value)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group flex-1 min-w-[180px]">
-                  <label className="form-label">Meta Geral (R$) *</label>
-                  <input
-                    className="form-input"
-                    type="text"
+                      options={vendedores.map((v) => ({ value: v.id, label: v.nome_completo }))}
+                      wrapperClassName="flex-1 min-w-[180px]"
+                    />
+                  )}
+                  <AppField
+                    as="select"
+                    label="Período *"
+                    value={periodo}
+                    onChange={(e) => setPeriodo(e.target.value)}
+                    options={monthOptionsSelect}
+                    wrapperClassName="flex-1 min-w-[180px]"
+                    block
+                  />
+                  <AppField
+                    label="Meta Geral (R$) *"
                     value={metaGeral}
                     onChange={(e) => setMetaGeral(sanitizeMoneyInput(e.target.value))}
                     onBlur={() => setMetaGeral(normalizeMoneyInput(metaGeral))}
                     inputMode="decimal"
                     placeholder="0,00"
+                    wrapperClassName="flex-1 min-w-[180px]"
                   />
-                </div>
-
-                <div className="form-group flex-1 min-w-[220px]">
-                  <label className="form-label">Metas diferenciadas por produto?</label>
-                  <select
-                    className="form-select"
+                  <AppField
+                    as="select"
+                    label="Metas diferenciadas por produto?"
                     value={mostrarMetaProdutos ? "sim" : "nao"}
                     onChange={(e) => {
                       const next = e.target.value === "sim";
                       setMostrarMetaProdutos(next);
                       if (!next) setMetaProdutos([]);
                     }}
-                  >
-                    <option value="nao">Não</option>
-                    <option value="sim">Sim</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Ativa?</label>
-                  <select
-                    className="form-select"
+                    options={simNaoOptions}
+                    wrapperClassName="flex-1 min-w-[220px]"
+                  />
+                  <AppField
+                    as="select"
+                    label="Ativa?"
                     value={ativoMeta ? "true" : "false"}
                     onChange={(e) => setAtivoMeta(e.target.value === "true")}
-                  >
-                    <option value="true">Sim</option>
-                    <option value="false">Não</option>
-                  </select>
+                    options={yesNoOptions}
+                  />
                 </div>
-              </div>
 
-              {mostrarMetaProdutos && (
-                <div className="meta-produtos-section">
-                  {metaProdutos.map((mp, idx) => (
-                    <div className="meta-produtos-row" key={idx}>
-                      <div className="form-group min-w-[140px]">
-                        <label className="form-label">Produto</label>
-                        <select
-                          className="form-select"
+                {mostrarMetaProdutos && (
+                  <div className="meta-produtos-section">
+                    {metaProdutos.map((mp, idx) => (
+                      <div className="meta-produtos-row" key={idx}>
+                        <AppField
+                          as="select"
+                          label="Produto"
                           value={mp.produto_id}
                           onChange={(e) => {
                             const copia = [...metaProdutos];
                             copia[idx] = { ...copia[idx], produto_id: e.target.value };
                             setMetaProdutos(copia);
                           }}
-                        >
-                          <option value="">Selecione</option>
-                          {produtos.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.nome}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-group min-w-[120px]">
-                        <label className="form-label">Meta (R$)</label>
-                        <input
-                          className="form-input"
-                          type="text"
-                          inputMode="decimal"
+                          options={produtoSelectOptions}
+                          wrapperClassName="min-w-[140px]"
+                        />
+                        <AppField
+                          label="Meta (R$)"
                           value={mp.valor}
                           onChange={(e) => {
                             const copia = [...metaProdutos];
@@ -1350,224 +1292,159 @@ export default function MetasVendedorIsland() {
                             copia[idx] = { ...copia[idx], valor: normalizeMoneyInput(copia[idx]?.valor || "") };
                             setMetaProdutos(copia);
                           }}
+                          inputMode="decimal"
                           placeholder="0,00"
+                          wrapperClassName="min-w-[120px]"
                         />
+                        <div className="meta-produtos-remove">
+                          <AppButton
+                            type="button"
+                            variant="secondary"
+                            onClick={() => {
+                              setMetaProdutos(metaProdutos.filter((_, i) => i !== idx));
+                            }}
+                          >
+                            Remover
+                          </AppButton>
+                        </div>
                       </div>
-                      <div className="form-group meta-produtos-remove">
-                        <button
-                          type="button"
-                          className="btn btn-light"
-                          onClick={() => {
-                            setMetaProdutos(metaProdutos.filter((_, i) => i !== idx));
-                          }}
-                        >
-                          Remover
-                        </button>
+                    ))}
+                    <div className="meta-produtos-actions">
+                      <AppButton
+                        type="button"
+                        variant="primary"
+                        onClick={() => setMetaProdutos([...metaProdutos, { produto_id: "", valor: "" }])}
+                      >
+                        + Adicionar produto
+                      </AppButton>
+                      <div className="meta-produtos-total">
+                        Total diferenciada: {formatCurrencyBRL(totalMetaDiferenciada())}
                       </div>
                     </div>
-                  ))}
-                  <div className="meta-produtos-actions">
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      onClick={() => setMetaProdutos([...metaProdutos, { produto_id: "", valor: "" }])}
-                    >
-                      + Adicionar produto
-                    </button>
-                    <div className="meta-produtos-total">
-                      Total diferenciada: {formatCurrencyBRL(totalMetaDiferenciada())}
-                    </div>
+                    {parametros?.foco_valor === "liquido" && (
+                      <small style={{ color: "#f97316" }}>
+                        Foco em valor líquido ativo: informe metas diferenciadas por produto.
+                      </small>
+                    )}
                   </div>
-                  {parametros?.foco_valor === "liquido" && (
-                    <small style={{ color: "#f97316" }}>
-                      Foco em valor líquido ativo: informe metas diferenciadas por produto.
-                    </small>
-                  )}
+                )}
+
+                {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
+
+                <div className="mobile-stack-buttons" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+                  <AppButton type="submit" variant="primary" disabled={salvando}>
+                    {salvando ? "Salvando..." : editId ? "Salvar alterações" : "Salvar meta"}
+                  </AppButton>
+                  <AppButton type="button" variant="secondary" onClick={fecharFormularioMeta} disabled={salvando}>
+                    Cancelar
+                  </AppButton>
                 </div>
-              )}
+              </form>
+            ) : null}
+          </AppCard>
+        )}
 
-              {erro && (
-                <div className="card-base card-config mb-2">
-                  <strong>{erro}</strong>
-                </div>
-              )}
-
-              <div
-                className="mobile-stack-buttons"
-                style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}
-              >
-                <button type="submit" className="btn btn-primary" disabled={salvando}>
-                  {salvando ? "Salvando..." : editId ? "Salvar alterações" : "Salvar meta"}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-light"
-                  onClick={fecharFormularioMeta}
-                  disabled={salvando}
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      )}
-
-      <div className="card-base card-blue mb-2">
-        <div className="flex flex-col gap-2">
-          <h3 className="text-center sm:text-left">Metas cadastradas</h3>
-          {podeGerenciarMetasEquipe && (
-            <div className="form-group w-full">
-              <label className="form-label">Período</label>
-              <select
-                className="form-select w-full"
+        <AppCard tone="info" title="Metas cadastradas">
+          {podeGerenciarMetasEquipe ? (
+            <div className="mb-3">
+              <AppField
+                as="select"
+                label="Período"
                 value={periodoEquipe}
                 onChange={(e) => setPeriodoEquipe(e.target.value)}
-              >
-                {monthOptions.map((value) => (
-                  <option key={value} value={value}>
-                    {formatMonthYearBR(value)}
-                  </option>
-                ))}
-              </select>
+                options={monthOptionsSelect}
+                wrapperClassName="max-w-sm"
+              />
             </div>
-          )}
-        </div>
+          ) : null}
 
-        {podeGerenciarMetasEquipe ? (
-          <div style={{ display: "grid", gap: 16, marginTop: 12 }}>
-            <div>
-              <h4 className="mb-2">Meta da Loja</h4>
-              <div
-                className="table-container overflow-x-auto"
-                style={{ maxHeight: "45vh", overflowY: "auto" }}
-              >
-                <table className="table-default table-header-blue table-mobile-cards min-w-[640px]">
-                  <thead>
+          {podeGerenciarMetasEquipe ? (
+            <div style={{ display: "grid", gap: 16 }}>
+              <div>
+                <h4 className="mb-2">Meta da Loja</h4>
+                <DataTable
+                  headers={
                     <tr>
                       <th>Loja</th>
                       <th>Meta geral</th>
                       <th>Meta Produto Diferenciado</th>
                       {usuarioPodeEditar && <th>Ações</th>}
                     </tr>
-                  </thead>
-                  <tbody>
-                    {carregandoResumoEquipe && (
-                      <tr>
-                        <td colSpan={usuarioPodeEditar ? 4 : 3}>Carregando metas...</td>
-                      </tr>
-                    )}
-                    {!carregandoResumoEquipe && !metaLojaPeriodo && (
-                      <tr>
-                        <td colSpan={usuarioPodeEditar ? 4 : 3}>
-                          Nenhuma meta da loja cadastrada para este período.
-                        </td>
-                      </tr>
-                    )}
-                    {!carregandoResumoEquipe && metaLojaPeriodo && (() => {
-                      const totalDif = (detalhesEquipePeriodo[metaLojaPeriodo.id] || []).reduce(
-                        (sum, d) => sum + (d.valor || 0),
-                        0
-                      );
-                      return (
-                        <tr key={metaLojaPeriodo.id}>
-                          <td data-label="Loja">{nomeLoja || "Loja"}</td>
-                          <td data-label="Meta geral">{formatarValor(metaLojaPeriodo.meta_geral || 0)}</td>
-                          <td data-label="Meta Produto Diferenciado">
-                            {totalDif > 0 ? formatarValor(totalDif) : "—"}
+                  }
+                  colSpan={usuarioPodeEditar ? 4 : 3}
+                  loading={carregandoResumoEquipe}
+                  empty={!carregandoResumoEquipe && !metaLojaPeriodo}
+                  emptyMessage="Nenhuma meta da loja cadastrada para este período."
+                  containerStyle={{ maxHeight: "45vh", overflowY: "auto" }}
+                >
+                  {metaLojaPeriodo && (() => {
+                    const totalDif = (detalhesEquipePeriodo[metaLojaPeriodo.id] || []).reduce(
+                      (sum, d) => sum + (d.valor || 0),
+                      0
+                    );
+                    return (
+                      <tr key={metaLojaPeriodo.id}>
+                        <td data-label="Loja">{nomeLoja || "Loja"}</td>
+                        <td data-label="Meta geral">{formatarValor(metaLojaPeriodo.meta_geral || 0)}</td>
+                        <td data-label="Meta Produto Diferenciado">{totalDif > 0 ? formatarValor(totalDif) : "—"}</td>
+                        {usuarioPodeEditar && (
+                          <td className="th-actions" data-label="Ações">
+                            <AppButton type="button" variant="ghost" title="Editar" onClick={iniciarEdicaoMetaLoja}>
+                              ✏️
+                            </AppButton>
                           </td>
-                          {usuarioPodeEditar && (
-                            <td className="th-actions" data-label="Ações">
-                              <div className="action-buttons">
-                                <button
-                                  className="btn-icon icon-action-btn"
-                                  title="Editar"
-                                  onClick={() => iniciarEdicaoMetaLoja()}
-                                >
-                                  ✏️
-                                </button>
-                              </div>
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    })()}
-                  </tbody>
-                </table>
+                        )}
+                      </tr>
+                    );
+                  })()}
+                </DataTable>
               </div>
-            </div>
 
-            <div>
-              <h4 className="mb-2">Meta por Vendedor</h4>
-              <div
-                className="table-container overflow-x-auto"
-                style={{ maxHeight: "65vh", overflowY: "auto" }}
-              >
-                <table className="table-default table-header-blue table-mobile-cards min-w-[760px]">
-                  <thead>
+              <div>
+                <h4 className="mb-2">Meta por Vendedor</h4>
+                <DataTable
+                  headers={
                     <tr>
                       <th>Vendedor</th>
                       <th>Meta Individual</th>
                       <th>Meta Produto Diferenciado</th>
                       {usuarioPodeEditar && <th>Ações</th>}
                     </tr>
-                  </thead>
-                  <tbody>
-                    {carregandoResumoEquipe && (
-                      <tr>
-                        <td colSpan={usuarioPodeEditar ? 4 : 3}>Carregando metas...</td>
+                  }
+                  colSpan={usuarioPodeEditar ? 4 : 3}
+                  loading={carregandoResumoEquipe}
+                  empty={!carregandoResumoEquipe && metasEquipePeriodo.length === 0}
+                  emptyMessage="Nenhuma meta cadastrada para este período."
+                  containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+                >
+                  {metasEquipePeriodo.map((m) => {
+                    const nomeVendedor =
+                      vendedores.find((v) => v.id === m.vendedor_id)?.nome_completo || "Vendedor";
+                    const totalDif = (detalhesEquipePeriodo[m.id] || []).reduce(
+                      (sum, d) => sum + (d.valor || 0),
+                      0
+                    );
+                    return (
+                      <tr key={m.id}>
+                        <td data-label="Vendedor">{nomeVendedor}</td>
+                        <td data-label="Meta Individual">{formatarValor(m.meta_geral || 0)}</td>
+                        <td data-label="Meta Produto Diferenciado">{totalDif > 0 ? formatarValor(totalDif) : "—"}</td>
+                        {usuarioPodeEditar && (
+                          <td className="th-actions" data-label="Ações">
+                            <AppButton type="button" variant="ghost" title="Editar" onClick={() => iniciarEdicaoEquipe(m)}>
+                              ✏️
+                            </AppButton>
+                          </td>
+                        )}
                       </tr>
-                    )}
-                    {!carregandoResumoEquipe && metasEquipePeriodo.length === 0 && (
-                      <tr>
-                        <td colSpan={usuarioPodeEditar ? 4 : 3}>
-                          Nenhuma meta cadastrada para este período.
-                        </td>
-                      </tr>
-                    )}
-                    {!carregandoResumoEquipe &&
-                      metasEquipePeriodo.map((m) => {
-                        const nomeVendedor =
-                          vendedores.find((v) => v.id === m.vendedor_id)?.nome_completo || "Vendedor";
-                        const totalDif = (detalhesEquipePeriodo[m.id] || []).reduce(
-                          (sum, d) => sum + (d.valor || 0),
-                          0
-                        );
-                        return (
-                          <tr key={m.id}>
-                            <td data-label="Vendedor">{nomeVendedor}</td>
-                            <td data-label="Meta Individual">{formatarValor(m.meta_geral || 0)}</td>
-                            <td data-label="Meta Produto Diferenciado">
-                              {totalDif > 0 ? formatarValor(totalDif) : "—"}
-                            </td>
-                            {usuarioPodeEditar && (
-                              <td className="th-actions" data-label="Ações">
-                                <div className="action-buttons">
-                                  <button
-                                    className="btn-icon icon-action-btn"
-                                    title="Editar"
-                                    onClick={() => iniciarEdicaoEquipe(m)}
-                                  >
-                                    ✏️
-                                  </button>
-                                </div>
-                              </td>
-                            )}
-                          </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
+                    );
+                  })}
+                </DataTable>
               </div>
             </div>
-          </div>
-        ) : (
-          <div
-            className="table-container overflow-x-auto"
-            style={{ maxHeight: "65vh", overflowY: "auto", marginTop: 12 }}
-          >
-            <table className="table-default table-header-blue table-mobile-cards min-w-[880px]">
-              <thead>
+          ) : (
+            <DataTable
+              headers={
                 <tr>
                   <th>Período</th>
                   <th>Meta Geral</th>
@@ -1576,86 +1453,75 @@ export default function MetasVendedorIsland() {
                   <th>Ativo</th>
                   {usuarioPodeEditar && <th>Ações</th>}
                 </tr>
-              </thead>
-              <tbody>
-                {metasExibidas.length === 0 && (
-                  <tr>
-                    <td colSpan={usuarioPodeEditar ? 6 : 5}>Nenhuma meta cadastrada.</td>
-                  </tr>
-                )}
-
-                {metasExibidas.map((m) => (
-                  <tr key={m.id}>
-                    <td data-label="Período">{formatMonthYearBR(m.periodo)}</td>
-                    <td data-label="Meta Geral">{formatCurrencyBRL(m.meta_geral)}</td>
-                    <td data-label="Meta Diferenciada">{formatCurrencyBRL(m.meta_diferenciada)}</td>
-                    <td data-label="Produtos">
-                      {(detalhesMetas[m.id] || []).length === 0
-                        ? "—"
-                        : (detalhesMetas[m.id] || [])
-                            .map((d) => {
-                              const nome = produtos.find((p) => p.id === d.produto_id)?.nome || "Produto";
-                              return `${nome}: ${formatCurrencyBRL(d.valor)}`;
-                            })
-                            .join(" | ")}
+              }
+              colSpan={usuarioPodeEditar ? 6 : 5}
+              empty={metasExibidas.length === 0}
+              emptyMessage="Nenhuma meta cadastrada."
+              containerStyle={{ maxHeight: "65vh", overflowY: "auto", marginTop: 12 }}
+            >
+              {metasExibidas.map((m) => (
+                <tr key={m.id}>
+                  <td data-label="Período">{formatMonthYearBR(m.periodo)}</td>
+                  <td data-label="Meta Geral">{formatCurrencyBRL(m.meta_geral)}</td>
+                  <td data-label="Meta Diferenciada">{formatCurrencyBRL(m.meta_diferenciada)}</td>
+                  <td data-label="Produtos">
+                    {(detalhesMetas[m.id] || []).length === 0
+                      ? "—"
+                      : (detalhesMetas[m.id] || [])
+                          .map((d) => {
+                            const nome = produtos.find((p) => p.id === d.produto_id)?.nome || "Produto";
+                            return `${nome}: ${formatCurrencyBRL(d.valor)}`;
+                          })
+                          .join(" | ")}
+                  </td>
+                  <td data-label="Ativo">{m.ativo ? "Sim" : "Não"}</td>
+                  {usuarioPodeEditar && (
+                    <td className="th-actions" data-label="Ações">
+                      <div className="action-buttons">
+                        <AppButton type="button" variant="ghost" title="Editar" onClick={() => iniciarEdicao(m)}>
+                          ✏️
+                        </AppButton>
+                        <AppButton type="button" variant="danger" title="Excluir" onClick={() => solicitarExclusaoMeta(m)}>
+                          🗑️
+                        </AppButton>
+                        <AppButton
+                          type="button"
+                          variant="ghost"
+                          title={m.ativo ? "Inativar" : "Ativar"}
+                          onClick={() => toggleAtivo(m.id, m.ativo)}
+                        >
+                          {m.ativo ? "⏸️" : "▶️"}
+                        </AppButton>
+                      </div>
                     </td>
-                    <td data-label="Ativo">{m.ativo ? "Sim" : "Não"}</td>
+                  )}
+                </tr>
+              ))}
+            </DataTable>
+          )}
+        </AppCard>
 
-                    {usuarioPodeEditar && (
-                      <td className="th-actions" data-label="Ações">
-                        <div className="action-buttons">
-                          <button
-                            className="btn-icon icon-action-btn"
-                            title="Editar"
-                            onClick={() => iniciarEdicao(m)}
-                          >
-                            ✏️
-                          </button>
-
-                          <button
-                            className="btn-icon icon-action-btn danger"
-                            title="Excluir"
-                            onClick={() => solicitarExclusaoMeta(m)}
-                          >
-                            🗑️
-                          </button>
-                          <button
-                            className="btn-icon icon-action-btn"
-                            title={m.ativo ? "Inativar" : "Ativar"}
-                            onClick={() => toggleAtivo(m.id, m.ativo)}
-                          >
-                            {m.ativo ? "⏸️" : "▶️"}
-                          </button>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <ConfirmDialog
+          open={Boolean(metaParaExcluir)}
+          title="Excluir meta"
+          message={`Excluir a meta de ${
+            metaParaExcluir?.periodo ? formatMonthYearBR(metaParaExcluir.periodo) : "este período"
+          }?`}
+          confirmLabel="Excluir"
+          confirmVariant="danger"
+          onCancel={() => setMetaParaExcluir(null)}
+          onConfirm={confirmarExclusaoMeta}
+        />
+        <ConfirmDialog
+          open={sucessoEquipe}
+          title="Metas salvas"
+          message="Metas salvas com sucesso!"
+          confirmLabel="OK"
+          cancelLabel="Fechar"
+          onCancel={() => setSucessoEquipe(false)}
+          onConfirm={() => setSucessoEquipe(false)}
+        />
       </div>
-      <ConfirmDialog
-        open={Boolean(metaParaExcluir)}
-        title="Excluir meta"
-        message={`Excluir a meta de ${
-          metaParaExcluir?.periodo ? formatMonthYearBR(metaParaExcluir.periodo) : "este período"
-        }?`}
-        confirmLabel="Excluir"
-        confirmVariant="danger"
-        onCancel={() => setMetaParaExcluir(null)}
-        onConfirm={confirmarExclusaoMeta}
-      />
-      <ConfirmDialog
-        open={sucessoEquipe}
-        title="Metas salvas"
-        message="Metas salvas com sucesso!"
-        confirmLabel="OK"
-        cancelLabel="Fechar"
-        onCancel={() => setSucessoEquipe(false)}
-        onConfirm={() => setSucessoEquipe(false)}
-      />
-    </div>
+    </AppPrimerProvider>
   );
 }

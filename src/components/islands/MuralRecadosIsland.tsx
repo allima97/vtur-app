@@ -2,6 +2,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { supabase } from "../../lib/supabase";
 import AlertMessage from "../ui/AlertMessage";
 import ConfirmDialog from "../ui/ConfirmDialog";
+import AppCard from "../ui/primer/AppCard";
+import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import AppToolbar from "../ui/primer/AppToolbar";
 
 type EmpresaOption = { id: string; nome_fantasia: string; status: string };
 
@@ -954,27 +957,39 @@ export default function MuralRecadosIsland() {
 
   if (loading) {
     return (
-      <div className="card-base" style={{ padding: 14 }}>
-        Carregando mural...
-      </div>
+      <AppPrimerProvider>
+        <AppCard>Carregando mural...</AppCard>
+      </AppPrimerProvider>
     );
   }
 
   if (!userId) {
-    return <AlertMessage variant="error">Sessão inválida. Faça login novamente.</AlertMessage>;
+    return (
+      <AppPrimerProvider>
+        <AlertMessage variant="error">Sessão inválida. Faça login novamente.</AlertMessage>
+      </AppPrimerProvider>
+    );
   }
 
   if (!companyContextId) {
     return (
-      <AlertMessage variant="warning">
-        Você ainda não está vinculado a uma empresa. Para usar o Mural, aceite um convite corporativo ou
-        conclua o vínculo com a empresa.
-      </AlertMessage>
+      <AppPrimerProvider>
+        <AlertMessage variant="warning">
+          Você ainda não está vinculado a uma empresa. Para usar o Mural, aceite um convite corporativo ou
+          conclua o vínculo com a empresa.
+        </AlertMessage>
+      </AppPrimerProvider>
     );
   }
 
   return (
+    <AppPrimerProvider>
     <div className="mural-recados mural-whatsapp">
+      <AppToolbar
+        tone="info"
+        title="Mural de Recados"
+        subtitle="Converse com contatos da empresa e acompanhe leituras em tempo real."
+      />
       {erro && (
         <div style={{ marginBottom: 12 }}>
           <AlertMessage variant="error">{erro}</AlertMessage>
@@ -1566,5 +1581,6 @@ export default function MuralRecadosIsland() {
         }}
       />
     </div>
+    </AppPrimerProvider>
   );
 }
