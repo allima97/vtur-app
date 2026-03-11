@@ -1,6 +1,7 @@
 import { createServerClient } from "../../../../lib/supabaseServer";
 import { kvCache } from "../../../../lib/kvCache";
 import { MODULO_ALIASES } from "../../../../config/modulos";
+import { normalizeText } from "../../../../lib/normalizeText";
 
 import { getSupabaseEnv } from "../../users";
 const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv();
@@ -60,6 +61,21 @@ function parseIntSafe(value: string | null, fallback: number) {
   if (!Number.isFinite(parsed)) return fallback;
   const intVal = Math.trunc(parsed);
   return intVal > 0 ? intVal : fallback;
+}
+
+const SEARCH_FALLBACK_PAGE_SIZE = 5000;
+
+function normalizeBusca(value?: string | null) {
+  return normalizeText(value || "", { trim: true, collapseWhitespace: true });
+}
+
+function paginateAccentInsensitiveRows(rows: any[], page: number, pageSize: number) {
+  const safePage = Math.max(1, page);
+  const safePageSize = Math.max(1, pageSize);
+  const total = rows.length;
+  const start = (safePage - 1) * safePageSize;
+  const paged = rows.slice(start, start + safePageSize);
+  return paged.map((row) => ({ ...row, total_count: total }));
 }
 
 type Papel = "ADMIN" | "MASTER" | "GESTOR" | "VENDEDOR" | "OUTRO";
@@ -298,7 +314,34 @@ export async function GET({ request }: { request: Request }) {
     });
     if (error) throw error;
 
-    const rows = data || [];
+    let rows = data || [];
+    if (buscaParam && rows.length === 0) {
+      const { data: searchFallbackData, error: searchFallbackError } = await client.rpc(
+        "relatorio_vendas_por_produto",
+        {
+          p_data_inicio: inicio || null,
+          p_data_fim: fim || null,
+          p_status: statusParam,
+          p_busca: null,
+          p_tipo_produto_id: null,
+          p_cidade_id: cidadeParam,
+          p_vendedor_ids: vendorParam,
+          p_ordem: ordem || "total",
+          p_ordem_desc: ordemDesc,
+          p_page: 1,
+          p_page_size: SEARCH_FALLBACK_PAGE_SIZE,
+        }
+      );
+      if (!searchFallbackError) {
+        const termo = normalizeBusca(buscaParam);
+        const filteredRows = (searchFallbackData || []).filter((row: any) => {
+          const produtoNome = normalizeBusca(row?.produto_nome);
+          return produtoNome.includes(termo);
+        });
+        rows = paginateAccentInsensitiveRows(filteredRows, page, pageSize);
+      }
+    }
+
     writeCache(cacheKey, rows);
     await kvCache.set(cacheKey, rows, 15);
 

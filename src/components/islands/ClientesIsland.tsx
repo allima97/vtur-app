@@ -12,6 +12,7 @@ import {
 } from "../../lib/whatsapp";
 import { parentescoOptions } from "../../lib/parentescoOptions";
 import { formatCurrencyBRL, formatDateBR, formatNumberBR } from "../../lib/format";
+import { normalizeText } from "../../lib/normalizeText";
 import { matchesCpfSearch } from "../../lib/searchNormalization";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import { renderTemplateText } from "../../lib/messageTemplates";
@@ -522,12 +523,12 @@ export default function ClientesIsland() {
   // =====================================
   const filtrados = useMemo(() => {
     if (!busca.trim()) return clientes;
-    const t = busca.toLowerCase();
+    const t = normalizeText(busca);
     return clientes.filter(
       (c) =>
-        c.nome.toLowerCase().includes(t) ||
+        normalizeText(c.nome).includes(t) ||
         matchesCpfSearch(c.cpf || "", busca) ||
-        (c.email || "").toLowerCase().includes(t)
+        normalizeText(c.email || "").includes(t)
     );
   }, [clientes, busca]);
   const usaPaginacaoServidor = !busca.trim() && !carregouTodos;

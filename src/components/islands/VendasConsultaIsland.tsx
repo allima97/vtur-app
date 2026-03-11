@@ -1246,8 +1246,26 @@ export default function VendasConsultaIsland() {
   // ================================
   return (
     <AppPrimerProvider>
-      <div className="vendas-consulta-page">
-        <AppCard className="mb-3" tone="config" title="Filtros do período" subtitle="Refine a consulta por competência, data ou escopo comercial.">
+      <div className={`vendas-consulta-page${podeCriar ? " has-mobile-actionbar" : ""}`}>
+        <AppCard
+          className="mb-3"
+          tone="config"
+          title="Filtros do período"
+          subtitle="Refine a consulta por competência, data ou escopo comercial."
+          actions={
+            podeCriar ? (
+              <AppButton
+                type="button"
+                as="a"
+                href="/vendas/cadastro"
+                variant="primary"
+                className="hidden sm:inline-flex"
+              >
+                Nova venda
+              </AppButton>
+            ) : null
+          }
+        >
           <div className="vtur-form-grid vtur-form-grid-4">
             <AppField
               as="select"
@@ -2146,6 +2164,20 @@ export default function VendasConsultaIsland() {
           await mesclarVendasSelecionadas(confirmMerge.vendaId, confirmMerge.mergeIds);
         }}
         />
+        {podeCriar && (
+          <div className="mobile-actionbar sm:hidden">
+            <div className="mobile-stack-buttons">
+              <AppButton
+                type="button"
+                as="a"
+                href="/vendas/cadastro"
+                variant="primary"
+              >
+                Nova venda
+              </AppButton>
+            </div>
+          </div>
+        )}
       </div>
     </AppPrimerProvider>
   );

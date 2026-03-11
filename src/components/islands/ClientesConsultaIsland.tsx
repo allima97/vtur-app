@@ -325,7 +325,7 @@ export default function ClientesConsultaIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="page-content-wrap clientes-page">
+      <div className={`page-content-wrap clientes-page${podeCriar ? " has-mobile-actionbar" : ""}`}>
         <AppCard
           className="mb-3"
           title="Carteira de Clientes"
@@ -333,7 +333,12 @@ export default function ClientesConsultaIsland() {
           tone="info"
           actions={
             podeCriar ? (
-              <AppButton as="a" href="/clientes/cadastro?novo=1" variant="primary">
+              <AppButton
+                as="a"
+                href="/clientes/cadastro?novo=1"
+                variant="primary"
+                className="hidden sm:inline-flex"
+              >
                 Adicionar cliente
               </AppButton>
             ) : null
@@ -447,7 +452,7 @@ export default function ClientesConsultaIsland() {
               loadingMessage="Carregando clientes..."
               empty={false}
               colSpan={5}
-              className="clientes-table table-mobile-cards"
+              className="table-default table-header-blue clientes-table table-mobile-cards"
             >
               {clientesExibidos.map((c) => {
                 const whatsappLink = construirLinkWhatsApp(c.whatsapp || c.telefone || "");
@@ -508,6 +513,16 @@ export default function ClientesConsultaIsland() {
             </DataTable>
           )}
         </AppCard>
+
+        {podeCriar && (
+          <div className="mobile-actionbar sm:hidden">
+            <div className="mobile-stack-buttons">
+              <AppButton as="a" href="/clientes/cadastro?novo=1" variant="primary">
+                Adicionar cliente
+              </AppButton>
+            </div>
+          </div>
+        )}
 
       </div>
 
