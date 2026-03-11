@@ -63,7 +63,7 @@ export class PerformanceMetricsCollector {
       this.recordSnapshot();
     }, 5000);
 
-    console.log("🎯 Performance recording started");
+    console.log("Performance recording started");
   }
 
   /**
@@ -79,7 +79,7 @@ export class PerformanceMetricsCollector {
     }
 
     this.saveToStorage();
-    console.log("🛑 Performance recording stopped");
+    console.log("Performance recording stopped");
   }
 
   /**
@@ -195,7 +195,7 @@ export class PerformanceMetricsCollector {
     this.snapshotBuffer = [];
     this.stopRecording();
     localStorage.removeItem(STORAGE_KEY);
-    console.log("🗑️ Performance data cleared");
+    console.log("Performance data cleared");
   }
 
   /**

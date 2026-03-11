@@ -375,9 +375,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
           title="Nenhuma viagem selecionada"
           description="Selecione uma viagem para abrir o dossiê."
           action={
-            <a className="btn btn-primary" href="/operacao/viagens">
+            <AppButton type="button" variant="primary" onClick={() => window.location.assign("/operacao/viagens")}>
               Voltar para viagens
-            </a>
+            </AppButton>
           }
         />
       </AppPrimerProvider>
@@ -667,9 +667,14 @@ export default function DossieViagemIsland({ viagemId }: Props) {
         subtitle="Acompanhe recibos, acompanhantes, serviços, documentos e follow-up."
         actions={
           <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-            <a className="btn btn-light w-full sm:w-auto" href="/operacao/viagens">
+            <AppButton
+              type="button"
+              variant="secondary"
+              className="w-full sm:w-auto"
+              onClick={() => window.location.assign("/operacao/viagens")}
+            >
               Voltar
-            </a>
+            </AppButton>
             <AppButton
               variant="primary"
               type="button"
@@ -866,9 +871,10 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       </div>
                       {podeCriar && (
                         <div className="form-group followup-action-group">
-                          <button
+                          <AppButton
                             type="button"
-                            className="btn btn-light w-full sm:w-auto"
+                            variant="secondary"
+                            className="w-full sm:w-auto"
                             onClick={salvarFollowUp}
                             disabled={followUpDisabled}
                             style={{
@@ -878,7 +884,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                             }}
                           >
                             {savingFollowUp ? "Salvando..." : "Salvar follow-up"}
-                          </button>
+                          </AppButton>
                         </div>
                       )}
                     </div>
@@ -937,9 +943,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                         <td data-label="Papel">{a.papel || "-"}</td>
                         <td data-label="Documento">
                           {a.documento_url ? (
-                            <a className="btn btn-light" href={a.documento_url} target="_blank" rel="noreferrer">
+                            <AppButton type="button" variant="secondary" onClick={() => window.open(a.documento_url!, "_blank", "noopener,noreferrer")}>
                               Abrir
-                            </a>
+                            </AppButton>
                           ) : (
                             "-"
                           )}
@@ -947,24 +953,26 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                         {podeExcluir && (
                           <td className="th-actions" data-label="Ações">
                             <div className="action-buttons">
-                              <button
-                                className="btn-icon"
+                              <AppButton
                                 type="button"
+                                variant="ghost"
+                                icon="pi pi-pencil"
+                                className="p-button-rounded p-button-sm"
                                 title="Editar acompanhante"
+                                aria-label="Editar acompanhante"
                                 onClick={() => iniciarEdicaoAcompanhante(a)}
                                 disabled={savingAcomp}
-                              >
-                                <i className="pi pi-pencil" aria-hidden="true" />
-                              </button>
-                              <button
-                                className="btn-icon btn-danger"
+                              />
+                              <AppButton
                                 type="button"
+                                variant="danger"
+                                icon="pi pi-trash"
+                                className="p-button-rounded p-button-sm"
                                 title="Excluir acompanhante"
+                                aria-label="Excluir acompanhante"
                                 onClick={() => removerAcompanhante(a.id)}
                                 disabled={savingAcomp}
-                              >
-                                <i className="pi pi-trash" aria-hidden="true" />
-                              </button>
+                              />
                             </div>
                           </td>
                         )}
@@ -976,9 +984,10 @@ export default function DossieViagemIsland({ viagemId }: Props) {
 
               {podeCriar && (
                 <div className="mobile-stack-buttons" style={{ justifyContent: "flex-start" }}>
-                  <button
+                  <AppButton
                     type="button"
-                    className="btn btn-purple w-full sm:w-auto"
+                    variant="primary"
+                    className="w-full sm:w-auto"
                     onClick={() => {
                       resetCadastroAcompanhante();
                       setMostrarCadastroAcomp(true);
@@ -986,10 +995,11 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                     }}
                   >
                     Cadastrar acompanhante
-                  </button>
-                  <button
+                  </AppButton>
+                  <AppButton
                     type="button"
-                    className="btn btn-purple w-full sm:w-auto"
+                    variant="primary"
+                    className="w-full sm:w-auto"
                     onClick={() =>
                       setMostrarVinculoAcomp((prev) => {
                         if (prev) {
@@ -1001,7 +1011,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                     }
                   >
                     Vincular acompanhante
-                  </button>
+                  </AppButton>
                 </div>
               )}
 
@@ -1122,8 +1132,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                     </div>
                   </div>
                   <div className="mobile-stack-buttons">
-                    <button
-                      className="btn btn-light w-full sm:w-auto"
+                    <AppButton
+                      variant="secondary"
+                      className="w-full sm:w-auto"
                       type="button"
                       onClick={salvarCadastroAcompanhante}
                       disabled={salvandoCadastroAcomp}
@@ -1134,9 +1145,10 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       }}
                     >
                       {salvandoCadastroAcomp ? "Salvando..." : "Salvar acompanhante"}
-                    </button>
-                    <button
-                      className="btn btn-light w-full sm:w-auto"
+                    </AppButton>
+                    <AppButton
+                      variant="secondary"
+                      className="w-full sm:w-auto"
                       type="button"
                       onClick={() => resetCadastroAcompanhante(true)}
                       disabled={salvandoCadastroAcomp}
@@ -1147,7 +1159,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       }}
                     >
                       Cancelar
-                    </button>
+                    </AppButton>
                   </div>
                 </div>
               )}
@@ -1208,8 +1220,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                     />
                   </div>
                   <div className="mobile-stack-buttons">
-                    <button
-                      className="btn btn-light w-full sm:w-auto"
+                    <AppButton
+                      variant="secondary"
+                      className="w-full sm:w-auto"
                       type="button"
                       onClick={adicionarAcompanhante}
                       disabled={savingAcomp}
@@ -1220,9 +1233,10 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       }}
                     >
                       {savingAcomp ? "Salvando..." : "Salvar vínculo"}
-                    </button>
-                    <button
-                      className="btn btn-light w-full sm:w-auto"
+                    </AppButton>
+                    <AppButton
+                      variant="secondary"
+                      className="w-full sm:w-auto"
                       type="button"
                       onClick={() => {
                         resetVinculoAcompanhante();
@@ -1236,7 +1250,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       }}
                     >
                       Cancelar
-                    </button>
+                    </AppButton>
                   </div>
                 </div>
               )}
@@ -1306,9 +1320,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                             </td>
                             <td data-label="Voucher">
                               {s.voucher_url ? (
-                                <a className="btn btn-light" href={s.voucher_url} target="_blank" rel="noreferrer">
+                                <AppButton type="button" variant="secondary" onClick={() => window.open(s.voucher_url!, "_blank", "noopener,noreferrer")}>
                                   Abrir
-                                </a>
+                                </AppButton>
                               ) : (
                                 "-"
                               )}
@@ -1316,17 +1330,17 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                             {podeExcluir && (
                               <td className="th-actions" data-label="Ações">
                                 <div className="action-buttons">
-                                  <button className="btn btn-light" type="button" onClick={() => iniciarEdicaoServico(s)}>
+                                  <AppButton variant="secondary" type="button" onClick={() => iniciarEdicaoServico(s)}>
                                     Editar
-                                  </button>
-                                  <button
-                                    className="btn btn-light"
+                                  </AppButton>
+                                  <AppButton
+                                    variant="secondary"
                                     type="button"
                                     onClick={() => removerServico(s.id)}
                                     disabled={removendoServicoId === s.id}
                                   >
                                     {removendoServicoId === s.id ? "Removendo..." : "Remover"}
-                                  </button>
+                                  </AppButton>
                                 </div>
                               </td>
                             )}
@@ -1338,16 +1352,17 @@ export default function DossieViagemIsland({ viagemId }: Props) {
 
                   {podeCriar && (
                     <div className="mobile-stack-buttons" style={{ justifyContent: "flex-start" }}>
-                      <button
+                      <AppButton
                         type="button"
-                        className="btn btn-purple w-full sm:w-auto"
+                        variant="primary"
+                        className="w-full sm:w-auto"
                         onClick={() => {
                           resetServico();
                           setMostrarServicoForm(true);
                         }}
                       >
                         Adicionar serviço
-                      </button>
+                      </AppButton>
                     </div>
                   )}
 
@@ -1486,8 +1501,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                         />
                       </div>
                       <div className="mobile-stack-buttons">
-                        <button
-                          className="btn btn-light w-full sm:w-auto"
+                        <AppButton
+                          variant="secondary"
+                          className="w-full sm:w-auto"
                           type="button"
                           onClick={salvarServico}
                           disabled={savingServico}
@@ -1498,9 +1514,10 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                           }}
                         >
                           {savingServico ? "Salvando..." : "Salvar serviço"}
-                        </button>
-                        <button
-                          className="btn btn-light w-full sm:w-auto"
+                        </AppButton>
+                        <AppButton
+                          variant="secondary"
+                          className="w-full sm:w-auto"
                           type="button"
                           onClick={() => {
                             resetServico();
@@ -1515,7 +1532,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                           }}
                         >
                           Cancelar
-                        </button>
+                        </AppButton>
                       </div>
                     </div>
                   )}
@@ -1572,14 +1589,14 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                             <td data-label="Tipo">{d.tipo || "-"}</td>
                             <td data-label="Arquivo">
                               {d.url ? (
-                                <button
-                                  className="btn btn-light"
+                                <AppButton
+                                  variant="secondary"
                                   type="button"
                                   onClick={() => abrirDocumento(d)}
                                   disabled={abrindoDocId === d.id}
                                 >
                                   {abrindoDocId === d.id ? "Abrindo..." : "Abrir"}
-                                </button>
+                                </AppButton>
                               ) : (
                                 "-"
                               )}
@@ -1593,15 +1610,18 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                             {podeExcluir && (
                               <td className="th-actions" data-label="Ações">
                                 <div className="action-buttons">
-                                  <button
-                                    className="btn-icon btn-danger"
+                                  <AppButton
+                                    variant="danger"
+                                    icon="pi pi-trash"
+                                    className="p-button-rounded p-button-sm"
                                     type="button"
                                     onClick={() => removerDocumento(d.id)}
                                     disabled={removendoDocId === d.id}
                                     title="Remover"
+                                    aria-label="Remover documento"
                                   >
-                                    {removendoDocId === d.id ? "..." : <i className="pi pi-trash" aria-hidden="true" />}
-                                  </button>
+                                    {removendoDocId === d.id ? "..." : null}
+                                  </AppButton>
                                 </div>
                               </td>
                             )}
@@ -1613,13 +1633,14 @@ export default function DossieViagemIsland({ viagemId }: Props) {
 
                   {podeCriar && (
                     <div className="mobile-stack-buttons" style={{ justifyContent: "flex-start" }}>
-                      <button
+                      <AppButton
                         type="button"
-                        className="btn btn-purple w-full sm:w-auto"
+                        variant="primary"
+                        className="w-full sm:w-auto"
                         onClick={() => setMostrarDocumentoForm(true)}
                       >
                         Enviar documento
-                      </button>
+                      </AppButton>
                     </div>
                   )}
 
@@ -1664,8 +1685,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                         </div>
                       </div>
                       <div className="mobile-stack-buttons">
-                        <button
-                          className="btn btn-light w-full sm:w-auto"
+                        <AppButton
+                          variant="secondary"
+                          className="w-full sm:w-auto"
                           type="button"
                           onClick={salvarDocumento}
                           disabled={savingDoc}
@@ -1676,9 +1698,10 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                           }}
                         >
                           {savingDoc ? "Enviando..." : "Enviar documento"}
-                        </button>
-                        <button
-                          className="btn btn-light w-full sm:w-auto"
+                        </AppButton>
+                        <AppButton
+                          variant="secondary"
+                          className="w-full sm:w-auto"
                           type="button"
                           onClick={() => {
                             setDocTitulo("");
@@ -1694,7 +1717,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                           }}
                         >
                           Cancelar
-                        </button>
+                        </AppButton>
                       </div>
                       <div className="text-xs text-slate-500 mt-2">
                         Bucket sugerido: {STORAGE_BUCKET} (público ou via URL assinada).
@@ -1707,9 +1730,14 @@ export default function DossieViagemIsland({ viagemId }: Props) {
           </div>
 
           <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end", marginTop: 12 }}>
-            <a className="btn btn-primary w-full sm:w-auto" href="/operacao/viagens">
+            <AppButton
+              type="button"
+              variant="primary"
+              className="w-full sm:w-auto"
+              onClick={() => window.location.assign("/operacao/viagens")}
+            >
               Fechar
-            </a>
+            </AppButton>
           </div>
         </div>
       )}
