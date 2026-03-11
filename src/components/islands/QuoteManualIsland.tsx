@@ -1033,7 +1033,7 @@ export default function QuoteManualIsland() {
                                 {
                                   key: "up",
                                   label: "Mover para cima",
-                                  icon: "↑",
+                                  icon: "pi pi-arrow-up",
                                   variant: "ghost",
                                   onClick: () => moveItem(index, "up"),
                                   disabled: index === 0,
@@ -1041,7 +1041,7 @@ export default function QuoteManualIsland() {
                                 {
                                   key: "down",
                                   label: "Mover para baixo",
-                                  icon: "↓",
+                                  icon: "pi pi-arrow-down",
                                   variant: "ghost",
                                   onClick: () => moveItem(index, "down"),
                                   disabled: index === items.length - 1,
@@ -1049,7 +1049,7 @@ export default function QuoteManualIsland() {
                                 {
                                   key: "delete",
                                   label: "Excluir item",
-                                  icon: "×",
+                                  icon: "pi pi-times",
                                   variant: "danger",
                                   onClick: () => solicitarRemocaoItem(index),
                                 },

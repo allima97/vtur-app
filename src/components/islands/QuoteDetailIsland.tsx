@@ -779,7 +779,7 @@ export default function QuoteDetailIsland(props: {
                                 {
                                   key: "up",
                                   label: "Mover para cima",
-                                  icon: "↑",
+                                  icon: "pi pi-arrow-up",
                                   variant: "ghost",
                                   onClick: () => moveItem(index, "up"),
                                   disabled: index === 0 || !isEditing,
@@ -787,7 +787,7 @@ export default function QuoteDetailIsland(props: {
                                 {
                                   key: "down",
                                   label: "Mover para baixo",
-                                  icon: "↓",
+                                  icon: "pi pi-arrow-down",
                                   variant: "ghost",
                                   onClick: () => moveItem(index, "down"),
                                   disabled: index === items.length - 1 || !isEditing,
@@ -795,7 +795,7 @@ export default function QuoteDetailIsland(props: {
                                 {
                                   key: "delete",
                                   label: "Excluir item",
-                                  icon: "×",
+                                  icon: "pi pi-times",
                                   variant: "danger",
                                   onClick: () => solicitarRemocaoItem(index),
                                   disabled: !isEditing,
@@ -1069,7 +1069,7 @@ export default function QuoteDetailIsland(props: {
                                               {
                                                 key: "up",
                                                 label: "Subir dia",
-                                                icon: "↑",
+                                                icon: "pi pi-arrow-up",
                                                 variant: "ghost",
                                                 onClick: () =>
                                                   updateCircuitSegments(index, (segments) => {
@@ -1084,7 +1084,7 @@ export default function QuoteDetailIsland(props: {
                                               {
                                                 key: "down",
                                                 label: "Descer dia",
-                                                icon: "↓",
+                                                icon: "pi pi-arrow-down",
                                                 variant: "ghost",
                                                 onClick: () =>
                                                   updateCircuitSegments(index, (segments) => {
@@ -1099,7 +1099,7 @@ export default function QuoteDetailIsland(props: {
                                               {
                                                 key: "delete",
                                                 label: "Remover dia",
-                                                icon: "×",
+                                                icon: "pi pi-times",
                                                 variant: "danger",
                                                 onClick: () =>
                                                   updateCircuitSegments(index, (segments) =>
