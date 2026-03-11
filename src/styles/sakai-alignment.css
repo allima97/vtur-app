@@ -98,7 +98,12 @@ body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item[aria-current="page"] {
   color: #6366f1;
   font-weight: 600;
   box-shadow: none;
-  border-color: transparent;
+  border-color: transparent !important;
+}
+
+body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 body.sakai-theme .vtur-app-card,
@@ -614,7 +619,7 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
 
 @media (min-width: 1025px) {
   body.sakai-theme .app-sidebar .sidebar-logo {
-    display: none;
+    display: none !important;
   }
 
   body.sakai-theme .app-sidebar .sidebar-section-title:first-of-type {
