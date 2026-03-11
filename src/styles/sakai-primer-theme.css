@@ -108,10 +108,16 @@ body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:hover {
 }
 
 body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item[aria-current="page"] {
-  background: rgba(124, 58, 237, 0.12);
-  color: #7c3aed;
-  font-weight: 700;
-  box-shadow: inset 0 0 0 1px rgba(124, 58, 237, 0.24);
+  background: transparent;
+  color: #6366f1;
+  font-weight: 600;
+  box-shadow: none;
+  border-color: transparent;
+}
+
+body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 body.sakai-theme .vtur-sidebar-action-note {
@@ -244,5 +250,11 @@ body.sakai-theme .kpi-meta {
   body.sakai-theme .mobile-bottom-nav-item.active {
     color: var(--sakai-primary-strong);
     background: rgba(59, 130, 246, 0.14);
+  }
+}
+
+@media (min-width: 1025px) {
+  body.sakai-theme .app-sidebar .sidebar-logo {
+    display: none !important;
   }
 }
