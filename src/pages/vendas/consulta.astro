@@ -11,7 +11,12 @@ const activePage = "vendas";
     title="Consulta de Vendas"
     subtitle="Aqui voce pode consultar suas vendas por Cliente, Destino, Produto, Recibo atraves do filtro."
     color="green"
-  />
+  >
+    <div class="mobile-stack-buttons">
+      <a class="btn btn-secondary" href="/vendas/importar">Importar contratos</a>
+      <a class="btn btn-primary" href="/vendas/cadastro">Nova venda</a>
+    </div>
+  </HeaderPage>
 
   <VendasConsultaIsland client:load />
 </DashboardLayout>

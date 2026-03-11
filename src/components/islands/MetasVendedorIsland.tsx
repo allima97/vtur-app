@@ -1145,7 +1145,7 @@ export default function MetasVendedorIsland() {
                       </div>
                     </div>
                     {parametros?.foco_valor === "liquido" && (
-                      <small style={{ color: "#f97316" }}>
+                      <small className="vtur-warning-text">
                         Foco em valor líquido ativo: informe metas diferenciadas por produto.
                       </small>
                     )}
@@ -1322,7 +1322,7 @@ export default function MetasVendedorIsland() {
                       </div>
                     </div>
                     {parametros?.foco_valor === "liquido" && (
-                      <small style={{ color: "#f97316" }}>
+                      <small className="vtur-warning-text">
                         Foco em valor líquido ativo: informe metas diferenciadas por produto.
                       </small>
                     )}

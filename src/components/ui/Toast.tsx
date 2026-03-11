@@ -19,7 +19,7 @@ type ToastStackProps = {
 const typeStyles: Record<ToastType, { background: string; border: string; color: string }> = {
   success: { background: "#ecfdf3", border: "#16a34a", color: "#0f172a" },
   error: { background: "#fee2e2", border: "#ef4444", color: "#0f172a" },
-  warning: { background: "#ffedd5", border: "#f97316", color: "#0f172a" },
+  warning: { background: "#ffffff", border: "#f97316", color: "#f97316" },
   info: { background: "#dbeafe", border: "#3b82f6", color: "#0f172a" },
 };
 

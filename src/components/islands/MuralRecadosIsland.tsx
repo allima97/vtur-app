@@ -5,7 +5,6 @@ import ConfirmDialog from "../ui/ConfirmDialog";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type EmpresaOption = { id: string; nome_fantasia: string; status: string };
 
@@ -988,11 +987,6 @@ export default function MuralRecadosIsland() {
   return (
     <AppPrimerProvider>
     <div className="mural-recados mural-whatsapp">
-      <AppToolbar
-        tone="info"
-        title="Mural de Recados"
-        subtitle="Converse com contatos da empresa e acompanhe leituras em tempo real."
-      />
       {erro && (
         <div style={{ marginBottom: 12 }}>
           <AlertMessage variant="error">{erro}</AlertMessage>

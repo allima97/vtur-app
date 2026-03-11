@@ -141,7 +141,9 @@ export default function PersonalizarMenuIsland() {
     if (canMenuExact("Mural de Recados")) push("informativos", "operacao_recados", "Mural de Recados");
     if (canMenuExact("Minhas Preferências")) push("informativos", "operacao_preferencias", "Minhas Preferências");
     if (canMenuExact("Documentos Viagens")) push("informativos", "operacao_documentos_viagens", "Documentos Viagens");
-    if (canMenuExact("Campanhas")) push("informativos", "operacao_campanhas", "Campanhas");
+    if (canMenuExact("Campanhas") || canMenuExact("Operacao")) {
+      push("informativos", "operacao_campanhas", "Campanhas");
+    }
     if (menuIsVendedor) push("informativos", "perfil-escala", "Minha Escala");
 
     // Operação
@@ -291,7 +293,9 @@ export default function PersonalizarMenuIsland() {
   return (
     <section className="personalizar-menu-page">
       <AppToolbar
-        tone="config"
+        tone="info"
+        className="mb-3"
+        sticky
         title="Personalizar menu"
         subtitle="Escolha itens visiveis e ajuste a ordem automaticamente."
       />
@@ -359,16 +363,18 @@ export default function PersonalizarMenuIsland() {
                           variant="secondary"
                           onClick={() => onMove(group.section, item.key, "up")}
                           disabled={idx === 0}
+                          aria-label="Mover para cima"
                         >
-                          ↑
+                          <i className="pi pi-arrow-up" aria-hidden="true" />
                         </AppButton>
                         <AppButton
                           type="button"
                           variant="secondary"
                           onClick={() => onMove(group.section, item.key, "down")}
                           disabled={idx === group.items.length - 1}
+                          aria-label="Mover para baixo"
                         >
-                          ↓
+                          <i className="pi pi-arrow-down" aria-hidden="true" />
                         </AppButton>
                         <AppButton
                           type="button"
@@ -377,6 +383,7 @@ export default function PersonalizarMenuIsland() {
                           disabled={Boolean(item.locked)}
                           title={item.locked ? "Este item nao pode ser ocultado." : undefined}
                         >
+                          <i className={hidden ? "pi pi-eye" : "pi pi-eye-slash"} aria-hidden="true" />
                           {hidden ? "Mostrar" : "Ocultar"}
                         </AppButton>
                       </div>

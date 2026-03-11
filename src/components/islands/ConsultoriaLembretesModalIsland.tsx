@@ -222,7 +222,7 @@ export default function ConsultoriaLembretesModalIsland() {
     <div className="modal-backdrop" role="dialog" aria-modal="true">
       <div className="modal-panel" style={{ maxWidth: 560, width: "95vw", background: "#f8fafc" }}>
         <div className="modal-header">
-          <div className="modal-title" style={{ color: "#b45309", fontWeight: 800 }}>
+          <div className="modal-title vtur-warning-text" style={{ fontWeight: 800 }}>
             Lembrete de consultoria
           </div>
           <AppButton type="button" variant="ghost" onClick={fecharModal}>

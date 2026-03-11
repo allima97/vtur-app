@@ -759,6 +759,7 @@ export default function ParametrosAvisosIsland() {
       <div className="page-content-wrap mt-6">
         <AppToolbar
           tone="info"
+          className="mb-3"
           title="Avisos de relacionamento VTUR"
           subtitle="Suba a arte por ocasião, vincule mensagem de WhatsApp e valide em prévia real."
         />

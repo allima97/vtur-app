@@ -681,6 +681,7 @@ function formatCnpj(value: string) {
         title="Meu perfil"
         subtitle={onboarding ? "Finalize seu cadastro para liberar o acesso ao sistema." : `Revise seus dados, acesso e vínculo atual${cidadeEstado ? ` • ${cidadeEstado}` : ""}.`}
         tone="info"
+        className="mb-3"
         sticky
       />
       {onboarding && (
@@ -693,6 +694,7 @@ function formatCnpj(value: string) {
           </p>
           <div className="mobile-stack-buttons" style={{ marginTop: 10 }}>
             <AppButton type="button" variant="secondary" onClick={() => setModalSairOnboarding(true)}>
+              <i className="pi pi-clock" aria-hidden="true" />
               Preencher depois
             </AppButton>
           </div>
@@ -968,6 +970,7 @@ function formatCnpj(value: string) {
           </div>
           <div className="mobile-stack-buttons" style={{ marginTop: 16 }}>
             <AppButton type="button" variant="primary" onClick={salvarPerfil} disabled={salvando}>
+              <i className="pi pi-save" aria-hidden="true" />
               {salvando ? "Salvando..." : "Salvar dados"}
             </AppButton>
           </div>
@@ -988,6 +991,7 @@ function formatCnpj(value: string) {
               </div>
               <div className="mobile-stack-buttons">
                 <AppButton type="button" variant="secondary" onClick={alterarEmail} disabled={salvando}>
+                  <i className="pi pi-envelope" aria-hidden="true" />
                   Atualizar e-mail
                 </AppButton>
               </div>
@@ -1039,6 +1043,7 @@ function formatCnpj(value: string) {
             </div>
             <div className="mobile-stack-buttons" style={{ marginTop: 16 }}>
               <AppButton type="button" variant="primary" onClick={alterarSenha} disabled={salvando}>
+                <i className="pi pi-key" aria-hidden="true" />
                 Alterar senha
               </AppButton>
               <AppButton
@@ -1047,6 +1052,7 @@ function formatCnpj(value: string) {
                 onClick={atualizarPermissoesAgora}
                 disabled={salvando || atualizandoPermissoes}
               >
+                <i className="pi pi-refresh" aria-hidden="true" />
                 {atualizandoPermissoes ? "Atualizando permissoes..." : "Atualizar permissoes"}
               </AppButton>
             </div>

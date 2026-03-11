@@ -1,17 +1,10 @@
 ---
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
-import HeaderPage from "../../components/ui/HeaderPage.astro";
 import RelatorioAgrupadoDestinoIsland from "../../components/islands/RelatorioAgrupadoDestinoIsland.tsx";
 
 const activePage = "relatorios-vendas-destino";
 ---
 
 <DashboardLayout title="Relatório de Vendas por Destino" {activePage}>
-  <HeaderPage
-    title="Relatório de Vendas por Destino"
-    subtitle="Veja quais destinos mais vendem, com faturamento e ticket médio."
-    color="blue"
-  />
-
   <RelatorioAgrupadoDestinoIsland client:only="react" />
 </DashboardLayout>

@@ -202,6 +202,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
   const canRelatoriosProdutos = canMenuExact("RelatorioProdutos") || canMenuExact("Relatorios");
   const canRelatoriosClientes = canMenuExact("RelatorioClientes") || canMenuExact("Relatorios");
   const canRelatoriosRanking = canMenuExact("Ranking de vendas");
+  const canOperacaoCampanhas = canMenuExact("Campanhas") || canMenuExact("Operacao");
   const canRelatoriosSection =
     canRelatoriosVendas ||
     canRelatoriosDestinos ||
@@ -493,7 +494,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       active: "operacao_campanhas",
       icon: "pi pi-megaphone",
       label: "Campanhas",
-      canShow: canMenuExact("Campanhas"),
+      canShow: canOperacaoCampanhas,
     });
     entries.push({
       key: "perfil-escala",
@@ -1522,8 +1523,8 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
           }}
         >
           <div
+            className="vtur-warning-panel"
             style={{
-              background: "white",
               borderRadius: 12,
               padding: "24px 32px",
               boxShadow: "0 30px 60px rgba(15,23,42,0.35)",
@@ -1531,7 +1532,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
               width: "100%",
             }}
           >
-            <h3 style={{ marginTop: 0, marginBottom: 12 }}>Sessão quase expirando</h3>
+            <h3 className="vtur-warning-text" style={{ marginTop: 0, marginBottom: 12 }}>Sessão quase expirando</h3>
             <p style={{ marginTop: 0, marginBottom: 20 }}>
               Sua sessão será encerrada automaticamente em 1 minuto por inatividade. Clique em
               “Continuar Logado” para ganhar mais 15 minutos sem perder o progresso.
