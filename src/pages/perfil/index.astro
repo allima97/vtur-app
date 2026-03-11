@@ -10,8 +10,5 @@ if (Astro.url.searchParams.get("onboarding") === "1") {
 ---
 
 <DashboardLayout title="Meu Perfil" {activePage} module="Perfil">
-  <h1 class="page-title">Meu Perfil</h1>
-  <p class="page-subtitle">Atualize seus dados pessoais e de acesso.</p>
-
   <PerfilIsland client:visible />
 </DashboardLayout>

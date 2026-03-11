@@ -1,6 +1,5 @@
 ---
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
-import HeaderPage from "../../components/ui/HeaderPage.astro";
 import ClientesConsultaIsland from "../../components/islands/ClientesConsultaIsland.tsx";
 
 const activePage = "clientes";
@@ -84,12 +83,6 @@ const activePage = "clientes";
   </style>
 
   <div class="page-content-wrap">
-    <HeaderPage
-      title="Carteira de Clientes"
-      subtitle="Gerencie seus clientes com visão de CRM."
-      color="blue"
-    />
-
     <ClientesConsultaIsland client:load />
   </div>
 </DashboardLayout>

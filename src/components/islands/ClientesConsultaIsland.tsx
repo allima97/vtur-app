@@ -15,7 +15,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type Cliente = {
   id: string;
@@ -326,12 +325,12 @@ export default function ClientesConsultaIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className={`page-content-wrap clientes-page${podeCriar ? " has-mobile-actionbar" : ""}`}>
-        <AppToolbar
-          title="Clientes"
-          subtitle="Consulte contatos, aplique filtros por filial/equipe e acompanhe o historico comercial de cada cliente."
+      <div className="page-content-wrap clientes-page">
+        <AppCard
+          className="mb-3"
+          title="Carteira de Clientes"
+          subtitle="Gerencie seus clientes com visão de CRM."
           tone="info"
-          sticky
           actions={
             podeCriar ? (
               <AppButton as="a" href="/clientes/cadastro?novo=1" variant="primary">
@@ -393,7 +392,7 @@ export default function ClientesConsultaIsland() {
               </>
             )}
           </div>
-        </AppToolbar>
+        </AppCard>
 
         {erro && <AlertMessage variant="error" className="mb-3">{erro}</AlertMessage>}
 
@@ -510,13 +509,6 @@ export default function ClientesConsultaIsland() {
           )}
         </AppCard>
 
-        {podeCriar && (
-          <div className="mobile-actionbar sm:hidden">
-            <AppButton as="a" href="/clientes/cadastro?novo=1" variant="primary" block>
-              Adicionar cliente
-            </AppButton>
-          </div>
-        )}
       </div>
 
       {historicoCliente && (

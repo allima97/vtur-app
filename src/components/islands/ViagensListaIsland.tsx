@@ -516,12 +516,6 @@ export default function ViagensListaIsland() {
       className={`page-content-wrap viagens-page${podeCriar && !showForm ? " has-mobile-actionbar" : ""}`}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <AppToolbar
-          tone="config"
-          title="Operacao de viagens"
-          subtitle="Cadastre, acompanhe e filtre viagens por cliente, periodo e status."
-        />
-
         {showForm && (
           <AppCard tone="info" className="form-card viagens-form" title="Nova viagem">
             <datalist id="cidades-list">

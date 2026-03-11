@@ -432,8 +432,8 @@ export default function PerformanceDashboardIsland() {
           )}
 
           {!historicalSummary && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
-              <p className="text-yellow-800">
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 text-center">
+              <p className="text-orange-700">
                 Ainda nao existem dados historicos. Va em <strong>Metricas ao vivo</strong> e
                 clique em <strong>Iniciar gravacao</strong> para coletar dados.
               </p>
@@ -514,7 +514,7 @@ export default function PerformanceDashboardIsland() {
                 const colors: Record<string, string> = {
                   info: "bg-blue-50 border-blue-200 text-blue-900",
                   success: "bg-green-50 border-green-200 text-green-900",
-                  warning: "bg-yellow-50 border-yellow-200 text-yellow-900",
+                  warning: "bg-orange-50 border-orange-200 text-orange-700",
                 };
                 return (
                   <div key={i} className={`${colors[alert.severity]} border rounded-lg p-3`}>

@@ -320,7 +320,7 @@ export default function ParametrosSistemaIsland() {
       </div>
 
       {bloqueado && (
-        <p style={{ marginTop: 12, color: "#f97316" }}>
+        <p className="vtur-warning-note" style={{ marginTop: 12 }}>
           Voce nao tem permissao para editar. Solicite acesso ao administrador.
         </p>
       )}

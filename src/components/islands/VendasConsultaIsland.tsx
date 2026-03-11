@@ -22,7 +22,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 function formatarDataCorretamente(dataString: string | null | undefined): string {
   if (!dataString) return "-";
@@ -200,7 +199,6 @@ export default function VendasConsultaIsland() {
   const podeEditar = can("Vendas", "edit");
   const podeExcluir = can("Vendas", "delete");
   const isAdmin = can("Vendas", "admin");
-  const podeImportarContratos = can("Importar Contratos") || can("Vendas");
 
   // ================================
   // ESTADOS
@@ -678,14 +676,6 @@ export default function VendasConsultaIsland() {
       });
   }, [modalVenda?.id]);
 
-  const filtroLabel = useMemo(() => {
-    if (!userCtx) return "";
-    if (userCtx.papel === "ADMIN") return "Todas as vendas";
-    if (userCtx.papel === "MASTER") return "Vendas do portfólio";
-    if (userCtx.papel === "GESTOR") return "Vendas da sua equipe";
-    return "Suas vendas";
-  }, [userCtx]);
-
   const placeholderBusca = useMemo(() => {
     switch (campoBusca) {
       case "cliente":
@@ -893,20 +883,6 @@ export default function VendasConsultaIsland() {
     }
     return `Resultados de ${formatarDataCorretamente(periodoFiltro.inicio)} até ${formatarDataCorretamente(periodoFiltro.fim)}`;
   }, [periodoFiltro]);
-
-  const resumoLista = useMemo(() => {
-    const restricao = filtroLabel
-      ? `${filtroLabel}${userCtx?.papel !== "ADMIN" ? " (restrição por vendedor)" : ""}`
-      : "";
-
-    const volume = busca.trim()
-      ? `${vendasFiltradas.length} venda(s) encontradas para a busca atual.`
-      : usaPaginacaoServidor
-        ? `${totalVendasDb} venda(s) cadastradas. Exibindo ${vendasExibidas.length} item(ns) na página ${paginaAtual}.`
-        : `${vendasFiltradas.length} venda(s) encontradas no período.`;
-
-    return [volume, restricao].filter(Boolean).join(" ");
-  }, [busca, filtroLabel, paginaAtual, totalVendasDb, usaPaginacaoServidor, userCtx?.papel, vendasExibidas.length, vendasFiltradas.length]);
 
   // ================================
   // CANCELAR VENDA
@@ -1270,45 +1246,9 @@ export default function VendasConsultaIsland() {
   // ================================
   return (
     <AppPrimerProvider>
-      <div className={`vendas-consulta-page${podeCriar ? " has-mobile-actionbar" : ""}`}>
-        <AppToolbar
-          sticky
-          tone="config"
-          className="mb-3 list-toolbar-sticky"
-          title="Consulta de vendas"
-          subtitle={resumoLista}
-          actions={
-            podeCriar || podeImportarContratos ? (
-              <>
-                {podeImportarContratos && (
-                  <AppButton
-                    type="button"
-                    variant="secondary"
-                    className="hidden sm:inline-flex"
-                    onClick={() => {
-                      window.location.href = "/vendas/importar";
-                    }}
-                  >
-                    Importar contratos
-                  </AppButton>
-                )}
-                {podeCriar && (
-                  <AppButton
-                    type="button"
-                    variant="primary"
-                    className="hidden sm:inline-flex"
-                    onClick={() => {
-                      window.location.href = "/vendas/cadastro";
-                    }}
-                  >
-                    Nova venda
-                  </AppButton>
-                )}
-              </>
-            ) : null
-          }
-        >
-          <div className="vtur-form-grid vtur-form-grid-3">
+      <div className="vendas-consulta-page">
+        <AppCard className="mb-3" tone="config" title="Filtros do período" subtitle="Refine a consulta por competência, data ou escopo comercial.">
+          <div className="vtur-form-grid vtur-form-grid-4">
             <AppField
               as="select"
               label="Campo de busca"
@@ -1329,11 +1269,6 @@ export default function VendasConsultaIsland() {
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
             />
-          </div>
-        </AppToolbar>
-
-        <AppCard className="mb-3" tone="config" title="Filtros do período" subtitle="Refine a consulta por competência, data ou escopo comercial.">
-          <div className="vtur-form-grid vtur-form-grid-4">
             <AppField
               as="select"
               label="Período (data da venda)"
@@ -2211,34 +2146,6 @@ export default function VendasConsultaIsland() {
           await mesclarVendasSelecionadas(confirmMerge.vendaId, confirmMerge.mergeIds);
         }}
         />
-        {(podeCriar || podeImportarContratos) && (
-        <div className="mobile-actionbar sm:hidden">
-          <div className="mobile-stack-buttons">
-            {podeCriar && (
-              <AppButton
-                type="button"
-                variant="primary"
-                onClick={() => {
-                  window.location.href = "/vendas/cadastro";
-                }}
-              >
-                Nova venda
-              </AppButton>
-            )}
-            {podeImportarContratos && (
-              <AppButton
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  window.location.href = "/vendas/importar";
-                }}
-              >
-                Importar contratos
-              </AppButton>
-            )}
-          </div>
-        </div>
-        )}
       </div>
     </AppPrimerProvider>
   );

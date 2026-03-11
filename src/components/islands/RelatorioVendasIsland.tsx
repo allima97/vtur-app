@@ -1917,7 +1917,12 @@ export default function RelatorioVendasIsland() {
           subtitle={`Periodo: ${periodoResumo}. ${filtrosLocaisAtivos ? "Filtros locais ativos." : "Sem filtros locais de cliente, cidade ou produto."}`}
           actions={
             <div className="vtur-quote-top-actions">
-              <AppButton type="button" variant="secondary" className="sm:hidden" onClick={() => setShowFilters(true)}>
+              <AppButton
+                type="button"
+                variant="secondary"
+                className="vtur-relatorio-vendas-filters-mobile"
+                onClick={() => setShowFilters(true)}
+              >
                 Filtros
               </AppButton>
               <AppButton type="button" variant="primary" onClick={aplicarFiltrosRelatorio}>
@@ -1929,7 +1934,7 @@ export default function RelatorioVendasIsland() {
             </div>
           }
         >
-          <div className="hidden sm:block">{renderFiltersGrid()}</div>
+          <div className="vtur-relatorio-vendas-filters-inline">{renderFiltersGrid()}</div>
         </AppToolbar>
 
         {showFilters ? (

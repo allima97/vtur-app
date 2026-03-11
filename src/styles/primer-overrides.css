@@ -7,6 +7,9 @@
   --vtur-primer-surface-alt: #f6f8fb;
   --vtur-primer-border: rgba(148, 163, 184, 0.24);
   --vtur-primer-sidebar-hover: rgba(255, 255, 255, 0.08);
+  --vtur-warning-bg: #ffffff;
+  --vtur-warning-border: #f97316;
+  --vtur-warning-text: #f97316;
 }
 
 .vtur-primer-scope {
@@ -359,6 +362,17 @@
 
 .vtur-alert .p-message {
   width: 100%;
+}
+
+.sakai-theme .vtur-alert .p-message.p-message-warn {
+  background: var(--vtur-warning-bg);
+  border: 1px solid var(--vtur-warning-border);
+  color: var(--vtur-warning-text);
+}
+
+.sakai-theme .vtur-alert .p-message.p-message-warn .p-message-icon,
+.sakai-theme .vtur-alert .p-message.p-message-warn .p-message-text {
+  color: var(--vtur-warning-text);
 }
 
 .vtur-form-grid {
@@ -860,6 +874,23 @@
   color: var(--vtur-primer-muted);
   font-size: 0.88rem;
   line-height: 1.45;
+}
+
+.vtur-warning-text {
+  color: var(--vtur-warning-text) !important;
+}
+
+.vtur-warning-note {
+  margin-top: 8px;
+  color: var(--vtur-warning-text);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.vtur-warning-panel {
+  background: var(--vtur-warning-bg);
+  border: 1px solid var(--vtur-warning-border);
+  border-radius: 12px;
 }
 
 .vtur-quote-top-actions {
@@ -1526,15 +1557,16 @@
 }
 
 .vtur-commission-kpi-label {
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   line-height: 1.4;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--vtur-primer-muted);
 }
 
 .vtur-commission-kpi-value {
-  font-size: clamp(1.2rem, 1rem + 0.7vw, 1.85rem);
+  font-size: 1.2rem;
+  font-weight: 700;
   line-height: 1.15;
   color: var(--vtur-primer-ink);
 }
@@ -1548,11 +1580,11 @@
 }
 
 .vtur-commission-kpi-warning {
-  border-color: rgba(202, 138, 4, 0.18);
+  border-color: rgba(249, 115, 22, 0.28);
 }
 
 .vtur-commission-kpi-warning .vtur-commission-kpi-value {
-  color: #b45309;
+  color: var(--vtur-warning-text);
 }
 
 .vtur-commission-kpi-info {

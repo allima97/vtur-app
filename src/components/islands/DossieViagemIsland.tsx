@@ -832,7 +832,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       Parecer do cliente após o retorno da viagem.
                     </div>
                     {!followUpLiberado && (
-                      <div style={{ color: "#b45309", fontSize: 13, marginBottom: 10 }}>
+                      <div className="vtur-warning-text" style={{ fontSize: 13, marginBottom: 10 }}>
                         Disponível após a data de embarque{dataEmbarqueLabel ? `: ${dataEmbarqueLabel}` : ""}.
                       </div>
                     )}

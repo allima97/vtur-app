@@ -141,7 +141,9 @@ export default function PersonalizarMenuIsland() {
     if (canMenuExact("Mural de Recados")) push("informativos", "operacao_recados", "Mural de Recados");
     if (canMenuExact("Minhas Preferências")) push("informativos", "operacao_preferencias", "Minhas Preferências");
     if (canMenuExact("Documentos Viagens")) push("informativos", "operacao_documentos_viagens", "Documentos Viagens");
-    if (canMenuExact("Campanhas")) push("informativos", "operacao_campanhas", "Campanhas");
+    if (canMenuExact("Campanhas") || canMenuExact("Operacao")) {
+      push("informativos", "operacao_campanhas", "Campanhas");
+    }
     if (menuIsVendedor) push("informativos", "perfil-escala", "Minha Escala");
 
     // Operação
@@ -291,7 +293,9 @@ export default function PersonalizarMenuIsland() {
   return (
     <section className="personalizar-menu-page">
       <AppToolbar
-        tone="config"
+        tone="info"
+        className="mb-3"
+        sticky
         title="Personalizar menu"
         subtitle="Escolha itens visiveis e ajuste a ordem automaticamente."
       />
@@ -300,42 +304,34 @@ export default function PersonalizarMenuIsland() {
           <EmptyState title="Nenhum item disponivel" description="Nao ha itens para personalizar no seu perfil." />
         ) : (
           grouped.map((group) => (
-            <div key={group.section} style={{ marginTop: 16 }}>
-              <div className="sidebar-section-title" style={{ marginTop: 0 }}>
+            <div key={group.section} className="personalizar-menu-section">
+              <div className="sidebar-section-title personalizar-menu-section-title">
                 {sectionTitle(group.section)}
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div className="personalizar-menu-list">
                 {group.items.map((item, idx) => {
                   const hidden = prefs.hidden.includes(item.key);
                   const effectiveSection = getEffectiveItemSection(prefs, item.key, item.section);
                   return (
                     <div
                       key={item.key}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: 10,
-                        padding: "8px 10px",
-                        borderRadius: "var(--radius-md)",
-                        opacity: hidden ? 0.55 : 1,
-                      }}
+                      className={["personalizar-menu-item", hidden ? "is-hidden" : ""].filter(Boolean).join(" ")}
                     >
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <div className="personalizar-menu-item-copy">
+                        <div className="personalizar-menu-item-label">
                           {item.label}
                         </div>
-                        {hidden && <div style={{ fontSize: 12, opacity: 0.8 }}>Oculto</div>}
+                        {hidden && <div className="personalizar-menu-item-hidden">Oculto</div>}
                       </div>
 
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      <div className="personalizar-menu-item-actions">
                         <AppField
                           as="select"
                           label="Secao"
                           value={effectiveSection}
                           onChange={(e) => onChangeSection(item, e.target.value)}
                           wrapperClassName="m-0"
-                          style={{ fontSize: 12, minWidth: 170 }}
+                          className="personalizar-menu-section-select"
                           options={(
                             isSystemAdmin
                               ? ["admin"]
@@ -359,16 +355,18 @@ export default function PersonalizarMenuIsland() {
                           variant="secondary"
                           onClick={() => onMove(group.section, item.key, "up")}
                           disabled={idx === 0}
+                          aria-label="Mover para cima"
                         >
-                          ↑
+                          <i className="pi pi-arrow-up" aria-hidden="true" />
                         </AppButton>
                         <AppButton
                           type="button"
                           variant="secondary"
                           onClick={() => onMove(group.section, item.key, "down")}
                           disabled={idx === group.items.length - 1}
+                          aria-label="Mover para baixo"
                         >
-                          ↓
+                          <i className="pi pi-arrow-down" aria-hidden="true" />
                         </AppButton>
                         <AppButton
                           type="button"
@@ -377,6 +375,7 @@ export default function PersonalizarMenuIsland() {
                           disabled={Boolean(item.locked)}
                           title={item.locked ? "Este item nao pode ser ocultado." : undefined}
                         >
+                          <i className={hidden ? "pi pi-eye" : "pi pi-eye-slash"} aria-hidden="true" />
                           {hidden ? "Mostrar" : "Ocultar"}
                         </AppButton>
                       </div>

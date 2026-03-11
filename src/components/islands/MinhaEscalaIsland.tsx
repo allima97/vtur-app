@@ -146,22 +146,37 @@ export default function MinhaEscalaIsland() {
   const [erroEquipe, setErroEquipe] = useState<string | null>(null);
   const [loadingDados, setLoadingDados] = useState(false);
   const [loadingEquipe, setLoadingEquipe] = useState(false);
+  const periodoMaximo = useMemo(() => {
+    const limite = new Date();
+    limite.setDate(1);
+    limite.setMonth(limite.getMonth() + 1);
+    return `${limite.getFullYear()}-${String(limite.getMonth() + 1).padStart(2, "0")}`;
+  }, []);
+
   const opcoesPeriodo = useMemo(() => {
-    const hoje = new Date();
-    const anoAtual = hoje.getFullYear();
-    const anoSelecionadoAtual = Number(periodo.split("-")[0] || anoAtual);
-    const anoInicio = Math.min(anoAtual - 5, anoSelecionadoAtual - 1);
-    const anoFim = Math.max(anoAtual + 5, anoSelecionadoAtual + 1);
+    const [anoMaximo] = periodoMaximo.split("-").map((v) => Number(v));
+    const anoInicio = 2000;
     const opcoes: string[] = [];
 
-    for (let ano = anoFim; ano >= anoInicio; ano -= 1) {
+    for (let ano = anoMaximo; ano >= anoInicio; ano -= 1) {
       for (let mes = 12; mes >= 1; mes -= 1) {
-        opcoes.push(`${ano}-${String(mes).padStart(2, "0")}`);
+        const valor = `${ano}-${String(mes).padStart(2, "0")}`;
+        if (valor > periodoMaximo) continue;
+        opcoes.push(valor);
       }
     }
 
+    if (periodo && !opcoes.includes(periodo) && periodo <= periodoMaximo) {
+      return [periodo, ...opcoes];
+    }
     return opcoes;
-  }, [periodo]);
+  }, [periodo, periodoMaximo]);
+
+  useEffect(() => {
+    if (periodo > periodoMaximo) {
+      setPeriodo(periodoMaximo);
+    }
+  }, [periodo, periodoMaximo]);
 
   const anoSelecionado = Number(periodo.split("-")[0] || "");
   const mesSelecionadoIndex = Number(periodo.split("-")[1] || "1") - 1;

@@ -1,14 +1,15 @@
 @import "./sgtur-tailwind.css";
 @import "./sakai-primer-theme.css";
+@import url("https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* Card laranja para mensagens de ajuda/alerta */
 .card-orange {
-  background: #fff7ed;
-  border: 1px solid #fdba74;
-  color: #b45309;
+  background: #ffffff;
+  border: 1px solid #f97316;
+  color: #f97316;
 }
 
 /* Documentos Viagens: preview/print isolado */
@@ -38,7 +39,10 @@
 /* Mantém todas formatações +40% performance */
 
 :root {
-  --vtur-font-family: "Inter var", sans-serif;
+  --vtur-font-family: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --vtur-font-weight: 400;
+  --vtur-font-size: 14px;
+  --vtur-line-height: 1.45;
   /* Shadows consolidados (removidas 50+ repetições) */
   --sgtur-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --sgtur-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -50,7 +54,7 @@
   --sgtur-primary: #667eea;
   --sgtur-primary-dark: #764ba2;
   --sgtur-success: #10b981;
-  --sgtur-warning: #f59e0b;
+  --sgtur-warning: #f97316;
   --sgtur-danger: #ef4444;
 }
 
@@ -147,6 +151,9 @@
 body {
   margin: 0;
   font-family: var(--vtur-font-family);
+  font-weight: var(--vtur-font-weight);
+  font-size: var(--vtur-font-size);
+  line-height: var(--vtur-line-height);
   background: #f8fafc;
   color: #0f172a;
   overflow-x: hidden;
@@ -433,6 +440,24 @@ body {
   position: sticky;
   top: calc(12px + env(safe-area-inset-top));
   z-index: 20;
+}
+
+.vtur-relatorio-vendas-filters-mobile {
+  display: none;
+}
+
+.vtur-relatorio-vendas-filters-inline {
+  display: block;
+}
+
+@media (max-width: 640px) {
+  .vtur-relatorio-vendas-filters-mobile {
+    display: inline-flex;
+  }
+
+  .vtur-relatorio-vendas-filters-inline {
+    display: none;
+  }
 }
 
 .page-title {
@@ -1339,6 +1364,15 @@ body {
   font-weight: 700;
   border-bottom: 1px solid rgba(148, 163, 184, 0.18);
   background: linear-gradient(180deg, rgba(248,250,252,0.98), rgba(241,245,249,0.98));
+}
+
+.relatorio-vendas-cliente-page .vtur-data-table thead th {
+  text-align: left;
+}
+
+.relatorio-vendas-destino-page .vtur-data-table thead th,
+.relatorio-vendas-produto-page .vtur-data-table thead th {
+  text-align: left;
 }
 
 .table-compact {
@@ -3261,6 +3295,36 @@ body {
   gap: 18px;
 }
 
+/* Dashboard tables: lighter CRM typography (single sans-serif + limited weights) */
+.vtur-dashboard-shell {
+  --vtur-dashboard-table-data-size: 12px;
+  --vtur-dashboard-table-head-size: 13px;
+  --vtur-dashboard-table-line-height: 1.45;
+}
+
+.vtur-dashboard-shell :is(.table-default, .vtur-data-table, .ranking-table) {
+  font-family: var(--vtur-font-family);
+  color: #0f172a;
+}
+
+.vtur-dashboard-shell :is(.table-default, .vtur-data-table, .ranking-table) thead th {
+  font-size: var(--vtur-dashboard-table-head-size);
+  font-weight: 700;
+  line-height: var(--vtur-dashboard-table-line-height);
+  color: #0f172a;
+}
+
+.vtur-dashboard-shell :is(.table-default, .vtur-data-table, .ranking-table) tbody td {
+  font-size: var(--vtur-dashboard-table-data-size);
+  font-weight: 400;
+  line-height: var(--vtur-dashboard-table-line-height);
+  color: #0f172a;
+}
+
+.vtur-dashboard-shell .ranking-table :is(.rank-pos, .total-row td) {
+  font-weight: 700;
+}
+
 @media (max-width: 900px) {
   .dashboard-two-columns {
     grid-template-columns: minmax(0,1fr);
@@ -3446,9 +3510,182 @@ body {
   gap: 12px;
 }
 
+.perfil-grid-main {
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1.1fr);
+  margin-top: 16px;
+}
+
+.perfil-grid-address {
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 2fr) minmax(0, 0.7fr) minmax(0, 1fr);
+  margin-top: 12px;
+}
+
+.perfil-grid-contact {
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 0.6fr);
+  margin-top: 12px;
+}
+
 .perfil-text-wrap {
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.perfil-required-dialog {
+  display: grid;
+  gap: 12px;
+}
+
+.perfil-required-dialog p {
+  margin: 0;
+}
+
+.perfil-required-dialog ul {
+  padding-left: 18px;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.perfil-onboarding-lead {
+  margin: 0 0 6px;
+}
+
+.perfil-onboarding-help {
+  margin: 0;
+  color: #475569;
+}
+
+.perfil-section-actions {
+  margin-top: 16px;
+}
+
+.perfil-card-fill {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.perfil-warning-text {
+  color: #b91c1c;
+}
+
+.perfil-uso-options {
+  margin-top: 6px;
+}
+
+.perfil-uso-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.perfil-cep-status {
+  color: #475569;
+}
+
+.perfil-cep-status.is-error {
+  color: #b91c1c;
+}
+
+.perfil-access-email-group {
+  flex: 1;
+}
+
+.perfil-password-title {
+  margin-top: 6px;
+  margin-bottom: 4px;
+}
+
+.perfil-password-group {
+  margin-top: 0;
+}
+
+.perfil-password-group + .perfil-password-group {
+  margin-top: 6px;
+}
+
+.perfil-company-summary {
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.perfil-company-empty {
+  margin-bottom: 12px;
+}
+
+.perfil-company-note {
+  opacity: 0.75;
+  display: block;
+}
+
+.perfil-company-note + .perfil-company-note {
+  margin-top: 6px;
+}
+
+.perfil-required-outline {
+  border: 1px solid #ef4444;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.perfil-input-pendente {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.35);
+}
+
+.personalizar-menu-section {
+  margin-top: 16px;
+}
+
+.personalizar-menu-section-title {
+  margin-top: 0;
+}
+
+.personalizar-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.personalizar-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+}
+
+.personalizar-menu-item.is-hidden {
+  opacity: 0.55;
+}
+
+.personalizar-menu-item-copy {
+  min-width: 0;
+}
+
+.personalizar-menu-item-label {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.personalizar-menu-item-hidden {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.personalizar-menu-item-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.personalizar-menu-section-select {
+  font-size: 12px;
+  min-width: 170px;
 }
 
 @media (max-width: 640px) {
@@ -3773,11 +4010,11 @@ body {
 }
 
 .escala-feriados-resumo li.feriado-local {
-  color: #b45309;
+  color: var(--vtur-warning-text, #f97316);
 }
 
 .escala-feriados-resumo li.feriado-local .feriado-origem {
-  color: #b45309;
+  color: var(--vtur-warning-text, #f97316);
 }
 
 .escala-legenda-item {
@@ -3897,6 +4134,11 @@ body {
 
 .agenda-add-btn.btn-primary {
   background: var(--fc-button-bg-color, #2563eb);
+}
+
+.agenda-calendar-shell .agenda-calendar-desktop,
+.agenda-calendar-shell .agenda-calendar-mobile {
+  margin-top: 12px;
 }
 
 /* FullCalendar: não exibimos aviso de licença (não usamos plugins premium) */
@@ -4280,7 +4522,14 @@ body {
   z-index: 35;
   width: 52px;
   height: 52px;
-  border-radius: 999px;
+  min-width: 52px;
+  min-height: 52px;
+  max-width: 52px;
+  max-height: 52px;
+  padding: 0;
+  border-radius: 50%;
+  aspect-ratio: 1 / 1;
+  box-sizing: border-box;
   background: #2563eb;
   color: #fff;
   border: none;
@@ -4289,6 +4538,23 @@ body {
   font-weight: 800;
   cursor: pointer;
   box-shadow: 0 18px 34px rgba(37, 99, 235, 0.28);
+}
+
+.todo-fab.p-button {
+  width: 52px !important;
+  height: 52px !important;
+  min-width: 52px !important;
+  min-height: 52px !important;
+  max-width: 52px !important;
+  max-height: 52px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+}
+
+.todo-fab.p-button .p-button-label {
+  display: inline-block;
+  flex: 0 0 auto;
+  line-height: 1;
 }
 
 @media (max-width: 640px) {
@@ -4339,6 +4605,14 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 52px !important;
+    height: 52px !important;
+    min-width: 52px !important;
+    min-height: 52px !important;
+    max-width: 52px !important;
+    max-height: 52px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
     /* Evita sobrepor o menu inferior (mobile-bottom-nav) */
     bottom: calc(84px + env(safe-area-inset-bottom));
     z-index: 34;

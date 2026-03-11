@@ -316,7 +316,7 @@ export default function ParametrosCambiosIsland() {
             </AlertMessage>
           )}
           {!podeEscrever && (
-            <div style={{ marginTop: 8, color: "#f97316", fontSize: "0.9rem" }}>
+            <div className="vtur-warning-note">
               Voce nao tem permissao para cadastrar ou remover cambios. Solicite acesso ao
               administrador.
             </div>
@@ -469,7 +469,7 @@ export default function ParametrosCambiosIsland() {
               </AlertMessage>
             )}
             {!podeEscrever && (
-              <div style={{ marginTop: 8, color: "#f97316", fontSize: "0.9rem" }}>
+              <div className="vtur-warning-note">
                 Voce nao tem permissao para cadastrar ou remover cambios. Solicite acesso ao
                 administrador.
               </div>
