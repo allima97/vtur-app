@@ -46,6 +46,9 @@ export default function AppField(props: AppFieldProps) {
   const inputProps = rest as React.InputHTMLAttributes<HTMLInputElement>;
   const isDateInput = as === "input" && inputProps.type === "date";
   const { className: inputClassName, ...textInputProps } = inputProps;
+  const dateTrailingVisual = isDateInput ? (
+    <i className="pi pi-calendar vtur-date-trailing-icon" aria-hidden="true" />
+  ) : undefined;
 
   return (
     <FormControl
@@ -90,6 +93,7 @@ export default function AppField(props: AppFieldProps) {
           required={required}
           validationStatus={validationStatus}
           className={[inputClassName, isDateInput ? "vtur-date-input" : ""].filter(Boolean).join(" ")}
+          trailingVisual={dateTrailingVisual}
           {...textInputProps}
         />
       )}

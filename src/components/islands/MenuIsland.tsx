@@ -49,6 +49,16 @@ const FornecedoresIcon = () => (
   </svg>
 );
 
+const primeMenuIcon = (iconClass: string) => (
+  <span
+    className="vtur-menu-prime-icon"
+    aria-hidden="true"
+    style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%" }}
+  >
+    <i className={`pi ${iconClass}`} aria-hidden="true" style={{ fontSize: "1rem", lineHeight: 1 }} />
+  </span>
+);
+
 type MenuIslandProps = {
   activePage?: string;
   initialCache?: PermissoesCache | null;
@@ -466,7 +476,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "informativos",
       href: "/operacao/minhas-preferencias",
       active: "operacao_preferencias",
-      icon: "⭐",
+      icon: primeMenuIcon("pi-database"),
       label: "Minhas Preferências",
       canShow: canMenuExact("Minhas Preferências"),
     });
@@ -484,7 +494,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "informativos",
       href: "/operacao/campanhas",
       active: "operacao_campanhas",
-      icon: "📣",
+      icon: primeMenuIcon("pi-share-alt"),
       label: "Campanhas",
       canShow: canMenuExact("Campanhas"),
     });
@@ -558,7 +568,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "financeiro",
       href: "/operacao/comissionamento",
       active: "comissionamento",
-      icon: "💰",
+      icon: primeMenuIcon("pi-percentage"),
       label: "Comissionamento",
       canShow: canMenuExact("Comissionamento"),
     });

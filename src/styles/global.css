@@ -1,3 +1,4 @@
+@import "primeicons/primeicons.css";
 @import "./sgtur-tailwind.css";
 @tailwind base;
 @tailwind components;
@@ -5894,50 +5895,75 @@ body {
   }
 }
 
-/* Date inputs: keep the calendar icon after Sakai/Primer background overrides */
+/* Date inputs: use PrimeIcons calendar and keep field sizing aligned */
 .vtur-app-field-date .TextInput-wrapper,
 .TextInput-wrapper.vtur-date-input {
-  position: relative;
-}
-
-.vtur-app-field-date .TextInput-wrapper::after,
-.TextInput-wrapper.vtur-date-input::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  right: 14px;
-  width: 18px;
-  height: 18px;
-  transform: translateY(-50%);
-  background: var(--date-input-icon) no-repeat center / contain;
-  pointer-events: none;
-  opacity: 0.8;
+  min-height: 42px;
+  border-radius: 14px;
+  align-items: center;
 }
 
 .vtur-app-field-date input[type="date"][data-component="input"],
 .TextInput-wrapper.vtur-date-input input[type="date"][data-component="input"] {
+  min-height: 40px;
   background-color: #fff;
   background-image: none !important;
   appearance: none;
   -webkit-appearance: none;
-  padding-right: 42px !important;
+  line-height: 1.25;
+}
+
+.vtur-date-trailing-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  min-width: 1rem;
+  font-size: 1rem;
+  line-height: 1;
+  color: #667280;
+}
+
+.vtur-app-field-date input[type="date"][data-component="input"]::-webkit-calendar-picker-indicator,
+.TextInput-wrapper.vtur-date-input input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  cursor: pointer;
+}
+
+div:has(> label.form-label + input[type="date"]:not([data-component="input"])),
+div:has(> input.form-input[type="date"]:not([data-component="input"])),
+td:has(> input[type="date"]:not([data-component="input"])) {
+  position: relative;
+}
+
+div:has(> label.form-label + input[type="date"]:not([data-component="input"]))::after,
+div:has(> input.form-input[type="date"]:not([data-component="input"]))::after,
+td:has(> input[type="date"]:not([data-component="input"]))::after {
+  content: "\e927";
+  font-family: "primeicons";
+  font-size: 1rem;
+  line-height: 1;
+  color: #667280;
+  position: absolute;
+  right: 14px;
+  bottom: 13px;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .form-input[type="date"],
 input[type="date"]:not([data-component="input"]) {
+  min-height: 42px;
   background-color: #fff;
-  background-image: var(--date-input-icon) !important;
-  background-repeat: no-repeat !important;
-  background-position: right 14px center !important;
-  background-size: 18px 18px !important;
+  background-image: none !important;
   appearance: none;
   -webkit-appearance: none;
+  line-height: 1.25;
   padding-right: 42px !important;
 }
 
-.vtur-app-field-date input[type="date"]::-webkit-calendar-picker-indicator,
-.TextInput-wrapper.vtur-date-input input[type="date"]::-webkit-calendar-picker-indicator,
-input[type="date"]::-webkit-calendar-picker-indicator {
+.form-input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="date"]:not([data-component="input"])::-webkit-calendar-picker-indicator {
   opacity: 0;
   cursor: pointer;
 }
