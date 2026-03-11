@@ -1,4 +1,4 @@
-import { Dialog } from "@primer/react";
+import { Dialog } from "../ui/primer/legacyCompat";
 import React, { useEffect, useMemo, useState } from "react";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { buildQueryLiteKey, queryLite } from "../../lib/queryLite";
@@ -763,7 +763,7 @@ function DashboardGestorIslandInner() {
       totalTeamDeals = vendas.length;
     }
 
-    // ✅ CORREÇÃO: Lógica de cálculo de meta de equipe
+    // CORRECAO: Logica de calculo de meta de equipe
     const metasEquipe = metas.filter((m) => m.scope === "equipe");
     if (metasEquipe.length > 0) {
       // Cenário 1: Existe meta de equipe explícita
@@ -773,7 +773,7 @@ function DashboardGestorIslandInner() {
       );
     } else if (metas.length > 0) {
       // Cenário 2: Não existe meta de equipe, calcula MÉDIA das metas individuais
-      // ✅ FIX: Antes somava tudo, agora divide pela quantidade
+      // FIX: Antes somava tudo, agora divide pela quantidade
       const somaMetasIndividuais = metas.reduce(
         (acc, m) => acc + Number(m.meta_geral || 0),
         0
@@ -1146,7 +1146,9 @@ function DashboardGestorIslandInner() {
                 <tr key={c.id}>
                   <td data-label="Cliente">
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      <span aria-hidden="true">{c.pessoa_tipo === "acompanhante" ? "🧑‍🤝‍🧑" : "👤"}</span>
+                      <span aria-hidden="true">
+                        <i className={c.pessoa_tipo === "acompanhante" ? "pi pi-users" : "pi pi-user"} />
+                      </span>
                       <span>{c.nome || "-"}</span>
                     </span>
                   </td>
@@ -1164,7 +1166,7 @@ function DashboardGestorIslandInner() {
                                 label: "WhatsApp",
                                 title: "Enviar cartão de aniversario no WhatsApp",
                                 onClick: () => window.open(whatsappLink, "_blank", "noopener,noreferrer"),
-                                icon: "🎂",
+                                icon: <i className="pi pi-gift" aria-hidden="true" />,
                                 variant: "ghost" as const,
                               },
                             ]
@@ -1181,7 +1183,7 @@ function DashboardGestorIslandInner() {
                                 onClick: () => {
                                   window.location.href = `/clientes/cadastro?id=${c.cliente_id}`;
                                 },
-                                icon: "👤",
+                                icon: <i className="pi pi-user" aria-hidden="true" />,
                                 variant: "ghost" as const,
                               },
                             ]
@@ -1237,7 +1239,7 @@ function DashboardGestorIslandInner() {
                               onClick: () => {
                                 window.location.href = `/clientes/cadastro?id=${v.clientes?.id}`;
                               },
-                              icon: "👤",
+                              icon: <i className="pi pi-user" aria-hidden="true" />,
                               variant: "ghost",
                             },
                           ]
@@ -1299,7 +1301,7 @@ function DashboardGestorIslandInner() {
                                 onClick: () => {
                                   window.location.href = `/clientes/cadastro?id=${f.venda?.clientes?.id}`;
                                 },
-                                icon: "👤",
+                                icon: <i className="pi pi-user" aria-hidden="true" />,
                                 variant: "ghost" as const,
                               },
                             ]
@@ -1311,7 +1313,7 @@ function DashboardGestorIslandInner() {
                                 label: "WhatsApp",
                                 title: "Enviar follow-up no WhatsApp",
                                 onClick: () => window.open(whatsappLink, "_blank", "noopener,noreferrer"),
-                                icon: "💬",
+                                icon: <i className="pi pi-comments" aria-hidden="true" />,
                                 variant: "ghost" as const,
                               },
                             ]

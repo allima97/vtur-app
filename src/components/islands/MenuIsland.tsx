@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { NavList } from "@primer/react";
+import { NavList } from "../ui/primer/legacyCompat";
 import { logoutUsuario } from "../../lib/logout";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { MAPA_MODULOS, listarModulosComHeranca } from "../../config/modulos";
@@ -48,6 +48,58 @@ const FornecedoresIcon = () => (
     <path d="M21.5 8l6 3-6 3" />
   </svg>
 );
+
+const MENU_EMOJI_TO_PRIME_ICON: Record<string, string> = {
+  "🧭": "pi pi-compass",
+  "💳": "pi pi-credit-card",
+  "💰": "pi pi-dollar",
+  "🏢": "pi pi-building",
+  "🧑": "pi pi-user",
+  "🧩": "pi pi-th-large",
+  "📣": "pi pi-megaphone",
+  "✉️": "pi pi-envelope",
+  "⚙️": "pi pi-cog",
+  "📜": "pi pi-file",
+  "📚": "pi pi-book",
+  "📊": "pi pi-chart-bar",
+  "📅": "pi pi-calendar",
+  "✅": "pi pi-check-circle",
+  "🧾": "pi pi-file",
+  "⭐": "pi pi-star",
+  "📁": "pi pi-folder",
+  "💼": "pi pi-briefcase",
+  "💬": "pi pi-comments",
+  "✈️": "pi pi-send",
+  "🎧": "pi pi-headphones",
+  "🧮": "pi pi-calculator",
+  "👥": "pi pi-users",
+  "🔐": "pi pi-lock",
+  "🏆": "pi pi-trophy",
+  "📈": "pi pi-chart-line",
+  "📌": "pi pi-map-marker",
+  "🎫": "pi pi-ticket",
+  "👤": "pi pi-user",
+  "🏷️": "pi pi-tag",
+  "📦": "pi pi-box",
+  "🎯": "pi pi-bullseye",
+  "💱": "pi pi-sync",
+  "🌍": "pi pi-globe",
+  "🗺️": "pi pi-map",
+  "🏙️": "pi pi-building",
+  "📋": "pi pi-list",
+  "⏳": "pi pi-clock",
+  "❓": "pi pi-question-circle",
+  "☰": "pi pi-bars",
+  "✕": "pi pi-times",
+  "🎛️": "pi pi-sliders-h",
+};
+
+function renderMenuIcon(icon: React.ReactNode, extraClassName = ""): React.ReactNode {
+  if (typeof icon !== "string") return icon;
+  const iconClass = MENU_EMOJI_TO_PRIME_ICON[icon];
+  if (!iconClass) return icon;
+  return <i className={`${iconClass} ${extraClassName}`.trim()} aria-hidden="true" />;
+}
 
 type MenuIslandProps = {
   activePage?: string;
@@ -856,7 +908,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
                 aria-current={activePage === entry.active ? "page" : undefined}
                 onClick={handleNavClick}
               >
-                <NavList.LeadingVisual>{entry.icon}</NavList.LeadingVisual>
+                <NavList.LeadingVisual>{renderMenuIcon(entry.icon)}</NavList.LeadingVisual>
                 {entry.label}
               </NavList.Item>
             ))}
@@ -1236,7 +1288,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
             aria-current={activePage === item.active ? "page" : undefined}
             onClick={handleNavClick}
           >
-            <NavList.LeadingVisual>{item.icon}</NavList.LeadingVisual>
+            <NavList.LeadingVisual>{renderMenuIcon(item.icon)}</NavList.LeadingVisual>
             {item.label}
           </NavList.Item>
         ))}
@@ -1342,7 +1394,9 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
         aria-controls={sidebarId}
         onClick={toggleMobile}
       >
-        <span className="sidebar-mobile-icon">{mobileOpen ? "✕" : "☰"}</span>
+        <span className="sidebar-mobile-icon" aria-hidden="true">
+          <i className={mobileOpen ? "pi pi-times" : "pi pi-bars"} />
+        </span>
         <span>{mobileOpen ? "Fechar" : "Menu"}</span>
       </AppButton>
       <div className={`sidebar-overlay ${mobileOpen ? "visible" : ""}`} onClick={closeMobile} />
@@ -1362,7 +1416,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
                 data-tone={item.tone || undefined}
               >
                 <span className="mobile-bottom-nav-icon">
-                  {item.icon}
+                  {renderMenuIcon(item.icon)}
                   {item.key === "consultoria" && consultoriaBadge > 0 && (
                     <span className="mobile-badge">{formatBadge(consultoriaBadge)}</span>
                   )}
@@ -1387,7 +1441,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
                 closeMobile();
               }}
             >
-              <span className="mobile-bottom-nav-icon">{item.icon}</span>
+              <span className="mobile-bottom-nav-icon">{renderMenuIcon(item.icon)}</span>
               <span className="mobile-bottom-nav-label">{item.label}</span>
             </AppButton>
           );
@@ -1402,7 +1456,9 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
             }
           }}
         >
-          <span className="mobile-bottom-nav-icon">❓</span>
+          <span className="mobile-bottom-nav-icon" aria-hidden="true">
+            <i className="pi pi-question-circle" />
+          </span>
           <span className="mobile-bottom-nav-label">Ajuda</span>
         </AppButton>
         <AppButton
@@ -1413,7 +1469,9 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
           aria-controls={sidebarId}
           onClick={toggleMobile}
         >
-          <span className="mobile-bottom-nav-icon">☰</span>
+          <span className="mobile-bottom-nav-icon" aria-hidden="true">
+            <i className="pi pi-bars" />
+          </span>
           <span className="mobile-bottom-nav-label">Mais</span>
         </AppButton>
       </nav>
@@ -1468,7 +1526,10 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
                 onClick={handleRefreshPermissionsNow}
                 disabled={updatingPerms}
               >
-                {updatingPerms ? "🔄 Atualizando permissoes..." : "🔄 Atualizar permissoes"}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                  <i className={`pi pi-sync${updatingPerms ? " pi-spin" : ""}`} aria-hidden="true" />
+                  <span>{updatingPerms ? "Atualizando permissoes..." : "Atualizar permissoes"}</span>
+                </span>
               </AppButton>
             </div>
             {permSyncMsg && (
@@ -1481,7 +1542,10 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
         <div style={{ marginTop: 20 }}>
           <div className="vtur-sidebar-action-group">
             <AppButton type="button" variant="danger" block onClick={handleLogout} disabled={saindo}>
-              {saindo ? "🚪 Saindo..." : "🚪 Sair"}
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                <i className="pi pi-sign-out" aria-hidden="true" />
+                <span>{saindo ? "Saindo..." : "Sair"}</span>
+              </span>
             </AppButton>
           </div>
         </div>

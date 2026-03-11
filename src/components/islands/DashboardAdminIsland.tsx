@@ -45,6 +45,25 @@ type MaintenanceStatus = {
   updated_at: string | null;
 };
 
+const DASHBOARD_ADMIN_ICON_MAP: Record<string, string> = {
+  "🏢": "pi pi-building",
+  "👥": "pi pi-users",
+  "💳": "pi pi-credit-card",
+  "⚠️": "pi pi-exclamation-triangle",
+  "💰": "pi pi-dollar",
+  "⚙️": "pi pi-cog",
+  "📣": "pi pi-megaphone",
+  "✉️": "pi pi-envelope",
+  "📜": "pi pi-file",
+  "📚": "pi pi-book",
+};
+
+function renderDashboardAdminIcon(icon: string) {
+  const iconClass = DASHBOARD_ADMIN_ICON_MAP[icon];
+  if (!iconClass) return icon;
+  return <i className={iconClass} aria-hidden="true" />;
+}
+
 export default function DashboardAdminIsland() {
   const { can, loading: loadingPerms, ready } = usePermissoesStore();
   const loadingPerm = loadingPerms || !ready;
@@ -439,7 +458,7 @@ export default function DashboardAdminIsland() {
                 style={{ borderLeft: `4px solid ${card.color}`, background: card.background }}
               >
                 <div className="vtur-dashboard-kpi-icon" style={{ color: card.color }}>
-                  {card.icon}
+                  {renderDashboardAdminIcon(card.icon)}
                 </div>
                 <div className="vtur-dashboard-kpi-copy">
                   <div className="vtur-dashboard-kpi-label">{card.label}</div>
@@ -487,7 +506,7 @@ export default function DashboardAdminIsland() {
             {atalhos.map((atalho) => (
               <a key={atalho.key} href={atalho.href} className="vtur-dashboard-link-card">
                 <div className="vtur-dashboard-link-copy">
-                  <span className="vtur-dashboard-link-icon">{atalho.icon}</span>
+                  <span className="vtur-dashboard-link-icon">{renderDashboardAdminIcon(atalho.icon)}</span>
                   <div>
                     <div className="vtur-dashboard-link-title">{atalho.label}</div>
                     <div className="vtur-dashboard-link-description">{atalho.description}</div>
