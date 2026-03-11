@@ -180,10 +180,6 @@ export default function PerfilIsland() {
   const [atualizandoPermissoes, setAtualizandoPermissoes] = useState(false);
   const bloqueiaEmpresaTipo = Boolean(perfil?.created_by_gestor);
   const usoBloqueado = bloqueiaEmpresaTipo || (Boolean(perfil?.company_id) && usoIndividual === false);
-  const campoPendenteStyle = {
-    borderColor: "#ef4444",
-    boxShadow: "0 0 0 1px rgba(239,68,68,0.35)",
-  } as const;
 
   function focarCampoPendente(keys: CampoObrigatorioKey[]) {
     if (!keys.length || typeof window === "undefined") return;
@@ -648,9 +644,9 @@ function formatCnpj(value: string) {
         title="Campos obrigatórios"
         onClose={() => setModalCamposObrigatorios(false)}
         message={
-          <div style={{ display: "grid", gap: 12 }}>
-            <p style={{ margin: 0 }}>Para finalizar o cadastro, preencha os campos abaixo:</p>
-            <ul style={{ paddingLeft: 18, margin: 0, display: "grid", gap: 6 }}>
+          <div className="perfil-required-dialog">
+            <p>Para finalizar o cadastro, preencha os campos abaixo:</p>
+            <ul>
               {camposObrigatorios.map((campo) => (
                 <li key={campo}>{CAMPOS_OBRIGATORIOS_INFO[campo].label}</li>
               ))}
@@ -686,13 +682,13 @@ function formatCnpj(value: string) {
       />
       {onboarding && (
         <AppCard tone="config">
-          <p style={{ margin: 0, marginBottom: 6 }}>
+          <p className="perfil-onboarding-lead">
             Complete os dados para finalizar seu primeiro acesso e liberar o acesso aos módulos solicitados.
           </p>
-          <p style={{ margin: 0, color: "#475569" }}>
+          <p className="perfil-onboarding-help">
             Caso precise sair, clique em <strong>Preencher depois</strong>. Você precisará entrar novamente para continuar o cadastro.
           </p>
-          <div className="mobile-stack-buttons" style={{ marginTop: 10 }}>
+          <div className="mobile-stack-buttons perfil-section-actions">
             <AppButton type="button" variant="secondary" onClick={() => setModalSairOnboarding(true)}>
               <i className="pi pi-clock" aria-hidden="true" />
               Preencher depois
@@ -711,23 +707,18 @@ function formatCnpj(value: string) {
       {msg && <AlertMessage variant="success">{msg}</AlertMessage>}
 
       <div className="flex flex-col gap-3">
-        <AppCard title="Dados pessoais" tone="info" style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
+        <AppCard title="Dados pessoais" tone="info" className="perfil-card-fill">
           {!camposExtrasOk && (
-            <small style={{ color: "#b91c1c", marginBottom: 8 }}>
+            <small className="perfil-warning-text mb-2">
               Campos extras indisponíveis. Adicione as colunas novas em "users" no banco para editar CEP/WhatsApp/RG/endereço.
             </small>
           )}
             <div
-              className="form-group"
-              style={
-                camposObrigatorios.includes("uso_individual")
-                  ? { border: "1px solid #ef4444", borderRadius: 8, padding: 8 }
-                  : undefined
-              }
+              className={`form-group${camposObrigatorios.includes("uso_individual") ? " perfil-required-outline" : ""}`}
             >
               <label>Uso do sistema</label>
-              <div className="flex items-center gap-4" style={{ marginTop: 6 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div className="flex items-center gap-4 perfil-uso-options">
+                <label className="perfil-uso-option">
                   <input
                     type="radio"
                     name="uso"
@@ -741,7 +732,7 @@ function formatCnpj(value: string) {
                   />
                   Individual
                 </label>
-                <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <label className="perfil-uso-option">
                   <input
                     type="radio"
                     name="uso"
@@ -766,17 +757,10 @@ function formatCnpj(value: string) {
               </small>
             )}
             </div>
-          <div
-            className="perfil-grid"
-            style={{
-              gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1.1fr)",
-              marginTop: 16,
-            }}
-          >
+          <div className="perfil-grid perfil-grid-main">
             <div className="form-group">
               <label>Nome completo</label>
               <input
-                className="form-input"
                 value={perfil.nome_completo}
                 onChange={(e) => atualizarCampo("nome_completo", e.target.value)}
                 onBlur={(e) =>
@@ -784,7 +768,7 @@ function formatCnpj(value: string) {
                 }
                 required
                 id="perfil-nome-completo"
-                style={camposObrigatorios.includes("nome_completo") ? campoPendenteStyle : undefined}
+                className={`form-input${camposObrigatorios.includes("nome_completo") ? " perfil-input-pendente" : ""}`}
                 aria-invalid={camposObrigatorios.includes("nome_completo") ? "true" : undefined}
               />
               {camposObrigatorios.includes("nome_completo") && (
@@ -796,7 +780,7 @@ function formatCnpj(value: string) {
             <div className="form-group">
               <label>CPF</label>
               <input
-                className="form-input"
+                className={`form-input${camposObrigatorios.includes("cpf") ? " perfil-input-pendente" : ""}`}
                 value={formatCpf(perfil.cpf || "")}
                 onChange={(e) => atualizarCampo("cpf", formatCpf(e.target.value))}
                 placeholder="000.000.000-00"
@@ -820,21 +804,16 @@ function formatCnpj(value: string) {
                 value={perfil.data_nascimento || ""}
                 onFocus={selectAllInputOnFocus}
                 onChange={(e) => atualizarCampo("data_nascimento", e.target.value)}
+                aria-invalid={camposObrigatorios.includes("data_nascimento") ? "true" : undefined}
               />
             </div>
           </div>
 
-          <div
-            className="perfil-grid"
-            style={{
-              gridTemplateColumns: "minmax(0, 0.8fr) minmax(0, 2fr) minmax(0, 0.7fr) minmax(0, 1fr)",
-              marginTop: 12,
-            }}
-          >
+          <div className="perfil-grid perfil-grid-address">
             <div className="form-group">
               <label>CEP</label>
               <input
-                className="form-input"
+                className={`form-input${camposObrigatorios.includes("cep") ? " perfil-input-pendente" : ""}`}
                 value={formatCep(perfil.cep || "")}
                 onChange={(e) => {
                   const val = formatCep(e.target.value);
@@ -849,7 +828,7 @@ function formatCnpj(value: string) {
                 placeholder="00000-000"
                 disabled={!camposExtrasOk}
               />
-              <small style={{ color: cepStatus?.includes("Não foi") ? "#b91c1c" : "#475569" }}>
+              <small className={`perfil-cep-status${cepStatus?.includes("Não foi") ? " is-error" : ""}`}>
                 {cepStatus || "Preencha para auto-preencher endereço."}
               </small>
             </div>
@@ -871,6 +850,7 @@ function formatCnpj(value: string) {
                 onChange={(e) => atualizarCampo("numero", e.target.value)}
                 placeholder="Nº"
                 disabled={!camposExtrasOk}
+                aria-invalid={camposObrigatorios.includes("numero") ? "true" : undefined}
               />
             </div>
             <div className="form-group">
@@ -885,13 +865,7 @@ function formatCnpj(value: string) {
             </div>
           </div>
 
-          <div
-            className="perfil-grid"
-            style={{
-              gridTemplateColumns: "minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 0.6fr)",
-              marginTop: 12,
-            }}
-          >
+          <div className="perfil-grid perfil-grid-contact">
             <div className="form-group">
               <label>E-mail</label>
               <input
@@ -909,12 +883,11 @@ function formatCnpj(value: string) {
             <div className="form-group">
               <label>Telefone</label>
               <input
-                className="form-input"
+                className={`form-input${camposObrigatorios.includes("telefone") ? " perfil-input-pendente" : ""}`}
                 value={formatTelefone(perfil.telefone || "")}
                 onChange={(e) => atualizarCampo("telefone", formatTelefone(e.target.value))}
                 placeholder="(00) 00000-0000"
                 id="perfil-telefone"
-                style={camposObrigatorios.includes("telefone") ? campoPendenteStyle : undefined}
                 aria-invalid={camposObrigatorios.includes("telefone") ? "true" : undefined}
               />
               {camposObrigatorios.includes("telefone") && (
@@ -936,11 +909,10 @@ function formatCnpj(value: string) {
             <div className="form-group">
               <label>Cidade</label>
               <input
-                className="form-input"
+                className={`form-input${camposObrigatorios.includes("cidade") ? " perfil-input-pendente" : ""}`}
                 value={perfil.cidade || ""}
                 onChange={(e) => atualizarCampo("cidade", e.target.value)}
                 id="perfil-cidade"
-                style={camposObrigatorios.includes("cidade") ? campoPendenteStyle : undefined}
                 aria-invalid={camposObrigatorios.includes("cidade") ? "true" : undefined}
               />
               {camposObrigatorios.includes("cidade") && (
@@ -952,13 +924,12 @@ function formatCnpj(value: string) {
             <div className="form-group">
               <label>Estado</label>
               <input
-                className="form-input"
+                className={`form-input${camposObrigatorios.includes("estado") ? " perfil-input-pendente" : ""}`}
                 value={perfil.estado || ""}
                 maxLength={2}
                 onChange={(e) => atualizarCampo("estado", e.target.value.toUpperCase())}
                 placeholder="UF"
                 id="perfil-estado"
-                style={camposObrigatorios.includes("estado") ? campoPendenteStyle : undefined}
                 aria-invalid={camposObrigatorios.includes("estado") ? "true" : undefined}
               />
               {camposObrigatorios.includes("estado") && (
@@ -968,7 +939,7 @@ function formatCnpj(value: string) {
               )}
             </div>
           </div>
-          <div className="mobile-stack-buttons" style={{ marginTop: 16 }}>
+          <div className="mobile-stack-buttons perfil-section-actions">
             <AppButton type="button" variant="primary" onClick={salvarPerfil} disabled={salvando}>
               <i className="pi pi-save" aria-hidden="true" />
               {salvando ? "Salvando..." : "Salvar dados"}
@@ -977,9 +948,9 @@ function formatCnpj(value: string) {
         </AppCard>
 
         <div className="grid md:grid-cols-2 gap-3">
-          <AppCard title="Dados de acesso" tone="config" style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
+          <AppCard title="Dados de acesso" tone="config" className="perfil-card-fill">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="form-group" style={{ flex: 1 }}>
+              <div className="form-group perfil-access-email-group">
                 <label>E-mail de login</label>
                 <input
                   className="form-input"
@@ -997,8 +968,8 @@ function formatCnpj(value: string) {
               </div>
             </div>
 
-            <h4 style={{ marginTop: 6, marginBottom: 4 }}>Alterar senha</h4>
-            <div className="form-group" style={{ marginTop: 0 }}>
+            <h4 className="perfil-password-title">Alterar senha</h4>
+            <div className="form-group perfil-password-group">
               <label>Nova senha</label>
               <div className="password-field">
                 <input
@@ -1020,7 +991,7 @@ function formatCnpj(value: string) {
                 </AppButton>
               </div>
             </div>
-            <div className="form-group" style={{ marginTop: 6 }}>
+            <div className="form-group perfil-password-group">
               <label>Confirmar senha</label>
               <div className="password-field">
                 <input
@@ -1041,7 +1012,7 @@ function formatCnpj(value: string) {
                 </AppButton>
               </div>
             </div>
-            <div className="mobile-stack-buttons" style={{ marginTop: 16 }}>
+            <div className="mobile-stack-buttons perfil-section-actions">
               <AppButton type="button" variant="primary" onClick={alterarSenha} disabled={salvando}>
                 <i className="pi pi-key" aria-hidden="true" />
                 Alterar senha
@@ -1058,9 +1029,9 @@ function formatCnpj(value: string) {
             </div>
           </AppCard>
 
-          <AppCard title="Empresa" style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
+          <AppCard title="Empresa" className="perfil-card-fill">
             {empresaAtual ? (
-              <p className="perfil-text-wrap" style={{ marginBottom: 12, lineHeight: 1.5 }}>
+              <p className="perfil-text-wrap perfil-company-summary">
                 <strong>Empresa:</strong> {empresaAtual.nome_empresa || "-"}<br />
                 <strong>Fantasia:</strong> {empresaAtual.nome_fantasia || "-"}<br />
                 <strong>CNPJ:</strong> {empresaAtual.cnpj ? formatCnpj(empresaAtual.cnpj) : "-"}<br />
@@ -1071,13 +1042,13 @@ function formatCnpj(value: string) {
                 <strong>Cargo:</strong> {perfil.cargo || "-"}
               </p>
             ) : (
-              <p style={{ marginBottom: 12 }}>Nenhuma empresa vinculada.</p>
+              <p className="perfil-company-empty">Nenhuma empresa vinculada.</p>
             )}
-            <small style={{ opacity: 0.75, display: "block" }}>
+            <small className="perfil-company-note">
               Vinculação de empresa é feita pelo Admin/Master. Se precisar, contate seu gestor.
             </small>
             {!empresaAtual && usoIndividual === false && (
-              <small style={{ opacity: 0.75, marginTop: 6, display: "block" }}>
+              <small className="perfil-company-note">
                 Seu acesso corporativo depende do vínculo da empresa.
               </small>
             )}
