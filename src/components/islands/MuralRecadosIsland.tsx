@@ -558,9 +558,10 @@ export default function MuralRecadosIsland() {
         <div className="mural-thread-empty">Nenhum contato encontrado.</div>
       ) : (
         orderedFilteredThreads.map((thread) => (
-          <button
+          <AppButton
             key={thread.id}
             type="button"
+            variant="ghost"
             className={`mural-whatsapp-thread ${currentThread?.id === thread.id ? "active" : ""}`}
             onClick={() => {
               setSelectedThreadId(thread.id);
@@ -597,7 +598,7 @@ export default function MuralRecadosIsland() {
                 {formatBadge(thread.unreadCount)}
               </span>
             ) : null}
-          </button>
+          </AppButton>
         ))
       )}
     </div>
@@ -613,9 +614,10 @@ export default function MuralRecadosIsland() {
           const name = getNomeExibicao(u);
           const isOnline = onlineUserIds.has(id);
           return (
-            <button
+            <AppButton
               key={id}
               type="button"
+              variant="ghost"
               className={`mural-whatsapp-thread ${currentThread?.id === id ? "active" : ""}`}
               onClick={() => {
                 setSelectedThreadId(id);
@@ -635,7 +637,7 @@ export default function MuralRecadosIsland() {
                 </span>
                 <span className="mural-whatsapp-thread-subtitle">{isOnline ? "Online" : "Offline"}</span>
               </span>
-            </button>
+            </AppButton>
           );
         })
       )}
@@ -1019,24 +1021,26 @@ export default function MuralRecadosIsland() {
                 </AppButton>
               </div>
               <div className="mural-wa-mobile-tabs" role="tablist" aria-label="Seções">
-                <button
+                <AppButton
                   type="button"
+                  variant="ghost"
                   role="tab"
                   aria-selected={mobileTab === "chats"}
                   className={mobileTab === "chats" ? "mural-wa-tab active" : "mural-wa-tab"}
                   onClick={() => setMobileTab("chats")}
                 >
                   CHATS
-                </button>
-                <button
+                </AppButton>
+                <AppButton
                   type="button"
+                  variant="ghost"
                   role="tab"
                   aria-selected={mobileTab === "contacts"}
                   className={mobileTab === "contacts" ? "mural-wa-tab active" : "mural-wa-tab"}
                   onClick={() => setMobileTab("contacts")}
                 >
                   CONTATOS
-                </button>
+                </AppButton>
               </div>
               <div className="mural-wa-mobile-search">
                 <input
@@ -1054,14 +1058,15 @@ export default function MuralRecadosIsland() {
           ) : (
             <section className="mural-whatsapp-chat mural-wa-mobile-chat">
               <div className="mural-wa-mobile-chat-header">
-                <button
+                <AppButton
                   type="button"
+                  variant="ghost"
                   className="mural-wa-back"
                   onClick={() => setMobileScreen("list")}
                   aria-label="Voltar"
                 >
                   Voltar
-                </button>
+                </AppButton>
                 <div className="mural-wa-mobile-chat-title" title={currentThread?.name || ""}>
                   {currentThread?.name || "Conversa"}
                 </div>
@@ -1175,8 +1180,9 @@ export default function MuralRecadosIsland() {
                         <span>{formatarDataHora(recado.created_at)}</span>
                         <div className="chat-bubble-actions">
                           {podeMarcarComoLido && (
-                            <button
+                            <AppButton
                               type="button"
+                              variant="ghost"
                               className="chat-inline-btn"
                               onClick={() => {
                                 limparFeedback();
@@ -1185,11 +1191,12 @@ export default function MuralRecadosIsland() {
                               disabled={marcandoLeituraId === recado.id}
                             >
                               {marcandoLeituraId === recado.id ? "Marcando..." : "Marcar como lido"}
-                            </button>
+                            </AppButton>
                           )}
                           {canDeleteRecado(recado) && (
-                            <button
+                            <AppButton
                               type="button"
+                              variant="ghost"
                               className="chat-inline-btn chat-inline-btn--danger"
                               onClick={() =>
                                 setConfirmDeleteRecado({
@@ -1200,7 +1207,7 @@ export default function MuralRecadosIsland() {
                               }
                             >
                               Apagar
-                            </button>
+                            </AppButton>
                           )}
                         </div>
                       </div>
@@ -1249,15 +1256,16 @@ export default function MuralRecadosIsland() {
                         </span>
                         <span className="mural-attachment-chip-name">{file.name}</span>
                         <span className="mural-attachment-chip-size">{formatBytes(file.size)}</span>
-                        <button
+                        <AppButton
                           type="button"
+                          variant="ghost"
                           className="mural-attachment-chip-remove"
                           onClick={() => removeAnexoAt(idx)}
                           aria-label="Remover anexo"
                           disabled={enviando}
                         >
                           ×
-                        </button>
+                        </AppButton>
                       </div>
                     ))}
                   </div>
@@ -1456,8 +1464,9 @@ export default function MuralRecadosIsland() {
                           <span>{formatarDataHora(recado.created_at)}</span>
                           <div className="chat-bubble-actions">
                             {podeMarcarComoLido && (
-                              <button
+                              <AppButton
                                 type="button"
+                                variant="ghost"
                                 className="chat-inline-btn"
                                 onClick={() => {
                                   limparFeedback();
@@ -1466,11 +1475,12 @@ export default function MuralRecadosIsland() {
                                 disabled={marcandoLeituraId === recado.id}
                               >
                                 {marcandoLeituraId === recado.id ? "Marcando..." : "Marcar como lido"}
-                              </button>
+                              </AppButton>
                             )}
                             {canDeleteRecado(recado) && (
-                              <button
+                              <AppButton
                                 type="button"
+                                variant="ghost"
                                 className="chat-inline-btn chat-inline-btn--danger"
                                 onClick={() =>
                                   setConfirmDeleteRecado({
@@ -1481,7 +1491,7 @@ export default function MuralRecadosIsland() {
                                 }
                               >
                                 Apagar
-                              </button>
+                              </AppButton>
                             )}
                           </div>
                         </div>
@@ -1530,15 +1540,16 @@ export default function MuralRecadosIsland() {
                           </span>
                           <span className="mural-attachment-chip-name">{file.name}</span>
                           <span className="mural-attachment-chip-size">{formatBytes(file.size)}</span>
-                          <button
+                          <AppButton
                             type="button"
+                            variant="ghost"
                             className="mural-attachment-chip-remove"
                             onClick={() => removeAnexoAt(idx)}
                             aria-label="Remover anexo"
                             disabled={enviando}
                           >
                             ×
-                          </button>
+                          </AppButton>
                         </div>
                       ))}
                     </div>

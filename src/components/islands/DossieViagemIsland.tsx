@@ -717,7 +717,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
       {!erro && viagem && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {clienteNome && (
-            <div className="card-base card-purple sm:hidden" style={{ padding: 12 }}>
+            <div className="vtur-surface-panel card-purple sm:hidden" style={{ padding: 12 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 <div
                   style={{
@@ -761,9 +761,10 @@ export default function DossieViagemIsland({ viagemId }: Props) {
 
           <div style={{ display: "grid", gap: 12 }}>
             <div style={{ display: "grid", gap: 12 }}>
-              <button
+              <AppButton
                 type="button"
-                className="card-base"
+                variant="ghost"
+                className="vtur-surface-panel"
                 onClick={() => setAbaAtiva("dados")}
                 aria-pressed={abaAtiva === "dados"}
                 style={{
@@ -778,7 +779,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                 >
                   Dados da viagem
                 </h3>
-              </button>
+              </AppButton>
 
               {abaAtiva === "dados" && (
                 <div style={{ display: "grid", gap: 12 }}>
@@ -825,7 +826,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                     </div>
                   )}
 
-                  <div className="card-base" style={{ border: "1px solid #e2e8f0" }}>
+                  <div className="vtur-surface-panel" style={{ border: "1px solid #e2e8f0" }}>
                     <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>Follow-up do cliente</div>
                     <div style={{ color: "#64748b", fontSize: 13, marginBottom: 10 }}>
                       Parecer do cliente após o retorno da viagem.
@@ -894,9 +895,10 @@ export default function DossieViagemIsland({ viagemId }: Props) {
             </div>
 
             <div style={{ display: "grid", gap: 12 }}>
-              <button
+              <AppButton
                 type="button"
-                className="card-base"
+                variant="ghost"
+                className="vtur-surface-panel"
                 onClick={() => setAbaAtiva("acompanhantes")}
                 aria-pressed={abaAtiva === "acompanhantes"}
                 style={{
@@ -911,7 +913,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                 >
                   Acompanhantes ({viagem.viagem_acompanhantes?.length || 0})
                 </h3>
-              </button>
+              </AppButton>
 
               {abaAtiva === "acompanhantes" && (
             <div style={{ display: "grid", gap: 12 }}>
@@ -1017,7 +1019,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
 
               {podeCriar && mostrarCadastroAcomp && (
                 <div
-                  className="card-base"
+                  className="vtur-surface-panel"
                   style={{ marginBottom: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" }}
                 >
                   {erroCadastroAcomp && (
@@ -1166,7 +1168,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
 
               {podeCriar && mostrarVinculoAcomp && (
                 <div
-                  className="card-base"
+                  className="vtur-surface-panel"
                   style={{ marginBottom: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" }}
                 >
                   <div style={{ fontWeight: 600, marginBottom: 8 }}>
@@ -1259,9 +1261,10 @@ export default function DossieViagemIsland({ viagemId }: Props) {
             </div>
 
             <div style={{ display: "grid", gap: 12 }}>
-              <button
+              <AppButton
                 type="button"
-                className="card-base"
+                variant="ghost"
+                className="vtur-surface-panel"
                 onClick={() => {
                   setAbaAtiva("servicos");
                   setMostrarServicoForm(false);
@@ -1280,7 +1283,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                 >
                   Serviços da viagem ({servicos.length})
                 </h3>
-              </button>
+              </AppButton>
 
               {abaAtiva === "servicos" && (
                 <div style={{ display: "grid", gap: 12 }}>
@@ -1368,7 +1371,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
 
                   {podeCriar && mostrarServicoForm && (
                     <div
-                      className="card-base"
+                      className="vtur-surface-panel"
                       style={{ marginBottom: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" }}
                     >
                       <div style={{ fontWeight: 600, marginBottom: 8 }}>
@@ -1541,9 +1544,10 @@ export default function DossieViagemIsland({ viagemId }: Props) {
             </div>
 
             <div style={{ display: "grid", gap: 12 }}>
-              <button
+              <AppButton
                 type="button"
-                className="card-base"
+                variant="ghost"
+                className="vtur-surface-panel"
                 onClick={() => {
                   setAbaAtiva("documentos");
                   setMostrarDocumentoForm(false);
@@ -1561,7 +1565,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                 >
                   Documentos / vouchers ({documentos.length})
                 </h3>
-              </button>
+              </AppButton>
 
               {abaAtiva === "documentos" && (
                 <div style={{ display: "grid", gap: 12 }}>
@@ -1645,7 +1649,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                   )}
 
                   {podeCriar && mostrarDocumentoForm && (
-                    <div className="card-base mb-3 border border-dashed border-slate-300 bg-slate-50">
+                    <div className="vtur-surface-panel mb-3 border border-dashed border-slate-300 bg-slate-50">
                       <div className="font-semibold mb-2">Enviar documento</div>
                       <div className="form-row">
                         <div className="form-group">

@@ -1112,7 +1112,7 @@ export default function ParametrosAvisosIsland() {
               {CARD_STYLE_SECTION_ORDER.map((section) => {
                 const style = styleForm[section];
                 return (
-                  <div key={section} className="card-base card-blue parametros-avisos-style-card">
+                  <div key={section} className="vtur-surface-panel card-blue parametros-avisos-style-card">
                     <div className="parametros-avisos-style-card-header">
                       <strong>{CARD_STYLE_SECTION_LABELS[section]}</strong>
                       <small style={{ color: "#64748b" }}>{STYLE_SECTION_SAMPLE[section]}</small>
@@ -1222,7 +1222,7 @@ export default function ParametrosAvisosIsland() {
           </div>
           <div className="form-group">
             <label className="form-label">Contexto do preview</label>
-            <div className="card-base card-blue" style={{ padding: 12 }}>
+            <div className="vtur-surface-panel card-blue" style={{ padding: 12 }}>
               <div><strong>Cliente:</strong> {previewNomeCliente}</div>
               <div><strong>Arte:</strong> {selectedThemeForForm?.nome || "Selecione uma arte"}</div>
               <div><strong>Ocasião:</strong> {form.categoria || selectedThemeForForm?.categoria || "-"}</div>

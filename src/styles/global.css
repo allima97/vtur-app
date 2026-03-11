@@ -811,7 +811,8 @@ body {
 }
 
 /* Cards */
-.card-base {
+.card-base,
+.vtur-surface-panel {
   background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98));
   border-radius: 18px;
   padding: 20px;
