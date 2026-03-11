@@ -1435,7 +1435,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       </div>
                       <div className="form-row">
                         <div className="form-group">
-                          <label className="form-label">Data início</label>
+                          <label className="form-label">Data Início</label>
                           <input
                             type="date"
                             className="form-input w-full"
@@ -1454,7 +1454,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                           />
                         </div>
                         <div className="form-group">
-                          <label className="form-label">Data fim</label>
+                          <label className="form-label">Data Final</label>
                           <input
                             type="date"
                             className="form-input"

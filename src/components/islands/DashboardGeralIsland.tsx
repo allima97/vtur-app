@@ -1,7 +1,11 @@
 import { Dialog, Select } from "../ui/primer/legacyCompat";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { usePermissoesStore } from "../../lib/permissoesStore";
-import { buildQueryLiteKey, queryLite } from "../../lib/queryLite";
+import {
+  buildQueryLiteKey,
+  invalidateQueryLiteByPrefix,
+  queryLite,
+} from "../../lib/queryLite";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
 import { formatCurrencyBRL, formatDateTimeBR } from "../../lib/format";
@@ -670,6 +674,11 @@ function toLineChartConfig(
           window.localStorage.setItem("dashboard_charts", JSON.stringify(charts));
         }
       }
+      const cacheUserId = userCtx?.usuarioId || userId;
+      if (cacheUserId) {
+        invalidateQueryLiteByPrefix(buildQueryLiteKey(["dashboardSummary", "geral", cacheUserId]));
+        invalidateQueryLiteByPrefix(buildQueryLiteKey(["dashboardSummary", "gestor", cacheUserId]));
+      }
     }
   }
 
@@ -822,6 +831,18 @@ function toLineChartConfig(
               setKpiOrder(normalizeKpiOrder(kpiFromDb.order, kpiIdArray));
             if (kpiFromDb.visible) setKpiVisible(kpiFromDb.visible);
             if (chartsFromDb) setChartPrefs((prev) => ({ ...prev, ...chartsFromDb }));
+
+            const localWidgets = typeof window !== "undefined"
+              ? window.localStorage.getItem("dashboard_widgets")
+              : null;
+            if (localWidgets) {
+              const parsed = JSON.parse(localWidgets);
+              if (parsed.order && parsed.visible) {
+                const localOrder = normalizeWidgetOrder(parsed.order);
+                if (localOrder.length > 0) setWidgetOrder(localOrder);
+                setWidgetVisible((prev) => ({ ...prev, ...parsed.visible }));
+              }
+            }
           } else {
             const allKpiIds = new Set([...BASE_KPIS.map((k) => k.id), ...produtosKpi.map((k) => k.id)]);
             const local = typeof window !== "undefined"
@@ -1436,6 +1457,17 @@ function toLineChartConfig(
     "viagens",
     "follow_up",
   ];
+
+  const getTableWidgetLabel = (id: WidgetId) => {
+    if (id === "aniversariantes_clientes") {
+      return `Aniversariantes (clientes e acompanhantes) (${clientesAniversariantes.length})`;
+    }
+    if (id === "orcamentos") return `Orcamentos recentes (${orcamentosRecentes.length})`;
+    if (id === "consultorias") return `Lembretes de consultoria (${lembretesDashboard.length})`;
+    if (id === "viagens") return `Proximas viagens (${proximasViagensAgrupadas.length})`;
+    if (id === "follow_up") return `Follow-Up (${followUpsRecentes.length})`;
+    return ALL_WIDGETS.find((w) => w.id === id)?.titulo || id;
+  };
 
   const renderChartSelect = (
     value: ChartType,
@@ -2304,8 +2336,15 @@ function toLineChartConfig(
                   Ranking de vendas
                 </AppButton>
               )}
-              <AppButton type="button" variant="secondary" onClick={() => setShowCalculator(true)}>
-                Calculadora
+              <AppButton
+                type="button"
+                variant="secondary"
+                className="btn-calculator-trigger"
+                onClick={() => setShowCalculator(true)}
+                aria-label="Calculadora"
+                title="Calculadora"
+              >
+                <i className="pi pi-calculator" aria-hidden="true" />
               </AppButton>
             </div>
           }
@@ -2336,7 +2375,7 @@ function toLineChartConfig(
             </div>
             <div className="vtur-form-grid vtur-form-grid-2">
               <AppField
-                label="Data inicio"
+                label="Data Início"
                 type="date"
                 value={inicio}
                 onFocus={selectAllInputOnFocus}
@@ -2348,7 +2387,7 @@ function toLineChartConfig(
                 }}
               />
               <AppField
-                label="Data fim"
+                label="Data Final"
                 type="date"
                 value={fim}
                 min={inicio || undefined}
@@ -2392,7 +2431,7 @@ function toLineChartConfig(
                   {presetPeriodo === "personalizado" && (
                     <>
                       <AppField
-                        label="Data inicio"
+                        label="Data Início"
                         type="date"
                         value={inicio}
                         onFocus={selectAllInputOnFocus}
@@ -2404,7 +2443,7 @@ function toLineChartConfig(
                         }}
                       />
                       <AppField
-                        label="Data fim"
+                        label="Data Final"
                         type="date"
                         value={fim}
                         min={inicio || undefined}
@@ -2435,37 +2474,34 @@ function toLineChartConfig(
 
         {tableWidgets.length > 0 && (
           <>
-            <div className="mobile-only">
-              <div className="vtur-dashboard-mobile-list">
-                {tableWidgets.map((id) => {
-                  const meta = ALL_WIDGETS.find((w) => w.id === id);
-                  const aberto = mobileWidgetOpen[id];
-                  return (
-                    <div key={`mobile-widget-${id}`}>
-                      <AppButton
-                        type="button"
-                        variant={aberto ? "primary" : "secondary"}
-                        block
-                        onClick={() => toggleMobileWidget(id as WidgetId)}
-                      >
-                        {meta?.titulo || id}
-                      </AppButton>
-                      {aberto && (
-                        <div style={{ marginTop: 12 }}>
-                          {renderWidget(id as WidgetId, { hideTitle: true, variant: "plain" })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            {tableWidgets.map((id) => {
+              const node = renderWidget(id as WidgetId);
+              if (!node) return null;
 
-            <div className="hidden sm:grid" style={{ gap: 12, alignItems: "start" }}>
-              {tableWidgets.map((id) => (
-                <div key={id}>{renderWidget(id as WidgetId)}</div>
-              ))}
-            </div>
+              const aberto = mobileWidgetOpen[id];
+              const label = getTableWidgetLabel(id as WidgetId);
+
+              return (
+                <React.Fragment key={id}>
+                  <div className="mobile-only">
+                    <AppButton
+                      type="button"
+                      variant={aberto ? "primary" : "secondary"}
+                      block
+                      onClick={() => toggleMobileWidget(id as WidgetId)}
+                    >
+                      {label}
+                    </AppButton>
+                    {aberto && (
+                      <div style={{ marginTop: 12 }}>
+                        {renderWidget(id as WidgetId, { hideTitle: true, variant: "plain" })}
+                      </div>
+                    )}
+                  </div>
+                  <div className="hidden sm:block">{node}</div>
+                </React.Fragment>
+              );
+            })}
           </>
         )}
 

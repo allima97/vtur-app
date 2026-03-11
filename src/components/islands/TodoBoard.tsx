@@ -534,6 +534,15 @@ export default function TodoBoard() {
     });
   }
 
+  function startEditTodo(card: any) {
+    setCreateOpen(true);
+    setTodoTitulo(card.titulo);
+    setTodoDesc(card.descricao || "");
+    setTodoCat(card.categoria_id || null);
+    setTodoPrio((card.prioridade as any) || "media");
+    setEditingTodo(card);
+  }
+
   const cards = useMemo(() => {
     return todos
       .filter((t) => !t.arquivo)
@@ -676,76 +685,56 @@ export default function TodoBoard() {
               {hasDetails && (
                 <AppButton
                   type="button"
+                  className="icon-action-btn todo-action-btn todo-expand-btn"
                   variant="ghost"
-                  style={{
-                    background: card.catColor,
-                    color: textColorFor(card.catColor),
-                    border: "none",
-                    borderRadius: "50%",
-                    width: 22,
-                    height: 22,
-                    cursor: "pointer",
-                    fontSize: 14,
-                    fontWeight: 800,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
                   onClick={() => toggleExpand(card.id)}
                   aria-label={isExpanded ? "Ocultar detalhes" : "Exibir detalhes"}
+                  title={isExpanded ? "Ocultar mensagem" : "Exibir mensagem"}
                 >
-                  {isExpanded ? "−" : "+"}
+                  <i
+                    className={`pi ${isExpanded ? "pi-chevron-circle-up" : "pi-chevron-circle-down"}`}
+                    aria-hidden="true"
+                  />
                 </AppButton>
               )}
 
               <AppButton
                 type="button"
-                className="icon-action-btn"
+                className="icon-action-btn todo-action-btn"
                 variant="ghost"
-                style={{ padding: "2px 6px", flexShrink: 0, fontSize: 12 }}
                 disabled={currentIndex === 0}
                 onClick={() => moveStatus(card.id, -1)}
                 aria-label="Mover para coluna anterior"
                 title="Mover para trás"
               >
-                {"◀"}
+                <i className="pi pi-chevron-left" aria-hidden="true" />
               </AppButton>
               <AppButton
                 type="button"
-                className="icon-action-btn"
+                className="icon-action-btn todo-action-btn"
                 variant="ghost"
-                style={{ padding: "2px 6px", flexShrink: 0, fontSize: 12 }}
                 disabled={currentIndex === STATUS_COLS.length - 1}
                 onClick={() => moveStatus(card.id, 1)}
                 aria-label="Mover para próxima coluna"
                 title="Mover para frente"
               >
-                {"▶"}
+                <i className="pi pi-chevron-right" aria-hidden="true" />
               </AppButton>
 
               <AppButton
                 type="button"
-                className="icon-action-btn"
+                className="icon-action-btn todo-action-btn"
                 variant="ghost"
-                style={{ padding: "2px 6px", flexShrink: 0, fontSize: 13 }}
-                onClick={() => {
-                  setCreateOpen(true);
-                  setTodoTitulo(card.titulo);
-                  setTodoDesc(card.descricao || "");
-                  setTodoCat(card.categoria_id || null);
-                  setTodoPrio((card.prioridade as any) || "media");
-                  setEditingTodo(card);
-                }}
+                onClick={() => startEditTodo(card)}
                 aria-label="Editar tarefa"
+                title="Editar"
               >
                 <i className="pi pi-pencil" aria-hidden="true" />
               </AppButton>
               <AppButton
                 type="button"
-                className="icon-action-btn"
+                className="icon-action-btn todo-action-btn"
                 variant="ghost"
-                style={{ padding: "2px 6px", flexShrink: 0, fontSize: 13 }}
                 onClick={() => archiveTodo(card.id)}
                 aria-label="Arquivar tarefa"
                 title="Arquivar"
@@ -754,11 +743,11 @@ export default function TodoBoard() {
               </AppButton>
               <AppButton
                 type="button"
-                className="icon-action-btn danger no-border"
+                className="icon-action-btn danger no-border todo-action-btn"
                 variant="danger"
-                style={{ padding: "2px 6px", flexShrink: 0, fontSize: 13 }}
                 onClick={() => removeTodo(card.id)}
                 aria-label="Excluir tarefa"
+                title="Excluir"
               >
                 <i className="pi pi-trash" aria-hidden="true" />
               </AppButton>
@@ -807,53 +796,41 @@ export default function TodoBoard() {
             {hasDetails && (
               <AppButton
                 type="button"
+                className="icon-action-btn todo-action-btn todo-expand-btn"
                 variant="ghost"
-                style={{
-                  background: card.catColor,
-                  color: textColorFor(card.catColor),
-                  border: "none",
-                  borderRadius: "50%",
-                  width: 22,
-                  height: 22,
-                  cursor: "pointer",
-                  fontSize: 14,
-                  fontWeight: 700,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
                 onClick={() => toggleExpand(card.id)}
                 aria-label={isExpanded ? "Ocultar detalhes" : "Exibir detalhes"}
+                title={isExpanded ? "Ocultar mensagem" : "Exibir mensagem"}
               >
-                {isExpanded ? "−" : "+"}
+                <i
+                  className={`pi ${isExpanded ? "pi-chevron-circle-up" : "pi-chevron-circle-down"}`}
+                  aria-hidden="true"
+                />
               </AppButton>
             )}
 
             {/* Botões de movimentação */}
             <AppButton
               type="button"
-              className="icon-action-btn"
+              className="icon-action-btn todo-action-btn"
               variant="ghost"
-              style={{ fontSize: 11, padding: "2px 5px" }}
               disabled={col.value === STATUS_COLS[0].value}
               onClick={() => moveStatus(card.id, -1)}
               aria-label="Mover para coluna anterior"
               title="Mover para trás"
             >
-              {"◀"}
+              <i className="pi pi-chevron-left" aria-hidden="true" />
             </AppButton>
             <AppButton
               type="button"
-              className="icon-action-btn"
+              className="icon-action-btn todo-action-btn"
               variant="ghost"
-              style={{ fontSize: 11, padding: "2px 5px" }}
               disabled={col.value === STATUS_COLS[STATUS_COLS.length - 1].value}
               onClick={() => moveStatus(card.id, 1)}
               aria-label="Mover para próxima coluna"
               title="Mover para frente"
             >
-              {"▶"}
+              <i className="pi pi-chevron-right" aria-hidden="true" />
             </AppButton>
 
             {/* Checkbox */}
@@ -868,18 +845,11 @@ export default function TodoBoard() {
             {/* Editar */}
             <AppButton
               type="button"
-              className="icon-action-btn"
+              className="icon-action-btn todo-action-btn"
               variant="ghost"
-              style={{ fontSize: 11, padding: "2px 5px" }}
-              onClick={() => {
-                setCreateOpen(true);
-                setTodoTitulo(card.titulo);
-                setTodoDesc(card.descricao || "");
-                setTodoCat(card.categoria_id || null);
-                setTodoPrio((card.prioridade as any) || "media");
-                setEditingTodo(card);
-              }}
+              onClick={() => startEditTodo(card)}
               aria-label="Editar tarefa"
+              title="Editar"
             >
               <i className="pi pi-pencil" aria-hidden="true" />
             </AppButton>
@@ -887,9 +857,8 @@ export default function TodoBoard() {
             {/* Arquivar */}
             <AppButton
               type="button"
-              className="icon-action-btn"
+              className="icon-action-btn todo-action-btn"
               variant="ghost"
-              style={{ fontSize: 11, padding: "2px 5px" }}
               onClick={() => archiveTodo(card.id)}
               aria-label="Arquivar tarefa"
               title="Arquivar"
@@ -900,11 +869,11 @@ export default function TodoBoard() {
             {/* Excluir */}
             <AppButton
               type="button"
-              className="icon-action-btn danger no-border"
+              className="icon-action-btn danger no-border todo-action-btn"
               variant="danger"
-              style={{ fontSize: 11, padding: "2px 5px" }}
               onClick={() => removeTodo(card.id)}
               aria-label="Excluir tarefa"
+              title="Excluir"
             >
               <i className="pi pi-trash" aria-hidden="true" />
             </AppButton>
@@ -1061,9 +1030,9 @@ export default function TodoBoard() {
                       fontWeight: 700, fontSize: 14, color: "#475569",
                     }}
                   >
-                    <span>{archivedOpen ? "▼" : "▶"}</span>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      <i className="pi pi-folder" aria-hidden="true" />
+                    <i className={`pi ${archivedOpen ? "pi-chevron-down" : "pi-chevron-right"} todo-inline-icon`} aria-hidden="true" />
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                      <i className="pi pi-folder todo-inline-icon" aria-hidden="true" />
                       <span>Arquivados</span>
                     </span>
                     <span style={{ background: "#e2e8f0", borderRadius: 999, padding: "2px 8px", fontSize: 12, fontWeight: 800, color: "#64748b" }}>
@@ -1081,7 +1050,7 @@ export default function TodoBoard() {
                             <AppButton variant="secondary" style={{ fontSize: 12, padding: "3px 10px" }} onClick={() => restoreTodo(card.id)}>
                               Restaurar
                             </AppButton>
-                            <AppButton variant="danger" className="icon-action-btn danger no-border" onClick={() => removeTodo(card.id)} aria-label="Excluir">
+                            <AppButton variant="danger" className="icon-action-btn danger no-border todo-action-btn" onClick={() => removeTodo(card.id)} aria-label="Excluir" title="Excluir">
                               <i className="pi pi-trash" aria-hidden="true" />
                             </AppButton>
                           </div>
@@ -1303,9 +1272,9 @@ export default function TodoBoard() {
               fontWeight: 700, fontSize: 14, color: "#475569", borderRadius: archivedOpen ? "8px 8px 0 0" : 8,
             }}
           >
-            <span>{archivedOpen ? "▼" : "▶"}</span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <i className="pi pi-folder" aria-hidden="true" />
+            <i className={`pi ${archivedOpen ? "pi-chevron-down" : "pi-chevron-right"} todo-inline-icon`} aria-hidden="true" />
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <i className="pi pi-folder todo-inline-icon" aria-hidden="true" />
               <span>Arquivados</span>
             </span>
             <span style={{ background: "#e2e8f0", borderRadius: 999, padding: "2px 8px", fontSize: 12, fontWeight: 800, color: "#64748b" }}>
@@ -1326,7 +1295,7 @@ export default function TodoBoard() {
                     <AppButton variant="secondary" style={{ fontSize: 12, padding: "3px 10px" }} onClick={() => restoreTodo(card.id)}>
                       Restaurar
                     </AppButton>
-                    <AppButton variant="danger" className="icon-action-btn danger no-border" onClick={() => removeTodo(card.id)} aria-label="Excluir">
+                    <AppButton variant="danger" className="icon-action-btn danger no-border todo-action-btn" onClick={() => removeTodo(card.id)} aria-label="Excluir" title="Excluir">
                       <i className="pi pi-trash" aria-hidden="true" />
                     </AppButton>
                   </div>

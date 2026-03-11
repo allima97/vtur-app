@@ -36,7 +36,7 @@ export default function SearchInput({
         disabled={disabled}
         caption={helpText}
         wrapperClassName={wrapperClassName}
-        className={inputClassName}
+        className={["w-full", "search-input-field", inputClassName].filter(Boolean).join(" ")}
       />
     </AppPrimerProvider>
   );

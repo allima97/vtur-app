@@ -816,8 +816,8 @@ export default function QuoteImportIsland() {
                     <th>Produto</th>
                     <th>Cidade</th>
                     <th>Destino</th>
-                    <th>Inicio</th>
-                    <th>Fim</th>
+                    <th>Data Início</th>
+                    <th>Data Final</th>
                     <th>Qtd</th>
                     <th>Total</th>
                     <th>Taxas</th>
@@ -904,7 +904,7 @@ export default function QuoteImportIsland() {
                               onChange={(e) => updateItem(index, { city_name: e.target.value })}
                             />
                           </td>
-                          <td data-label="Inicio">
+                          <td data-label="Data Início">
                             <input
                               className="form-input"
                               type="date"
@@ -920,7 +920,7 @@ export default function QuoteImportIsland() {
                               }}
                             />
                           </td>
-                          <td data-label="Fim">
+                          <td data-label="Data Final">
                             <input
                               className="form-input"
                               type="date"

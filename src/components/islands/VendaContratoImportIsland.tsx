@@ -1238,6 +1238,7 @@ export default function VendaContratoImportIsland() {
                       <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 16 }}>
                         <AppField
                           label="Produto (ajuste se necessário)"
+                          className="w-full search-input-field"
                           list="listaProdutosImportAll"
                           placeholder={cidadeId ? "Digite ou selecione um produto" : "Digite o produto do recibo"}
                           value={c.produto_principal || ""}
@@ -1548,6 +1549,7 @@ export default function VendaContratoImportIsland() {
                 <div>
                   <AppField
                     label="Produto"
+                    className="w-full search-input-field"
                     list="listaDestinosImport"
                     placeholder={cidadeId ? "Digite ou selecione um produto" : "Selecione a cidade primeiro"}
                     value={buscaDestino}

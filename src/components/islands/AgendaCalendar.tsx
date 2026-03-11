@@ -843,7 +843,7 @@ export default function AgendaCalendar() {
                       as="input"
                       type="date"
                       wrapperClassName="form-group"
-                      label="Inicio"
+                      label="Data Início"
                       value={newEvent.start}
                       onFocus={selectAllInputOnFocus}
                       onChange={(e) => {
@@ -862,7 +862,7 @@ export default function AgendaCalendar() {
                       as="input"
                       type="date"
                       wrapperClassName="form-group"
-                      label="Fim"
+                      label="Data Final"
                       value={newEvent.end}
                       min={newEvent.start || undefined}
                       onFocus={selectAllInputOnFocus}
@@ -973,7 +973,7 @@ export default function AgendaCalendar() {
                         as="input"
                         type="date"
                         wrapperClassName="form-group"
-                        label="Inicio"
+                        label="Data Início"
                         value={editForm.startDate}
                         onFocus={selectAllInputOnFocus}
                         onChange={(e) => {
@@ -995,7 +995,7 @@ export default function AgendaCalendar() {
                         as="input"
                         type="date"
                         wrapperClassName="form-group"
-                        label="Fim"
+                        label="Data Final"
                         value={editForm.endDate}
                         min={editForm.startDate || undefined}
                         onFocus={selectAllInputOnFocus}

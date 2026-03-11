@@ -717,7 +717,7 @@ export default function RelatorioAgrupadoClienteIsland() {
     <>
       <div className="vtur-commission-filters-grid">
         <AppField
-          label="Data inicio"
+          label="Data Início"
           type="date"
           value={dataInicio}
           onFocus={selectAllInputOnFocus}
@@ -731,7 +731,7 @@ export default function RelatorioAgrupadoClienteIsland() {
           }}
         />
         <AppField
-          label="Data fim"
+          label="Data Final"
           type="date"
           value={dataFim}
           min={dataInicio || undefined}
