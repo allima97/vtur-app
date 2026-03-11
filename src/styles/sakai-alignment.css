@@ -1,0 +1,178 @@
+body.sakai-theme {
+  background: #f5f7fb;
+  color: #334155;
+}
+
+body.sakai-theme .app-topbar {
+  height: 4.6rem;
+  padding: 0 1.5rem;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: none;
+}
+
+body.sakai-theme .app-sidebar {
+  width: 286px;
+  border-radius: 12px;
+  border-color: #e5e7eb;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+body.sakai-theme .app-main {
+  margin-left: calc(2rem + 286px + 0.75rem) !important;
+  padding-top: 6.3rem;
+}
+
+body.sakai-theme .sidebar-section-title {
+  margin: 0.9rem 0 0.3rem;
+  color: #111827;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+body.sakai-theme .vtur-sidebar-nav {
+  gap: 0.18rem;
+}
+
+body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item {
+  border-radius: 8px;
+  color: #4b5563;
+  font-size: 0.94rem;
+  font-weight: 500;
+  padding: 0.58rem 0.72rem;
+}
+
+body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item[aria-current="page"] {
+  background: #eef2ff;
+  color: #4f46e5;
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px #c7d2fe;
+}
+
+body.sakai-theme .vtur-app-card,
+body.sakai-theme .vtur-app-toolbar,
+body.sakai-theme .card-base,
+body.sakai-theme .vtur-surface-panel {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+body.sakai-theme .vtur-app-button {
+  border-radius: 8px;
+}
+
+body.sakai-theme .vtur-app-button-primary {
+  background: #4f46e5;
+  border-color: #4f46e5;
+  box-shadow: none;
+}
+
+body.sakai-theme .vtur-app-button-primary:hover {
+  background: #4338ca;
+  border-color: #4338ca;
+}
+
+body.sakai-theme .table-default,
+body.sakai-theme .vtur-data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+body.sakai-theme .table-default thead th,
+body.sakai-theme .vtur-data-table thead th {
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+body.sakai-theme .table-default tbody td,
+body.sakai-theme .vtur-data-table tbody td {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+body.sakai-theme .table-default tbody tr:nth-child(even),
+body.sakai-theme .vtur-data-table tbody tr:nth-child(even) {
+  background: #ffffff;
+}
+
+body.sakai-theme .table-default tbody tr:hover,
+body.sakai-theme .vtur-data-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+body.sakai-theme .th-actions .action-buttons {
+  gap: 0.35rem;
+}
+
+body.sakai-theme .th-actions .vtur-app-button,
+body.sakai-theme .th-actions .p-button {
+  min-width: 2.2rem;
+  min-height: 2.2rem;
+  padding: 0.4rem;
+  border-radius: 8px;
+}
+
+body.sakai-theme .vtur-dashboard-shell .recharts-wrapper text,
+body.sakai-theme .vtur-dashboard-shell .recharts-text {
+  fill: #64748b;
+  font-size: 12px;
+}
+
+body.sakai-theme .vtur-dashboard-shell .recharts-cartesian-grid line {
+  stroke: #e5e7eb;
+}
+
+body.sakai-theme .vtur-dashboard-shell .recharts-legend-item-text {
+  color: #475569 !important;
+}
+
+body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-default-tooltip {
+  border: 1px solid #e5e7eb !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.12) !important;
+}
+
+.auth-body {
+  background: #f5f7fb;
+  font-family: "Inter var", Inter, "Segoe UI", Roboto, sans-serif;
+}
+
+.auth-container {
+  max-width: 440px;
+  padding: 1rem;
+}
+
+.auth-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+  background: #ffffff;
+}
+
+.auth-actions .vtur-app-button {
+  border-radius: 8px;
+}
+
+@media (max-width: 1024px) {
+  body.sakai-theme .app-main {
+    margin-left: 0 !important;
+    padding-top: calc(5.4rem + env(safe-area-inset-top));
+  }
+}
