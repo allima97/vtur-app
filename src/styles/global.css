@@ -6286,3 +6286,127 @@ body {
     line-height: 1.25;
   }
 }
+
+/* Roteiro (editor): mobile cards com labels por coluna e ações compactas */
+@media (max-width: 640px) {
+  .roteiro-edit-page .roteiro-edit-table td::before {
+    color: #334155;
+    font-weight: 700;
+  }
+
+  .roteiro-edit-page .roteiro-edit-table input,
+  .roteiro-edit-page .roteiro-edit-table select,
+  .roteiro-edit-page .roteiro-edit-table textarea {
+    min-height: 42px;
+    font-size: 0.92rem;
+  }
+
+  .roteiro-edit-page .roteiro-edit-table .th-actions .action-buttons.roteiro-row-actions {
+    flex-direction: row !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    width: auto !important;
+    gap: 6px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .roteiro-edit-page .roteiro-edit-table .th-actions .action-buttons.roteiro-row-actions .vtur-app-button {
+    width: 38px !important;
+    min-width: 38px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+  }
+
+  .roteiro-edit-table-hoteis td:nth-child(1)::before { content: "Cidade"; }
+  .roteiro-edit-table-hoteis td:nth-child(2)::before { content: "Hotel"; }
+  .roteiro-edit-table-hoteis td:nth-child(3)::before { content: "Data Início"; }
+  .roteiro-edit-table-hoteis td:nth-child(4)::before { content: "Data Fim"; }
+  .roteiro-edit-table-hoteis td:nth-child(5)::before { content: "Noites"; }
+  .roteiro-edit-table-hoteis td:nth-child(6)::before { content: "Apto"; }
+  .roteiro-edit-table-hoteis td:nth-child(7)::before { content: "Categoria"; }
+  .roteiro-edit-table-hoteis td:nth-child(8)::before { content: "Regime"; }
+
+  .roteiro-edit-table-passeios td:nth-child(1)::before { content: "Cidade"; }
+  .roteiro-edit-table-passeios td:nth-child(2)::before { content: "Passeio"; }
+  .roteiro-edit-table-passeios td:nth-child(3)::before { content: "Data Início"; }
+  .roteiro-edit-table-passeios td:nth-child(4)::before { content: "Data Fim"; }
+  .roteiro-edit-table-passeios td:nth-child(5)::before { content: "Tipo"; }
+  .roteiro-edit-table-passeios td:nth-child(6)::before { content: "Ingressos"; }
+
+  .roteiro-edit-table-transporte td:nth-child(1)::before { content: "Tipo"; }
+  .roteiro-edit-table-transporte td:nth-child(2)::before { content: "Fornecedor"; }
+  .roteiro-edit-table-transporte td:nth-child(3)::before { content: "Descrição"; }
+  .roteiro-edit-table-transporte td:nth-child(4)::before { content: "Data Início"; }
+  .roteiro-edit-table-transporte td:nth-child(5)::before { content: "Data Fim"; }
+  .roteiro-edit-table-transporte td:nth-child(6)::before { content: "Categoria"; }
+  .roteiro-edit-table-transporte td:nth-child(7)::before { content: "Observação"; }
+
+  .roteiro-edit-table-investimento td:nth-child(1)::before { content: "Tipo"; }
+  .roteiro-edit-table-investimento td:nth-child(2)::before { content: "Valor por Pessoa"; }
+  .roteiro-edit-table-investimento td:nth-child(3)::before { content: "Qte Pax"; }
+  .roteiro-edit-table-investimento td:nth-child(4)::before { content: "Valor por Apto"; }
+
+  .roteiro-edit-table-pagamento td:nth-child(1)::before { content: "Serviço"; }
+  .roteiro-edit-table-pagamento td:nth-child(2)::before { content: "Valor Total c/Taxas"; }
+  .roteiro-edit-table-pagamento td:nth-child(3)::before { content: "Taxas"; }
+  .roteiro-edit-table-pagamento td:nth-child(4)::before { content: "Forma de Pagamento"; }
+}
+
+/* Escala: tabela grade no mobile com scroll horizontal e primeira coluna fixa */
+@media (max-width: 640px) {
+  .table-container .table-mobile-grid {
+    min-width: 980px;
+  }
+
+  .table-container .escala-calendario.table-mobile-grid {
+    min-width: 620px;
+  }
+
+  .escala-table.table-mobile-grid .escala-col-nome {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    background: #ffffff;
+    box-shadow: 1px 0 0 #111827;
+  }
+
+  .escala-table.table-mobile-grid thead .escala-col-nome {
+    z-index: 4;
+    background: #d9d9d9;
+  }
+}
+
+/* Ranking: usar padrão card no mobile mantendo identidade visual da tela */
+@media (max-width: 640px) {
+  .ranking-vendas-page .ranking-table.table-mobile-cards {
+    min-width: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .ranking-vendas-page .ranking-table.table-mobile-cards tr {
+    border-radius: 12px;
+  }
+
+  .ranking-vendas-page .ranking-table.table-mobile-cards td {
+    font-size: 0.9rem;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .ranking-vendas-page .ranking-table.table-mobile-cards .rank-pos {
+    width: auto;
+    min-width: 34px;
+    min-height: 34px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ranking-vendas-page .ranking-table.table-mobile-cards td[colspan] {
+    text-align: center;
+  }
+}

@@ -355,13 +355,53 @@ function RowActions({
   onDown?: () => void;
 }) {
   return (
-    <td style={{ ...tdSt, whiteSpace: "nowrap" }}>
-      <AppButton type="button" onClick={onUp} variant="secondary" style={actionBtnSt} title="Subir">▲</AppButton>{" "}
-      <AppButton type="button" onClick={onDown} variant="secondary" style={actionBtnSt} title="Descer">▼</AppButton>{" "}
-      <AppButton type="button" onClick={onAdd} variant="secondary" style={actionBtnSt} title="Adicionar abaixo">+</AppButton>{" "}
-      <AppButton type="button" onClick={onDelete} variant="danger" style={{ ...actionBtnSt, borderColor: "#fca5a5" }} title="Excluir">
-        <i className="pi pi-trash" aria-hidden="true" />
-      </AppButton>
+    <td className="th-actions" data-label="Ações" style={{ ...tdSt, whiteSpace: "nowrap" }}>
+      <div className="action-buttons action-buttons-center roteiro-row-actions">
+        <AppButton
+          type="button"
+          onClick={onUp}
+          variant="secondary"
+          className="btn-icon"
+          style={actionBtnSt}
+          title="Subir"
+          aria-label="Subir"
+        >
+          ▲
+        </AppButton>
+        <AppButton
+          type="button"
+          onClick={onDown}
+          variant="secondary"
+          className="btn-icon"
+          style={actionBtnSt}
+          title="Descer"
+          aria-label="Descer"
+        >
+          ▼
+        </AppButton>
+        <AppButton
+          type="button"
+          onClick={onAdd}
+          variant="secondary"
+          className="btn-icon"
+          style={actionBtnSt}
+          title="Adicionar abaixo"
+          aria-label="Adicionar abaixo"
+        >
+          +
+        </AppButton>
+        <AppButton
+          type="button"
+          onClick={onDelete}
+          variant="danger"
+          className="btn-icon danger"
+          style={{ ...actionBtnSt, borderColor: "#fca5a5" }}
+          title="Excluir"
+          aria-label="Excluir"
+        >
+          <i className="pi pi-trash" aria-hidden="true" />
+        </AppButton>
+      </div>
     </td>
   );
 }
@@ -783,7 +823,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <AppPrimerProvider>
-      <div style={{ padding: "0 0 60px" }}>
+      <div className="roteiro-edit-page" style={{ padding: "0 0 60px" }}>
         <AppToolbar
           className="mb-3"
           sticky
@@ -949,7 +989,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
         {abaAtiva === "hoteis" && (
           <div style={cardSt}>
             <div style={{ overflowX: "auto" }}>
-              <table className="table-default table-header-blue" style={{ width: "100%" }}>
+              <table className="table-default table-header-blue table-mobile-cards roteiro-edit-table roteiro-edit-table-hoteis" style={{ width: "100%" }}>
                 <thead>
                   <tr style={{ background: "#f8fafc" }}>
                     {["Cidade *", "Hotel *", "Data Início", "Data Fim", "Noites", "Apto *", "Categoria *", "Regime", ""].map((h) => (
@@ -1064,7 +1104,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
         {abaAtiva === "passeios" && (
           <div style={cardSt}>
             <div style={{ overflowX: "auto" }}>
-              <table className="table-default table-header-blue" style={{ width: "100%" }}>
+              <table className="table-default table-header-blue table-mobile-cards roteiro-edit-table roteiro-edit-table-passeios" style={{ width: "100%" }}>
                 <thead>
                   <tr style={{ background: "#f8fafc" }}>
                     {["Cidade *", "Passeio *", "Data Início", "Data Fim", "Tipo", "Ingressos", ""].map((h) => (
@@ -1158,7 +1198,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
         {abaAtiva === "transporte" && (
           <div style={cardSt}>
             <div style={{ overflowX: "auto" }}>
-              <table className="table-default table-header-blue" style={{ width: "100%" }}>
+              <table className="table-default table-header-blue table-mobile-cards roteiro-edit-table roteiro-edit-table-transporte" style={{ width: "100%" }}>
                 <thead>
                   <tr style={{ background: "#f8fafc" }}>
                     {["Tipo *", "Fornecedor *", "Descrição *", "Data Início", "Data Fim", "Categoria *", "Observação", ""].map((h) => (
@@ -1344,7 +1384,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
         {abaAtiva === "investimento" && (
           <div style={cardSt}>
             <div style={{ overflowX: "auto" }}>
-              <table className="table-default table-header-blue" style={{ width: "100%" }}>
+              <table className="table-default table-header-blue table-mobile-cards roteiro-edit-table roteiro-edit-table-investimento" style={{ width: "100%" }}>
                 <thead>
                   <tr style={{ background: "#f8fafc" }}>
                     {["Tipo *", "Valor por Pessoa (R$)", "Qte Pax", "Valor por Apto (R$)", ""].map((h) => (
@@ -1421,7 +1461,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
         {abaAtiva === "pagamento" && (
           <div style={cardSt}>
             <div style={{ overflowX: "auto" }}>
-              <table className="table-default table-header-blue" style={{ width: "100%" }}>
+              <table className="table-default table-header-blue table-mobile-cards roteiro-edit-table roteiro-edit-table-pagamento" style={{ width: "100%" }}>
                 <thead>
                   <tr style={{ background: "#f8fafc" }}>
                     {["Serviço", "Valor Total c/Taxas (R$)", "Taxas (R$)", "Forma de Pagamento *", ""].map((h) => (

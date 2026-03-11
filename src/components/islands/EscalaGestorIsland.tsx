@@ -1245,7 +1245,7 @@ export default function EscalaGestorIsland() {
       {!loadingEscala && !precisaFiltroMaster && (
         <AppCard className="escala-grid-card mb-3">
           <div className="table-container">
-            <table className="escala-table">
+            <table className="escala-table table-mobile-grid">
               <thead>
                 <tr>
                   <th className="escala-col-nome">Usuário</th>
