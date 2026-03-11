@@ -633,6 +633,15 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
     display: none !important;
   }
 
+  body.sakai-theme .vtur-app-card .vtur-app-card-body .table-container,
+  body.sakai-theme .vtur-app-card .vtur-app-card-body > table.table-mobile-cards,
+  body.sakai-theme .vtur-app-card .vtur-app-card-body > table.table-mobile-grid {
+    width: calc(100% + 2.5rem) !important;
+    max-width: calc(100% + 2.5rem) !important;
+    margin-left: -1.25rem !important;
+    margin-right: -1.25rem !important;
+  }
+
   body.sakai-theme .table-mobile-cards,
   body.sakai-theme .table-mobile-cards table,
   body.sakai-theme .table-mobile-cards tbody,
@@ -672,6 +681,10 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
 
   body.sakai-theme .table-mobile-cards td:last-child {
     border-bottom: 0;
+  }
+
+  body.sakai-theme .table-mobile-grid {
+    min-width: max-content;
   }
 
   body.sakai-theme .table-mobile-cards :is(td.th-actions, th.th-actions) {
