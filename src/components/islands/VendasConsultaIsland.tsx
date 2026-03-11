@@ -17,7 +17,6 @@ import { ToastStack, useToastQueue } from "../ui/Toast";
 import PaginationControls from "../ui/PaginationControls";
 import { fetchGestorEquipeIdsComGestor } from "../../lib/gestorEquipe";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
-import { Eye, Trash2 } from "lucide-react";
 import TableActions from "../ui/TableActions";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
@@ -1884,7 +1883,7 @@ export default function VendasConsultaIsland() {
                                         label: "Visualização completa",
                                         title: "Visualização completa",
                                         onClick: () => setModalReciboDetalhe({ reciboId: r.id, notas: recibosNotas[r.id] }),
-                                        icon: <Eye size={16} />,
+                                        icon: "pi pi-eye",
                                         variant: "light" as const,
                                       },
                                     ]
@@ -1896,7 +1895,7 @@ export default function VendasConsultaIsland() {
                                         label: excluindoRecibo === r.id ? "Excluindo..." : "Excluir recibo",
                                         title: "Excluir recibo",
                                         onClick: () => solicitarExclusaoRecibo(r.id, modalVenda.id),
-                                        icon: excluindoRecibo === r.id ? "…" : <Trash2 size={16} />,
+                                        icon: excluindoRecibo === r.id ? "pi pi-spin pi-spinner" : "pi pi-trash",
                                         variant: "danger" as const,
                                         disabled: excluindoRecibo === r.id,
                                       },

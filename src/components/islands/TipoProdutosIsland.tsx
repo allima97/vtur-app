@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { AlertTriangle } from "lucide-react";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { normalizeText } from "../../lib/normalizeText";
@@ -959,7 +958,7 @@ export default function TipoProdutosIsland() {
         <AppNoticeDialog
           open={Boolean(modalDuplicado)}
           title="ATENCAO"
-          icon={<AlertTriangle size={20} strokeWidth={2} />}
+          icon={<i className="pi pi-exclamation-triangle" aria-hidden="true" />}
           message={modalDuplicado ? `${modalDuplicado.entity} ja cadastrado.` : ""}
           onClose={() => setModalDuplicado(null)}
         />

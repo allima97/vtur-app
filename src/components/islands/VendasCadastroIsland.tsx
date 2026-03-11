@@ -9,7 +9,6 @@ import { matchesCpfSearch, onlyDigits } from "../../lib/searchNormalization";
 import { carregarTermosNaoComissionaveis, isFormaNaoComissionavel } from "../../lib/pagamentoUtils";
 import CalculatorModal from "../ui/CalculatorModal";
 import { ToastStack, useToastQueue } from "../ui/Toast";
-import { AlertTriangle } from "lucide-react";
 import AlertMessage from "../ui/AlertMessage";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
@@ -2231,14 +2230,14 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
         open={Boolean(duplicadoModal)}
         title="ATENCAO!"
         message={duplicadoModal?.mensagem}
-        icon={<AlertTriangle size={20} strokeWidth={2} />}
+        icon={<i className="pi pi-exclamation-triangle" aria-hidden="true" />}
         onClose={() => setDuplicadoModal(null)}
       />
       <AppNoticeDialog
         open={Boolean(tipoPacoteModal)}
         title="ATENCAO!"
         message={tipoPacoteModal?.mensagem}
-        icon={<AlertTriangle size={20} strokeWidth={2} />}
+        icon={<i className="pi pi-exclamation-triangle" aria-hidden="true" />}
         onClose={() => setTipoPacoteModal(null)}
       />
       <ToastStack toasts={toasts} onDismiss={dismissToast} />

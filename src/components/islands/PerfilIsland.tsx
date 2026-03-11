@@ -1012,7 +1012,7 @@ function formatCnpj(value: string) {
                   aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
                   aria-pressed={mostrarSenha}
                 >
-                  <i className={`fa-solid ${mostrarSenha ? "fa-eye-slash" : "fa-eye"}`} />
+                  <i className={mostrarSenha ? "pi pi-eye-slash" : "pi pi-eye"} />
                 </AppButton>
               </div>
             </div>
@@ -1033,7 +1033,7 @@ function formatCnpj(value: string) {
                   aria-label={mostrarConfirmacao ? "Ocultar senha" : "Mostrar senha"}
                   aria-pressed={mostrarConfirmacao}
                 >
-                  <i className={`fa-solid ${mostrarConfirmacao ? "fa-eye-slash" : "fa-eye"}`} />
+                  <i className={mostrarConfirmacao ? "pi pi-eye-slash" : "pi pi-eye"} />
                 </AppButton>
               </div>
             </div>
