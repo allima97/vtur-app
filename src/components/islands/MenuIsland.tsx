@@ -49,55 +49,10 @@ const FornecedoresIcon = () => (
   </svg>
 );
 
-const MENU_EMOJI_TO_PRIME_ICON: Record<string, string> = {
-  "🧭": "pi pi-compass",
-  "💳": "pi pi-credit-card",
-  "💰": "pi pi-dollar",
-  "🏢": "pi pi-building",
-  "🧑": "pi pi-user",
-  "🧩": "pi pi-th-large",
-  "📣": "pi pi-megaphone",
-  "✉️": "pi pi-envelope",
-  "⚙️": "pi pi-cog",
-  "📜": "pi pi-file",
-  "📚": "pi pi-book",
-  "📊": "pi pi-chart-bar",
-  "📅": "pi pi-calendar",
-  "✅": "pi pi-check-circle",
-  "🧾": "pi pi-file",
-  "⭐": "pi pi-star",
-  "📁": "pi pi-folder",
-  "💼": "pi pi-briefcase",
-  "💬": "pi pi-comments",
-  "✈️": "pi pi-send",
-  "🎧": "pi pi-headphones",
-  "🧮": "pi pi-calculator",
-  "👥": "pi pi-users",
-  "🔐": "pi pi-lock",
-  "🏆": "pi pi-trophy",
-  "📈": "pi pi-chart-line",
-  "📌": "pi pi-map-marker",
-  "🎫": "pi pi-ticket",
-  "👤": "pi pi-user",
-  "🏷️": "pi pi-tag",
-  "📦": "pi pi-box",
-  "🎯": "pi pi-bullseye",
-  "💱": "pi pi-sync",
-  "🌍": "pi pi-globe",
-  "🗺️": "pi pi-map",
-  "🏙️": "pi pi-building",
-  "📋": "pi pi-list",
-  "⏳": "pi pi-clock",
-  "❓": "pi pi-question-circle",
-  "☰": "pi pi-bars",
-  "✕": "pi pi-times",
-  "🎛️": "pi pi-sliders-h",
-};
-
 function renderMenuIcon(icon: React.ReactNode, extraClassName = ""): React.ReactNode {
   if (typeof icon !== "string") return icon;
-  const iconClass = MENU_EMOJI_TO_PRIME_ICON[icon];
-  if (!iconClass) return icon;
+  const iconClass = icon.trim();
+  if (!iconClass.startsWith("pi ")) return icon;
   return <i className={`${iconClass} ${extraClassName}`.trim()} aria-hidden="true" />;
 }
 
@@ -348,7 +303,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
           section: "admin",
           href: "/dashboard/admin",
           active: "admin-dashboard",
-          icon: "🧭",
+          icon: "pi pi-compass",
           label: "Dashboard",
           canShow: true,
         },
@@ -357,7 +312,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
           section: "admin",
           href: "/admin/planos",
           active: "admin-planos",
-          icon: "💳",
+          icon: "pi pi-credit-card",
           label: "Planos",
           canShow: true,
         },
@@ -366,7 +321,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
           section: "admin",
           href: "/admin/financeiro",
           active: "admin-financeiro",
-          icon: "💰",
+          icon: "pi pi-dollar",
           label: "Financeiro",
           canShow: true,
         },
@@ -375,7 +330,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
           section: "admin",
           href: "/admin/empresas",
           active: "admin-empresas",
-          icon: "🏢",
+          icon: "pi pi-building",
           label: "Empresas",
           canShow: true,
         },
@@ -384,7 +339,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
           section: "admin",
           href: "/admin/usuarios",
           active: "admin-usuarios",
-          icon: "🧑",
+          icon: "pi pi-user",
           label: "Usuários",
           canShow: true,
         },
@@ -393,7 +348,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
           section: "admin",
           href: "/admin/tipos-usuario",
           active: "admin-tipos-usuario",
-          icon: "🧩",
+          icon: "pi pi-th-large",
           label: "Tipos de usuário",
           canShow: true,
         },
@@ -402,7 +357,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
           section: "admin",
           href: "/admin/avisos",
           active: "admin-avisos",
-          icon: "📣",
+          icon: "pi pi-megaphone",
           label: "Avisos",
           canShow: true,
         },
@@ -411,7 +366,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
           section: "admin",
           href: "/admin/email",
           active: "admin-email",
-          icon: "✉️",
+          icon: "pi pi-envelope",
           label: "E-mail (Envio)",
           canShow: true,
         },
@@ -420,7 +375,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
           section: "admin",
           href: "/admin/permissoes",
           active: "admin-permissoes",
-          icon: "⚙️",
+          icon: "pi pi-cog",
           label: "Permissões",
           canShow: true,
         },
@@ -429,7 +384,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
           section: "admin",
           href: "/admin/parametros-importacao",
           active: "admin-parametros-importacao",
-          icon: "🧩",
+          icon: "pi pi-th-large",
           label: "Parâmetros importação",
           canShow: true,
         },
@@ -438,7 +393,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
           section: "admin",
           href: "/dashboard/logs",
           active: "admin-logs",
-          icon: "📜",
+          icon: "pi pi-file",
           label: "Logs",
           canShow: true,
         },
@@ -447,7 +402,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
           section: "admin",
           href: "/documentacao",
           active: "documentacao",
-          icon: "📚",
+          icon: "pi pi-book",
           label: "Documentação",
           canShow: true,
         },
@@ -468,7 +423,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "informativos",
       href: dashboardHref,
       active: "dashboard",
-      icon: "📊",
+      icon: "pi pi-chart-bar",
       label: "Dashboard",
       canShow: canMenuExact("Dashboard"),
     });
@@ -477,7 +432,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "informativos",
       href: "/operacao/agenda",
       active: "operacao_agenda",
-      icon: "📅",
+      icon: "pi pi-calendar",
       label: (
         <span className="sidebar-link-label">
           Agenda
@@ -493,7 +448,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "informativos",
       href: "/operacao/todo",
       active: "operacao_todo",
-      icon: "✅",
+      icon: "pi pi-check-circle",
       label: "Tarefas",
       canShow: canMenuExact("Tarefas"),
     });
@@ -502,7 +457,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "informativos",
       href: "/operacao/recados",
       active: "operacao_recados",
-      icon: "🧾",
+      icon: "pi pi-file",
       label: (
         <span className="sidebar-link-label">
           Mural de Recados
@@ -518,7 +473,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "informativos",
       href: "/operacao/minhas-preferencias",
       active: "operacao_preferencias",
-      icon: "⭐",
+      icon: "pi pi-star",
       label: "Minhas Preferências",
       canShow: canMenuExact("Minhas Preferências"),
     });
@@ -527,7 +482,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "informativos",
       href: "/operacao/documentos-viagens",
       active: "operacao_documentos_viagens",
-      icon: "📁",
+      icon: "pi pi-folder",
       label: "Documentos Viagens",
       canShow: canMenuExact("Documentos Viagens"),
     });
@@ -536,7 +491,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "informativos",
       href: "/operacao/campanhas",
       active: "operacao_campanhas",
-      icon: "📣",
+      icon: "pi pi-megaphone",
       label: "Campanhas",
       canShow: canMenuExact("Campanhas"),
     });
@@ -545,7 +500,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "informativos",
       href: "/perfil/escala",
       active: "perfil-escala",
-      icon: "📅",
+      icon: "pi pi-calendar",
       label: "Minha Escala",
       canShow: menuIsVendedor,
     });
@@ -556,7 +511,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "operacao",
       href: "/vendas/consulta",
       active: "vendas",
-      icon: "🧾",
+      icon: "pi pi-file",
       label: "Vendas",
       canShow: canMenuExact("Vendas"),
     });
@@ -565,7 +520,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "operacao",
       href: "/orcamentos/consulta",
       active: "orcamentos",
-      icon: "💼",
+      icon: "pi pi-briefcase",
       label: "Orçamentos",
       canShow: canMenuExact("Orcamentos"),
     });
@@ -574,7 +529,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "operacao",
       href: "/consultoria-online",
       active: "consultoria",
-      icon: "💬",
+      icon: "pi pi-comments",
       label: (
         <span className="sidebar-link-label">
           Consultoria
@@ -590,7 +545,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "operacao",
       href: "/operacao/viagens",
       active: "operacao_viagens",
-      icon: "✈️",
+      icon: "pi pi-send",
       label: "Viagens",
       canShow: canMenuExact("Viagens"),
     });
@@ -599,7 +554,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "operacao",
       href: "/operacao/controle-sac",
       active: "operacao_sac",
-      icon: "🎧",
+      icon: "pi pi-headphones",
       label: "Controle de SAC",
       canShow: canMenuExact("Controle de SAC"),
     });
@@ -610,7 +565,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "financeiro",
       href: "/operacao/comissionamento",
       active: "comissionamento",
-      icon: "💰",
+      icon: "pi pi-dollar",
       label: "Comissionamento",
       canShow: canMenuExact("Comissionamento"),
     });
@@ -619,7 +574,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "financeiro",
       href: "/parametros/formas-pagamento",
       active: "parametros-formas-pagamento",
-      icon: "💳",
+      icon: "pi pi-credit-card",
       label: "Formas de Pagamento",
       canShow: canMenuExact("Formas de Pagamento"),
     });
@@ -628,7 +583,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "financeiro",
       href: "/parametros/regras-comissao",
       active: "regras-comissao",
-      icon: "💰",
+      icon: "pi pi-dollar",
       label: "Regras de Comissão",
       canShow: canMenuExact("RegrasComissao"),
     });
@@ -637,7 +592,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "financeiro",
       href: "/operacao/conciliacao",
       active: "operacao_conciliacao",
-      icon: "🧮",
+      icon: "pi pi-calculator",
       label: "Conciliação",
       canShow: (menuIsGestor || menuIsMaster || menuIsSystemAdmin) && canMenuExact("Conciliação"),
     });
@@ -648,7 +603,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "cadastros",
       href: "/clientes/carteira",
       active: "clientes",
-      icon: "👥",
+      icon: "pi pi-users",
       label: "Clientes",
       canShow: canMenuExact("Clientes"),
     });
@@ -671,7 +626,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
         section: "gestao",
         href: "/master/empresas",
         active: "master-empresas",
-        icon: "🏢",
+        icon: "pi pi-building",
         label: "Empresas",
         canShow: menuIsMaster && canMenuExact("MasterEmpresas"),
       });
@@ -680,7 +635,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
         section: "gestao",
         href: "/master/usuarios",
         active: "master-usuarios",
-        icon: "👥",
+        icon: "pi pi-users",
         label: "Usuários",
         canShow: menuIsMaster && canMenuExact("MasterUsuarios"),
       });
@@ -689,7 +644,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
         section: "gestao",
         href: "/master/permissoes",
         active: "master-permissoes",
-        icon: "🔐",
+        icon: "pi pi-lock",
         label: "Permissões",
         canShow: canMenuExact("MasterPermissoes"),
       });
@@ -701,7 +656,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "relatorios",
       href: "/relatorios/ranking-vendas",
       active: "relatorios-ranking-vendas",
-      icon: "🏆",
+      icon: "pi pi-trophy",
       label: "Ranking de vendas",
       canShow: canMenuExact("Ranking de vendas"),
     });
@@ -710,7 +665,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "relatorios",
       href: "/relatorios/vendas",
       active: "relatorios-vendas",
-      icon: "📈",
+      icon: "pi pi-chart-line",
       label: "Vendas (detalhado)",
       canShow: canMenuExact("RelatorioVendas") || canMenuExact("Relatorios"),
     });
@@ -719,7 +674,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "relatorios",
       href: "/relatorios/vendas-por-destino",
       active: "relatorios-vendas-destino",
-      icon: "📌",
+      icon: "pi pi-map-marker",
       label: "Vendas por destino",
       canShow: canMenuExact("RelatorioDestinos") || canMenuExact("Relatorios"),
     });
@@ -728,7 +683,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "relatorios",
       href: "/relatorios/vendas-por-produto",
       active: "relatorios-vendas-produto",
-      icon: "🎫",
+      icon: "pi pi-ticket",
       label: "Vendas por produto",
       canShow: canMenuExact("RelatorioProdutos") || canMenuExact("Relatorios"),
     });
@@ -737,7 +692,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "relatorios",
       href: "/relatorios/vendas-por-cliente",
       active: "relatorios-vendas-cliente",
-      icon: "👤",
+      icon: "pi pi-user",
       label: "Vendas por cliente",
       canShow: canMenuExact("RelatorioClientes") || canMenuExact("Relatorios"),
     });
@@ -748,7 +703,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "parametros",
       href: "/parametros/tipo-produtos",
       active: "parametros-tipo-produtos",
-      icon: "🏷️",
+      icon: "pi pi-tag",
       label: "Tipo de Produtos",
       canShow: canMenuExact("TipoProdutos"),
     });
@@ -757,7 +712,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "parametros",
       href: "/parametros/tipo-pacotes",
       active: "parametros-tipo-pacotes",
-      icon: "📦",
+      icon: "pi pi-box",
       label: "Tipo de Pacotes",
       canShow: canMenuExact("TipoPacotes"),
     });
@@ -766,7 +721,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "parametros",
       href: "/parametros/metas",
       active: "parametros-metas",
-      icon: "🎯",
+      icon: "pi pi-bullseye",
       label: "Metas",
       canShow: canMenuExact("Metas"),
     });
@@ -775,7 +730,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "parametros",
       href: "/parametros/equipe",
       active: "parametros-equipe",
-      icon: "👥",
+      icon: "pi pi-users",
       label: "Equipe",
       canShow: canMenuExact("Equipe"),
     });
@@ -784,7 +739,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "parametros",
       href: "/parametros/escalas",
       active: "parametros-escalas",
-      icon: "📅",
+      icon: "pi pi-calendar",
       label: "Escalas",
       canShow: canMenuExact("Escalas"),
     });
@@ -793,7 +748,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "parametros",
       href: "/parametros",
       active: "parametros",
-      icon: "⚙️",
+      icon: "pi pi-cog",
       label: "Parâmetros do Sistema",
       canShow: canMenuExact("Parametros"),
     });
@@ -802,7 +757,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "parametros",
       href: "/parametros/avisos",
       active: "parametros-avisos",
-      icon: "📣",
+      icon: "pi pi-megaphone",
       label: "Avisos",
       canShow: canMenuExact("Avisos") || canMenuExact("ParametrosAvisos") || canMenuExact("Parametros"),
     });
@@ -811,7 +766,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "parametros",
       href: "/parametros/cambios",
       active: "parametros-cambios",
-      icon: "💱",
+      icon: "pi pi-sync",
       label: "Câmbios",
       canShow: canMenuExact("Cambios"),
     });
@@ -820,7 +775,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "parametros",
       href: "/parametros/orcamentos",
       active: "parametros-orcamentos",
-      icon: "🧾",
+      icon: "pi pi-file",
       label: "Orçamentos (PDF)",
       canShow: canMenuExact("Orcamentos (PDF)"),
     });
@@ -831,7 +786,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "documentacao",
       href: "/documentacao",
       active: "documentacao",
-      icon: "📚",
+      icon: "pi pi-book",
       label: "Documentação",
       canShow: Boolean(menuUserId) && canMenuExact("Admin"),
     });
@@ -1240,18 +1195,18 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
   }
 
   const cadastrosMenu = [
-    { name: "Produtos", href: "/cadastros/produtos", active: "produtos", icon: "🎫", label: "Produtos" },
-    { name: "Circuitos", href: "/cadastros/circuitos", active: "circuitos", icon: "🧭", label: "Circuitos" },
-    { name: "Paises", href: "/cadastros/paises", active: "paises", icon: "🌍", label: "Países" },
+    { name: "Produtos", href: "/cadastros/produtos", active: "produtos", icon: "pi pi-ticket", label: "Produtos" },
+    { name: "Circuitos", href: "/cadastros/circuitos", active: "circuitos", icon: "pi pi-compass", label: "Circuitos" },
+    { name: "Paises", href: "/cadastros/paises", active: "paises", icon: "pi pi-globe", label: "Países" },
     {
       name: "Subdivisoes",
       href: "/cadastros/estados",
       active: "subdivisoes",
-      icon: "🗺️",
+      icon: "pi pi-map",
       label: "Estado/Província",
     },
-    { name: "Cidades", href: "/cadastros/cidades", active: "cidades", icon: "🏙️", label: "Cidades" },
-    { name: "ProdutosLote", href: "/cadastros/lote", active: "lote", icon: "📦", label: "Lote" },
+    { name: "Cidades", href: "/cadastros/cidades", active: "cidades", icon: "pi pi-building", label: "Cidades" },
+    { name: "ProdutosLote", href: "/cadastros/lote", active: "lote", icon: "pi pi-box", label: "Lote" },
     {
       name: "Fornecedores",
       href: "/cadastros/fornecedores",
@@ -1302,7 +1257,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       {
         key: "todo-novo",
         label: "A Fazer",
-        icon: "📋",
+        icon: "pi pi-list",
         todoTab: "novo",
         tone: "blue",
         onPress: () => setTodoTab("novo"),
@@ -1310,7 +1265,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       {
         key: "todo-agendado",
         label: "Fazendo",
-        icon: "⏳",
+        icon: "pi pi-clock",
         todoTab: "agendado",
         tone: "orange",
         onPress: () => setTodoTab("agendado"),
@@ -1318,7 +1273,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       {
         key: "todo-em-andamento",
         label: "Feito",
-        icon: "✅",
+        icon: "pi pi-check-circle",
         todoTab: "em_andamento",
         tone: "green",
         onPress: () => setTodoTab("em_andamento"),
@@ -1326,7 +1281,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       {
         key: "todo-categorias",
         label: "Categorias",
-        icon: "🏷️",
+        icon: "pi pi-tag",
         todoTab: "categorias",
         tone: "violet",
         onPress: () => setTodoTab("categorias"),
@@ -1337,7 +1292,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       key: "admin-dashboard",
       label: "Dashboard",
       href: "/dashboard/admin",
-      icon: "🧭",
+      icon: "pi pi-compass",
       active: "admin-dashboard",
     });
   } else {
@@ -1351,7 +1306,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
         key: "dashboard",
         label: "Dashboard",
         href: dashboardHref,
-        icon: "📊",
+        icon: "pi pi-chart-bar",
         active: "dashboard",
       });
     }
@@ -1360,7 +1315,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
         key: "agenda",
         label: "Agenda",
         href: "/operacao/agenda",
-        icon: "📅",
+        icon: "pi pi-calendar",
         active: "operacao_agenda",
       });
     }
@@ -1369,7 +1324,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
         key: "tarefas",
         label: "Tarefas",
         href: "/operacao/todo",
-        icon: "✅",
+        icon: "pi pi-check-circle",
         active: "operacao_todo",
       });
     }
@@ -1378,7 +1333,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
         key: "vendas",
         label: "Vendas",
         href: "/vendas/consulta",
-        icon: "🧾",
+        icon: "pi pi-file",
         active: "vendas",
       });
     }
@@ -1490,12 +1445,12 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
         {/* PERFIL */}
         {menuUserId && !menuIsSystemAdmin && (
           renderSidebarLinks("Conta", "conta", [
-            { key: "perfil", href: "/perfil", active: "perfil", icon: "👤", label: "Perfil", locked: true },
+            { key: "perfil", href: "/perfil", active: "perfil", icon: "pi pi-user", label: "Perfil", locked: true },
             {
               key: "perfil-personalizar",
               href: "/perfil/personalizar",
               active: "perfil-personalizar",
-              icon: "🎛️",
+              icon: "pi pi-sliders-h",
               label: "Personalizar",
               locked: true,
             },
@@ -1504,12 +1459,12 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
 
         {menuUserId && menuIsSystemAdmin && (
           renderSidebarLinks("Conta", "conta", [
-            { key: "perfil", href: "/perfil", active: "perfil", icon: "👤", label: "Perfil", locked: true },
+            { key: "perfil", href: "/perfil", active: "perfil", icon: "pi pi-user", label: "Perfil", locked: true },
             {
               key: "perfil-personalizar",
               href: "/perfil/personalizar",
               active: "perfil-personalizar",
-              icon: "🎛️",
+              icon: "pi pi-sliders-h",
               label: "Personalizar",
               locked: true,
             },

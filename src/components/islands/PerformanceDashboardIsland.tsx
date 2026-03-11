@@ -19,46 +19,24 @@ import AppToolbar from "../ui/primer/AppToolbar";
 
 type Tab = "live" | "historical" | "recommendations";
 
-const PERFORMANCE_ICON_MAP: Record<string, string> = {
-  "📊": "pi pi-chart-bar",
-  "📈": "pi pi-chart-line",
-  "📅": "pi pi-calendar",
-  "✅": "pi pi-check-circle",
-  "🔴": "pi pi-circle-fill",
-  "💡": "pi pi-lightbulb",
-  "⚡": "pi pi-bolt",
-  "🛑": "pi pi-stop-circle",
-  "🎯": "pi pi-bullseye",
-  "💾": "pi pi-download",
-  "🗑️": "pi pi-trash",
-  "📡": "pi pi-wifi",
-  "🔄": "pi pi-sync",
-  "🏆": "pi pi-trophy",
-  "📱": "pi pi-mobile",
-  "🗄️": "pi pi-database",
-  "ℹ️": "pi pi-info-circle",
-  "⚠️": "pi pi-exclamation-triangle",
-  "📋": "pi pi-list",
-};
-
 function renderPerformanceIcon(icon: string, extraClassName = "") {
-  const iconClass = PERFORMANCE_ICON_MAP[icon];
-  if (!iconClass) return icon;
+  const iconClass = String(icon || "").trim();
+  if (!iconClass.startsWith("pi ")) return icon;
   return <i className={`${iconClass} ${extraClassName}`.trim()} aria-hidden="true" />;
 }
 
 const BEFORE_METRICS = {
-  vendas: { requests: 8, icon: "📊" },
-  dashboard: { requests: 15, icon: "📈" },
-  agenda: { requests: 30, icon: "📅" },
-  tarefas: { requests: "N+1", icon: "✅" },
+  vendas: { requests: 8, icon: "pi pi-chart-bar" },
+  dashboard: { requests: 15, icon: "pi pi-chart-line" },
+  agenda: { requests: 30, icon: "pi pi-calendar" },
+  tarefas: { requests: "N+1", icon: "pi pi-check-circle" },
 };
 
 const AFTER_METRICS = {
-  vendas: { requests: "~10", improvement: "60-70%", icon: "📊" },
-  dashboard: { requests: "~5", improvement: "67%", icon: "📈" },
-  agenda: { requests: "~8", improvement: "73%", icon: "📅" },
-  tarefas: { requests: "1-2 batch", improvement: "~90%", icon: "✅" },
+  vendas: { requests: "~10", improvement: "60-70%", icon: "pi pi-chart-bar" },
+  dashboard: { requests: "~5", improvement: "67%", icon: "pi pi-chart-line" },
+  agenda: { requests: "~8", improvement: "73%", icon: "pi pi-calendar" },
+  tarefas: { requests: "1-2 batch", improvement: "~90%", icon: "pi pi-check-circle" },
 };
 
 export default function PerformanceDashboardIsland() {
@@ -175,9 +153,9 @@ export default function PerformanceDashboardIsland() {
       <AppCard tone="config">
         <div className="flex flex-wrap gap-2">
         {[
-          { id: "live", label: "Metricas ao vivo", icon: "🔴" },
-          { id: "historical", label: "Historico", icon: "📈" },
-          { id: "recommendations", label: "Recomendacoes", icon: "💡" },
+          { id: "live", label: "Metricas ao vivo", icon: "pi pi-circle-fill" },
+          { id: "historical", label: "Historico", icon: "pi pi-chart-line" },
+          { id: "recommendations", label: "Recomendacoes", icon: "pi pi-lightbulb" },
         ].map((tab) => (
           <AppButton
             key={tab.id}
@@ -208,7 +186,7 @@ export default function PerformanceDashboardIsland() {
                 variant={isRecording ? "danger" : "primary"}
               >
                 <span className="inline-flex items-center gap-2">
-                  {renderPerformanceIcon(isRecording ? "🛑" : "🎯")}
+                  {renderPerformanceIcon(isRecording ? "pi pi-stop-circle" : "pi pi-bullseye")}
                   <span>{isRecording ? "Parar gravacao" : "Iniciar gravacao"}</span>
                 </span>
               </AppButton>
@@ -224,7 +202,7 @@ export default function PerformanceDashboardIsland() {
                 variant="primary"
               >
                 <span className="inline-flex items-center gap-2">
-                  {renderPerformanceIcon("💾")}
+                  {renderPerformanceIcon("pi pi-download")}
                   <span>Exportar</span>
                 </span>
               </AppButton>
@@ -235,7 +213,7 @@ export default function PerformanceDashboardIsland() {
                 variant="secondary"
               >
                 <span className="inline-flex items-center gap-2">
-                  {renderPerformanceIcon("🗑️")}
+                  {renderPerformanceIcon("pi pi-trash")}
                   <span>Limpar</span>
                 </span>
               </AppButton>
@@ -251,25 +229,25 @@ export default function PerformanceDashboardIsland() {
                   label: "Requisicoes totais",
                   value: liveMetrics.totalRequests,
                   color: "blue",
-                  icon: "📡",
+                  icon: "pi pi-wifi",
                 },
                 {
                   label: "Requisicoes BFF",
                   value: liveMetrics.bffRequests,
                   color: "green",
-                  icon: "✅",
+                  icon: "pi pi-check-circle",
                 },
                 {
                   label: "Requisicoes Supabase",
                   value: liveMetrics.supabaseRequests,
                   color: "orange",
-                  icon: "🔄",
+                  icon: "pi pi-sync",
                 },
                 {
                   label: "TTFB medio (ms)",
                   value: liveMetrics.avgTTFBMs,
                   color: "purple",
-                  icon: "⚡",
+                  icon: "pi pi-bolt",
                 },
               ].map((card, i) => {
                 const colorMap: Record<string, string> = {
@@ -342,22 +320,22 @@ export default function PerformanceDashboardIsland() {
                   {
                     label: "Media total",
                     value: historicalSummary.avgTotalRequests,
-                    icon: "📊",
+                    icon: "pi pi-chart-bar",
                   },
                   {
                     label: "Media BFF",
                     value: historicalSummary.avgBffRequests,
-                    icon: "✅",
+                    icon: "pi pi-check-circle",
                   },
                   {
                     label: "Media Supabase",
                     value: historicalSummary.avgSupabaseRequests,
-                    icon: "🔄",
+                    icon: "pi pi-sync",
                   },
                   {
                     label: "Media TTFB",
                     value: `${historicalSummary.avgTTFBMs}ms`,
-                    icon: "⚡",
+                    icon: "pi pi-bolt",
                   },
                 ].map((card, i) => (
                   <div key={i} className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 p-4 rounded-lg">
@@ -470,7 +448,7 @@ export default function PerformanceDashboardIsland() {
           {/* Performance Status */}
           <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-6">
             <div className="flex items-start gap-4">
-              <div className="text-4xl">{renderPerformanceIcon("✅")}</div>
+              <div className="text-4xl">{renderPerformanceIcon("pi pi-check-circle")}</div>
               <div>
                 <h3 className="font-bold text-lg text-green-700">Otimizacao de performance concluida!</h3>
                 <p className="text-green-600 mt-1">
@@ -495,7 +473,7 @@ export default function PerformanceDashboardIsland() {
                     <div className="text-xs text-gray-500 font-mono">{m.file}</div>
                   </div>
                   <span className="text-green-600 font-bold inline-flex items-center gap-2">
-                    {renderPerformanceIcon("✅")}
+                    {renderPerformanceIcon("pi pi-check-circle")}
                     <span>{m.status}</span>
                   </span>
                 </div>
@@ -510,25 +488,25 @@ export default function PerformanceDashboardIsland() {
               {[
                 {
                   severity: "info",
-                  icon: "ℹ️",
+                  icon: "pi pi-info-circle",
                   title: "Monitoramento em tempo real ativo",
                   desc: "NetMetrics em execucao. Use a aba ao vivo para acompanhar.",
                 },
                 {
                   severity: "success",
-                  icon: "✅",
+                  icon: "pi pi-check-circle",
                   title: "Cache em estado ideal",
                   desc: "Cache do queryLite esta deduplicando requisicoes com eficiencia.",
                 },
                 {
                   severity: "warning",
-                  icon: "⚠️",
+                  icon: "pi pi-exclamation-triangle",
                   title: "P2: Deduplicar requests do layout",
                   desc: "current_company_id e mural_recados chamam 2-4x por tela. Adicione cache queryLite (~4 req a menos).",
                 },
                 {
                   severity: "info",
-                  icon: "💡",
+                  icon: "pi pi-lightbulb",
                   title: "P3: Recomenda-se code splitting",
                   desc: "index.4x3VkhOw.js tem 568KB. Considere lazy load para componentes menos usados.",
                 },
