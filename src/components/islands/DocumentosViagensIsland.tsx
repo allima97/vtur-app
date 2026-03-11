@@ -506,20 +506,20 @@ export default function DocumentosViagensIsland() {
                       {
                         key: "open",
                         label: "Abrir",
-                        icon: "📄",
+                        icon: <i className="pi pi-file" aria-hidden="true" />,
                         variant: "primary",
                         onClick: () => abrirDocumento(doc),
                       },
                       {
                         key: "model",
                         label: "Modelo",
-                        icon: "🧾",
+                        icon: <i className="pi pi-file-edit" aria-hidden="true" />,
                         onClick: () => setEditingId(doc.id),
                       },
                       {
                         key: "delete",
                         label: "Excluir",
-                        icon: "🗑️",
+                        icon: <i className="pi pi-trash" aria-hidden="true" />,
                         variant: "danger",
                         onClick: () => setConfirmDeleteId(doc.id),
                         disabled: !podeExcluir,

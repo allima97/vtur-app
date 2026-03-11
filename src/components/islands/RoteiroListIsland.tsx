@@ -111,7 +111,7 @@ export default function RoteiroListIsland() {
 
         {!loading && filtered.length === 0 && (
           <EmptyState
-            icon={<span aria-hidden>📋</span>}
+            icon={<i className="pi pi-list" aria-hidden="true" />}
             title="Nenhum roteiro encontrado"
             description="Ajuste a busca ou crie um novo roteiro."
             action={
@@ -163,7 +163,7 @@ export default function RoteiroListIsland() {
                             {
                               key: "view",
                               label: "Visualizar",
-                              icon: "👁️",
+                              icon: <i className="pi pi-eye" aria-hidden="true" />,
                               onClick: () => {
                                 window.location.href = `/orcamentos/personalizados/visualizar/${r.id}`;
                               },
@@ -171,7 +171,7 @@ export default function RoteiroListIsland() {
                             {
                               key: "edit",
                               label: "Editar",
-                              icon: "✏️",
+                              icon: <i className="pi pi-pencil" aria-hidden="true" />,
                               onClick: () => {
                                 window.location.href = `/orcamentos/personalizados/${r.id}`;
                               },
@@ -179,7 +179,7 @@ export default function RoteiroListIsland() {
                             {
                               key: "delete",
                               label: "Excluir",
-                              icon: "🗑️",
+                              icon: <i className="pi pi-trash" aria-hidden="true" />,
                               variant: "danger",
                               onClick: () => setRoteiroParaExcluir(r),
                             },

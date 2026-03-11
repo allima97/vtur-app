@@ -889,9 +889,15 @@ export default function ParametrosAvisosIsland() {
                     <td data-label="Status">{theme.ativo ? "Ativo" : "Inativo"}</td>
                     <td className="th-actions" data-label="Ações">
                       <div className="action-buttons">
-                        <button className="btn-icon" type="button" onClick={() => editarTheme(theme)} title="Editar arte">✏️</button>
-                        <a className="btn-icon" href={resolvedThemeAsset.asset_url || theme.asset_url} target="_blank" rel="noreferrer" title="Visualizar arte">👁️</a>
-                        <button className="btn-icon btn-danger" type="button" onClick={() => void removerTheme(theme.id)} title="Excluir arte">🗑️</button>
+                        <button className="btn-icon" type="button" onClick={() => editarTheme(theme)} title="Editar arte">
+                          <i className="pi pi-pencil" aria-hidden="true" />
+                        </button>
+                        <a className="btn-icon" href={resolvedThemeAsset.asset_url || theme.asset_url} target="_blank" rel="noreferrer" title="Visualizar arte">
+                          <i className="pi pi-eye" aria-hidden="true" />
+                        </a>
+                        <button className="btn-icon btn-danger" type="button" onClick={() => void removerTheme(theme.id)} title="Excluir arte">
+                          <i className="pi pi-trash" aria-hidden="true" />
+                        </button>
                       </div>
                     </td>
                   </tr>

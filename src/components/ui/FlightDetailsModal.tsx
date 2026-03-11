@@ -69,7 +69,7 @@ export default function FlightDetailsModal({ details, title, onClose }: FlightDe
             )}
           </div>
           <AppButton variant="ghost" onClick={onClose}>
-            ✖
+            <i className="pi pi-times" aria-hidden="true" />
           </AppButton>
         </div>
         <div className="modal-body" style={{ display: "grid", gap: 12 }}>

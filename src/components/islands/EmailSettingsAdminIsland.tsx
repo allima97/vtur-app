@@ -277,7 +277,7 @@ const EmailSettingsAdminIsland: React.FC = () => {
                       aria-label={mostrarResend ? "Ocultar chave" : "Mostrar chave"}
                       aria-pressed={mostrarResend}
                     >
-                      {mostrarResend ? "🙈" : "👁️"}
+                      <i className={mostrarResend ? "pi pi-eye-slash" : "pi pi-eye"} aria-hidden="true" />
                     </AppButton>
                   </div>
                   <div className="vtur-inline-note">
@@ -403,7 +403,7 @@ const EmailSettingsAdminIsland: React.FC = () => {
                           aria-pressed={mostrarSenha}
                           disabled={!usarSmtp}
                         >
-                          {mostrarSenha ? "🙈" : "👁️"}
+                          <i className={mostrarSenha ? "pi pi-eye-slash" : "pi pi-eye"} aria-hidden="true" />
                         </AppButton>
                       </div>
                     </div>

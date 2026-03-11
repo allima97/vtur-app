@@ -1579,7 +1579,7 @@ export default function VendasConsultaIsland() {
                               label: "WhatsApp",
                               title: "Enviar WhatsApp",
                               onClick: () => window.open(whatsappLink, "_blank", "noopener,noreferrer"),
-                              icon: "💬",
+                              icon: <i className="pi pi-comments" aria-hidden="true" />,
                               variant: "ghost" as const,
                             },
                           ]
@@ -1589,7 +1589,7 @@ export default function VendasConsultaIsland() {
                         label: "Detalhes",
                         title: "Ver detalhes",
                         onClick: () => setModalVenda(v),
-                        icon: "👁️",
+                        icon: <i className="pi pi-eye" aria-hidden="true" />,
                         variant: "primary" as const,
                       },
                     ]}
@@ -2153,7 +2153,7 @@ export default function VendasConsultaIsland() {
           fontWeight: 800,
           border: "1px solid #fda4af",
           fontSize: 14,
-        }}>✕</span>}
+        }}><i className="pi pi-times" aria-hidden="true" /></span>}
         message={(
           <p style={{ margin: 0 }}>
             Tem certeza que deseja cancelar esta venda? Esta ação remove recibos vinculados.

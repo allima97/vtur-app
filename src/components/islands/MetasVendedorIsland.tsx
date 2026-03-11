@@ -1390,7 +1390,7 @@ export default function MetasVendedorIsland() {
                         {usuarioPodeEditar && (
                           <td className="th-actions" data-label="Ações">
                             <AppButton type="button" variant="ghost" title="Editar" onClick={iniciarEdicaoMetaLoja}>
-                              ✏️
+                              <i className="pi pi-pencil" aria-hidden="true" />
                             </AppButton>
                           </td>
                         )}
@@ -1432,7 +1432,7 @@ export default function MetasVendedorIsland() {
                         {usuarioPodeEditar && (
                           <td className="th-actions" data-label="Ações">
                             <AppButton type="button" variant="ghost" title="Editar" onClick={() => iniciarEdicaoEquipe(m)}>
-                              ✏️
+                              <i className="pi pi-pencil" aria-hidden="true" />
                             </AppButton>
                           </td>
                         )}
@@ -1479,10 +1479,10 @@ export default function MetasVendedorIsland() {
                     <td className="th-actions" data-label="Ações">
                       <div className="action-buttons">
                         <AppButton type="button" variant="ghost" title="Editar" onClick={() => iniciarEdicao(m)}>
-                          ✏️
+                          <i className="pi pi-pencil" aria-hidden="true" />
                         </AppButton>
                         <AppButton type="button" variant="danger" title="Excluir" onClick={() => solicitarExclusaoMeta(m)}>
-                          🗑️
+                          <i className="pi pi-trash" aria-hidden="true" />
                         </AppButton>
                         <AppButton
                           type="button"
@@ -1490,7 +1490,7 @@ export default function MetasVendedorIsland() {
                           title={m.ativo ? "Inativar" : "Ativar"}
                           onClick={() => toggleAtivo(m.id, m.ativo)}
                         >
-                          {m.ativo ? "⏸️" : "▶️"}
+                          <i className={m.ativo ? "pi pi-pause-circle" : "pi pi-play-circle"} aria-hidden="true" />
                         </AppButton>
                       </div>
                     </td>

@@ -436,7 +436,7 @@ export default function AdminPermissoesIsland() {
                         label: "Permissoes",
                         title: "Editar permissoes",
                         onClick: () => abrirEditor(u),
-                        icon: "⚙️",
+                        icon: <i className="pi pi-cog" aria-hidden="true" />,
                         variant: "ghost",
                       },
                       ...(usuarioLogadoId !== u.id
@@ -446,7 +446,12 @@ export default function AdminPermissoesIsland() {
                               label: u.active ? "Bloquear" : "Reativar",
                               title: u.active ? "Bloquear usuario" : "Reativar usuario",
                               onClick: () => toggleUsuarioAtivo(u),
-                              icon: u.active ? "🚫" : "✅",
+                              icon: (
+                                <i
+                                  className={u.active ? "pi pi-ban" : "pi pi-check-circle"}
+                                  aria-hidden="true"
+                                />
+                              ),
                               variant: u.active ? ("danger" as const) : ("primary" as const),
                             },
                           ]

@@ -356,7 +356,9 @@ function RowActions({
       <AppButton type="button" onClick={onUp} variant="secondary" style={actionBtnSt} title="Subir">▲</AppButton>{" "}
       <AppButton type="button" onClick={onDown} variant="secondary" style={actionBtnSt} title="Descer">▼</AppButton>{" "}
       <AppButton type="button" onClick={onAdd} variant="secondary" style={actionBtnSt} title="Adicionar abaixo">+</AppButton>{" "}
-      <AppButton type="button" onClick={onDelete} variant="danger" style={{ ...actionBtnSt, borderColor: "#fca5a5" }} title="Excluir">🗑</AppButton>
+      <AppButton type="button" onClick={onDelete} variant="danger" style={{ ...actionBtnSt, borderColor: "#fca5a5" }} title="Excluir">
+        <i className="pi pi-trash" aria-hidden="true" />
+      </AppButton>
     </td>
   );
 }
@@ -1272,7 +1274,10 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                 onClick={() => setShowDiasBusca(true)}
                 style={{ fontSize: 12, fontWeight: 500, padding: "6px 12px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}
               >
-                🔍 Buscar no banco
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <i className="pi pi-search" aria-hidden="true" />
+                  <span>Buscar no banco</span>
+                </span>
               </AppButton>
             </div>
             {dias.map((d, i) => (
@@ -1320,7 +1325,9 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                   <AppButton type="button" variant="secondary" onClick={() => diaOps.moveUp(i)} style={actionBtnSt} title="Subir">▲</AppButton>
                   <AppButton type="button" variant="secondary" onClick={() => diaOps.moveDown(i)} style={actionBtnSt} title="Descer">▼</AppButton>
                   <AppButton type="button" variant="secondary" onClick={() => diaOps.add(i)} style={actionBtnSt} title="Adicionar">+</AppButton>
-                  <AppButton type="button" variant="danger" onClick={() => diaOps.remove(i)} style={{ ...actionBtnSt, color: "#dc2626" }} title="Excluir">🗑</AppButton>
+                  <AppButton type="button" variant="danger" onClick={() => diaOps.remove(i)} style={{ ...actionBtnSt, color: "#dc2626" }} title="Excluir">
+                    <i className="pi pi-trash" aria-hidden="true" />
+                  </AppButton>
                 </div>
               </div>
             ))}

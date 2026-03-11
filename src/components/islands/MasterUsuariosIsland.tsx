@@ -557,7 +557,9 @@ export default function MasterUsuariosIsland() {
                         title={u.active ? "Desativar" : "Ativar"}
                         aria-label={u.active ? "Desativar" : "Ativar"}
                       >
-                        <span aria-hidden="true">{u.active ? "⏸️" : "✅"}</span>
+                        <span aria-hidden="true">
+                          <i className={u.active ? "pi pi-pause-circle" : "pi pi-check-circle"} />
+                        </span>
                         <span className="sr-only">{u.active ? "Desativar" : "Ativar"}</span>
                       </AppButton>
                     </div>

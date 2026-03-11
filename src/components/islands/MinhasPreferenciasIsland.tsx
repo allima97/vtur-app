@@ -666,7 +666,7 @@ export default function MinhasPreferenciasIsland() {
                         actions.push({
                           key: "edit",
                           label: "Editar",
-                          icon: "✏️",
+                          icon: <i className="pi pi-pencil" aria-hidden="true" />,
                           onClick: () => {
                             setErro(null);
                             setEditId(pref.id);
@@ -677,14 +677,14 @@ export default function MinhasPreferenciasIsland() {
                         actions.push({
                           key: "share",
                           label: "Compartilhar",
-                          icon: "🔗",
+                          icon: <i className="pi pi-share-alt" aria-hidden="true" />,
                           onClick: () => abrirCompartilhar(pref.id),
                           disabled: !podeEditar,
                         });
                         actions.push({
                           key: "delete",
                           label: "Excluir",
-                          icon: "🗑️",
+                          icon: <i className="pi pi-trash" aria-hidden="true" />,
                           variant: "danger",
                           onClick: () => setConfirmDeleteId(pref.id),
                           disabled: !podeExcluir,
@@ -693,7 +693,7 @@ export default function MinhasPreferenciasIsland() {
                         actions.push({
                           key: "accept",
                           label: "Aceitar",
-                          icon: "✅",
+                          icon: <i className="pi pi-check-circle" aria-hidden="true" />,
                           variant: "primary",
                           onClick: () => {
                             if ((row as any).share?.id) aceitarShare((row as any).share.id);
@@ -704,7 +704,7 @@ export default function MinhasPreferenciasIsland() {
                         actions.push({
                           key: "remove",
                           label: "Remover",
-                          icon: "⛔",
+                          icon: <i className="pi pi-ban" aria-hidden="true" />,
                           variant: "ghost",
                           onClick: () => {
                             if ((row as any).share?.id) revogarShare((row as any).share.id);

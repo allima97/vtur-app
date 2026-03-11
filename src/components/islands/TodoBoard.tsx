@@ -739,7 +739,7 @@ export default function TodoBoard() {
                 }}
                 aria-label="Editar tarefa"
               >
-                {"✎"}
+                <i className="pi pi-pencil" aria-hidden="true" />
               </AppButton>
               <AppButton
                 type="button"
@@ -750,7 +750,7 @@ export default function TodoBoard() {
                 aria-label="Arquivar tarefa"
                 title="Arquivar"
               >
-                {"📁"}
+                <i className="pi pi-folder" aria-hidden="true" />
               </AppButton>
               <AppButton
                 type="button"
@@ -760,7 +760,7 @@ export default function TodoBoard() {
                 onClick={() => removeTodo(card.id)}
                 aria-label="Excluir tarefa"
               >
-                🗑️
+                <i className="pi pi-trash" aria-hidden="true" />
               </AppButton>
             </div>
           </div>
@@ -881,7 +881,7 @@ export default function TodoBoard() {
               }}
               aria-label="Editar tarefa"
             >
-              {"✎"}
+              <i className="pi pi-pencil" aria-hidden="true" />
             </AppButton>
 
             {/* Arquivar */}
@@ -894,7 +894,7 @@ export default function TodoBoard() {
               aria-label="Arquivar tarefa"
               title="Arquivar"
             >
-              {"📁"}
+              <i className="pi pi-folder" aria-hidden="true" />
             </AppButton>
 
             {/* Excluir */}
@@ -906,7 +906,7 @@ export default function TodoBoard() {
               onClick={() => removeTodo(card.id)}
               aria-label="Excluir tarefa"
             >
-              🗑️
+              <i className="pi pi-trash" aria-hidden="true" />
             </AppButton>
           </div>
         </div>
@@ -1023,7 +1023,7 @@ export default function TodoBoard() {
                         aria-label="Editar categoria"
                         title="Editar"
                       >
-                        {"✎"}
+                        <i className="pi pi-pencil" aria-hidden="true" />
                       </AppButton>
                       <AppButton
                         type="button"
@@ -1034,7 +1034,7 @@ export default function TodoBoard() {
                         aria-label="Excluir categoria"
                         title={categoriasComTodo.has(c.id) ? "Remova as tarefas dessa categoria para excluir." : "Excluir"}
                       >
-                        🗑️
+                        <i className="pi pi-trash" aria-hidden="true" />
                       </AppButton>
                     </div>
                   </div>
@@ -1062,7 +1062,10 @@ export default function TodoBoard() {
                     }}
                   >
                     <span>{archivedOpen ? "▼" : "▶"}</span>
-                    <span>📁 Arquivados</span>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <i className="pi pi-folder" aria-hidden="true" />
+                      <span>Arquivados</span>
+                    </span>
                     <span style={{ background: "#e2e8f0", borderRadius: 999, padding: "2px 8px", fontSize: 12, fontWeight: 800, color: "#64748b" }}>
                       {archivedCards.length}
                     </span>
@@ -1078,7 +1081,9 @@ export default function TodoBoard() {
                             <AppButton variant="secondary" style={{ fontSize: 12, padding: "3px 10px" }} onClick={() => restoreTodo(card.id)}>
                               Restaurar
                             </AppButton>
-                            <AppButton variant="danger" className="icon-action-btn danger no-border" onClick={() => removeTodo(card.id)} aria-label="Excluir">{"🗑️"}</AppButton>
+                            <AppButton variant="danger" className="icon-action-btn danger no-border" onClick={() => removeTodo(card.id)} aria-label="Excluir">
+                              <i className="pi pi-trash" aria-hidden="true" />
+                            </AppButton>
                           </div>
                         </div>
                       ))}
@@ -1131,7 +1136,7 @@ export default function TodoBoard() {
                 }}
                 aria-label="Editar categoria"
               >
-                {"✎"}
+                <i className="pi pi-pencil" aria-hidden="true" />
               </AppButton>
               <AppButton
                 type="button"
@@ -1143,7 +1148,7 @@ export default function TodoBoard() {
                 aria-label="Excluir categoria"
                 title={categoriasComTodo.has(c.id) ? "Remova as tarefas dessa categoria para excluir." : "Excluir categoria"}
               >
-                🗑️
+                <i className="pi pi-trash" aria-hidden="true" />
               </AppButton>
             </span>
           ))}
@@ -1299,7 +1304,10 @@ export default function TodoBoard() {
             }}
           >
             <span>{archivedOpen ? "▼" : "▶"}</span>
-            <span>📁 Arquivados</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <i className="pi pi-folder" aria-hidden="true" />
+              <span>Arquivados</span>
+            </span>
             <span style={{ background: "#e2e8f0", borderRadius: 999, padding: "2px 8px", fontSize: 12, fontWeight: 800, color: "#64748b" }}>
               {archivedCards.length}
             </span>
@@ -1318,7 +1326,9 @@ export default function TodoBoard() {
                     <AppButton variant="secondary" style={{ fontSize: 12, padding: "3px 10px" }} onClick={() => restoreTodo(card.id)}>
                       Restaurar
                     </AppButton>
-                    <AppButton variant="danger" className="icon-action-btn danger no-border" onClick={() => removeTodo(card.id)} aria-label="Excluir">{"🗑️"}</AppButton>
+                    <AppButton variant="danger" className="icon-action-btn danger no-border" onClick={() => removeTodo(card.id)} aria-label="Excluir">
+                      <i className="pi pi-trash" aria-hidden="true" />
+                    </AppButton>
                   </div>
                 </div>
               ))}
