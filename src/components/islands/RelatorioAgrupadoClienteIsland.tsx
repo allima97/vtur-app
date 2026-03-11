@@ -1006,7 +1006,7 @@ export default function RelatorioAgrupadoClienteIsland() {
               />
             }
             colSpan={5}
-            className="table-header-purple table-mobile-cards min-w-[700px]"
+            className="table-header-blue table-mobile-cards min-w-[700px]"
           >
             {linhasExibidas.map((linha) => (
               <tr key={linha.cliente_id}>

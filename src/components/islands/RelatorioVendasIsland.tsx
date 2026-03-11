@@ -2120,7 +2120,7 @@ export default function RelatorioVendasIsland() {
               />
             }
             colSpan={12}
-            className="table-header-purple table-mobile-cards min-w-[1100px]"
+            className="table-header-blue table-mobile-cards min-w-[1100px]"
           >
             {recibosExibidos.map((recibo) => {
               const comissao = comissaoPorRecibo.get(recibo.id) ?? 0;

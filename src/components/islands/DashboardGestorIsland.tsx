@@ -970,7 +970,7 @@ function DashboardGestorIslandInner() {
             empty={rankingEquipe.length === 0}
             emptyMessage="Sem vendas no periodo."
             colSpan={2}
-            className="table-mobile-cards table-header-purple min-w-[480px]"
+            className="table-mobile-cards table-header-blue min-w-[480px]"
           >
             {rankingEquipe.map((item, idx) => (
               <tr key={item.vendedor_id}>
@@ -1075,7 +1075,7 @@ function DashboardGestorIslandInner() {
             empty={orcamentosRecentes.length === 0}
             emptyMessage="Nenhum orcamento no periodo."
             colSpan={4}
-            className="table-mobile-cards table-header-purple min-w-[520px]"
+            className="table-mobile-cards table-header-blue min-w-[520px]"
           >
             {orcamentosRecentes.map((o) => (
               <tr key={o.id}>
@@ -1135,7 +1135,7 @@ function DashboardGestorIslandInner() {
             empty={items.length === 0}
             emptyMessage="Nenhum aniversariante de cliente/acompanhante este mes."
             colSpan={4}
-            className="table-mobile-cards table-header-purple min-w-[520px]"
+            className="table-mobile-cards table-header-blue min-w-[520px]"
           >
             {items.map((c) => {
               const cardUrl = construirUrlCartaoAniversario(c.nome, assinaturaUsuario);
@@ -1217,7 +1217,7 @@ function DashboardGestorIslandInner() {
             empty={viagensProximas.length === 0}
             emptyMessage="Nenhuma viagem nos proximos dias."
             colSpan={5}
-            className="table-mobile-cards table-header-purple min-w-[520px]"
+            className="table-mobile-cards table-header-blue min-w-[520px]"
           >
             {viagensProximas.map((v) => (
               <tr key={v.id}>
@@ -1271,7 +1271,7 @@ function DashboardGestorIslandInner() {
             empty={followUpsRecentes.length === 0}
             emptyMessage="Nenhum follow-up no periodo."
             colSpan={4}
-            className="table-mobile-cards table-header-purple min-w-[520px]"
+            className="table-mobile-cards table-header-blue min-w-[520px]"
           >
             {followUpsRecentes.map((f) => {
               const mensagem = montarMensagemFollowUp(f.venda?.clientes?.nome, assinaturaUsuario);

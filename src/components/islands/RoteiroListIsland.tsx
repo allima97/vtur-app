@@ -124,7 +124,7 @@ export default function RoteiroListIsland() {
 
         {(loading || filtered.length > 0) && (
           <div className="table-container overflow-x-auto" style={{ maxHeight: "65vh", overflowY: "auto" }}>
-            <table className="table-default table-header-purple table-mobile-cards min-w-[900px]">
+            <table className="table-default table-header-blue table-mobile-cards min-w-[900px]">
               <thead style={{ position: "sticky", top: 0, zIndex: 1 }}>
                 <tr>
                   <th>Nome</th>

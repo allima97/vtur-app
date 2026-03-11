@@ -1004,7 +1004,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
               />
             }
             colSpan={4}
-            className="table-header-purple table-mobile-cards min-w-[620px]"
+            className="table-header-blue table-mobile-cards min-w-[620px]"
           >
             {linhasExibidas.map((linha) => (
               <tr key={linha.destino_id}>

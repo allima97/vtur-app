@@ -335,7 +335,7 @@ export default function QuoteListIsland() {
           subtitle="Acompanhe itens, negociacao, ultima interacao comercial e proximos passos de cada proposta."
         >
           <DataTable
-            className="table-mobile-cards table-header-purple quote-list-table"
+            className="table-mobile-cards table-header-blue quote-list-table"
             containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
             headers={
               <tr>
@@ -587,7 +587,7 @@ export default function QuoteListIsland() {
                   empty={!visualizandoQuote.quote_item || visualizandoQuote.quote_item.length === 0}
                   emptyMessage="Nenhum item encontrado."
                   colSpan={3}
-                  className="table-mobile-cards table-header-purple"
+                  className="table-mobile-cards table-header-blue"
                 >
                   {(visualizandoQuote.quote_item || []).map((item) => (
                     <tr key={`${visualizandoQuote.id}-${item.id}`}>
