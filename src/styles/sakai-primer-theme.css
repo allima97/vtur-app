@@ -120,9 +120,21 @@ body.sakai-theme .vtur-sidebar-action-note {
 
 body.sakai-theme .app-main {
   min-height: 100vh;
-  margin-left: calc(2rem + 300px + 1rem);
+  margin-left: calc(2rem + 300px + 0.5rem);
   padding: 7rem 2rem 2rem 1.25rem;
   background: transparent;
+}
+
+@media (min-width: 1025px) {
+  body.sakai-theme .app-shell {
+    display: block !important;
+    grid-template-columns: none !important;
+  }
+
+  body.sakai-theme .app-main {
+    margin-left: calc(2rem + 300px + 0.5rem) !important;
+    padding-left: 0.85rem;
+  }
 }
 
 body.sakai-theme .vtur-app-card,
