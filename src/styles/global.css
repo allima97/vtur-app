@@ -3172,9 +3172,9 @@ body {
 }
 
 :root {
-  --color-purple-bg: #f5f3ff;
-  --color-purple-border: #ddd6fe;
-  --color-purple-title: #6d28d9;
+  --color-purple-bg: #eff6ff;
+  --color-purple-border: #bfdbfe;
+  --color-purple-title: #1d4ed8;
 }
 
 /* Header purple */
@@ -3191,7 +3191,7 @@ body {
 
 /* Optional purple button */
 .btn-purple {
-  background: #7c3aed;
+  background: #2563eb;
   color: white;
   padding: 10px 16px;
 }
@@ -3219,7 +3219,7 @@ body {
   font-size: 2rem;
 }
 
-.kpi-meta { color: #6b21a8; } /* purple */
+.kpi-meta { color: #1d4ed8; } /* blue */
 .kpi-vendas { color: #15803d; } /* green */
 .kpi-ticket { color: #1d4ed8; } /* blue */
 .kpi-diferenciado { color: #c2410c; } /* orange */
