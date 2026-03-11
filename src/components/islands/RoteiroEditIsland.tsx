@@ -161,19 +161,22 @@ const cardSt: React.CSSProperties = {
 
 const inputSt: React.CSSProperties = {
   width: "100%",
-  padding: "7px 10px",
+  padding: "0.75rem",
   border: "1px solid #d1d5db",
   borderRadius: 6,
-  fontSize: 12,
+  fontSize: 14,
   outline: "none",
   background: "#fff",
-  color: "#111827",
+  color: "#4b5563",
   boxSizing: "border-box",
 };
 
 const tdSt: React.CSSProperties = {
-  padding: "7px 8px",
+  padding: "1rem",
+  borderBottom: "1px solid #f1f5f9",
   verticalAlign: "top",
+  fontSize: 14,
+  color: "#4b5563",
 };
 
 const actionBtnSt: React.CSSProperties = {
@@ -946,11 +949,11 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
         {abaAtiva === "hoteis" && (
           <div style={cardSt}>
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <table className="table-default table-header-blue" style={{ width: "100%" }}>
                 <thead>
                   <tr style={{ background: "#f8fafc" }}>
                     {["Cidade *", "Hotel *", "Data Início", "Data Fim", "Noites", "Apto *", "Categoria *", "Regime", ""].map((h) => (
-                      <th key={h} style={{ padding: "7px 8px", textAlign: "left", color: "#374151", fontWeight: 600, whiteSpace: "nowrap", borderBottom: "1px solid #e5e7eb" }}>{h}</th>
+                      <th key={h} style={{ padding: "1rem", textAlign: "left", color: "#374151", fontWeight: 700, whiteSpace: "nowrap", borderBottom: "1px solid #e5e7eb" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -1061,11 +1064,11 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
         {abaAtiva === "passeios" && (
           <div style={cardSt}>
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <table className="table-default table-header-blue" style={{ width: "100%" }}>
                 <thead>
                   <tr style={{ background: "#f8fafc" }}>
                     {["Cidade *", "Passeio *", "Data Início", "Data Fim", "Tipo", "Ingressos", ""].map((h) => (
-                      <th key={h} style={{ padding: "7px 8px", textAlign: "left", color: "#374151", fontWeight: 600, whiteSpace: "nowrap", borderBottom: "1px solid #e5e7eb" }}>{h}</th>
+                      <th key={h} style={{ padding: "1rem", textAlign: "left", color: "#374151", fontWeight: 700, whiteSpace: "nowrap", borderBottom: "1px solid #e5e7eb" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -1155,11 +1158,11 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
         {abaAtiva === "transporte" && (
           <div style={cardSt}>
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <table className="table-default table-header-blue" style={{ width: "100%" }}>
                 <thead>
                   <tr style={{ background: "#f8fafc" }}>
                     {["Tipo *", "Fornecedor *", "Descrição *", "Data Início", "Data Fim", "Categoria *", "Observação", ""].map((h) => (
-                      <th key={h} style={{ padding: "7px 8px", textAlign: "left", color: "#374151", fontWeight: 600, whiteSpace: "nowrap", borderBottom: "1px solid #e5e7eb" }}>{h}</th>
+                      <th key={h} style={{ padding: "1rem", textAlign: "left", color: "#374151", fontWeight: 700, whiteSpace: "nowrap", borderBottom: "1px solid #e5e7eb" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -1341,11 +1344,11 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
         {abaAtiva === "investimento" && (
           <div style={cardSt}>
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <table className="table-default table-header-blue" style={{ width: "100%" }}>
                 <thead>
                   <tr style={{ background: "#f8fafc" }}>
                     {["Tipo *", "Valor por Pessoa (R$)", "Qte Pax", "Valor por Apto (R$)", ""].map((h) => (
-                      <th key={h} style={{ padding: "7px 8px", textAlign: "left", color: "#374151", fontWeight: 600, whiteSpace: "nowrap", borderBottom: "1px solid #e5e7eb" }}>{h}</th>
+                      <th key={h} style={{ padding: "1rem", textAlign: "left", color: "#374151", fontWeight: 700, whiteSpace: "nowrap", borderBottom: "1px solid #e5e7eb" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -1418,11 +1421,11 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
         {abaAtiva === "pagamento" && (
           <div style={cardSt}>
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <table className="table-default table-header-blue" style={{ width: "100%" }}>
                 <thead>
                   <tr style={{ background: "#f8fafc" }}>
                     {["Serviço", "Valor Total c/Taxas (R$)", "Taxas (R$)", "Forma de Pagamento *", ""].map((h) => (
-                      <th key={h} style={{ padding: "7px 8px", textAlign: "left", color: "#374151", fontWeight: 600, whiteSpace: "nowrap", borderBottom: "1px solid #e5e7eb" }}>{h}</th>
+                      <th key={h} style={{ padding: "1rem", textAlign: "left", color: "#374151", fontWeight: 700, whiteSpace: "nowrap", borderBottom: "1px solid #e5e7eb" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>

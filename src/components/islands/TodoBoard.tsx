@@ -37,9 +37,9 @@ const PRIORITY_COLOR: Record<string, string> = {
 };
 
 const STATUS_COLS = [
-  { value: "novo", label: "A Fazer", color: "#2563eb", body: "#eef7ff", icon: "\u2192", order: 1 },
-  { value: "agendado", label: "Fazendo", color: "#f5a524", body: "#fff8e6", icon: "\u2192", order: 2 },
-  { value: "em_andamento", label: "Feito", color: "#27ae60", body: "#e9f7ef", icon: "\u2192", order: 3 },
+  { value: "novo", label: "A Fazer", color: "#2563eb", body: "#eef7ff", order: 1 },
+  { value: "agendado", label: "Fazendo", color: "#f5a524", body: "#fff8e6", order: 2 },
+  { value: "em_andamento", label: "Feito", color: "#27ae60", body: "#e9f7ef", order: 3 },
 ];
 
 const FALLBACK_COLORS = [
