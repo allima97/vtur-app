@@ -1,6 +1,6 @@
 # Prime/Sakai Full Audit
 
-Gerado em: 2026-03-11T02:36:15.936Z
+Gerado em: 2026-03-11T03:37:49.419Z
 
 ## Resumo
 
@@ -15,7 +15,7 @@ Gerado em: 2026-03-11T02:36:15.936Z
 - raw <select>: 42
 - raw <textarea>: 20
 - raw <table>: 38
-- raw <button>: 16
+- raw <button>: 1
 
 ## Bloqueadores
 
@@ -188,6 +188,4 @@ Nenhuma ocorrência.
 
 ### raw <button>
 
-- src/components/islands/MuralRecadosIsland.tsx: 11
-- src/components/islands/DossieViagemIsland.tsx: 4
 - src/components/ui/Button.astro: 1

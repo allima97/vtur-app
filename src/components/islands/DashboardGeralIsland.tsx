@@ -17,20 +17,7 @@ import {
   montarMensagemFollowUp,
 } from "../../lib/whatsapp";
 import CalculatorModal from "../ui/CalculatorModal";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-  Legend,
-} from "recharts";
+import { Chart } from "primereact/chart";
 import IslandErrorBoundary from "../ui/IslandErrorBoundary";
 import AlertMessage from "../ui/AlertMessage";
 import DataTable from "../ui/DataTable";
@@ -316,6 +303,134 @@ function readWidgetVisibilityFromStorage(storageKey: string, ids: WidgetId[]) {
 }
 
 const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
+
+function chartTokens() {
+  if (typeof window === "undefined") {
+    return {
+      text: "#475569",
+      textSecondary: "#64748b",
+      border: "#e2e8f0",
+    };
+  }
+  const ds = getComputedStyle(document.documentElement);
+  return {
+    text: ds.getPropertyValue("--text-color")?.trim() || "#475569",
+    textSecondary: ds.getPropertyValue("--text-color-secondary")?.trim() || "#64748b",
+    border: ds.getPropertyValue("--surface-border")?.trim() || "#e2e8f0",
+  };
+}
+
+function toPieChartConfig(items: Array<{ name: string; value: number }>) {
+  const tk = chartTokens();
+  return {
+    data: {
+      labels: items.map((item) => item.name),
+      datasets: [
+        {
+          data: items.map((item) => Number(item.value || 0)),
+          backgroundColor: items.map((_, idx) => COLORS_PURPLE[idx % COLORS_PURPLE.length]),
+          hoverBackgroundColor: items.map((_, idx) => COLORS_PURPLE[idx % COLORS_PURPLE.length]),
+        },
+      ],
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false, labels: { color: tk.text } },
+      },
+    },
+  };
+}
+
+function toBarChartConfig(
+  items: Array<{ label: string; value: number }>,
+  formatter: (value: number) => string,
+  hideXAxis = false
+) {
+  const tk = chartTokens();
+  return {
+    data: {
+      labels: items.map((item) => item.label),
+      datasets: [
+        {
+          data: items.map((item) => Number(item.value || 0)),
+          backgroundColor: items.map((_, idx) => COLORS_PURPLE[idx % COLORS_PURPLE.length]),
+          borderRadius: 6,
+          maxBarThickness: 28,
+        },
+      ],
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (context: any) => formatter(Number(context?.parsed?.y ?? context?.parsed ?? 0)),
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color: tk.textSecondary, display: !hideXAxis },
+          grid: { display: false },
+          border: { display: false },
+        },
+        y: {
+          ticks: { color: tk.textSecondary },
+          grid: { color: tk.border },
+          border: { display: false },
+        },
+      },
+    },
+  };
+}
+
+function toLineChartConfig(
+  items: Array<{ label: string; value: number }>,
+  formatter: (value: number) => string
+) {
+  const tk = chartTokens();
+  return {
+    data: {
+      labels: items.map((item) => item.label),
+      datasets: [
+        {
+          data: items.map((item) => Number(item.value || 0)),
+          borderColor: "#3b82f6",
+          backgroundColor: "rgba(59,130,246,0.15)",
+          borderWidth: 2,
+          tension: 0.4,
+          pointRadius: 0,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (context: any) => formatter(Number(context?.parsed?.y ?? context?.parsed ?? 0)),
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color: tk.textSecondary },
+          grid: { display: false },
+          border: { display: false },
+        },
+        y: {
+          ticks: { color: tk.textSecondary },
+          grid: { color: tk.border },
+          border: { display: false },
+        },
+      },
+    },
+  };
+}
 
 // ----------------- COMPONENTE -----------------
 
@@ -1512,6 +1627,12 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
           chartPrefsEffective.vendas_destino === "bar"
             ? "Vendas por Destino (Visao completa)"
             : "Vendas por destino (Top 5)";
+        const destinoBarConfig = toBarChartConfig(
+          vendasPorDestinoFull.map((item) => ({ label: item.name, value: item.value })),
+          formatCurrency,
+          true
+        );
+        const destinoPieConfig = toPieChartConfig(top5Destinos);
         return (
           <AppCard
             title={hideTitle ? undefined : tituloDestino}
@@ -1528,18 +1649,12 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
               {vendasPorDestinoFull.length === 0 ? (
                 <div style={{ fontSize: "0.9rem" }}>Sem dados para o período.</div>
               ) : chartPrefsEffective.vendas_destino === "bar" ? (
-                <ResponsiveContainer>
-                  <BarChart data={vendasPorDestinoFull}>
-                    <XAxis dataKey="name" hide />
-                    <YAxis />
-                    <Tooltip formatter={(value: any) => formatCurrency(Number(value || 0))} />
-                    <Bar dataKey="value">
-                      {vendasPorDestinoFull.map((entry, index) => (
-                        <Cell key={`cell-dest-${index}`} fill={COLORS_PURPLE[index % COLORS_PURPLE.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <Chart
+                  type="bar"
+                  data={destinoBarConfig.data}
+                  options={destinoBarConfig.options as any}
+                  style={{ width: "100%", height: "100%" }}
+                />
               ) : (
                 <div
                   style={{
@@ -1563,23 +1678,12 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                       justifyContent: "center",
                     }}
                   >
-                    <ResponsiveContainer width="100%" height={180}>
-                      <PieChart>
-                        <Pie
-                          data={top5Destinos}
-                          dataKey="value"
-                          nameKey="name"
-                          outerRadius={70}
-                          label={false}
-                          labelLine={false}
-                        >
-                          {top5Destinos.map((entry, index) => (
-                            <Cell key={`cell-dest-pie-${index}`} fill={COLORS_PURPLE[index % COLORS_PURPLE.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value: any) => formatCurrency(Number(value || 0))} />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    <Chart
+                      type="pie"
+                      data={destinoPieConfig.data}
+                      options={destinoPieConfig.options as any}
+                      style={{ width: "100%", height: "180px" }}
+                    />
                   </div>
                   <div
                     style={{
@@ -1604,6 +1708,12 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
         );
       }
       case "vendas_produto":
+        const produtoBarConfig = toBarChartConfig(
+          vendasPorProduto.map((item) => ({ label: item.name, value: item.value })),
+          formatCurrency,
+          true
+        );
+        const produtoPieConfig = toPieChartConfig(vendasPorProduto);
         return (
           <AppCard
             title={hideTitle ? undefined : "Vendas por produto"}
@@ -1641,23 +1751,12 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                       justifyContent: "center",
                     }}
                   >
-                    <ResponsiveContainer width="100%" height={180}>
-                      <PieChart>
-                        <Pie
-                          data={vendasPorProduto}
-                          dataKey="value"
-                          nameKey="name"
-                          outerRadius={70}
-                          label={false}
-                          labelLine={false}
-                        >
-                          {vendasPorProduto.map((entry, index) => (
-                            <Cell key={`cell-prod-pie-${index}`} fill={COLORS_PURPLE[index % COLORS_PURPLE.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value: any) => formatCurrency(Number(value || 0))} />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    <Chart
+                      type="pie"
+                      data={produtoPieConfig.data}
+                      options={produtoPieConfig.options as any}
+                      style={{ width: "100%", height: "180px" }}
+                    />
                   </div>
                   <div
                     style={{
@@ -1677,23 +1776,25 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
                   </div>
                 </div>
               ) : (
-                <ResponsiveContainer>
-                  <BarChart data={vendasPorProduto}>
-                    <XAxis dataKey="name" hide />
-                    <YAxis />
-                    <Tooltip formatter={(value: any) => formatCurrency(Number(value || 0))} />
-                    <Bar dataKey="value">
-                      {vendasPorProduto.map((entry, index) => (
-                        <Cell key={`cell-prod-${index}`} fill={COLORS_PURPLE[index % COLORS_PURPLE.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <Chart
+                  type="bar"
+                  data={produtoBarConfig.data}
+                  options={produtoBarConfig.options as any}
+                  style={{ width: "100%", height: "100%" }}
+                />
               )}
             </div>
           </AppCard>
         );
       case "timeline":
+        const timelineBarConfig = toBarChartConfig(
+          vendasTimeline.map((item) => ({ label: item.label, value: item.value })),
+          formatCurrency
+        );
+        const timelineLineConfig = toLineChartConfig(
+          vendasTimeline.map((item) => ({ label: item.label, value: item.value })),
+          formatCurrency
+        );
         return (
           <AppCard
             title={hideTitle ? undefined : "Evolucao das vendas no periodo"}
@@ -1708,27 +1809,19 @@ const COLORS_PURPLE = ["#2563eb", "#3b82f6", "#6366f1", "#ec4899", "#22c55e"];
               {vendasTimeline.length === 0 ? (
                 <div style={{ fontSize: "0.9rem" }}>Sem dados para o período.</div>
               ) : chartPrefs.timeline === "bar" ? (
-                <ResponsiveContainer>
-                  <BarChart data={vendasTimeline}>
-                    <XAxis dataKey="label" />
-                    <YAxis />
-                    <Tooltip formatter={(value: any) => formatCurrency(Number(value || 0))} />
-                    <Bar dataKey="value">
-                      {vendasTimeline.map((entry, index) => (
-                        <Cell key={`cell-time-${index}`} fill={COLORS_PURPLE[index % COLORS_PURPLE.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <Chart
+                  type="bar"
+                  data={timelineBarConfig.data}
+                  options={timelineBarConfig.options as any}
+                  style={{ width: "100%", height: "100%" }}
+                />
               ) : (
-                <ResponsiveContainer>
-                  <LineChart data={vendasTimeline}>
-                    <XAxis dataKey="label" />
-                    <YAxis />
-                    <Tooltip formatter={(value: any) => formatCurrency(Number(value || 0))} />
-                    <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
+                <Chart
+                  type="line"
+                  data={timelineLineConfig.data}
+                  options={timelineLineConfig.options as any}
+                  style={{ width: "100%", height: "100%" }}
+                />
               )}
             </div>
           </AppCard>

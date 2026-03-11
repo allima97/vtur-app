@@ -1,6 +1,16 @@
 body.sakai-theme {
   background: #f5f7fb;
   color: #334155;
+  font-family: "Inter var", Inter, "Segoe UI", Roboto, sans-serif;
+}
+
+body.sakai-theme :is(button, input, select, textarea) {
+  font-family: inherit;
+}
+
+body.sakai-theme .app-shell {
+  display: block !important;
+  grid-template-columns: none !important;
 }
 
 body.sakai-theme .app-topbar {
@@ -19,7 +29,8 @@ body.sakai-theme .app-sidebar {
 }
 
 body.sakai-theme .app-main {
-  margin-left: calc(2rem + 286px + 0.75rem) !important;
+  margin-left: calc(2rem + 286px + 1rem) !important;
+  padding-left: 0.75rem;
   padding-top: 6.3rem;
 }
 
@@ -32,7 +43,23 @@ body.sakai-theme .sidebar-section-title {
 }
 
 body.sakai-theme .vtur-sidebar-nav {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
   gap: 0.18rem;
+}
+
+body.sakai-theme .vtur-legacy-navlist,
+body.sakai-theme .vtur-legacy-navitem {
+  list-style: none !important;
+  margin: 0;
+  padding: 0;
+}
+
+body.sakai-theme .vtur-legacy-navitem::marker {
+  content: "";
 }
 
 body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item {
@@ -49,10 +76,10 @@ body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:hover {
 }
 
 body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item[aria-current="page"] {
-  background: transparent;
-  color: var(--primary-color, #6366f1);
+  background: rgba(124, 58, 237, 0.12);
+  color: #7c3aed;
   font-weight: 700;
-  box-shadow: none;
+  box-shadow: inset 0 0 0 1px rgba(124, 58, 237, 0.24);
 }
 
 body.sakai-theme .vtur-app-card,
