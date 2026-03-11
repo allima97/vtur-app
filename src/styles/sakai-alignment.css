@@ -94,10 +94,11 @@ body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:hover {
 }
 
 body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item[aria-current="page"] {
-  background: rgba(124, 58, 237, 0.12);
-  color: #7c3aed;
-  font-weight: 700;
-  box-shadow: inset 0 0 0 1px rgba(124, 58, 237, 0.24);
+  background: transparent;
+  color: #6366f1;
+  font-weight: 600;
+  box-shadow: none;
+  border-color: transparent;
 }
 
 body.sakai-theme .vtur-app-card,
@@ -608,6 +609,16 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
   body.sakai-theme .app-main {
     margin-left: 0 !important;
     padding: calc(5.4rem + env(safe-area-inset-top)) 1rem calc(1.2rem + env(safe-area-inset-bottom));
+  }
+}
+
+@media (min-width: 1025px) {
+  body.sakai-theme .app-sidebar .sidebar-logo {
+    display: none;
+  }
+
+  body.sakai-theme .app-sidebar .sidebar-section-title:first-of-type {
+    margin-top: 0.35rem;
   }
 }
 
