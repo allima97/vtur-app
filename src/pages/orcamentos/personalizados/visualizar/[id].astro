@@ -416,22 +416,22 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
           </div>
           <div class="bg-white border border-slate-200 rounded-xl p-5">
             <div class="overflow-x-auto">
-              <table class="w-full text-sm">
+              <table class="table-default table-header-blue w-full text-sm">
                 <thead>
                   <tr class="text-left text-slate-600">
-                    <th class="py-2 pr-3">Tipo</th>
-                    <th class="py-2 pr-3 whitespace-nowrap">Valor por Pessoa</th>
-                    <th class="py-2 pr-3 whitespace-nowrap">Qte Pax</th>
-                    <th class="py-2 pr-3 whitespace-nowrap">Valor por Apto</th>
+                    <th>Tipo</th>
+                    <th class="whitespace-nowrap">Valor por Pessoa</th>
+                    <th class="whitespace-nowrap">Qte Pax</th>
+                    <th class="whitespace-nowrap">Valor por Apto</th>
                   </tr>
                 </thead>
                 <tbody>
                   {investimentos.map((i: any, idx: number) => (
                     <tr class="border-t border-slate-200" key={i.id || idx}>
-                      <td class="py-2 pr-3 text-slate-900">{i.tipo || "—"}</td>
-                      <td class="py-2 pr-3 text-slate-700 whitespace-nowrap">{formatCurrency(i.valor_por_pessoa)}</td>
-                      <td class="py-2 pr-3 text-slate-700 whitespace-nowrap">{Number(i.qtd_apto || 0) || "—"}</td>
-                      <td class="py-2 pr-3 text-slate-700 whitespace-nowrap">{formatCurrency(i.valor_por_apto)}</td>
+                      <td class="text-slate-900">{i.tipo || "—"}</td>
+                      <td class="text-slate-700 whitespace-nowrap">{formatCurrency(i.valor_por_pessoa)}</td>
+                      <td class="text-slate-700 whitespace-nowrap">{Number(i.qtd_apto || 0) || "—"}</td>
+                      <td class="text-slate-700 whitespace-nowrap">{formatCurrency(i.valor_por_apto)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -449,22 +449,22 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
           </div>
           <div class="bg-white border border-slate-200 rounded-xl p-5">
             <div class="overflow-x-auto">
-              <table class="w-full text-sm">
+              <table class="table-default table-header-blue w-full text-sm">
                 <thead>
                   <tr class="text-left text-slate-600">
-                    <th class="py-2 pr-3">Serviço</th>
-                    <th class="py-2 pr-3 whitespace-nowrap">Valor Total c/ Taxas</th>
-                    <th class="py-2 pr-3 whitespace-nowrap">Taxas</th>
-                    <th class="py-2 pr-3 whitespace-nowrap">Forma</th>
+                    <th>Serviço</th>
+                    <th class="whitespace-nowrap">Valor Total c/ Taxas</th>
+                    <th class="whitespace-nowrap">Taxas</th>
+                    <th class="whitespace-nowrap">Forma</th>
                   </tr>
                 </thead>
                 <tbody>
                   {pagamentos.map((p: any, idx: number) => (
                     <tr class="border-t border-slate-200" key={p.id || idx}>
-                      <td class="py-2 pr-3 text-slate-900">{p.servico || "—"}</td>
-                      <td class="py-2 pr-3 text-slate-700 whitespace-nowrap">{formatCurrency(p.valor_total_com_taxas)}</td>
-                      <td class="py-2 pr-3 text-slate-700 whitespace-nowrap">{formatCurrency(p.taxas)}</td>
-                      <td class="py-2 pr-3 text-slate-700">
+                      <td class="text-slate-900">{p.servico || "—"}</td>
+                      <td class="text-slate-700 whitespace-nowrap">{formatCurrency(p.valor_total_com_taxas)}</td>
+                      <td class="text-slate-700 whitespace-nowrap">{formatCurrency(p.taxas)}</td>
+                      <td class="text-slate-700">
                         {(() => {
                           const lines = splitLines(p.forma_pagamento || "");
                           if (!lines.length) return "—";

@@ -209,6 +209,16 @@ body.sakai-theme .ranking-table {
   overflow: hidden;
 }
 
+body.sakai-theme table:not(.vtur-data-table):not(.table-default):not(.ranking-table):not(.escala-table):not(.escala-calendario) {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
 body.sakai-theme .table-default thead th,
 body.sakai-theme .vtur-data-table thead th,
 body.sakai-theme .ranking-table thead th {
@@ -218,6 +228,16 @@ body.sakai-theme .ranking-table thead th {
   font-weight: 700;
   letter-spacing: 0;
   text-transform: none;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 1rem;
+  line-height: 1.4;
+}
+
+body.sakai-theme table:not(.vtur-data-table):not(.table-default):not(.ranking-table):not(.escala-table):not(.escala-calendario) thead th {
+  background: #f8fafc;
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 700;
   border-bottom: 1px solid #e5e7eb;
   padding: 1rem;
   line-height: 1.4;
@@ -260,6 +280,14 @@ body.sakai-theme .ranking-table tbody td {
   line-height: 1.45;
   color: #4b5563;
   font-weight: 500;
+}
+
+body.sakai-theme table:not(.vtur-data-table):not(.table-default):not(.ranking-table):not(.escala-table):not(.escala-calendario) tbody td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 1rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: #4b5563;
 }
 
 body.sakai-theme .table-default tbody tr:nth-child(even),
