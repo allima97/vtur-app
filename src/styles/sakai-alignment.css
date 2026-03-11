@@ -279,7 +279,7 @@ body.sakai-theme .table-mobile-cards.table-header-config,
 body.sakai-theme .table-mobile-cards.table-header-red {
   --table-card-border: #e5e7eb !important;
   --table-card-divider: #e5e7eb !important;
-  --table-card-gap: #f8fafc !important;
+  --table-card-gap: transparent !important;
 }
 
 body.sakai-theme .table-default tbody td,
@@ -628,14 +628,100 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
 }
 
 @media (max-width: 640px) {
+  body.sakai-theme .table-container::before,
+  body.sakai-theme .table-container::after {
+    display: none !important;
+  }
+
+  body.sakai-theme .table-mobile-cards,
+  body.sakai-theme .table-mobile-cards table,
+  body.sakai-theme .table-mobile-cards tbody,
+  body.sakai-theme .table-mobile-cards tr,
+  body.sakai-theme .table-mobile-cards td {
+    min-width: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  body.sakai-theme .table-mobile-cards {
+    padding: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    --table-card-gap: transparent !important;
+    --table-card-border: #e5e7eb !important;
+    --table-card-divider: #e5e7eb !important;
+  }
+
+  body.sakai-theme .table-mobile-cards tr {
+    margin-bottom: 12px;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    overflow: hidden;
+  }
+
+  body.sakai-theme .table-mobile-cards td {
+    grid-template-columns: 100px 1fr;
+    background: #ffffff !important;
+  }
+
+  body.sakai-theme .table-mobile-cards tr:last-child {
+    margin-bottom: 0;
+  }
+
+  body.sakai-theme .table-mobile-cards td:last-child {
+    border-bottom: 0;
+  }
+
   body.sakai-theme .table-mobile-cards :is(td.th-actions, th.th-actions) {
-    justify-items: center !important;
-    text-align: center !important;
+    justify-items: end !important;
+    text-align: right !important;
   }
 
   body.sakai-theme .table-mobile-cards td.th-actions :is(.action-buttons, .vtur-table-actions, .action-buttons-quote, .action-buttons-center, .viagens-action-buttons) {
-    justify-content: center !important;
+    justify-content: flex-end !important;
     flex-wrap: wrap !important;
     overflow-x: visible !important;
+    gap: 0.35rem !important;
+  }
+
+  body.sakai-theme .table-mobile-cards td.th-actions :is(.btn-icon, .vtur-table-action, .vtur-app-button, .p-button, button) {
+    width: 2.25rem;
+    min-width: 2.25rem;
+    height: 2.25rem;
+    min-height: 2.25rem;
+    padding: 0.2rem !important;
+    border-radius: 8px;
+    justify-content: center !important;
+  }
+
+  body.sakai-theme .table-mobile-cards td.th-actions :is(.vtur-table-action .p-button-label, .vtur-app-button .p-button-label) {
+    display: none;
+  }
+
+  body.sakai-theme :is(.vtur-form-grid, .form-row.mobile-stack) {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+
+  body.sakai-theme :is(
+    .vtur-app-field input,
+    .vtur-app-field select,
+    .vtur-app-field textarea,
+    .p-inputtext,
+    .p-inputtextarea,
+    .form-input,
+    .form-select,
+    .form-textarea
+  ) {
+    min-height: 44px;
+    font-size: 1rem;
+  }
+
+  body.sakai-theme :is(.mobile-stack-buttons, .vtur-app-toolbar-actions) .vtur-app-button {
+    min-height: 44px;
+    width: 100%;
+    justify-content: center;
   }
 }
