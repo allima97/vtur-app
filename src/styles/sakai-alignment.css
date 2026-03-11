@@ -38,9 +38,9 @@ body.sakai-theme .vtur-sidebar-nav {
 body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item {
   border-radius: 8px;
   color: #4b5563;
-  font-size: 0.94rem;
+  font-size: 0.9rem;
   font-weight: 500;
-  padding: 0.58rem 0.72rem;
+  padding: 0.75rem 1rem;
 }
 
 body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:hover {
@@ -49,10 +49,10 @@ body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:hover {
 }
 
 body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item[aria-current="page"] {
-  background: #eef2ff;
-  color: #4f46e5;
-  font-weight: 600;
-  box-shadow: inset 0 0 0 1px #c7d2fe;
+  background: transparent;
+  color: var(--primary-color, #6366f1);
+  font-weight: 700;
+  box-shadow: none;
 }
 
 body.sakai-theme .vtur-app-card,
@@ -100,6 +100,34 @@ body.sakai-theme .vtur-data-table thead th {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   border-bottom: 1px solid #e5e7eb;
+}
+
+body.sakai-theme .table-header-blue thead th,
+body.sakai-theme .table-header-green thead th,
+body.sakai-theme .table-header-teal thead th,
+body.sakai-theme .table-header-purple thead th,
+body.sakai-theme .table-header-config thead th,
+body.sakai-theme .table-header-red thead th,
+body.sakai-theme .table-mobile-cards.table-header-blue thead th,
+body.sakai-theme .table-mobile-cards.table-header-green thead th,
+body.sakai-theme .table-mobile-cards.table-header-teal thead th,
+body.sakai-theme .table-mobile-cards.table-header-purple thead th,
+body.sakai-theme .table-mobile-cards.table-header-config thead th,
+body.sakai-theme .table-mobile-cards.table-header-red thead th {
+  background: #f8fafc !important;
+  color: #64748b !important;
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+body.sakai-theme .table-mobile-cards.table-header-blue,
+body.sakai-theme .table-mobile-cards.table-header-green,
+body.sakai-theme .table-mobile-cards.table-header-teal,
+body.sakai-theme .table-mobile-cards.table-header-purple,
+body.sakai-theme .table-mobile-cards.table-header-config,
+body.sakai-theme .table-mobile-cards.table-header-red {
+  --table-card-border: #e5e7eb !important;
+  --table-card-divider: #e5e7eb !important;
+  --table-card-gap: #f8fafc !important;
 }
 
 body.sakai-theme .table-default tbody td,
@@ -164,6 +192,15 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
   background: #ffffff;
+}
+
+.auth-card::before {
+  content: "";
+  display: block;
+  height: 0.3rem;
+  margin: -16px -18px 14px;
+  border-radius: 12px 12px 0 0;
+  background: linear-gradient(90deg, var(--primary-color, #6366f1), rgba(99, 102, 241, 0));
 }
 
 .auth-actions .vtur-app-button {
