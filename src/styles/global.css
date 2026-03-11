@@ -5934,10 +5934,7 @@ body {
 input[type="date"]:not([data-component="input"]) {
   min-height: 42px;
   background-color: #fff;
-  background-image: var(--date-input-prime-calendar) !important;
-  background-repeat: no-repeat !important;
-  background-position: right 14px center !important;
-  background-size: 18px 18px !important;
+  background-image: none !important;
   appearance: none;
   -webkit-appearance: none;
   line-height: 1.25;
@@ -5946,8 +5943,15 @@ input[type="date"]:not([data-component="input"]) {
 
 .form-input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="date"]:not([data-component="input"])::-webkit-calendar-picker-indicator {
-  opacity: 0;
+  opacity: 1;
   cursor: pointer;
+  width: 18px;
+  height: 18px;
+  margin-right: 12px;
+  padding: 0;
+  display: block;
+  background: var(--date-input-prime-calendar) no-repeat center / 18px 18px;
+  color: transparent;
 }
 
 /* Tables: all data columns left-aligned; only action columns stay centered */
