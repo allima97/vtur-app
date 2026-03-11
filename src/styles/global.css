@@ -2042,6 +2042,7 @@ body {
   }
 
   .btn,
+  .vtur-app-button,
   .btn-icon {
     min-height: 44px;
   }
@@ -2132,6 +2133,16 @@ body {
     padding: 10px 14px;
   }
 
+  .mobile-stack-buttons .vtur-app-button,
+  .mobile-actionbar .vtur-app-button {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+    min-height: 44px;
+    line-height: 1.2;
+    padding: 10px 14px;
+  }
+
   .mobile-actionbar {
     position: fixed;
     left: 0;
@@ -2153,6 +2164,11 @@ body {
     white-space: normal;
     min-height: 44px;
     padding: 10px 14px;
+  }
+
+  .mobile-actionbar .vtur-app-button {
+    flex-wrap: wrap;
+    white-space: normal;
   }
 
   .sac-toolbar-actions .btn:not(.btn-icon),
@@ -6065,6 +6081,22 @@ body {
 
   .table-mobile-cards td.th-actions .action-buttons.action-buttons-center {
     justify-content: center !important;
+  }
+
+  .table-mobile-cards td.th-actions .action-buttons .vtur-table-action,
+  .table-mobile-cards td.th-actions .action-buttons .vtur-app-button.vtur-table-action {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    border-radius: 10px;
+  }
+
+  .table-mobile-cards td.th-actions .action-buttons .vtur-table-action .p-button-label,
+  .table-mobile-cards td.th-actions .action-buttons .vtur-app-button.vtur-table-action .p-button-label {
+    display: none;
   }
 }
 /* To Do - Mobile: evitar card dentro de card + impedir overflow horizontal */
