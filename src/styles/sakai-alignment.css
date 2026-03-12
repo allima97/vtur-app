@@ -190,6 +190,56 @@ body.sakai-theme .p-error {
   font-weight: 500;
 }
 
+body.sakai-theme .vtur-app-field-control {
+  position: relative;
+}
+
+body.sakai-theme .vtur-app-field-control.is-date > input[type="date"] {
+  background-image: none !important;
+  padding-right: 2.75rem !important;
+}
+
+body.sakai-theme .vtur-app-field-control.is-date::after {
+  content: "\e927";
+  position: absolute;
+  right: 0.95rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: "primeicons";
+  font-size: 0.95rem;
+  line-height: 1;
+  color: #64748b;
+  pointer-events: none;
+  z-index: 1;
+}
+
+body.sakai-theme .form-group:has(> input[type="date"]) {
+  position: relative;
+}
+
+body.sakai-theme .form-group:has(> input[type="date"]) > input[type="date"] {
+  background-image: none !important;
+  padding-right: 2.75rem !important;
+}
+
+body.sakai-theme .form-group:has(> input[type="date"])::after {
+  content: "\e927";
+  position: absolute;
+  right: 0.95rem;
+  bottom: 0.9rem;
+  font-family: "primeicons";
+  font-size: 0.95rem;
+  line-height: 1;
+  color: #64748b;
+  pointer-events: none;
+  z-index: 1;
+}
+
+body.sakai-theme input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0 !important;
+  cursor: pointer;
+}
+
 body.sakai-theme .vtur-app-button {
   border-radius: 8px;
 }
@@ -361,6 +411,29 @@ body.sakai-theme .quote-list-table td[data-label="Status"] .form-input {
 }
 
 @media (min-width: 641px) {
+  body.sakai-theme :is(td, th):has(> input[type="date"]) {
+    position: relative;
+  }
+
+  body.sakai-theme :is(td, th):has(> input[type="date"]) > input[type="date"] {
+    background-image: none !important;
+    padding-right: 2.75rem !important;
+  }
+
+  body.sakai-theme :is(td, th):has(> input[type="date"])::after {
+    content: "\e927";
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: "primeicons";
+    font-size: 0.95rem;
+    line-height: 1;
+    color: #64748b;
+    pointer-events: none;
+    z-index: 1;
+  }
+
   body.sakai-theme :is(.table-default, .vtur-data-table, .ranking-table) thead th {
     font-size: 0.95rem !important;
     font-weight: 700 !important;
