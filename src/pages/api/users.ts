@@ -1144,7 +1144,10 @@ export async function POST({ request }: { request: Request }) {
       return new Response(`Falha ao persistir usuario: ${persistError.message}`, { status: 500 });
     }
 
-    const canBackfillPerms = !isSelf || hasServiceRoleKey;
+    // No fluxo do proprio usuario (login sem perfil / onboarding), as permissoes
+    // devem vir dos triggers do banco. Evita tentativas redundantes de insert em
+    // modulo_acesso que podem cair em RLS dependendo do ambiente do Worker.
+    const canBackfillPerms = !isSelf && (isAdmin || isMaster || isGestor);
     if (canBackfillPerms) {
       try {
         const permsClient = !isSelf ? dbWriteClient : supabaseServer;
