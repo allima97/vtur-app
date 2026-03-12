@@ -5,6 +5,7 @@
  */
 
 import type { Env } from "../types/env";
+import { isCacheDisabled } from "./cachePolicy";
 
 interface CacheEntry<T> {
   data: T;
@@ -49,6 +50,7 @@ export const kvCache = {
    * Get a value from KV or memory cache
    */
   async get<T>(key: string, env?: Env): Promise<T | null> {
+    if (isCacheDisabled()) return null;
     try {
       const fullKey = createKey(key);
       const kv = getKVNamespace(env);
@@ -96,6 +98,7 @@ export const kvCache = {
    * Set a value in KV and memory cache
    */
   async set<T>(key: string, value: T, ttlSeconds = 3600, env?: Env): Promise<void> {
+    if (isCacheDisabled()) return;
     try {
       const fullKey = createKey(key);
       const expiresAt = Date.now() + ttlSeconds * 1000;
@@ -133,6 +136,10 @@ export const kvCache = {
    * Delete a value from KV and memory cache
    */
   async delete(key: string, env?: Env): Promise<void> {
+    if (isCacheDisabled()) {
+      memoryCache.clear();
+      return;
+    }
     try {
       const fullKey = createKey(key);
       const kv = getKVNamespace(env);
@@ -169,6 +176,9 @@ export const kvCache = {
     ttlSeconds = 3600,
     env?: Env
   ): Promise<T> {
+    if (isCacheDisabled()) {
+      return fetcher();
+    }
     // Try to get from cache first
     const cached = await kvCache.get<T>(key, env);
     if (cached !== null) {
