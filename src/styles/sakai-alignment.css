@@ -317,6 +317,24 @@ body.sakai-theme table:not(.vtur-data-table):not(.table-default):not(.ranking-ta
   text-align: left !important;
 }
 
+@media (min-width: 641px) {
+  body.sakai-theme :is(.table-default, .vtur-data-table, .ranking-table)
+    :is(thead th:not(.th-actions), tbody td:not(.th-actions):not([colspan])),
+  body.sakai-theme table:not(.vtur-data-table):not(.table-default):not(.ranking-table):not(.escala-table):not(.escala-calendario)
+    :is(thead th:not(.th-actions), tbody td:not(.th-actions):not([colspan])) {
+    text-align: left !important;
+  }
+
+  body.sakai-theme :is(.table-default, .vtur-data-table, .ranking-table)
+    :is(thead th:not(.th-actions), tbody td:not(.th-actions):not([colspan])) > :is(div, span, p, strong, small, a),
+  body.sakai-theme table:not(.vtur-data-table):not(.table-default):not(.ranking-table):not(.escala-table):not(.escala-calendario)
+    :is(thead th:not(.th-actions), tbody td:not(.th-actions):not([colspan])) > :is(div, span, p, strong, small, a) {
+    text-align: left !important;
+    justify-content: flex-start !important;
+    margin-inline: 0 auto !important;
+  }
+}
+
 body.sakai-theme :is(.table-default, .vtur-data-table, .ranking-table) :is(thead th:first-child, tbody td:first-child) {
   padding-left: 1.25rem !important;
 }
@@ -557,6 +575,21 @@ body.sakai-theme .th-actions .p-button {
   min-height: 2.2rem;
   padding: 0.4rem;
   border-radius: 8px;
+}
+
+body.sakai-theme .th-actions :is(.vtur-table-action, .vtur-app-button, .p-button).p-button-icon-only {
+  width: 2.2rem;
+  min-width: 2.2rem;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+body.sakai-theme .th-actions :is(.vtur-table-action, .vtur-app-button, .p-button).p-button-icon-only .p-button-label {
+  display: none !important;
+}
+
+body.sakai-theme .th-actions :is(.vtur-table-action, .vtur-app-button, .p-button).p-button-icon-only .p-button-icon {
+  margin: 0 !important;
 }
 
 /* Coluna Ações: padrão icon-only (sem texto visível) */
