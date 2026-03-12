@@ -6540,3 +6540,92 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     min-height: 30px;
   }
 }
+
+/* Mobile tables: padronizar todas as table-mobile-cards no mesmo visual de vendas */
+@media (max-width: 640px) {
+  .table-container:has(.table-mobile-cards)::before,
+  .table-container:has(.table-mobile-cards)::after {
+    display: none !important;
+  }
+
+  .table-mobile-cards:not(.table-mobile-plain) {
+    min-width: 0 !important;
+    --table-card-border: var(--color-border) !important;
+    --table-card-divider: var(--color-border) !important;
+    --table-card-gap: transparent !important;
+    background: transparent !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .table-mobile-cards:not(.table-mobile-plain),
+  .table-mobile-cards:not(.table-mobile-plain) table,
+  .table-mobile-cards:not(.table-mobile-plain) tbody,
+  .table-mobile-cards:not(.table-mobile-plain) tr,
+  .table-mobile-cards:not(.table-mobile-plain) td {
+    min-width: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .table-mobile-cards:not(.table-mobile-plain) tr {
+    border: 1px solid var(--color-border) !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    border-radius: var(--radius-md) !important;
+    overflow: hidden !important;
+    margin-bottom: 12px !important;
+  }
+
+  .table-mobile-cards:not(.table-mobile-plain) td,
+  .table-mobile-cards:not(.table-mobile-plain) tbody tr:nth-child(even),
+  .table-mobile-cards:not(.table-mobile-plain) tbody tr:hover {
+    background: #ffffff !important;
+  }
+
+  .table-mobile-cards:not(.table-mobile-plain) td:last-child {
+    border-bottom: 0 !important;
+  }
+
+  .table-mobile-cards:not(.table-mobile-plain) tr:last-child {
+    margin-bottom: 0 !important;
+  }
+
+  .table-mobile-cards td.th-actions::before {
+    display: none !important;
+  }
+
+  .table-mobile-cards td.th-actions {
+    grid-template-columns: 1fr !important;
+    justify-items: stretch !important;
+    align-items: stretch !important;
+    padding: 0 !important;
+    text-align: center !important;
+    background: #ffffff !important;
+  }
+
+  .table-mobile-cards td.th-actions > :is(.action-buttons, .vtur-table-actions, .action-buttons-quote, .action-buttons-center, .viagens-action-buttons) {
+    width: 100% !important;
+    min-height: 4rem;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    overflow-x: visible !important;
+    gap: 0.5rem !important;
+    padding: 0.85rem 1rem !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .table-mobile-cards td.th-actions > .action-buttons > .vtur-table-actions,
+  .table-mobile-cards td.th-actions > .vtur-table-actions > .vtur-table-actions {
+    display: contents !important;
+  }
+
+  .table-mobile-cards td.th-actions :is(.action-buttons, .vtur-table-actions, .action-buttons-quote, .action-buttons-center, .viagens-action-buttons) {
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+    overflow-x: visible !important;
+  }
+}
