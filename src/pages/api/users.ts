@@ -90,9 +90,10 @@ function normalizeNomeCompleto(value?: string | null) {
 
 async function garantirPermissoesPadrao(
   usuarioId: string,
-  permissaoPadrao: string = PERMISSAO_PADRAO_VENDEDOR
+  permissaoPadrao: string = PERMISSAO_PADRAO_VENDEDOR,
+  client: any = supabaseServer
 ) {
-  const { data: existente, error: selectError } = await supabaseServer
+  const { data: existente, error: selectError } = await client
     .from("modulo_acesso")
     .select("modulo")
     .eq("usuario_id", usuarioId);
@@ -116,12 +117,12 @@ async function garantirPermissoesPadrao(
     ativo: true,
   }));
 
-  const { error: insertError } = await supabaseServer.from("modulo_acesso").insert(rows);
+  const { error: insertError } = await client.from("modulo_acesso").insert(rows);
   if (insertError) throw insertError;
 }
 
-async function garantirPermissoesMaster(usuarioId: string) {
-  const { data: existente, error: selectError } = await supabaseServer
+async function garantirPermissoesMaster(usuarioId: string, client: any = supabaseServer) {
+  const { data: existente, error: selectError } = await client
     .from("modulo_acesso")
     .select("modulo")
     .eq("usuario_id", usuarioId);
@@ -145,15 +146,15 @@ async function garantirPermissoesMaster(usuarioId: string) {
     ativo: true,
   }));
 
-  const { error: insertError } = await supabaseServer.from("modulo_acesso").insert(rows);
+  const { error: insertError } = await client.from("modulo_acesso").insert(rows);
   if (insertError) throw insertError;
 }
 
-async function isUsuarioMaster(usuarioId: string) {
-  const tipo = await getUserTypeNameByUserId(usuarioId);
+async function isUsuarioMaster(usuarioId: string, client: any = supabaseServer) {
+  const tipo = await getUserTypeNameByUserId(usuarioId, client);
   if (tipo.includes("MASTER")) return true;
 
-  const { data, error } = await supabaseServer
+  const { data, error } = await client
     .from("master_empresas")
     .select("id")
     .eq("master_id", usuarioId)
@@ -174,9 +175,9 @@ async function getCompanyIdFromUser(usuarioId: string) {
   return ((data as any)?.company_id as string | null) || null;
 }
 
-async function getUserTypeNameById(userTypeId?: string | null) {
+async function getUserTypeNameById(userTypeId?: string | null, client: any = supabaseServer) {
   if (!userTypeId) return "";
-  const { data, error } = await supabaseServer
+  const { data, error } = await client
     .from("user_types")
     .select("name")
     .eq("id", userTypeId)
@@ -185,8 +186,8 @@ async function getUserTypeNameById(userTypeId?: string | null) {
   return String((data as any)?.name || "").toUpperCase();
 }
 
-async function getUserTypeNameByUserId(userId: string) {
-  const { data, error } = await supabaseServer
+async function getUserTypeNameByUserId(userId: string, client: any = supabaseServer) {
+  const { data, error } = await client
     .from("users")
     .select("user_type_id, user_types(name)")
     .eq("id", userId)
@@ -199,7 +200,7 @@ async function getUserTypeNameByUserId(userId: string) {
   const userTypeId = (data as any)?.user_type_id as string | null;
   if (!userTypeId) return "";
 
-  return await getUserTypeNameById(userTypeId);
+  return await getUserTypeNameById(userTypeId, client);
 }
 
 function isTableMissing(error: any) {
@@ -1143,15 +1144,28 @@ export async function POST({ request }: { request: Request }) {
       return new Response(`Falha ao persistir usuario: ${persistError.message}`, { status: 500 });
     }
 
-    try {
-      const master = await isUsuarioMaster(userId);
-      await garantirPermissoesPadrao(
-        userId,
-        master ? PERMISSAO_PADRAO_MASTER : PERMISSAO_PADRAO_VENDEDOR
-      );
-      if (master) await garantirPermissoesMaster(userId);
-    } catch (permError: any) {
-      console.warn("Falha ao garantir permissoes (nao bloqueante):", permError?.message || permError);
+    const canBackfillPerms = !isSelf || hasServiceRoleKey;
+    if (canBackfillPerms) {
+      try {
+        const permsClient = !isSelf ? dbWriteClient : supabaseServer;
+        const hintedTypeName = await getUserTypeNameById(
+          (payload.user_type_id ?? body.user_type_id ?? null) as string | null,
+          permsClient
+        );
+        const master =
+          hintedTypeName.includes("MASTER") ||
+          (isSelf ? isMaster : await isUsuarioMaster(userId, permsClient));
+        await garantirPermissoesPadrao(
+          userId,
+          master ? PERMISSAO_PADRAO_MASTER : PERMISSAO_PADRAO_VENDEDOR,
+          permsClient
+        );
+        if (master) {
+          await garantirPermissoesMaster(userId, permsClient);
+        }
+      } catch (permError: any) {
+        console.warn("Falha ao garantir permissoes (nao bloqueante):", permError?.message || permError);
+      }
     }
 
     const usuarioCriadoAgora = Boolean(createdAuthUserId) || !usuarioExistente;
