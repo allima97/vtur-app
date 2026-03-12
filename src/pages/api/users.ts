@@ -1167,7 +1167,13 @@ export async function POST({ request }: { request: Request }) {
           await garantirPermissoesMaster(userId, permsClient);
         }
       } catch (permError: any) {
-        console.warn("Falha ao garantir permissoes (nao bloqueante):", permError?.message || permError);
+        // Em ambientes sem service role e/ou RLS estrito, o backfill pode falhar
+        // para o proprio usuario sem impactar o fluxo de login/onboarding.
+        if (isRlsViolation(permError)) {
+          // ignora para nao poluir logs com erro esperado
+        } else {
+          console.warn("Falha ao garantir permissoes (nao bloqueante):", permError?.message || permError);
+        }
       }
     }
 
