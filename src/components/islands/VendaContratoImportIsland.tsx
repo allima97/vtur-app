@@ -135,7 +135,8 @@ async function fetchCidadeSuggestions(params: { query: string; limit?: number; s
   if (query.length < 2) return [] as CidadeSugestao[];
   const qs = new URLSearchParams();
   qs.set("q", query);
-  qs.set("limite", String(params.limit ?? 25));
+  qs.set("limite", String(params.limit ?? 60));
+  qs.set("no_cache", "1");
   const response = await fetch(`/api/v1/vendas/cidades-busca?${qs.toString()}`, {
     signal: params.signal,
   });
@@ -512,7 +513,7 @@ export default function VendaContratoImportIsland() {
       try {
         const data = await fetchCidadeSuggestions({
           query: buscaCidade.trim(),
-          limit: 25,
+          limit: 60,
           signal: controller.signal,
         });
         if (controller.signal.aborted) return;
@@ -527,7 +528,7 @@ export default function VendaContratoImportIsland() {
           .select("id, nome")
           .ilike("nome", `%${buscaCidade.trim()}%`)
           .order("nome")
-          .limit(25);
+          .limit(60);
         if (controller.signal.aborted) return;
         if (fallbackError) {
           console.error("Erro no fallback de cidades:", fallbackError);

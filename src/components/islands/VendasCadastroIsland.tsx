@@ -68,7 +68,8 @@ async function fetchCidadesSugestoes(params: {
 }) {
   const qs = new URLSearchParams();
   qs.set("q", params.query);
-  qs.set("limite", String(params.limite ?? 25));
+  qs.set("limite", String(params.limite ?? 60));
+  qs.set("no_cache", "1");
   const resp = await fetch(`/api/v1/vendas/cidades-busca?${qs.toString()}`,
     { signal: params.signal }
   );
@@ -685,7 +686,7 @@ export default function VendasCadastroIsland() {
       try {
         const data = await fetchCidadesSugestoes({
           query: buscaDestino.trim(),
-          limite: 25,
+          limite: 60,
           signal: controller.signal,
         });
         if (!controller.signal.aborted) {

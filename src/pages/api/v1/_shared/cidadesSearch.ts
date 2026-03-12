@@ -88,52 +88,97 @@ export function buildCidadeSearchTerms(query: string) {
   const keywords = tokenize(raw).filter((token) => token.length >= 3 && !STOPWORDS.has(token));
   keywords
     .sort((a, b) => b.length - a.length)
-    .slice(0, 2)
+    .slice(0, 4)
     .forEach((token) => add(token));
 
-  return terms.slice(0, 6);
+  return terms.slice(0, 8);
 }
 
-function scoreCidade(row: CidadeBuscaRow, query: string) {
-  const nome = normalizeLookup(row?.nome || "");
-  if (!nome) return -1_000_000;
+type RankedCidade = {
+  row: CidadeBuscaRow;
+  score: number;
+  tokenMatches: number;
+  allTokensMatch: boolean;
+  startsWithFirstToken: boolean;
+};
 
-  const full = normalizeLookup(query);
-  const tokens = tokenize(query);
+function getQueryTokens(query: string) {
+  return tokenize(query).filter((token) => !STOPWORDS.has(token));
+}
+
+function scoreCidade(row: CidadeBuscaRow, query: string, tokens: string[]): RankedCidade {
+  const nome = normalizeLookup(row?.nome || "");
   const detail = normalizeLookup(
     [row?.subdivisao_nome || "", row?.pais_nome || ""].filter(Boolean).join(" ")
   );
   const target = detail ? `${nome} ${detail}` : nome;
+  const full = normalizeLookup(query);
+  if (!nome) {
+    return {
+      row,
+      score: -1_000_000,
+      tokenMatches: 0,
+      allTokensMatch: false,
+      startsWithFirstToken: false,
+    };
+  }
 
   let score = 0;
-  if (full && nome === full) score += 1_000;
-  if (full && nome.startsWith(full)) score += 700;
-  if (full && nome.includes(full)) score += 420;
+  if (full && nome === full) score += 1_500;
+  if (full && target.startsWith(full)) score += 1_100;
+  if (full && target.includes(full)) score += 700;
 
   let tokenMatches = 0;
   tokens.forEach((token) => {
-    if (nome === token) score += 350;
-    if (nome.startsWith(token)) score += 120;
-    if (target.includes(token)) {
-      tokenMatches += 1;
-      score += 70;
-    }
+    const inNome = nome.includes(token);
+    const inTarget = target.includes(token);
+    if (inTarget) tokenMatches += 1;
+
+    if (nome === token) score += 520;
+    if (nome.startsWith(token)) score += 220;
+    else if (inNome) score += 160;
+    else if (inTarget) score += 80;
+    else score -= 32;
   });
 
-  if (tokens.length > 1 && tokenMatches === tokens.length) score += 260;
-  if (tokens.length > 0 && tokenMatches === 0) score -= 200;
+  const firstToken = tokens[0] || "";
+  const startsWithFirstToken = Boolean(firstToken && nome.startsWith(firstToken));
+  if (startsWithFirstToken) score += 260;
 
-  score -= Math.min(nome.length, 120) * 0.01;
-  return score;
+  const allTokensMatch = tokens.length > 0 && tokenMatches === tokens.length;
+  if (allTokensMatch) score += 420;
+  else if (tokens.length > 0) {
+    score += (tokenMatches / tokens.length) * 180;
+  }
+
+  score -= Math.min(nome.length, 140) * 0.01;
+
+  return {
+    row,
+    score,
+    tokenMatches,
+    allTokensMatch,
+    startsWithFirstToken,
+  };
 }
 
 function sortRanked(rows: CidadeBuscaRow[], query: string) {
-  return [...rows].sort((a, b) => {
-    const scoreB = scoreCidade(b, query);
-    const scoreA = scoreCidade(a, query);
-    if (scoreB !== scoreA) return scoreB - scoreA;
-    return String(a?.nome || "").localeCompare(String(b?.nome || ""), "pt-BR");
+  const tokens = getQueryTokens(query);
+  const ranked = rows.map((row) => scoreCidade(row, query, tokens));
+
+  ranked.sort((a, b) => {
+    if (tokens.length > 1 && a.allTokensMatch !== b.allTokensMatch) {
+      return a.allTokensMatch ? -1 : 1;
+    }
+    if (a.tokenMatches !== b.tokenMatches) return b.tokenMatches - a.tokenMatches;
+    if (a.startsWithFirstToken !== b.startsWithFirstToken) {
+      return a.startsWithFirstToken ? -1 : 1;
+    }
+    if (b.score !== a.score) return b.score - a.score;
+    return String(a.row?.nome || "").localeCompare(String(b.row?.nome || ""), "pt-BR");
   });
+
+  return ranked.map((entry) => entry.row);
 }
 
 async function fetchFromRpc(client: any, term: string, limit: number) {
@@ -203,8 +248,8 @@ export async function searchCidades(client: any, params: { query: string; limit:
   if (!terms.length) return [];
 
   const pool = new Map<string, CidadeBuscaRow>();
-  const poolTargetSize = Math.min(220, Math.max(limit * 4, 40));
-  const perTermLimit = Math.min(80, Math.max(limit * 2, 20));
+  const poolTargetSize = Math.min(500, Math.max(limit * 8, 120));
+  const perTermLimit = Math.min(160, Math.max(limit * 4, 40));
 
   for (const term of terms) {
     try {
