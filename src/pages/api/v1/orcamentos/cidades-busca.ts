@@ -1,5 +1,6 @@
 import { kvCache } from "../../../../lib/kvCache";
 import { buildAuthClient, requireModuloLevel } from "../vendas/_utils";
+import { searchCidades } from "../_shared/cidadesSearch";
 
 const CACHE_TTL_MS = 12_000;
 const CACHE_MAX_ENTRIES = 200;
@@ -76,32 +77,11 @@ export async function GET({ request }: { request: Request }) {
       });
     }
 
-    let cidadesData: any[] = [];
-    if (!query) {
-      const fallback = await client
-        .from("cidades")
-        .select("id, nome")
-        .order("nome")
-        .limit(limite);
-      if (fallback.error) throw fallback.error;
-      cidadesData = fallback.data || [];
-    } else {
-      try {
-        const { data, error } = await client.rpc("buscar_cidades", { q: query, limite });
-        if (error) throw error;
-        cidadesData = data || [];
-      } catch (rpcError) {
-        let fallbackQuery = client
-          .from("cidades")
-          .select("id, nome")
-          .order("nome")
-          .limit(limite);
-        fallbackQuery = fallbackQuery.ilike("nome", `%${query}%`);
-        const fallback = await fallbackQuery;
-        if (fallback.error) throw fallback.error;
-        cidadesData = fallback.data || [];
-      }
-    }
+    const cidadesData = await searchCidades(client, {
+      query,
+      limit: limite,
+      allowEmpty: true,
+    });
 
     writeCache(cacheKey, cidadesData);
     await kvCache.set(cacheKey, cidadesData, 12);

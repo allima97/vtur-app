@@ -113,6 +113,39 @@ function formatCidadeLabel(cidade: CidadeSugestao) {
   return cidade.subdivisao_nome ? `${cidade.nome} (${cidade.subdivisao_nome})` : cidade.nome;
 }
 
+function sanitizeCidadeSeed(value?: string | null) {
+  if (!value) return "";
+  let term = value.replace(/\s+/g, " ").trim();
+  if (!term) return "";
+  term = term.replace(/\s*[-–—]\s*\d+\s*(?:dia|dias|noite|noites)\b.*$/i, "");
+
+  const parts = term
+    .split(/\s*(?:\/|,|;|\||→|->)\s*/g)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => part.replace(/\s*(?:\/|-)\s*[a-z]{2}$/i, "").trim())
+    .filter(Boolean);
+
+  if (parts.length > 0) return parts[0];
+  return term;
+}
+
+async function fetchCidadeSuggestions(params: { query: string; limit?: number; signal?: AbortSignal }) {
+  const query = String(params.query || "").trim();
+  if (query.length < 2) return [] as CidadeSugestao[];
+  const qs = new URLSearchParams();
+  qs.set("q", query);
+  qs.set("limite", String(params.limit ?? 25));
+  const response = await fetch(`/api/v1/vendas/cidades-busca?${qs.toString()}`, {
+    signal: params.signal,
+  });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  const data = (await response.json()) as CidadeSugestao[];
+  return Array.isArray(data) ? data : [];
+}
+
 function isLocacaoCarroTerm(value?: string | null) {
   const term = normalizeText(value || "");
   if (!term) return false;
@@ -477,30 +510,32 @@ export default function VendaContratoImportIsland() {
       setBuscandoCidade(true);
       setErroCidade(null);
       try {
-        const { data, error: cidadesError } = await supabase.rpc(
-          "buscar_cidades",
-          { q: buscaCidade.trim(), limite: 10 },
-          { signal: controller.signal }
-        );
-        if (!controller.signal.aborted) {
-          if (cidadesError) {
-            console.error("Erro ao buscar cidades:", cidadesError);
-            setErroCidade("Erro ao buscar cidades (RPC). Tentando fallback...");
-            const { data: fallbackData, error: fallbackError } = await supabase
-              .from("cidades")
-              .select("id, nome")
-              .ilike("nome", `%${buscaCidade.trim()}%`)
-              .order("nome");
-            if (fallbackError) {
-              console.error("Erro no fallback de cidades:", fallbackError);
-              setErroCidade("Erro ao buscar cidades.");
-            } else {
-              setResultadosCidade((fallbackData as CidadeSugestao[]) || []);
-              setErroCidade(null);
-            }
-          } else {
-            setResultadosCidade((data as CidadeSugestao[]) || []);
-          }
+        const data = await fetchCidadeSuggestions({
+          query: buscaCidade.trim(),
+          limit: 25,
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
+        setResultadosCidade(data);
+        setErroCidade(null);
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        console.error("Erro ao buscar cidades via endpoint:", err);
+        setErroCidade("Erro ao buscar cidades (API). Tentando fallback...");
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from("cidades")
+          .select("id, nome")
+          .ilike("nome", `%${buscaCidade.trim()}%`)
+          .order("nome")
+          .limit(25);
+        if (controller.signal.aborted) return;
+        if (fallbackError) {
+          console.error("Erro no fallback de cidades:", fallbackError);
+          setErroCidade("Erro ao buscar cidades.");
+          setResultadosCidade([]);
+        } else {
+          setResultadosCidade((fallbackData as CidadeSugestao[]) || []);
+          setErroCidade(null);
         }
       } finally {
         if (!controller.signal.aborted) setBuscandoCidade(false);
@@ -517,7 +552,7 @@ export default function VendaContratoImportIsland() {
     if (!contratos.length) return;
     const principal = contratos[principalIndex] || contratos[0];
     if (!cidadeManual && !cidadeAutoIndefinida) {
-      setBuscaCidade(principal.destino || "");
+      setBuscaCidade(sanitizeCidadeSeed(principal.destino || ""));
       setCidadeId("");
       setCidadeNome("");
       setCidadeSelecionadaLabel("");

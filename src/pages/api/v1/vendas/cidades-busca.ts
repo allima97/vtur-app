@@ -1,5 +1,6 @@
 import { kvCache } from "../../../../lib/kvCache";
 import { buildAuthClient, requireModuloLevel } from "./_utils";
+import { searchCidades } from "../_shared/cidadesSearch";
 
 type CacheEntry = {
   expiresAt: number;
@@ -15,7 +16,7 @@ function parseLimit(value: string | null, fallback: number) {
   if (!Number.isFinite(parsed)) return fallback;
   const intVal = Math.trunc(parsed);
   if (intVal <= 0) return fallback;
-  return Math.min(20, intVal);
+  return Math.min(50, intVal);
 }
 
 function readCache(key: string) {
@@ -45,7 +46,7 @@ export async function GET({ request }: { request: Request }) {
 
     const url = new URL(request.url);
     const query = String(url.searchParams.get("q") || "").trim();
-    const limite = parseLimit(url.searchParams.get("limite"), 8);
+    const limite = parseLimit(url.searchParams.get("limite"), 20);
     const noCache = String(url.searchParams.get("no_cache") || "").trim() === "1";
 
     if (query.length < 2) {
@@ -95,13 +96,11 @@ export async function GET({ request }: { request: Request }) {
       }
     }
 
-    const { data, error } = await client.rpc("buscar_cidades", {
-      q: query,
-      limite,
+    const payload = await searchCidades(client, {
+      query,
+      limit: limite,
+      allowEmpty: false,
     });
-    if (error) throw error;
-
-    const payload = data || [];
     writeCache(cacheKey, payload);
     await kvCache.set(cacheKey, payload, 10);
 

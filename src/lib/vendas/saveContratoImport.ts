@@ -129,8 +129,25 @@ function buildDestinoCandidates(destino: string) {
   const base = sanitizeDestinoTerm(destino);
   add(base);
   add(destino);
-  if (base.includes(" / ")) add(base.split(" / ")[0]);
-  if (base.includes(" - ")) add(base.split(" - ")[0]);
+  base
+    .split(/\s*(?:\/|,|;|\||→|->)\s*/g)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .forEach((part) => add(part.replace(/\s*(?:\/|-)\s*[a-z]{2}$/i, "").trim()));
+  base
+    .split(/\s[-–—]\s/g)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .forEach((part) => add(part.replace(/\s*(?:\/|-)\s*[a-z]{2}$/i, "").trim()));
+
+  const normalizedWords = normalizeText(base, { trim: true, collapseWhitespace: true })
+    .split(" ")
+    .filter((token) => token.length >= 3)
+    .filter((token) => !["de", "da", "do", "das", "dos", "e", "em", "para", "com"].includes(token))
+    .sort((a, b) => b.length - a.length)
+    .slice(0, 2);
+  normalizedWords.forEach((word) => add(word));
+
   return Array.from(candidates);
 }
 
