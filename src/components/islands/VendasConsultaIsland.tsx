@@ -1506,7 +1506,7 @@ export default function VendasConsultaIsland() {
               <th>Vendedor</th>
               <th>Destino</th>
               <th>Produto</th>
-              <th style={{ textAlign: "center" }}>Embarque</th>
+              <th>Embarque</th>
               <th>Valor</th>
               <th>Taxas</th>
               {podeVer && <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>}
@@ -1564,7 +1564,7 @@ export default function VendasConsultaIsland() {
                     </div>
                   )}
                 </td>
-                <td data-label="Embarque" style={{ textAlign: "center" }}>
+                <td data-label="Embarque">
                   {formatarDataCorretamente(v.data_embarque)}
                 </td>
                 <td data-label="Valor">{formatCurrencyBRL(totalValor)}</td>
@@ -1832,8 +1832,8 @@ export default function VendasConsultaIsland() {
                       <th>Número</th>
                       <th>Reserva</th>
                       <th>Produto</th>
-                      <th style={{ textAlign: "center" }}>Data Início</th>
-                      <th style={{ textAlign: "center" }}>Data Final</th>
+                      <th>Data Início</th>
+                      <th>Data Final</th>
                       <th>Valor</th>
                       <th>Taxas</th>
                       <th>Contrato</th>
@@ -1856,10 +1856,10 @@ export default function VendasConsultaIsland() {
                           <td data-label="Número">{r.numero_recibo || "-"}</td>
                           <td data-label="Reserva">{r.numero_reserva || "-"}</td>
                           <td data-label="Produto">{r.produto_nome || "-"}</td>
-                          <td data-label="Data Início" style={{ textAlign: "center" }}>
+                          <td data-label="Data Início">
                             {formatarData(r.data_inicio)}
                           </td>
-                          <td data-label="Data Final" style={{ textAlign: "center" }}>
+                          <td data-label="Data Final">
                             {formatarData(r.data_fim)}
                           </td>
                           <td data-label="Valor">{valorFmt}</td>

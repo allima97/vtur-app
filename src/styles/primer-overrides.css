@@ -1344,3 +1344,19 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Tables: keep all columns left-aligned, except action columns */
+:is(.table-default, .vtur-data-table, .clientes-table, .ranking-table) thead th:not(.th-actions):not([colspan]),
+:is(.table-default, .vtur-data-table, .clientes-table, .ranking-table) tbody td:not(.th-actions):not(.table-loading-cell):not(.table-empty-cell):not(.vtur-data-table-message-cell):not([colspan]) {
+  text-align: left !important;
+}
+
+:is(.table-default, .vtur-data-table, .clientes-table, .ranking-table) :is(th, td).th-actions {
+  text-align: center !important;
+}
+
+:is(.table-default, .vtur-data-table, .clientes-table, .ranking-table) .th-actions :is(.action-buttons, .vtur-table-actions, .sac-action-buttons, .viagens-action-buttons, .orcamentos-actions) {
+  justify-content: center !important;
+  align-items: center !important;
+  margin-inline: auto !important;
+}

@@ -2807,8 +2807,8 @@ export default function ClientesIsland() {
                   <tr>
                     <th>Numero</th>
                     <th>Produto</th>
-                    <th style={{ textAlign: "center" }}>Data Início</th>
-                    <th style={{ textAlign: "center" }}>Data Final</th>
+                    <th>Data Início</th>
+                    <th>Data Final</th>
                     <th>Valor</th>
                     <th>Taxas</th>
                   </tr>
@@ -2824,8 +2824,8 @@ export default function ClientesIsland() {
                     <tr key={idx}>
                       <td data-label="Numero">{r.numero_recibo || "-"}</td>
                       <td data-label="Produto">{r.produto_nome || "-"}</td>
-                      <td data-label="Data Início" style={{ textAlign: "center" }}>{formatarData(r.data_inicio)}</td>
-                      <td data-label="Data Final" style={{ textAlign: "center" }}>{formatarData(r.data_fim)}</td>
+                      <td data-label="Data Início">{formatarData(r.data_inicio)}</td>
+                      <td data-label="Data Final">{formatarData(r.data_fim)}</td>
                       <td data-label="Valor">{formatCurrencyBRL(r.valor_total || 0)}</td>
                       <td data-label="Taxas">{formatCurrencyBRL(r.valor_taxas || 0)}</td>
                     </tr>
