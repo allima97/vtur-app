@@ -11,11 +11,25 @@ type AppButtonVariant =
   | "ghost"
   | "link";
 
-type AppButtonProps = Omit<PrimeButtonProps, "severity" | "outlined" | "text" | "link" | "label"> & {
+type AppButtonCommonProps = {
+  as?: "button" | "a";
   variant?: AppButtonVariant;
   block?: boolean;
   children?: React.ReactNode;
 };
+
+type AppButtonElementProps = Omit<PrimeButtonProps, "severity" | "outlined" | "text" | "link" | "label"> & {
+  as?: "button";
+};
+
+type AppButtonAnchorProps = Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, "children"> & {
+  as: "a";
+  href: string;
+  disabled?: boolean;
+  icon?: React.ReactNode;
+};
+
+type AppButtonProps = AppButtonCommonProps & (AppButtonElementProps | AppButtonAnchorProps);
 
 const variantClassMap: Record<AppButtonVariant, string> = {
   default: "",
@@ -59,7 +73,16 @@ function isIconOnlyNode(node: React.ReactNode): boolean {
   return false;
 }
 
+function renderIcon(icon: React.ReactNode) {
+  if (typeof icon === "string") {
+    return <span className={icon} aria-hidden="true" />;
+  }
+
+  return icon;
+}
+
 export default function AppButton({
+  as = "button",
   variant = "default",
   block = false,
   className,
@@ -88,23 +111,51 @@ export default function AppButton({
   const isIconOnlyButton = !resolvedLabel && Boolean(resolvedIcon) && contentNodes.length <= 1;
   const resolvedAriaLabel =
     props["aria-label"] || (typeof props.title === "string" ? props.title : undefined) || srOnlyText || undefined;
+  const resolvedClassName = [
+    "vtur-app-button",
+    `vtur-app-button-${variant}`,
+    variantClassMap[variant],
+    isIconOnlyButton ? "p-button-icon-only" : "",
+    block ? "w-full" : "",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (as === "a") {
+    const { href, disabled = false, onClick, ...anchorProps } = props as AppButtonAnchorProps;
+
+    return (
+      <a
+        {...anchorProps}
+        href={disabled ? undefined : href}
+        aria-label={resolvedAriaLabel}
+        aria-disabled={disabled || undefined}
+        className={["p-button", "p-component", resolvedClassName, disabled ? "p-disabled" : ""].filter(Boolean).join(" ")}
+        onClick={(event) => {
+          if (disabled) {
+            event.preventDefault();
+            return;
+          }
+
+          onClick?.(event);
+        }}
+        tabIndex={disabled ? -1 : anchorProps.tabIndex}
+      >
+        {resolvedIcon ? <span className="p-button-icon p-c">{renderIcon(resolvedIcon)}</span> : null}
+        {resolvedLabel ? <span className="p-button-label p-c">{resolvedLabel}</span> : null}
+        {resolvedLabel || extractedIcon ? null : children}
+      </a>
+    );
+  }
 
   return (
     <PrimeButton
-      {...props}
+      {...(props as AppButtonElementProps)}
       icon={resolvedIcon}
       label={resolvedLabel}
       aria-label={resolvedAriaLabel}
-      className={[
-        "vtur-app-button",
-        `vtur-app-button-${variant}`,
-        variantClassMap[variant],
-        isIconOnlyButton ? "p-button-icon-only" : "",
-        block ? "w-full" : "",
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      className={resolvedClassName}
     >
       {isPrimitiveChild || extractedIcon ? null : children}
     </PrimeButton>

@@ -131,9 +131,9 @@ export default function AuthRecoverIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="auth-container">
+      <div className="auth-container auth-container-auth-entry">
         <AppCard
-          className="auth-card auth-card-lg"
+          className="auth-card auth-card-lg auth-card-auth-entry"
           title="Recuperar senha"
           subtitle="Enviaremos um link para redefinir sua senha."
         >
