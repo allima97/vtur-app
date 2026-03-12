@@ -848,7 +848,38 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
     text-align: center !important;
   }
 
-  body.sakai-theme .table-mobile-cards td.th-actions :is(.action-buttons, .vtur-table-actions, .action-buttons-quote, .action-buttons-center, .viagens-action-buttons) {
+  body.sakai-theme .table-mobile-cards td.th-actions::before {
+    display: none !important;
+  }
+
+  body.sakai-theme .table-mobile-cards td.th-actions {
+    grid-template-columns: 1fr !important;
+    justify-items: stretch !important;
+    align-items: stretch !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  body.sakai-theme .table-mobile-cards td.th-actions > :is(.action-buttons, .vtur-table-actions, .action-buttons-quote, .action-buttons-center, .viagens-action-buttons) {
+    width: 100% !important;
+    min-height: 4rem;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    overflow-x: visible !important;
+    gap: 0.5rem !important;
+    padding: 0.85rem 1rem !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+  }
+
+  body.sakai-theme .table-mobile-cards td.th-actions > .action-buttons > .vtur-table-actions,
+  body.sakai-theme .table-mobile-cards td.th-actions > .vtur-table-actions > .vtur-table-actions {
+    display: contents !important;
+  }
+
+  body.sakai-theme .table-mobile-cards td.th-actions > :is(.action-buttons, .vtur-table-actions, .action-buttons-quote, .action-buttons-center, .viagens-action-buttons) > :is(.action-buttons, .vtur-table-actions, .action-buttons-quote, .action-buttons-center, .viagens-action-buttons) {
     width: auto !important;
     justify-content: center !important;
     flex-wrap: wrap !important;

@@ -457,6 +457,18 @@ export default function ClientesConsultaIsland() {
               {clientesExibidos.map((c) => {
                 const whatsappLink = construirLinkWhatsApp(c.whatsapp || c.telefone || "");
                 const actions = [
+                  ...(whatsappLink
+                    ? [
+                        {
+                          key: "whatsapp",
+                          label: "WhatsApp",
+                          title: "Abrir WhatsApp",
+                          onClick: () => window.open(whatsappLink, "_blank", "noopener,noreferrer"),
+                          icon: <i className="pi pi-whatsapp" aria-hidden="true" />,
+                          variant: "ghost" as const,
+                        },
+                      ]
+                    : []),
                   {
                     key: "historico",
                     label: "Historico",
@@ -488,24 +500,7 @@ export default function ClientesConsultaIsland() {
                     <td data-label="Telefone">{c.telefone || "-"}</td>
                     <td data-label="E-mail">{c.email || "-"}</td>
                     <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons vtur-table-actions">
-                        {whatsappLink ? (
-                          <AppButton
-                            as="a"
-                            href={whatsappLink}
-                            target="_blank"
-                            rel="noreferrer"
-                            type="button"
-                            variant="ghost"
-                            className="vtur-table-action"
-                            title="Abrir WhatsApp"
-                            aria-label="Abrir WhatsApp"
-                          >
-                            <i className="pi pi-whatsapp" aria-hidden="true" />
-                          </AppButton>
-                        ) : null}
-                        <TableActions actions={actions} />
-                      </div>
+                      <TableActions actions={actions} />
                     </td>
                   </tr>
                 );
