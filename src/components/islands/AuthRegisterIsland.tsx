@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useRegisterForm } from "../../lib/useRegisterForm";
 import CredentialsForm from "../forms/CredentialsForm";
-import { SYSTEM_NAME } from "../../lib/systemName";
 import AlertMessage from "../ui/AlertMessage";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
@@ -34,8 +33,13 @@ export default function AuthRegisterIsland() {
     <AppPrimerProvider>
       <div className="auth-container">
         <AppCard
-          className="auth-card auth-card-lg"
-          title={`Bem-vindo ao ${SYSTEM_NAME}`}
+          className="auth-card auth-card-lg auth-card-with-logo auth-card-register"
+          title={
+            <span className="auth-brand-title">
+              <img className="auth-brand-logo" src="/brand/vtur-logo-stacked.svg" alt="VTUR" />
+              <span>Bem-vindo!</span>
+            </span>
+          }
           subtitle="Cadastre-se, confirme o e-mail e complete seus dados no primeiro acesso."
         >
           <AppNoticeDialog

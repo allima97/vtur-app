@@ -8,7 +8,6 @@
     radial-gradient(circle at 8% -10%, rgba(59, 130, 246, 0.2), transparent 36%),
     radial-gradient(circle at 100% 0%, rgba(20, 184, 166, 0.16), transparent 30%),
     #f5f6fa;
-  --auth-entry-card-max-width: 400px;
   font-family: var(--vtur-font-family, "Inter var", sans-serif);
   --color-form-label: #334155;
 }
@@ -44,38 +43,39 @@
   max-width: 460px;
 }
 
-.auth-container.auth-container-auth-entry {
-  max-width: calc(var(--auth-entry-card-max-width) + 24px);
+.auth-card-with-logo .vtur-app-card-header {
+  justify-content: center;
+  text-align: center;
 }
 
-.auth-card.auth-card-auth-entry {
-  max-width: var(--auth-entry-card-max-width);
-}
-
-.auth-card-login .vtur-app-card-copy {
+.auth-card-with-logo .vtur-app-card-copy {
   width: 100%;
-}
-
-.auth-login-title {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 14px;
+  align-items: center;
+}
+
+.auth-brand-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   line-height: 1.05;
 }
 
-.auth-login-logo {
+.auth-brand-logo {
   display: block;
-  width: clamp(128px, 38vw, 164px);
-  height: auto;
+  width: 2.3rem;
+  height: 2.3rem;
 }
 
-.auth-card-login .vtur-app-card-title {
+.auth-card-with-logo .vtur-app-card-title {
   font-size: 1.34rem;
 }
 
-.auth-card-login .vtur-app-card-subtitle {
-  max-width: 30ch;
+.auth-card-with-logo .vtur-app-card-subtitle {
+  max-width: 34ch;
+  text-align: center;
 }
 
 .auth-header {
@@ -364,10 +364,6 @@
     max-width: 100%;
   }
 
-  .auth-card.auth-card-auth-entry {
-    max-width: var(--auth-entry-card-max-width);
-  }
-
   .auth-header h1 {
     font-size: 1.6rem;
   }
@@ -380,8 +376,9 @@
     font-size: 0.95rem;
   }
 
-  .auth-login-logo {
-    width: clamp(120px, 44vw, 156px);
+  .auth-brand-logo {
+    width: 2.3rem;
+    height: 2.3rem;
   }
 
   .auth-form {

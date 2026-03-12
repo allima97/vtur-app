@@ -249,12 +249,12 @@ export default function AuthLoginIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="auth-container auth-container-auth-entry">
+      <div className="auth-container">
         <AppCard
-          className="auth-card auth-card-lg auth-card-auth-entry auth-card-login"
+          className="auth-card auth-card-lg auth-card-with-logo auth-card-login"
           title={
-            <span className="auth-login-title">
-              <img className="auth-login-logo" src="/brand/vtur-logo-stacked.svg" alt="VTUR" />
+            <span className="auth-brand-title">
+              <img className="auth-brand-logo" src="/brand/vtur-logo-stacked.svg" alt="VTUR" />
               <span>Bem-vindo!</span>
             </span>
           }

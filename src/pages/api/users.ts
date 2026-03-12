@@ -13,21 +13,18 @@ import {
 export function getSupabaseEnv(request?: Request) {
   // Prefer readEnv to support Workers bindings at module scope.
   let url = readEnv("PUBLIC_SUPABASE_URL") || readEnv("SUPABASE_URL");
-  let anon = readEnv("PUBLIC_SUPABASE_ANON_KEY");
+  let anon = readEnv("PUBLIC_SUPABASE_ANON_KEY") || readEnv("SUPABASE_ANON_KEY");
 
   // Cloudflare Workers (D1/Pages Functions) may expose env on request.
   if ((!url || !anon) && request && "env" in request) {
     // @ts-ignore
     url = url || request.env.PUBLIC_SUPABASE_URL || request.env.SUPABASE_URL;
     // @ts-ignore
-    anon = anon || request.env.PUBLIC_SUPABASE_ANON_KEY;
+    anon = anon || request.env.PUBLIC_SUPABASE_ANON_KEY || request.env.SUPABASE_ANON_KEY;
   }
 
   return { supabaseUrl: url, supabaseAnonKey: anon };
 }
-
-// Uso: sempre que precisar das variáveis, chame getSupabaseEnv(request)
-const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv();
 
 type BodyPayload = {
   id?: string | null;
@@ -302,8 +299,11 @@ function parseCookies(request: Request): Map<string, string> {
 }
 
 function buildAuthClient(request: Request) {
+  const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv(request);
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("PUBLIC_SUPABASE_URL ou PUBLIC_SUPABASE_ANON_KEY nao configurados.");
+    throw new Error(
+      "PUBLIC_SUPABASE_URL/SUPABASE_URL e PUBLIC_SUPABASE_ANON_KEY/SUPABASE_ANON_KEY nao configurados."
+    );
   }
   const cookies = parseCookies(request);
   return createServerClient(supabaseUrl, supabaseAnonKey, {
