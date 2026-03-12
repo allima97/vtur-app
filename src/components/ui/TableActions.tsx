@@ -101,14 +101,12 @@ export default function TableActions({
                       : "ghost"
               }
               className={`vtur-table-action ${action.className || ""}`.trim()}
+              icon={actionIcon}
               title={actionLabel}
               aria-label={actionLabel}
               onClick={action.onClick}
               disabled={action.disabled}
-            >
-              <span aria-hidden="true">{actionIcon}</span>
-              <span className="sr-only">{actionLabel}</span>
-            </AppButton>
+            />
           );
         })}
       </div>
@@ -127,26 +125,24 @@ export default function TableActions({
           type="button"
           variant="ghost"
           className="vtur-table-action"
+          icon={editIcon}
           title={editLabel}
           aria-label={editLabel}
           onClick={onEdit}
           disabled={editDisabled}
-        >
-          {editIcon}
-        </AppButton>
+        />
       )}
       {shouldShowDelete && onDelete && (
         <AppButton
           type="button"
           variant="danger"
           className="vtur-table-action"
+          icon={deleteIcon}
           title={deleteLabel}
           aria-label={deleteLabel}
           onClick={onDelete}
           disabled={deleteDisabled}
-        >
-          {deleteIcon}
-        </AppButton>
+        />
       )}
     </div>
   );
