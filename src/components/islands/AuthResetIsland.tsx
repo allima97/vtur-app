@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { registrarLog } from "../../lib/logs";
-import { SYSTEM_NAME } from "../../lib/systemName";
 
 export default function AuthResetIsland() {
   const [password, setPassword] = useState("");
@@ -114,14 +113,11 @@ export default function AuthResetIsland() {
   return (
     <div className="auth-container">
       <div className="auth-card auth-card-lg">
-        <div className="auth-header">
-          <div className="auth-icon">
-            <i className="fa-solid fa-plane-departure"></i>
-          </div>
-          <h1>Definir nova senha</h1>
-          <h2 className="auth-subtitle">
-            Crie uma nova senha para voltar a usar o {SYSTEM_NAME}.
-          </h2>
+        <div className="auth-header auth-header-brand">
+          <img className="auth-logo auth-logo-wordmark" src="/brand/vtur-logo-stacked.svg" alt="VTUR" />
+          <p className="auth-kicker">Definir nova senha</p>
+          <h1>Bem-vindo!</h1>
+          <p className="auth-subtitle">Crie uma nova senha para voltar a acessar sua conta.</p>
         </div>
         {erro && <div className="alert alert-danger" style={{ marginBottom: 16 }}>{erro}</div>}
         {ok && (
@@ -187,14 +183,12 @@ export default function AuthResetIsland() {
           </div>
           <div className="auth-actions">
             <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
-              <i className="fa-solid fa-key"></i>
-              {loading ? " Salvando..." : " Salvar nova senha"}
+              {loading ? "Salvando..." : "Salvar nova senha"}
             </button>
             <div className="auth-divider">
               <span>ou</span>
             </div>
             <a href="/auth/login" className="btn btn-secondary btn-block">
-              <i className="fa-solid fa-right-to-bracket"></i>
               Voltar ao login
             </a>
           </div>

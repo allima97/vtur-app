@@ -134,8 +134,9 @@ export default function AuthRecoverIsland() {
     <div className="auth-container">
       <div className="auth-card auth-card-lg">
         <div className="auth-header auth-header-brand">
-          <img className="auth-logo" src="/brand/vtur-symbol.svg" alt="VTUR" />
-          <h1>Recuperar senha</h1>
+          <img className="auth-logo auth-logo-wordmark" src="/brand/vtur-logo-stacked.svg" alt="VTUR" />
+          <p className="auth-kicker">Recuperar senha</p>
+          <h1>Bem-vindo!</h1>
           <p className="auth-subtitle">Enviaremos um link para redefinir sua senha.</p>
         </div>
         {erro && (
@@ -170,20 +171,24 @@ export default function AuthRecoverIsland() {
               className="btn btn-primary btn-block"
               disabled={loading || cooldownSeconds > 0}
             >
-              <i className="fa-solid fa-paper-plane"></i>
-              {loading ? " Enviando..." : " Enviar link"}
+              {loading ? "Enviando..." : "Enviar link"}
             </button>
             {cooldownSeconds > 0 && (
               <small className="text-muted auth-feedback">
                 Aguarde {cooldownSeconds} segundos antes de reenviar.
               </small>
             )}
-            <button type="button" className="btn btn-secondary btn-block" onClick={voltarAoLogin}>
-              <i className="fa-solid fa-right-to-bracket"></i>
-              Voltar ao login
-            </button>
           </div>
         </form>
+        <div className="auth-divider">
+          <span>ou</span>
+        </div>
+        <a className="btn btn-secondary btn-block auth-nav-button" href="/auth/login" onClick={(e) => {
+          e.preventDefault();
+          voltarAoLogin();
+        }}>
+          Voltar ao login
+        </a>
       </div>
     </div>
   );

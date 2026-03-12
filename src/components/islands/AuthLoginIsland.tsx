@@ -226,9 +226,9 @@ export default function AuthLoginIsland() {
     <div className="auth-container">
       <div className="auth-card auth-card-lg">
         <div className="auth-header auth-header-brand">
-          <img className="auth-logo" src="/brand/vtur-symbol.svg" alt="VTUR" />
+          <img className="auth-logo auth-logo-wordmark" src="/brand/vtur-logo-stacked.svg" alt="VTUR" />
           <h1>Bem-vindo!</h1>
-          <p className="auth-subtitle">Use seu e-mail e senha para acessar ou faça seu cadastro</p>
+          <p className="auth-subtitle">Use seu e-mail e senha para acessar sua conta.</p>
         </div>
 
         {mensagem && (
@@ -307,8 +307,7 @@ export default function AuthLoginIsland() {
           </div>
           <div className="auth-links auth-links-forgot">
             <a href="/auth/recover">
-              <i className="fa-solid fa-unlock-keyhole"></i>
-              Esqueceu a senha? Redefinir
+              Esqueceu a senha?
             </a>
           </div>
           <div className="auth-actions">
@@ -317,15 +316,13 @@ export default function AuthLoginIsland() {
               className="btn btn-primary btn-block"
               disabled={loading}
             >
-              <i className="fa-solid fa-right-to-bracket"></i>
-              {loading ? " Entrando..." : " Entrar"}
+              {loading ? "Entrando..." : "Entrar"}
             </button>
             <a
               href="/auth/register"
               className="btn btn-secondary btn-block"
             >
-              <i className="fa-solid fa-user-plus"></i>
-              Criar Nova Conta
+              Criar nova conta
             </a>
           </div>
         </form>

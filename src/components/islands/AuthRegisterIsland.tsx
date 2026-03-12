@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useRegisterForm } from "../../lib/useRegisterForm";
 import CredentialsForm from "../forms/CredentialsForm";
-import { SYSTEM_NAME } from "../../lib/systemName";
 
 export default function AuthRegisterIsland() {
   const [modalSucesso, setModalSucesso] = useState(false);
@@ -58,12 +57,10 @@ export default function AuthRegisterIsland() {
           </div>
         )}
 
-        <div className="auth-header">
-          <div className="auth-icon">
-            <i className="fa-solid fa-plane-departure"></i>
-          </div>
-          <h1>{`Bem-vindo ao ${SYSTEM_NAME}`}</h1>
-          <h2>Sistema de Gerenciamento de Vendas para Turismo</h2>
+        <div className="auth-header auth-header-brand">
+          <img className="auth-logo auth-logo-wordmark" src="/brand/vtur-logo-stacked.svg" alt="VTUR" />
+          <p className="auth-kicker">Criar nova conta</p>
+          <h1>Bem-vindo!</h1>
           <p className="auth-subtitle">
             Cadastre-se, confirme o e-mail e complete seus dados no primeiro acesso.
           </p>
@@ -88,8 +85,7 @@ export default function AuthRegisterIsland() {
 
           <div className="auth-actions">
             <button type="submit" className="btn btn-primary w-full" disabled={registerForm.loading}>
-              <i className="fa-solid fa-user-plus"></i>
-              {registerForm.loading ? " Criando..." : " Criar Conta"}
+              {registerForm.loading ? "Criando..." : "Criar nova conta"}
             </button>
 
             <div className="auth-divider">
@@ -97,8 +93,7 @@ export default function AuthRegisterIsland() {
             </div>
 
             <a href="/auth/login" className="btn btn-secondary w-full">
-              <i className="fa-solid fa-right-to-bracket"></i>
-              Ja tenho conta
+              Voltar ao login
             </a>
           </div>
         </form>
