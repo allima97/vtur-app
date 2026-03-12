@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import AlertMessage from "../ui/AlertMessage";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { formatDateBR } from "../../lib/format";
+import DataTable from "../ui/DataTable";
 
 type EmpresaRow = {
   id: string;
@@ -374,101 +375,102 @@ const EmpresasAdminIsland: React.FC = () => {
       {loading ? (
         <p>Carregando empresas...</p>
       ) : (
-        <div className="table-container overflow-x-auto">
-          <table className="table-default table-header-blue table-mobile-cards min-w-[960px]">
-            <thead>
-              <tr>
-                <th>Nome Fantasia</th>
-                <th>CNPJ</th>
-                <th>Cidade/Estado</th>
-                <th>Plano</th>
-                <th>Status</th>
-                <th>Ult. Pagamento</th>
-                <th>Próx. Vencimento</th>
-                <th>Valor</th>
-                <th className="th-actions">Ações</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {empresas.map((e) => (
-                <tr key={e.id}>
-                  <td data-label="Nome Fantasia">{e.nome_fantasia}</td>
-                  <td data-label="CNPJ">{formatCnpj(e.cnpj || "")}</td>
-                  <td data-label="Cidade/Estado">{[e.cidade, e.estado].filter(Boolean).join("/") || "—"}</td>
-                  <td data-label="Plano">{e.billing?.plan?.nome || "—"}</td>
-                  <td data-label="Status">
-                    <span
-                      className="font-bold capitalize"
-                      style={{ color: statusColors[e?.billing?.status || "canceled"] }}
-                    >
-                      {e.billing?.status || "—"}
-                    </span>
-                  </td>
-                  <td data-label="Ult. Pagamento">
-                    {e.billing?.ultimo_pagamento
-                      ? formatDateBR(e.billing.ultimo_pagamento)
-                      : "—"}
-                  </td>
-                  <td data-label="Próx. Vencimento">
-                    {e.billing?.proximo_vencimento
-                      ? formatDateBR(e.billing.proximo_vencimento)
-                      : "—"}
-                  </td>
-                  <td data-label="Valor">
-                    {e.billing?.valor_mensal
-                      ? `R$ ${e.billing.valor_mensal.toFixed(2)}`
-                      : "—"}
-                  </td>
-                  <td className="th-actions" data-label="Ações">
-                    <div className="action-buttons">
-                      <button
-                        type="button"
-                        className="btn-icon icon-action-btn"
-                        onClick={() => atualizarStatus(e.id, "active")}
-                        title="Ativar"
-                        aria-label="Ativar"
-                      >
-                        <span aria-hidden="true">&#10003;</span>
-                        <span className="sr-only">Ativar</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-icon icon-action-btn"
-                        onClick={() => atualizarStatus(e.id, "past_due")}
-                        title="Atraso"
-                        aria-label="Atraso"
-                      >
-                        <span aria-hidden="true">&#9203;</span>
-                        <span className="sr-only">Atraso</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-icon icon-action-btn"
-                        onClick={() => atualizarStatus(e.id, "suspended")}
-                        title="Suspender"
-                        aria-label="Suspender"
-                      >
-                        <span aria-hidden="true">&#9208;</span>
-                        <span className="sr-only">Suspender</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-icon icon-action-btn danger"
-                        onClick={() => atualizarStatus(e.id, "canceled")}
-                        title="Cancelar"
-                        aria-label="Cancelar"
-                      >
-                        <span aria-hidden="true">&#10007;</span>
-                        <span className="sr-only">Cancelar</span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          shellClassName="vtur-data-table-shellless"
+          className="table-default table-header-blue table-mobile-cards min-w-[960px]"
+          headers={
+            <tr>
+              <th>Nome Fantasia</th>
+              <th>CNPJ</th>
+              <th>Cidade/Estado</th>
+              <th>Plano</th>
+              <th>Status</th>
+              <th>Ult. Pagamento</th>
+              <th>Próx. Vencimento</th>
+              <th>Valor</th>
+              <th className="th-actions">Ações</th>
+            </tr>
+          }
+          empty={empresas.length === 0}
+          emptyMessage="Nenhuma empresa cadastrada."
+          colSpan={9}
+        >
+          {empresas.map((e) => (
+            <tr key={e.id}>
+              <td data-label="Nome Fantasia">{e.nome_fantasia}</td>
+              <td data-label="CNPJ">{formatCnpj(e.cnpj || "")}</td>
+              <td data-label="Cidade/Estado">{[e.cidade, e.estado].filter(Boolean).join("/") || "—"}</td>
+              <td data-label="Plano">{e.billing?.plan?.nome || "—"}</td>
+              <td data-label="Status">
+                <span
+                  className="font-bold capitalize"
+                  style={{ color: statusColors[e?.billing?.status || "canceled"] }}
+                >
+                  {e.billing?.status || "—"}
+                </span>
+              </td>
+              <td data-label="Ult. Pagamento">
+                {e.billing?.ultimo_pagamento
+                  ? formatDateBR(e.billing.ultimo_pagamento)
+                  : "—"}
+              </td>
+              <td data-label="Próx. Vencimento">
+                {e.billing?.proximo_vencimento
+                  ? formatDateBR(e.billing.proximo_vencimento)
+                  : "—"}
+              </td>
+              <td data-label="Valor">
+                {e.billing?.valor_mensal
+                  ? `R$ ${e.billing.valor_mensal.toFixed(2)}`
+                  : "—"}
+              </td>
+              <td className="th-actions" data-label="Ações">
+                <div className="action-buttons">
+                  <button
+                    type="button"
+                    className="btn-icon icon-action-btn"
+                    onClick={() => atualizarStatus(e.id, "active")}
+                    title="Ativar"
+                    aria-label="Ativar"
+                  >
+                    <span aria-hidden="true">&#10003;</span>
+                    <span className="sr-only">Ativar</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-icon icon-action-btn"
+                    onClick={() => atualizarStatus(e.id, "past_due")}
+                    title="Atraso"
+                    aria-label="Atraso"
+                  >
+                    <span aria-hidden="true">&#9203;</span>
+                    <span className="sr-only">Atraso</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-icon icon-action-btn"
+                    onClick={() => atualizarStatus(e.id, "suspended")}
+                    title="Suspender"
+                    aria-label="Suspender"
+                  >
+                    <span aria-hidden="true">&#9208;</span>
+                    <span className="sr-only">Suspender</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-icon icon-action-btn danger"
+                    onClick={() => atualizarStatus(e.id, "canceled")}
+                    title="Cancelar"
+                    aria-label="Cancelar"
+                  >
+                    <span aria-hidden="true">&#10007;</span>
+                    <span className="sr-only">Cancelar</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </DataTable>
       )}
 
       <div className="card-base card-config mt-6">
@@ -540,77 +542,70 @@ const EmpresasAdminIsland: React.FC = () => {
         {loadingVinculos ? (
           <p className="mt-3">Carregando vínculos...</p>
         ) : (
-          <div className="table-container overflow-x-auto mt-4">
-            <table className="table-default table-header-blue table-mobile-cards min-w-[980px]">
-              <thead>
-                <tr>
-                  <th>Empresa</th>
-                  <th>Master</th>
-                  <th>Status</th>
-                  <th>Solicitado</th>
-                  <th>Aprovado</th>
-                  <th className="th-actions">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vinculosMaster.length === 0 && (
-                  <tr>
-                    <td colSpan={6}>Nenhum vínculo cadastrado.</td>
-                  </tr>
-                )}
-                {vinculosMaster.map((v) => (
-                  <tr key={v.id}>
-                    <td data-label="Empresa">{v.empresa?.nome_fantasia || v.company_id}</td>
-                    <td data-label="Master">
-                      {v.master?.nome_completo || v.master_id}
-                      {v.master?.email ? ` (${v.master.email})` : ""}
-                    </td>
-                    <td data-label="Status">{v.status}</td>
-                    <td data-label="Solicitado">
-                      {v.created_at ? formatDateBR(v.created_at) : "—"}
-                    </td>
-                    <td data-label="Aprovado">
-                      {v.approved_at ? formatDateBR(v.approved_at) : "—"}
-                    </td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        <button
-                          type="button"
-                          className="btn-icon icon-action-btn"
-                          onClick={() => atualizarVinculo(v.id, "approved")}
-                          title="Aprovar"
-                          aria-label="Aprovar"
-                        >
-                          <span aria-hidden="true">&#10003;</span>
-                          <span className="sr-only">Aprovar</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-icon icon-action-btn"
-                          onClick={() => atualizarVinculo(v.id, "rejected")}
-                          title="Rejeitar"
-                          aria-label="Rejeitar"
-                        >
-                          <span aria-hidden="true">&#10007;</span>
-                          <span className="sr-only">Rejeitar</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-icon icon-action-btn danger"
-                          onClick={() => removerVinculoMaster(v.id)}
-                          title="Remover"
-                          aria-label="Remover"
-                        >
-                          <span aria-hidden="true">&#128465;</span>
-                          <span className="sr-only">Remover</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            shellClassName="vtur-data-table-shellless mt-4"
+            className="table-default table-header-blue table-mobile-cards min-w-[980px]"
+            headers={
+              <tr>
+                <th>Empresa</th>
+                <th>Master</th>
+                <th>Status</th>
+                <th>Solicitado</th>
+                <th>Aprovado</th>
+                <th className="th-actions">Ações</th>
+              </tr>
+            }
+            empty={vinculosMaster.length === 0}
+            emptyMessage="Nenhum vínculo cadastrado."
+            colSpan={6}
+          >
+            {vinculosMaster.map((v) => (
+              <tr key={v.id}>
+                <td data-label="Empresa">{v.empresa?.nome_fantasia || v.company_id}</td>
+                <td data-label="Master">
+                  {v.master?.nome_completo || v.master_id}
+                  {v.master?.email ? ` (${v.master.email})` : ""}
+                </td>
+                <td data-label="Status">{v.status}</td>
+                <td data-label="Solicitado">{v.created_at ? formatDateBR(v.created_at) : "—"}</td>
+                <td data-label="Aprovado">{v.approved_at ? formatDateBR(v.approved_at) : "—"}</td>
+                <td className="th-actions" data-label="Ações">
+                  <div className="action-buttons">
+                    <button
+                      type="button"
+                      className="btn-icon icon-action-btn"
+                      onClick={() => atualizarVinculo(v.id, "approved")}
+                      title="Aprovar"
+                      aria-label="Aprovar"
+                    >
+                      <span aria-hidden="true">&#10003;</span>
+                      <span className="sr-only">Aprovar</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-icon icon-action-btn"
+                      onClick={() => atualizarVinculo(v.id, "rejected")}
+                      title="Rejeitar"
+                      aria-label="Rejeitar"
+                    >
+                      <span aria-hidden="true">&#10007;</span>
+                      <span className="sr-only">Rejeitar</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-icon icon-action-btn danger"
+                      onClick={() => removerVinculoMaster(v.id)}
+                      title="Remover"
+                      aria-label="Remover"
+                    >
+                      <span aria-hidden="true">&#128465;</span>
+                      <span className="sr-only">Remover</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </DataTable>
         )}
       </div>
 
@@ -772,4 +767,3 @@ const EmpresasAdminIsland: React.FC = () => {
 };
 
 export default EmpresasAdminIsland;
-

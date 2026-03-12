@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { formatDateTimeBR } from "../../lib/format";
+import DataTable from "../ui/DataTable";
 
 type LogEntry = {
   id: string;
@@ -216,49 +217,44 @@ export default function LogsIsland() {
       {/* TABELA */}
       <div className="card-base card-red">
         <h3 className="mb-3 font-semibold">Registros ({logsFiltrados.length})</h3>
-        <div
-          className="table-container overflow-x-auto"
-          style={{ maxHeight: "65vh", overflowY: "auto" }}
+        <DataTable
+          shellClassName="vtur-data-table-shellless"
+          className="table-default table-header-red table-mobile-cards min-w-[820px]"
+          containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+          headers={
+            <tr>
+              <th className="min-w-[150px]">Data</th>
+              <th>Usuário</th>
+              <th>Ação</th>
+              <th>Módulo</th>
+              <th>IP</th>
+              <th className="th-actions">Ver</th>
+            </tr>
+          }
+          empty={logsFiltrados.length === 0}
+          emptyMessage="Nenhum log encontrado."
+          colSpan={6}
         >
-          <table className="table-default table-header-red table-mobile-cards min-w-[820px]">
-            <thead>
-              <tr>
-                <th className="min-w-[150px]">Data</th>
-                <th>Usuário</th>
-                <th>Ação</th>
-                <th>Módulo</th>
-                <th>IP</th>
-                <th className="th-actions">Ver</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logsFiltrados.length === 0 && (
-                <tr>
-                  <td colSpan={6}>Nenhum log encontrado.</td>
-                </tr>
-              )}
-              {logsFiltrados.map((l) => (
-                <tr key={l.id}>
-                  <td data-label="Data">{formatDateTimeBR(l.created_at)}</td>
-                  <td data-label="Usuário">{l.users?.nome_completo || "Desconhecido"}</td>
-                  <td data-label="Ação">{l.acao}</td>
-                  <td data-label="Módulo">{l.modulo || "-"}</td>
-                  <td data-label="IP">{l.ip || "-"}</td>
-                  <td className="th-actions" data-label="Ver">
-                    <div className="action-buttons">
-                      <button
-                        className="btn btn-light"
-                        onClick={() => setLogSelecionado(l)}
-                      >
-                        Ver
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+          {logsFiltrados.map((l) => (
+            <tr key={l.id}>
+              <td data-label="Data">{formatDateTimeBR(l.created_at)}</td>
+              <td data-label="Usuário">{l.users?.nome_completo || "Desconhecido"}</td>
+              <td data-label="Ação">{l.acao}</td>
+              <td data-label="Módulo">{l.modulo || "-"}</td>
+              <td data-label="IP">{l.ip || "-"}</td>
+              <td className="th-actions" data-label="Ver">
+                <div className="action-buttons">
+                  <button
+                    className="btn btn-light"
+                    onClick={() => setLogSelecionado(l)}
+                  >
+                    Ver
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </DataTable>
       </div>
 
       {/* MODAL DETALHES */}

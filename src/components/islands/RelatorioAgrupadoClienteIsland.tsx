@@ -10,6 +10,7 @@ import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import AlertMessage from "../ui/AlertMessage";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import PaginationControls from "../ui/PaginationControls";
+import DataTable from "../ui/DataTable";
 import { fetchGestorEquipeIdsComGestor } from "../../lib/gestorEquipe";
 
 type StatusFiltro = "todos" | "aberto" | "confirmado" | "cancelado";
@@ -960,51 +961,39 @@ export default function RelatorioAgrupadoClienteIsland() {
         }}
       />
 
-      <div className="table-container overflow-x-auto">
-        <table className="table-default table-header-purple table-mobile-cards min-w-[700px]">
-          <thead>
-            <tr>
-              <th>Cliente</th>
-              <th>CPF</th>
-              <th style={{ cursor: "pointer" }} onClick={() => mudarOrdenacao("quantidade")}>
-                Qtde {ordenacao === "quantidade" ? (ordemDesc ? "↓" : "↑") : ""}
-              </th>
-              <th style={{ cursor: "pointer" }} onClick={() => mudarOrdenacao("total")}>
-                Faturamento {ordenacao === "total" ? (ordemDesc ? "↓" : "↑") : ""}
-              </th>
-              <th style={{ cursor: "pointer" }} onClick={() => mudarOrdenacao("ticket")}>
-                Ticket médio {ordenacao === "ticket" ? (ordemDesc ? "↓" : "↑") : ""}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={5}>Carregando...</td>
-              </tr>
-            )}
-            {!loading && linhasExibidas.length === 0 && (
-              <tr>
-                <td colSpan={5}>Nenhum cliente encontrado com os filtros atuais.</td>
-              </tr>
-            )}
-            {!loading &&
-              linhasExibidas.map((l) => (
-                <tr key={l.cliente_id}>
-                  <td data-label="Cliente">{l.cliente_nome}</td>
-                  <td data-label="CPF">{l.cliente_cpf}</td>
-                  <td data-label="Qtde">{l.quantidade}</td>
-                  <td data-label="Faturamento">
-                    {formatCurrencyBRL(l.total)}
-                  </td>
-                  <td data-label="Ticket médio">
-                    {formatCurrencyBRL(l.ticketMedio)}
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        shellClassName="vtur-data-table-shellless"
+        className="table-default table-header-purple table-mobile-cards min-w-[700px]"
+        headers={
+          <tr>
+            <th>Cliente</th>
+            <th>CPF</th>
+            <th style={{ cursor: "pointer" }} onClick={() => mudarOrdenacao("quantidade")}>
+              Qtde {ordenacao === "quantidade" ? (ordemDesc ? "↓" : "↑") : ""}
+            </th>
+            <th style={{ cursor: "pointer" }} onClick={() => mudarOrdenacao("total")}>
+              Faturamento {ordenacao === "total" ? (ordemDesc ? "↓" : "↑") : ""}
+            </th>
+            <th style={{ cursor: "pointer" }} onClick={() => mudarOrdenacao("ticket")}>
+              Ticket médio {ordenacao === "ticket" ? (ordemDesc ? "↓" : "↑") : ""}
+            </th>
+          </tr>
+        }
+        loading={loading}
+        empty={linhasExibidas.length === 0}
+        emptyMessage="Nenhum cliente encontrado com os filtros atuais."
+        colSpan={5}
+      >
+        {linhasExibidas.map((l) => (
+          <tr key={l.cliente_id}>
+            <td data-label="Cliente">{l.cliente_nome}</td>
+            <td data-label="CPF">{l.cliente_cpf}</td>
+            <td data-label="Qtde">{l.quantidade}</td>
+            <td data-label="Faturamento">{formatCurrencyBRL(l.total)}</td>
+            <td data-label="Ticket médio">{formatCurrencyBRL(l.ticketMedio)}</td>
+          </tr>
+        ))}
+      </DataTable>
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );

@@ -6,6 +6,7 @@ import { usePermissoesStore } from "../../lib/permissoesStore";
 import AlertMessage from "../ui/AlertMessage";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { ToastStack, useToastQueue } from "../ui/Toast";
+import DataTable from "../ui/DataTable";
 
 type AvisoTemplate = {
   id: string;
@@ -251,66 +252,62 @@ const AvisosAdminIsland: React.FC = () => {
       {loading ? (
         <p className="mt-4">Carregando templates...</p>
       ) : (
-        <div className="table-container overflow-x-auto mt-4">
-          <table className="table-default table-header-red table-mobile-cards min-w-[720px]">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Assunto</th>
-                <th>Remetente</th>
-                <th>Status</th>
-                <th className="th-actions">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {templates.length === 0 ? (
-                <tr>
-                  <td colSpan={5}>Nenhum template cadastrado.</td>
-                </tr>
-              ) : (
-                templates.map((t) => (
-                  <tr key={t.id}>
-                    <td data-label="Nome">{t.nome}</td>
-                    <td data-label="Assunto">{t.assunto}</td>
-                    <td data-label="Remetente">
-                      {REMETENTE_OPTIONS.find((opt) => opt.value === t.sender_key)?.label || "Avisos"}
-                    </td>
-                    <td
-                      data-label="Status"
-                      className={t.ativo ? "text-emerald-500 font-bold" : "text-rose-500 font-bold"}
-                    >
-                      {t.ativo ? "Ativo" : "Inativo"}
-                    </td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        <button
-                          type="button"
-                          className="btn-icon icon-action-btn"
-                          onClick={() => openModal(t)}
-                          title="Editar"
-                          aria-label="Editar"
-                        >
-                          <span aria-hidden="true">✏️</span>
-                          <span className="sr-only">Editar</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-icon icon-action-btn"
-                          onClick={() => toggleAtivo(t)}
-                          title={t.ativo ? "Desativar" : "Ativar"}
-                          aria-label={t.ativo ? "Desativar" : "Ativar"}
-                        >
-                          <span aria-hidden="true">{t.ativo ? "⏸️" : "✅"}</span>
-                          <span className="sr-only">{t.ativo ? "Desativar" : "Ativar"}</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          shellClassName="vtur-data-table-shellless mt-4"
+          className="table-default table-header-red table-mobile-cards min-w-[720px]"
+          headers={
+            <tr>
+              <th>Nome</th>
+              <th>Assunto</th>
+              <th>Remetente</th>
+              <th>Status</th>
+              <th className="th-actions">Ações</th>
+            </tr>
+          }
+          empty={templates.length === 0}
+          emptyMessage="Nenhum template cadastrado."
+          colSpan={5}
+        >
+          {templates.map((t) => (
+            <tr key={t.id}>
+              <td data-label="Nome">{t.nome}</td>
+              <td data-label="Assunto">{t.assunto}</td>
+              <td data-label="Remetente">
+                {REMETENTE_OPTIONS.find((opt) => opt.value === t.sender_key)?.label || "Avisos"}
+              </td>
+              <td
+                data-label="Status"
+                className={t.ativo ? "text-emerald-500 font-bold" : "text-rose-500 font-bold"}
+              >
+                {t.ativo ? "Ativo" : "Inativo"}
+              </td>
+              <td className="th-actions" data-label="Ações">
+                <div className="action-buttons">
+                  <button
+                    type="button"
+                    className="btn-icon icon-action-btn"
+                    onClick={() => openModal(t)}
+                    title="Editar"
+                    aria-label="Editar"
+                  >
+                    <span aria-hidden="true">✏️</span>
+                    <span className="sr-only">Editar</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-icon icon-action-btn"
+                    onClick={() => toggleAtivo(t)}
+                    title={t.ativo ? "Desativar" : "Ativar"}
+                    aria-label={t.ativo ? "Desativar" : "Ativar"}
+                  >
+                    <span aria-hidden="true">{t.ativo ? "⏸️" : "✅"}</span>
+                    <span className="sr-only">{t.ativo ? "Desativar" : "Ativar"}</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </DataTable>
       )}
 
       {modalOpen && (

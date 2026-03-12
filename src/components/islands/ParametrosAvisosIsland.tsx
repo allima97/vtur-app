@@ -24,6 +24,7 @@ import {
   type CardStyleMap,
   type CardStyleSectionKey,
 } from "../../lib/cards/styleConfig";
+import DataTable from "../ui/DataTable";
 
 const STORAGE_BUCKET = "message-template-themes";
 
@@ -834,59 +835,53 @@ export default function ParametrosAvisosIsland() {
           </div>
         </form>
 
-        <div className="table-container overflow-x-auto mt-3">
-          <table className="table-default table-header-blue table-mobile-cards min-w-[820px]">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Categoria</th>
-                <th>Preview</th>
-                <th>Dimensão</th>
-                <th>Status</th>
-                <th className="th-actions">Ações</th>
+        <DataTable
+          shellClassName="vtur-data-table-shellless mt-3"
+          className="table-default table-header-blue table-mobile-cards min-w-[820px]"
+          headers={
+            <tr>
+              <th>Nome</th>
+              <th>Categoria</th>
+              <th>Preview</th>
+              <th>Dimensão</th>
+              <th>Status</th>
+              <th className="th-actions">Ações</th>
+            </tr>
+          }
+          loading={carregandoDados}
+          loadingMessage="Carregando artes..."
+          empty={!carregandoDados && themes.length === 0}
+          emptyMessage="Nenhuma arte cadastrada."
+          colSpan={6}
+        >
+          {!carregandoDados && themes.map((theme) => {
+            const resolvedThemeAsset = resolveThemeAssetMeta(theme);
+            return (
+              <tr key={theme.id}>
+                <td data-label="Nome">{theme.nome}</td>
+                <td data-label="Categoria">{theme.categoria}</td>
+                <td data-label="Preview">
+                  <img
+                    src={resolvedThemeAsset.asset_url || theme.asset_url}
+                    alt={theme.nome}
+                    style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 8, border: "1px solid #cbd5e1" }}
+                  />
+                </td>
+                <td data-label="Dimensão">
+                  {resolvedThemeAsset.width_px || theme.width_px}x{resolvedThemeAsset.height_px || theme.height_px}
+                </td>
+                <td data-label="Status">{theme.ativo ? "Ativo" : "Inativo"}</td>
+                <td className="th-actions" data-label="Ações">
+                  <div className="action-buttons">
+                    <button className="btn-icon" type="button" onClick={() => editarTheme(theme)} title="Editar arte">✏️</button>
+                    <a className="btn-icon" href={resolvedThemeAsset.asset_url || theme.asset_url} target="_blank" rel="noreferrer" title="Visualizar arte">👁️</a>
+                    <button className="btn-icon btn-danger" type="button" onClick={() => void removerTheme(theme.id)} title="Excluir arte">🗑️</button>
+                  </div>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {carregandoDados && (
-                <tr>
-                  <td colSpan={6}>Carregando artes...</td>
-                </tr>
-              )}
-              {!carregandoDados && themes.length === 0 && (
-                <tr>
-                  <td colSpan={6}>Nenhuma arte cadastrada.</td>
-                </tr>
-              )}
-              {!carregandoDados && themes.map((theme) => {
-                const resolvedThemeAsset = resolveThemeAssetMeta(theme);
-                return (
-                  <tr key={theme.id}>
-                    <td data-label="Nome">{theme.nome}</td>
-                    <td data-label="Categoria">{theme.categoria}</td>
-                    <td data-label="Preview">
-                      <img
-                        src={resolvedThemeAsset.asset_url || theme.asset_url}
-                        alt={theme.nome}
-                        style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 8, border: "1px solid #cbd5e1" }}
-                      />
-                    </td>
-                    <td data-label="Dimensão">
-                      {resolvedThemeAsset.width_px || theme.width_px}x{resolvedThemeAsset.height_px || theme.height_px}
-                    </td>
-                    <td data-label="Status">{theme.ativo ? "Ativo" : "Inativo"}</td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        <button className="btn-icon" type="button" onClick={() => editarTheme(theme)} title="Editar arte">✏️</button>
-                        <a className="btn-icon" href={resolvedThemeAsset.asset_url || theme.asset_url} target="_blank" rel="noreferrer" title="Visualizar arte">👁️</a>
-                        <button className="btn-icon btn-danger" type="button" onClick={() => void removerTheme(theme.id)} title="Excluir arte">🗑️</button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+            );
+          })}
+        </DataTable>
       </div>
 
       <div className="card-base card-config mb-3">

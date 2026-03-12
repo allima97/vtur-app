@@ -4,6 +4,7 @@ import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import AlertMessage from "../ui/AlertMessage";
 import { ToastStack, useToastQueue } from "../ui/Toast";
+import DataTable from "../ui/DataTable";
 
 type PlanoRow = {
   id: string;
@@ -182,66 +183,62 @@ const PlanosAdminIsland: React.FC = () => {
       {loading ? (
         <p className="mt-4">Carregando planos...</p>
       ) : (
-        <div className="table-container overflow-x-auto mt-4">
-          <table className="table-default table-header-red table-mobile-cards min-w-[720px]">
-            <thead>
-              <tr>
-                <th>Plano</th>
-                <th>Descrição</th>
-                <th>Valor mensal</th>
-                <th>Moeda</th>
-                <th>Ativo</th>
-                <th className="th-actions">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {planos.length === 0 ? (
-                <tr>
-                  <td colSpan={6}>Nenhum plano cadastrado.</td>
-                </tr>
-              ) : (
-                planos.map((p) => (
-                  <tr key={p.id}>
-                    <td data-label="Plano">{p.nome}</td>
-                    <td data-label="Descrição">{p.descricao || "—"}</td>
-                    <td data-label="Valor mensal">R$ {p.valor_mensal.toFixed(2)}</td>
-                    <td data-label="Moeda">{p.moeda}</td>
-                    <td
-                      data-label="Ativo"
-                      className={p.ativo ? "text-emerald-500 font-bold" : "text-rose-500 font-bold"}
-                    >
-                      {p.ativo ? "Sim" : "Não"}
-                    </td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        <button
-                          type="button"
-                          className="btn-icon icon-action-btn"
-                          onClick={() => openModal(p)}
-                          title="Editar"
-                          aria-label="Editar"
-                        >
-                          <span aria-hidden="true">✏️</span>
-                          <span className="sr-only">Editar</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-icon icon-action-btn"
-                          onClick={() => toggleStatus(p)}
-                          title={p.ativo ? "Desativar" : "Ativar"}
-                          aria-label={p.ativo ? "Desativar" : "Ativar"}
-                        >
-                          <span aria-hidden="true">{p.ativo ? "⏸️" : "✅"}</span>
-                          <span className="sr-only">{p.ativo ? "Desativar" : "Ativar"}</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          shellClassName="vtur-data-table-shellless mt-4"
+          className="table-default table-header-red table-mobile-cards min-w-[720px]"
+          headers={
+            <tr>
+              <th>Plano</th>
+              <th>Descrição</th>
+              <th>Valor mensal</th>
+              <th>Moeda</th>
+              <th>Ativo</th>
+              <th className="th-actions">Ações</th>
+            </tr>
+          }
+          empty={planos.length === 0}
+          emptyMessage="Nenhum plano cadastrado."
+          colSpan={6}
+        >
+          {planos.map((p) => (
+            <tr key={p.id}>
+              <td data-label="Plano">{p.nome}</td>
+              <td data-label="Descrição">{p.descricao || "—"}</td>
+              <td data-label="Valor mensal">R$ {p.valor_mensal.toFixed(2)}</td>
+              <td data-label="Moeda">{p.moeda}</td>
+              <td
+                data-label="Ativo"
+                className={p.ativo ? "text-emerald-500 font-bold" : "text-rose-500 font-bold"}
+              >
+                {p.ativo ? "Sim" : "Não"}
+              </td>
+              <td className="th-actions" data-label="Ações">
+                <div className="action-buttons">
+                  <button
+                    type="button"
+                    className="btn-icon icon-action-btn"
+                    onClick={() => openModal(p)}
+                    title="Editar"
+                    aria-label="Editar"
+                  >
+                    <span aria-hidden="true">✏️</span>
+                    <span className="sr-only">Editar</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-icon icon-action-btn"
+                    onClick={() => toggleStatus(p)}
+                    title={p.ativo ? "Desativar" : "Ativar"}
+                    aria-label={p.ativo ? "Desativar" : "Ativar"}
+                  >
+                    <span aria-hidden="true">{p.ativo ? "⏸️" : "✅"}</span>
+                    <span className="sr-only">{p.ativo ? "Desativar" : "Ativar"}</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </DataTable>
       )}
 
       {modalOpen && (

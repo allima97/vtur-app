@@ -7,6 +7,7 @@ import ConfirmDialog from "../ui/ConfirmDialog";
 import { registrarLog } from "../../lib/logs";
 import { formatDateTimeBR, formatNumberBR } from "../../lib/format";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
+import DataTable from "../ui/DataTable";
 
 const MOEDA_SUGESTOES = ["R$", "USD", "EUR"];
 
@@ -312,80 +313,75 @@ export default function ParametrosCambiosIsland() {
             </div>
           )}
 
-          <div
-            className="table-container overflow-x-auto mt-6"
-            style={{ maxHeight: "65vh", overflowY: "auto" }}
-          >
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2">
-              <strong>{tituloTabela}</strong>
-              <button
-                type="button"
-                className="btn btn-light w-full sm:w-auto"
-                onClick={carregar}
-                disabled={loading}
-              >
-                Recarregar
-              </button>
-            </div>
-            <table className="table-default table-header-blue table-mobile-cards min-w-[600px]">
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Moeda</th>
-                  <th>Valor (R$)</th>
-                  <th>Cadastrado por</th>
-                  <th>Criado em</th>
-                  {podeExcluir && <th className="th-actions">Ações</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {cambiosExibidos.length === 0 && (
-                  <tr>
-                    <td colSpan={podeExcluir ? 6 : 5}>Nenhum câmbio cadastrado ainda.</td>
-                  </tr>
-                )}
-                {cambiosExibidos.map((cambio) => (
-                  <tr key={cambio.id}>
-                    <td data-label="Data">{cambio.data}</td>
-                    <td data-label="Moeda">{cambio.moeda}</td>
-                    <td data-label="Valor (R$)">{formatValorNumber(cambio.valor)}</td>
-                    <td data-label="Cadastrado por">
-                      {cambio.owner_user?.nome_completo || cambio.owner_user_id || "—"}
-                    </td>
-                    <td data-label="Criado em">
-                      {cambio.created_at
-                        ? formatDateTimeBR(cambio.created_at)
-                        : "—"}
-                    </td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        {podeEscrever && (
-                          <button
-                            type="button"
-                            className="btn-icon"
-                            title="Editar câmbio"
-                            onClick={() => handleEdit(cambio)}
-                          >
-                            ✏️
-                          </button>
-                        )}
-                        {podeExcluir && (
-                          <button
-                            type="button"
-                            className="btn-icon btn-danger"
-                            title="Excluir câmbio"
-                            onClick={() => solicitarExclusao(cambio)}
-                          >
-                            🗑️
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mt-6 mb-2">
+            <strong>{tituloTabela}</strong>
+            <button
+              type="button"
+              className="btn btn-light w-full sm:w-auto"
+              onClick={carregar}
+              disabled={loading}
+            >
+              Recarregar
+            </button>
           </div>
+          <DataTable
+            shellClassName="vtur-data-table-shellless"
+            className="table-default table-header-blue table-mobile-cards min-w-[600px]"
+            containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+            headers={
+              <tr>
+                <th>Data</th>
+                <th>Moeda</th>
+                <th>Valor (R$)</th>
+                <th>Cadastrado por</th>
+                <th>Criado em</th>
+                {podeExcluir && <th className="th-actions">Ações</th>}
+              </tr>
+            }
+            empty={cambiosExibidos.length === 0}
+            emptyMessage="Nenhum câmbio cadastrado ainda."
+            colSpan={podeExcluir ? 6 : 5}
+          >
+            {cambiosExibidos.map((cambio) => (
+              <tr key={cambio.id}>
+                <td data-label="Data">{cambio.data}</td>
+                <td data-label="Moeda">{cambio.moeda}</td>
+                <td data-label="Valor (R$)">{formatValorNumber(cambio.valor)}</td>
+                <td data-label="Cadastrado por">
+                  {cambio.owner_user?.nome_completo || cambio.owner_user_id || "—"}
+                </td>
+                <td data-label="Criado em">
+                  {cambio.created_at
+                    ? formatDateTimeBR(cambio.created_at)
+                    : "—"}
+                </td>
+                <td className="th-actions" data-label="Ações">
+                  <div className="action-buttons">
+                    {podeEscrever && (
+                      <button
+                        type="button"
+                        className="btn-icon"
+                        title="Editar câmbio"
+                        onClick={() => handleEdit(cambio)}
+                      >
+                        ✏️
+                      </button>
+                    )}
+                    {podeExcluir && (
+                      <button
+                        type="button"
+                        className="btn-icon btn-danger"
+                        title="Excluir câmbio"
+                        onClick={() => solicitarExclusao(cambio)}
+                      >
+                        🗑️
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </DataTable>
         </>
       )}
 

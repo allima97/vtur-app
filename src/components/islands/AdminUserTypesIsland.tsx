@@ -13,6 +13,7 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import AlertMessage from "../ui/AlertMessage";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import { ToastStack, useToastQueue } from "../ui/Toast";
+import DataTable from "../ui/DataTable";
 
 type NivelPermissao = "none" | "view" | "create" | "edit" | "delete" | "admin";
 
@@ -465,65 +466,62 @@ export default function AdminUserTypesIsland() {
       {loading ? (
         <LoadingUsuarioContext />
       ) : (
-        <div className="table-container overflow-x-auto">
-          <table className="table-default table-header-red table-mobile-cards min-w-[820px]">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Descrição</th>
-                <th>Permissões padrão</th>
-                <th className="th-actions">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tiposFiltrados.length === 0 && (
-                <tr>
-                  <td colSpan={4}>Nenhum tipo encontrado.</td>
-                </tr>
-              )}
-              {tiposFiltrados.map((tipo) => (
-                <tr key={tipo.id}>
-                  <td data-label="Nome">{tipo.name}</td>
-                  <td data-label="Descrição">{tipo.description || "-"}</td>
-                  <td data-label="Permissões padrão">
-                    {(defaultCounts[tipo.id] ?? 0) > 0
-                      ? `${defaultCounts[tipo.id]} módulo(s)`
-                      : "Nenhuma"}
-                  </td>
-                  <td className="th-actions" data-label="Ações">
-                    <div className="action-buttons">
-                      <button
-                        type="button"
-                        className="btn btn-light"
-                        onClick={() => abrirPermissoes(tipo)}
-                      >
-                        Permissões
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-icon icon-action-btn"
-                        onClick={() => abrirEdicaoTipo(tipo)}
-                        title="Editar tipo"
-                        aria-label="Editar tipo"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-icon btn-danger"
-                        onClick={() => setDeleteTarget(tipo)}
-                        title="Excluir tipo"
-                        aria-label="Excluir tipo"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          shellClassName="vtur-data-table-shellless"
+          className="table-default table-header-red table-mobile-cards min-w-[820px]"
+          headers={
+            <tr>
+              <th>Nome</th>
+              <th>Descrição</th>
+              <th>Permissões padrão</th>
+              <th className="th-actions">Ações</th>
+            </tr>
+          }
+          empty={tiposFiltrados.length === 0}
+          emptyMessage="Nenhum tipo encontrado."
+          colSpan={4}
+        >
+          {tiposFiltrados.map((tipo) => (
+            <tr key={tipo.id}>
+              <td data-label="Nome">{tipo.name}</td>
+              <td data-label="Descrição">{tipo.description || "-"}</td>
+              <td data-label="Permissões padrão">
+                {(defaultCounts[tipo.id] ?? 0) > 0
+                  ? `${defaultCounts[tipo.id]} módulo(s)`
+                  : "Nenhuma"}
+              </td>
+              <td className="th-actions" data-label="Ações">
+                <div className="action-buttons">
+                  <button
+                    type="button"
+                    className="btn btn-light"
+                    onClick={() => abrirPermissoes(tipo)}
+                  >
+                    Permissões
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-icon icon-action-btn"
+                    onClick={() => abrirEdicaoTipo(tipo)}
+                    title="Editar tipo"
+                    aria-label="Editar tipo"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-icon btn-danger"
+                    onClick={() => setDeleteTarget(tipo)}
+                    title="Excluir tipo"
+                    aria-label="Excluir tipo"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </DataTable>
       )}
 
       {editModalOpen && (
@@ -624,94 +622,91 @@ export default function AdminUserTypesIsland() {
               {permsLoading ? (
                 <p style={{ marginTop: 12 }}>Carregando permissões...</p>
               ) : (
-                <div className="table-container overflow-x-auto" style={{ marginTop: 12 }}>
-                  <table className="table-default table-header-red table-mobile-cards min-w-[720px]">
-                    <thead>
+                <DataTable
+                  shellClassName="vtur-data-table-shellless mt-3"
+                  className="table-default table-header-red table-mobile-cards min-w-[720px]"
+                  headers={
+                    <tr>
+                      <th>Módulo</th>
+                      <th>Permissão</th>
+                    </tr>
+                  }
+                  empty={modulosPorSecaoVisiveis.length === 0}
+                  emptyMessage="Nenhum módulo encontrado."
+                  colSpan={2}
+                >
+                  {modulosPorSecaoVisiveis.map((secao) => (
+                    <React.Fragment key={secao.id}>
                       <tr>
-                        <th>Módulo</th>
-                        <th>Permissão</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {modulosPorSecaoVisiveis.length === 0 && (
-                        <tr>
-                          <td colSpan={2}>Nenhum módulo encontrado.</td>
-                        </tr>
-                      )}
-                      {modulosPorSecaoVisiveis.map((secao) => (
-                        <React.Fragment key={secao.id}>
-                          <tr>
-                            <td colSpan={2} style={{ background: "#eff6ff" }}>
-                              <div className="flex flex-wrap gap-2 items-center justify-between">
-                                <div>
-                                  <strong>{secao.titulo}</strong>
-                                  {secao.includes.length > 0 && (
-                                    <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.75 }}>
-                                      (inclui:{" "}
-                                      {secao.includes
-                                        .map((id) => secoesLabels.get(id) || id)
-                                        .join(", ")}
-                                      )
-                                    </span>
-                                  )}
-                                </div>
-                                {secao.applyModulos.length > 0 && (
-                                  <div className="flex items-center gap-2">
-                                    <span style={{ fontSize: 12, opacity: 0.8 }}>
-                                      Aplicar em {secao.applyModulos.length}:
-                                    </span>
-                                    <select
-                                      className="form-select"
-                                      value={getSecaoNivel(secao.applyModulos)}
-                                      onChange={(e) => {
-                                        const value = e.target.value as NivelPermissao;
-                                        if (!value) return;
-                                        aplicarNivelSecao(secao.applyModulos, value);
-                                      }}
-                                      disabled={salvandoPerms}
-                                    >
-                                      <option value="">—</option>
-                                      {NIVEIS.map((n) => (
-                                        <option key={n.value} value={n.value}>
-                                          {n.label}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-
-                          {secao.modulosVisiveis.map((modulo) => (
-                            <tr key={`${secao.id}:${modulo}`}>
-                              <td data-label="Módulo">{modulo}</td>
-                              <td data-label="Permissão">
+                        <td colSpan={2} style={{ background: "#eff6ff" }}>
+                          <div className="flex flex-wrap gap-2 items-center justify-between">
+                            <div>
+                              <strong>{secao.titulo}</strong>
+                              {secao.includes.length > 0 && (
+                                <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.75 }}>
+                                  (inclui:{" "}
+                                  {secao.includes
+                                    .map((id) => secoesLabels.get(id) || id)
+                                    .join(", ")}
+                                  )
+                                </span>
+                              )}
+                            </div>
+                            {secao.applyModulos.length > 0 && (
+                              <div className="flex items-center gap-2">
+                                <span style={{ fontSize: 12, opacity: 0.8 }}>
+                                  Aplicar em {secao.applyModulos.length}:
+                                </span>
                                 <select
                                   className="form-select"
-                                  value={permsForm[modulo] || "none"}
-                                  onChange={(e) =>
-                                    setPermsForm((prev) => ({
-                                      ...prev,
-                                      [modulo]: e.target.value as NivelPermissao,
-                                    }))
-                                  }
+                                  value={getSecaoNivel(secao.applyModulos)}
+                                  onChange={(e) => {
+                                    const value = e.target.value as NivelPermissao;
+                                    if (!value) return;
+                                    aplicarNivelSecao(secao.applyModulos, value);
+                                  }}
                                   disabled={salvandoPerms}
                                 >
+                                  <option value="">—</option>
                                   {NIVEIS.map((n) => (
                                     <option key={n.value} value={n.value}>
                                       {n.label}
                                     </option>
                                   ))}
                                 </select>
-                              </td>
-                            </tr>
-                          ))}
-                        </React.Fragment>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+
+                      {secao.modulosVisiveis.map((modulo) => (
+                        <tr key={`${secao.id}:${modulo}`}>
+                          <td data-label="Módulo">{modulo}</td>
+                          <td data-label="Permissão">
+                            <select
+                              className="form-select"
+                              value={permsForm[modulo] || "none"}
+                              onChange={(e) =>
+                                setPermsForm((prev) => ({
+                                  ...prev,
+                                  [modulo]: e.target.value as NivelPermissao,
+                                }))
+                              }
+                              disabled={salvandoPerms}
+                            >
+                              {NIVEIS.map((n) => (
+                                <option key={n.value} value={n.value}>
+                                  {n.label}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                        </tr>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
+                    </React.Fragment>
+                  ))}
+                </DataTable>
               )}
             </div>
             <div className="modal-footer mobile-stack-buttons">

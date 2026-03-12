@@ -8,6 +8,7 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import DataTable from "../ui/DataTable";
 
 type FormaPagamento = {
   id: string;
@@ -253,71 +254,71 @@ export default function FormasPagamentoIsland() {
         >
         {loading ? (
           <p>Carregando...</p>
-        ) : formas.length === 0 ? (
-          <p>Nenhuma forma cadastrada.</p>
         ) : (
-          <div className="table-container overflow-x-auto">
-            <table className="table-default table-header-blue table-mobile-cards">
-              <thead>
-                <tr>
-                  <th>Nome</th>
-                  <th>Comissão</th>
-                  <th>Desconto</th>
-                  <th>Ativo</th>
-                  <th className="th-actions">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {formas.map((f) => (
-                  <tr key={f.id}>
-                    <td data-label="Nome">{f.nome}</td>
-                    <td data-label="Comissão">{f.paga_comissao ? "Sim" : "Não"}</td>
-                    <td data-label="Desconto">
-                      {f.permite_desconto
-                        ? f.desconto_padrao_pct
-                          ? `${formatNumberBR(f.desconto_padrao_pct, 2)}%`
-                          : "Sim"
-                        : "Não"}
-                    </td>
-                    <td data-label="Ativo">{f.ativo ? "Sim" : "Não"}</td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="vtur-table-actions">
-                        {(podeEditar || podeCriar) && (
-                          <AppButton
-                            type="button"
-                            variant="ghost"
-                            onClick={() => {
-                              setEditId(f.id);
-                              setForm({
-                                nome: f.nome || "",
-                                descricao: f.descricao || "",
-                                paga_comissao: Boolean(f.paga_comissao),
-                                permite_desconto: Boolean(f.permite_desconto),
-                                desconto_padrao_pct: f.desconto_padrao_pct?.toString() || "",
-                                ativo: Boolean(f.ativo),
-                              });
-                            }}
-                          >
-                            Editar
-                          </AppButton>
-                        )}
-                        {podeExcluir && (
-                          <AppButton
-                            type="button"
-                            variant="danger"
-                            disabled={excluindoId === f.id}
-                            onClick={() => setDeleteTarget(f)}
-                          >
-                            {excluindoId === f.id ? "Excluindo..." : "Excluir"}
-                          </AppButton>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            shellClassName="vtur-data-table-shellless"
+            className="table-default table-header-blue table-mobile-cards"
+            headers={
+              <tr>
+                <th>Nome</th>
+                <th>Comissão</th>
+                <th>Desconto</th>
+                <th>Ativo</th>
+                <th className="th-actions">Ações</th>
+              </tr>
+            }
+            empty={formas.length === 0}
+            emptyMessage="Nenhuma forma cadastrada."
+            colSpan={5}
+          >
+            {formas.map((f) => (
+              <tr key={f.id}>
+                <td data-label="Nome">{f.nome}</td>
+                <td data-label="Comissão">{f.paga_comissao ? "Sim" : "Não"}</td>
+                <td data-label="Desconto">
+                  {f.permite_desconto
+                    ? f.desconto_padrao_pct
+                      ? `${formatNumberBR(f.desconto_padrao_pct, 2)}%`
+                      : "Sim"
+                    : "Não"}
+                </td>
+                <td data-label="Ativo">{f.ativo ? "Sim" : "Não"}</td>
+                <td className="th-actions" data-label="Ações">
+                  <div className="vtur-table-actions">
+                    {(podeEditar || podeCriar) && (
+                      <AppButton
+                        type="button"
+                        variant="ghost"
+                        onClick={() => {
+                          setEditId(f.id);
+                          setForm({
+                            nome: f.nome || "",
+                            descricao: f.descricao || "",
+                            paga_comissao: Boolean(f.paga_comissao),
+                            permite_desconto: Boolean(f.permite_desconto),
+                            desconto_padrao_pct: f.desconto_padrao_pct?.toString() || "",
+                            ativo: Boolean(f.ativo),
+                          });
+                        }}
+                      >
+                        Editar
+                      </AppButton>
+                    )}
+                    {podeExcluir && (
+                      <AppButton
+                        type="button"
+                        variant="danger"
+                        disabled={excluindoId === f.id}
+                        onClick={() => setDeleteTarget(f)}
+                      >
+                        {excluindoId === f.id ? "Excluindo..." : "Excluir"}
+                      </AppButton>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </DataTable>
         )}
         </AppCard>
         <ConfirmDialog

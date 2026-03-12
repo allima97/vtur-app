@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { registrarLog } from "../../lib/logs";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import DataTable from "../ui/DataTable";
 import {
   agruparModulosPorSecao,
   MAPA_MODULOS,
@@ -393,53 +394,49 @@ export default function AdminPermissoesIsland() {
       </div>
 
       {/* TABELA DE USUÁRIOS */}
-      <div className="table-container mb-3 overflow-x-auto">
-        <table className="table-default table-header-blue table-mobile-cards min-w-[780px]">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>E-mail</th>
-              <th>Status</th>
-              <th className="th-actions">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {usuariosFiltrados.length === 0 && (
-              <tr>
-                <td colSpan={4}>Nenhum usuário encontrado.</td>
-              </tr>
-            )}
-
-            {usuariosFiltrados.map((u) => (
-              <tr key={u.id}>
-                <td data-label="Nome">{u.nome_completo}</td>
-                <td data-label="E-mail">{u.email || "-"}</td>
-                <td data-label="Status">{u.active ? "Ativo" : "Bloqueado"}</td>
-                <td className="th-actions" data-label="Ações">
-                  <div className="action-buttons">
-                    <button
-                      className="btn-icon icon-action-btn"
-                      title="Editar permissões"
-                      onClick={() => abrirEditor(u)}
-                    >
-                      ⚙️
-                    </button>
-                    {usuarioLogadoId !== u.id && (
-                      <button
-                        className={`btn-icon icon-action-btn ${u.active ? "danger" : ""}`}
-                        title={u.active ? "Bloquear usuário" : "Reativar usuário"}
-                        onClick={() => toggleUsuarioAtivo(u)}
-                      >
-                        {u.active ? "🚫" : "✅"}
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        shellClassName="vtur-data-table-shellless mb-3"
+        className="table-default table-header-blue table-mobile-cards min-w-[780px]"
+        headers={
+          <tr>
+            <th>Nome</th>
+            <th>E-mail</th>
+            <th>Status</th>
+            <th className="th-actions">Ações</th>
+          </tr>
+        }
+        empty={usuariosFiltrados.length === 0}
+        emptyMessage="Nenhum usuário encontrado."
+        colSpan={4}
+      >
+        {usuariosFiltrados.map((u) => (
+          <tr key={u.id}>
+            <td data-label="Nome">{u.nome_completo}</td>
+            <td data-label="E-mail">{u.email || "-"}</td>
+            <td data-label="Status">{u.active ? "Ativo" : "Bloqueado"}</td>
+            <td className="th-actions" data-label="Ações">
+              <div className="action-buttons">
+                <button
+                  className="btn-icon icon-action-btn"
+                  title="Editar permissões"
+                  onClick={() => abrirEditor(u)}
+                >
+                  ⚙️
+                </button>
+                {usuarioLogadoId !== u.id && (
+                  <button
+                    className={`btn-icon icon-action-btn ${u.active ? "danger" : ""}`}
+                    title={u.active ? "Bloquear usuário" : "Reativar usuário"}
+                    onClick={() => toggleUsuarioAtivo(u)}
+                  >
+                    {u.active ? "🚫" : "✅"}
+                  </button>
+                )}
+              </div>
+            </td>
+          </tr>
+        ))}
+      </DataTable>
 
       {/* EDITOR DE PERMISSÕES DO USUÁRIO SELECIONADO */}
       {selecionado && (
@@ -447,82 +444,82 @@ export default function AdminPermissoesIsland() {
           <h3>
             Permissões de: <span className="font-semibold">{selecionado.nome_completo}</span>
           </h3>
-          <div className="table-container overflow-x-auto">
-            <table className="table-default table-header-blue table-mobile-cards min-w-[680px]">
-              <thead>
+          <DataTable
+            shellClassName="vtur-data-table-shellless"
+            className="table-default table-header-blue table-mobile-cards min-w-[680px]"
+            headers={
+              <tr>
+                <th>Módulo</th>
+                <th>Nível</th>
+              </tr>
+            }
+            colSpan={2}
+          >
+            {modulosPorSecao.map((secao) => (
+              <React.Fragment key={secao.id}>
                 <tr>
-                  <th>Módulo</th>
-                  <th>Nível</th>
-                </tr>
-              </thead>
-              <tbody>
-                {modulosPorSecao.map((secao) => (
-                  <React.Fragment key={secao.id}>
-                    <tr>
-                      <td colSpan={2} style={{ background: "#eff6ff" }}>
-                        <div className="flex flex-wrap gap-2 items-center justify-between">
-                          <div>
-                            <strong>{secao.titulo}</strong>
-                            {secao.includes.length > 0 && (
-                              <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.75 }}>
-                                (inclui:{" "}
-                                {secao.includes
-                                  .map((id) => secoesLabels.get(id) || id)
-                                  .join(", ")}
-                                )
-                              </span>
-                            )}
-                          </div>
-                          {secao.applyModulos.length > 0 && (
-                            <div className="flex items-center gap-2">
-                              <span style={{ fontSize: 12, opacity: 0.8 }}>
-                                Aplicar em {secao.applyModulos.length}:
-                              </span>
-                              <select
-                                className="form-select"
-                                value={getSecaoNivel(secao.applyModulos)}
-                                onChange={(e) => {
-                                  const value = e.target.value as NivelPermissao;
-                                  if (!value) return;
-                                  aplicarNivelSecao(secao.applyModulos, value);
-                                }}
-                              >
-                                <option value="">—</option>
-                                {NIVEIS.map((n) => (
-                                  <option key={n.value} value={n.value}>
-                                    {n.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-
-                    {secao.modulos.map((modulo) => (
-                      <tr key={`${secao.id}:${modulo}`}>
-                        <td data-label="Módulo">{modulo}</td>
-                        <td data-label="Nível">
+                  <td colSpan={2} style={{ background: "#eff6ff" }}>
+                    <div className="flex flex-wrap gap-2 items-center justify-between">
+                      <div>
+                        <strong>{secao.titulo}</strong>
+                        {secao.includes.length > 0 && (
+                          <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.75 }}>
+                            (inclui:{" "}
+                            {secao.includes
+                              .map((id) => secoesLabels.get(id) || id)
+                              .join(", ")}
+                            )
+                          </span>
+                        )}
+                      </div>
+                      {secao.applyModulos.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <span style={{ fontSize: 12, opacity: 0.8 }}>
+                            Aplicar em {secao.applyModulos.length}:
+                          </span>
                           <select
                             className="form-select"
-                            value={formPermissoes[modulo] || "none"}
-                            onChange={(e) => handleChangeNivel(modulo, e.target.value)}
+                            value={getSecaoNivel(secao.applyModulos)}
+                            onChange={(e) => {
+                              const value = e.target.value as NivelPermissao;
+                              if (!value) return;
+                              aplicarNivelSecao(secao.applyModulos, value);
+                            }}
                           >
+                            <option value="">—</option>
                             {NIVEIS.map((n) => (
                               <option key={n.value} value={n.value}>
                                 {n.label}
                               </option>
                             ))}
                           </select>
-                        </td>
-                      </tr>
-                    ))}
-                  </React.Fragment>
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+
+                {secao.modulos.map((modulo) => (
+                  <tr key={`${secao.id}:${modulo}`}>
+                    <td data-label="Módulo">{modulo}</td>
+                    <td data-label="Nível">
+                      <select
+                        className="form-select"
+                        value={formPermissoes[modulo] || "none"}
+                        onChange={(e) => handleChangeNivel(modulo, e.target.value)}
+                      >
+                        {NIVEIS.map((n) => (
+                          <option key={n.value} value={n.value}>
+                            {n.label}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </React.Fragment>
+            ))}
+          </DataTable>
           <div className="mt-2 flex gap-2 flex-wrap mobile-stack-buttons">
             <button
               className="btn btn-primary"

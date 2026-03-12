@@ -7,6 +7,7 @@ import { construirLinkWhatsApp } from "../../lib/whatsapp";
 import { normalizeText } from "../../lib/normalizeText";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import ConfirmDialog from "../ui/ConfirmDialog";
+import DataTable from "../ui/DataTable";
 
 type Viagem = {
   id: string;
@@ -825,101 +826,89 @@ export default function ViagensListaIsland() {
         )}
 
         {!showForm && (
-          <div
-            className="table-container overflow-x-auto"
-            style={{ maxHeight: "65vh", overflowY: "auto" }}
+          <DataTable
+            shellClassName="vtur-data-table-shellless"
+            containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+            className="table-default table-header-teal table-mobile-cards min-w-[760px]"
+            headers={
+              <tr>
+                <th>Cliente</th>
+                <th>Data Início</th>
+                <th>Data Final</th>
+                <th>Status</th>
+                <th>Produto</th>
+                <th>Valor</th>
+                <th className="th-actions">Ações</th>
+              </tr>
+            }
+            loading={loading}
+            loadingMessage="Carregando viagens..."
+            empty={viagensExibidas.length === 0}
+            emptyMessage="Nenhuma viagem encontrada."
+            colSpan={totalColunasTabela}
           >
-            <table className="table-default table-header-teal table-mobile-cards min-w-[760px]">
-              <thead>
-                <tr>
-                  <th>Cliente</th>
-                  <th>Data Início</th>
-                  <th>Data Final</th>
-                  <th>Status</th>
-                  <th>Produto</th>
-                  <th>Valor</th>
-                  <th className="th-actions">Ações</th>
+            {viagensExibidas.map((v) => {
+              const statusLabel = obterStatusExibicao(v);
+              const recibos = v.recibos || [];
+              const produtoLabel =
+                recibos.length > 1
+                  ? `Múltiplos (${recibos.length})`
+                  : recibos[0]?.tipo_produtos?.nome ||
+                    recibos[0]?.tipo_produtos?.tipo ||
+                    recibos[0]?.produto_id ||
+                    "-";
+              const valorTotal = recibos.reduce((total, r) => total + (r.valor_total || 0), 0);
+              const valorLabel = recibos.length > 0 ? formatarMoeda(valorTotal) : "-";
+              const whatsappLink = construirLinkWhatsApp(v.clientes?.whatsapp || null);
+              return (
+                <tr key={v.id}>
+                  <td data-label="Cliente">{v.clientes?.nome || "-"}</td>
+                  <td data-label="Data Início">{formatarDataParaExibicao(v.data_inicio)}</td>
+                  <td data-label="Data Final">{formatarDataParaExibicao(v.data_fim)}</td>
+                  <td data-label="Status">{statusLabel}</td>
+                  <td data-label="Produto">{produtoLabel}</td>
+                  <td data-label="Valor">{valorLabel}</td>
+                  <td className="th-actions" data-label="Ações">
+                    <div className="action-buttons viagens-action-buttons">
+                      <a className="btn-icon" href={`/operacao/viagens/${v.id}`} title="Ver viagem">
+                        👁️
+                      </a>
+                      {whatsappLink && (
+                        <a
+                          className="btn-icon"
+                          href={whatsappLink}
+                          title="Enviar WhatsApp"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          💬
+                        </a>
+                      )}
+                      {podeEditar && (
+                        <a
+                          className="btn-icon"
+                          href={`/operacao/viagens/${v.id}?modo=editar`}
+                          title="Editar viagem"
+                        >
+                          ✏️
+                        </a>
+                      )}
+                      {podeExcluir && (
+                        <button
+                          className="btn-icon btn-danger"
+                          title="Excluir viagem"
+                          onClick={() => solicitarExclusaoViagem(v)}
+                          disabled={deletandoViagemId === v.id}
+                        >
+                          {deletandoViagemId === v.id ? "..." : "🗑️"}
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {loading && (
-                  <tr>
-                    <td colSpan={totalColunasTabela}>Carregando viagens...</td>
-                  </tr>
-                )}
-                {!loading && viagensExibidas.length === 0 && (
-                  <tr>
-                    <td colSpan={totalColunasTabela}>Nenhuma viagem encontrada.</td>
-                  </tr>
-                )}
-                {viagensExibidas.map((v) => {
-                  const statusLabel = obterStatusExibicao(v);
-                  const recibos = v.recibos || [];
-                  const produtoLabel =
-                    recibos.length > 1
-                      ? `Múltiplos (${recibos.length})`
-                      : recibos[0]?.tipo_produtos?.nome ||
-                        recibos[0]?.tipo_produtos?.tipo ||
-                        recibos[0]?.produto_id ||
-                        "-";
-                  const valorTotal = recibos.reduce((total, r) => total + (r.valor_total || 0), 0);
-                  const valorLabel = recibos.length > 0 ? formatarMoeda(valorTotal) : "-";
-                  const whatsappLink = construirLinkWhatsApp(v.clientes?.whatsapp || null);
-                  return (
-                    <tr key={v.id}>
-                      <td data-label="Cliente">{v.clientes?.nome || "-"}</td>
-                      <td data-label="Data Início">{formatarDataParaExibicao(v.data_inicio)}</td>
-                      <td data-label="Data Final">{formatarDataParaExibicao(v.data_fim)}</td>
-                      <td data-label="Status">{statusLabel}</td>
-                      <td data-label="Produto">{produtoLabel}</td>
-                      <td data-label="Valor">{valorLabel}</td>
-                      <td className="th-actions" data-label="Ações">
-                        <div className="action-buttons viagens-action-buttons">
-                          <a
-                            className="btn-icon"
-                            href={`/operacao/viagens/${v.id}`}
-                            title="Ver viagem"
-                          >
-                            👁️
-                          </a>
-                          {whatsappLink && (
-                            <a
-                              className="btn-icon"
-                              href={whatsappLink}
-                              title="Enviar WhatsApp"
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              💬
-                            </a>
-                          )}
-                          {podeEditar && (
-                            <a
-                              className="btn-icon"
-                              href={`/operacao/viagens/${v.id}?modo=editar`}
-                              title="Editar viagem"
-                            >
-                              ✏️
-                            </a>
-                          )}
-                          {podeExcluir && (
-                            <button
-                              className="btn-icon btn-danger"
-                              title="Excluir viagem"
-                              onClick={() => solicitarExclusaoViagem(v)}
-                              disabled={deletandoViagemId === v.id}
-                            >
-                              {deletandoViagemId === v.id ? "..." : "🗑️"}
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+              );
+            })}
+          </DataTable>
         )}
 
         {!showForm && podeCriar && (

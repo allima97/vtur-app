@@ -5,6 +5,7 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { MODULOS_ADMIN_PERMISSOES } from "../../config/modulos";
 import AlertMessage from "../ui/AlertMessage";
 import { ToastStack, useToastQueue } from "../ui/Toast";
+import DataTable from "../ui/DataTable";
 
 type Usuario = {
   id: string;
@@ -277,70 +278,70 @@ export default function PermissoesAdminIsland() {
       <div className="hidden sm:block">
         <div className="card-base card-red">
           <h3 className="mb-3 font-semibold">Usuários</h3>
-          <div className="table-container overflow-x-auto">
-            <table className="table-default table-header-red table-mobile-cards min-w-[900px]">
-              <thead>
-                <tr>
-                  <th className="min-w-[180px]">Usuário</th>
-                  {MODULOS.map((m) => (
-                    <th key={m}>{m}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {usuarios.map((u) => (
-                  <tr key={u.id}>
-                    <td data-label="Usuário">
-                      <strong>{u.nome_completo}</strong>
-                      <br />
-                      <small>{u.email}</small>
-                      <br />
-                      <small>Tipo: {u.tipo}</small>
-                    </td>
-                    {MODULOS.map((m) => {
-                      const per = getPermissao(u.id, m);
-                      return (
-                        <td key={m} data-label={m}>
-                          <div className="flex flex-col gap-1">
-                            {/* Toggle ATIVO */}
-                            <label className="text-xs">
-                              <input
-                                type="checkbox"
-                                checked={per.ativo}
-                                onChange={(e) =>
-                                  salvar({
-                                    ...per,
-                                    ativo: e.target.checked,
-                                  })
-                                }
-                              />{" "}
-                              ativo
-                            </label>
-                            {/* SELECT PERMISSÃO */}
-                            <select
-                              disabled={!per.ativo}
-                              value={per.permissao}
-                              onChange={(e) =>
-                                salvar({
-                                  ...per,
-                                  permissao: e.target.value as any,
-                                })
-                              }
-                              className="text-xs bg-indigo-950 text-indigo-100 border border-indigo-900 rounded px-1 py-0.5"
-                            >
-                              <option value="view">View</option>
-                              <option value="edit">Edit</option>
-                              <option value="admin">Admin</option>
-                            </select>
-                          </div>
-                        </td>
-                      );
-                    })}
-                  </tr>
+          <DataTable
+            shellClassName="vtur-data-table-shellless"
+            className="table-default table-header-red table-mobile-cards min-w-[900px]"
+            headers={
+              <tr>
+                <th className="min-w-[180px]">Usuário</th>
+                {MODULOS.map((m) => (
+                  <th key={m}>{m}</th>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </tr>
+            }
+            empty={usuarios.length === 0}
+            emptyMessage="Nenhum usuário encontrado."
+            colSpan={MODULOS.length + 1}
+          >
+            {usuarios.map((u) => (
+              <tr key={u.id}>
+                <td data-label="Usuário">
+                  <strong>{u.nome_completo}</strong>
+                  <br />
+                  <small>{u.email}</small>
+                  <br />
+                  <small>Tipo: {u.tipo}</small>
+                </td>
+                {MODULOS.map((m) => {
+                  const per = getPermissao(u.id, m);
+                  return (
+                    <td key={m} data-label={m}>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs">
+                          <input
+                            type="checkbox"
+                            checked={per.ativo}
+                            onChange={(e) =>
+                              salvar({
+                                ...per,
+                                ativo: e.target.checked,
+                              })
+                            }
+                          />{" "}
+                          ativo
+                        </label>
+                        <select
+                          disabled={!per.ativo}
+                          value={per.permissao}
+                          onChange={(e) =>
+                            salvar({
+                              ...per,
+                              permissao: e.target.value as any,
+                            })
+                          }
+                          className="text-xs bg-indigo-950 text-indigo-100 border border-indigo-900 rounded px-1 py-0.5"
+                        >
+                          <option value="view">View</option>
+                          <option value="edit">Edit</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </DataTable>
         </div>
       </div>
       <ToastStack toasts={toasts} onDismiss={dismissToast} />

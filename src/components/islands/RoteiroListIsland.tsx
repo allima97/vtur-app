@@ -6,6 +6,7 @@ import AlertMessage from "../ui/AlertMessage";
 import EmptyState from "../ui/EmptyState";
 import TableActions from "../ui/TableActions";
 import SearchInput from "../ui/SearchInput";
+import DataTable from "../ui/DataTable";
 
 type Roteiro = {
   id: string;
@@ -112,74 +113,70 @@ export default function RoteiroListIsland() {
       )}
 
       {(loading || filtered.length > 0) && (
-        <div className="table-container overflow-x-auto" style={{ maxHeight: "65vh", overflowY: "auto" }}>
-          <table className="table-default table-header-purple table-mobile-cards min-w-[900px]">
-            <thead style={{ position: "sticky", top: 0, zIndex: 1 }}>
-              <tr>
-                <th>Nome</th>
-                <th>Duração</th>
-                <th>Origem → Destino</th>
-                <th>Criado em</th>
-                <th className="th-actions" style={{ width: 150, textAlign: "center" }}>
-                  Ações
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr>
-                  <td colSpan={5}>Carregando...</td>
-                </tr>
-              )}
-
-              {!loading &&
-                filtered.map((r) => (
-                  <tr key={r.id}>
-                    <td data-label="Nome">
-                      <strong>{r.nome}</strong>
-                    </td>
-                    <td data-label="Duração">{r.duracao ? `${r.duracao} dias` : "-"}</td>
-                    <td data-label="Origem → Destino">
-                      {r.inicio_cidade && r.fim_cidade
-                        ? `${r.inicio_cidade} → ${r.fim_cidade}`
-                        : r.inicio_cidade || r.fim_cidade || "-"}
-                    </td>
-                    <td data-label="Criado em">{r.created_at ? formatDateBR(r.created_at) : "-"}</td>
-                    <td className="th-actions" data-label="Ações">
-                      <TableActions
-                        className="orcamentos-actions"
-                        actions={[
-                          {
-                            key: "view",
-                            label: "Visualizar",
-                            icon: "👁️",
-                            onClick: () => {
-                              window.location.href = `/orcamentos/personalizados/visualizar/${r.id}`;
-                            },
-                          },
-                          {
-                            key: "edit",
-                            label: "Editar",
-                            icon: "✏️",
-                            onClick: () => {
-                              window.location.href = `/orcamentos/personalizados/${r.id}`;
-                            },
-                          },
-                          {
-                            key: "delete",
-                            label: "Excluir",
-                            icon: "🗑️",
-                            variant: "danger",
-                            onClick: () => setRoteiroParaExcluir(r),
-                          },
-                        ]}
-                      />
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          shellClassName="vtur-data-table-shellless"
+          containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+          className="table-default table-header-purple table-mobile-cards min-w-[900px]"
+          headers={
+            <tr>
+              <th>Nome</th>
+              <th>Duração</th>
+              <th>Origem → Destino</th>
+              <th>Criado em</th>
+              <th className="th-actions" style={{ width: 150, textAlign: "center" }}>
+                Ações
+              </th>
+            </tr>
+          }
+          loading={loading}
+          empty={filtered.length === 0}
+          colSpan={5}
+        >
+          {filtered.map((r) => (
+            <tr key={r.id}>
+              <td data-label="Nome">
+                <strong>{r.nome}</strong>
+              </td>
+              <td data-label="Duração">{r.duracao ? `${r.duracao} dias` : "-"}</td>
+              <td data-label="Origem → Destino">
+                {r.inicio_cidade && r.fim_cidade
+                  ? `${r.inicio_cidade} → ${r.fim_cidade}`
+                  : r.inicio_cidade || r.fim_cidade || "-"}
+              </td>
+              <td data-label="Criado em">{r.created_at ? formatDateBR(r.created_at) : "-"}</td>
+              <td className="th-actions" data-label="Ações">
+                <TableActions
+                  className="orcamentos-actions"
+                  actions={[
+                    {
+                      key: "view",
+                      label: "Visualizar",
+                      icon: "👁️",
+                      onClick: () => {
+                        window.location.href = `/orcamentos/personalizados/visualizar/${r.id}`;
+                      },
+                    },
+                    {
+                      key: "edit",
+                      label: "Editar",
+                      icon: "✏️",
+                      onClick: () => {
+                        window.location.href = `/orcamentos/personalizados/${r.id}`;
+                      },
+                    },
+                    {
+                      key: "delete",
+                      label: "Excluir",
+                      icon: "🗑️",
+                      variant: "danger",
+                      onClick: () => setRoteiroParaExcluir(r),
+                    },
+                  ]}
+                />
+              </td>
+            </tr>
+          ))}
+        </DataTable>
       )}
 
       <ConfirmDialog

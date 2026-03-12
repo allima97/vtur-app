@@ -6,6 +6,7 @@ import AlertMessage from "../ui/AlertMessage";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { formatDateBR } from "../../lib/format";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
+import DataTable from "../ui/DataTable";
 
 type PlanoRow = {
   id: string;
@@ -362,96 +363,92 @@ const FinanceiroAdminIsland: React.FC = () => {
       {loading ? (
         <p>Carregando financeiro...</p>
       ) : (
-        <div className="table-container overflow-x-auto">
-          <table className="table-default table-header-red table-mobile-cards min-w-[860px]">
-            <thead>
-              <tr>
-                <th>Empresa</th>
-                <th>CNPJ</th>
-                <th>Plano</th>
-                <th>Status</th>
-                <th>Últ. pagamento</th>
-                <th>Próx. vencimento</th>
-                <th>Valor</th>
-                <th className="th-actions">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {registros.length === 0 ? (
-                <tr>
-                  <td colSpan={8}>Nenhuma cobrança encontrada.</td>
-                </tr>
-              ) : (
-                registros.map((r) => (
-                  <tr key={r.id}>
-                    <td data-label="Empresa">{r.companies?.nome_fantasia || "—"}</td>
-                    <td data-label="CNPJ">{r.companies?.cnpj || "—"}</td>
-                    <td data-label="Plano">{r.plan?.nome || "—"}</td>
-                    <td data-label="Status">
-                      <span className="font-bold capitalize" style={{ color: statusColors[r.status] }}>
-                        {statusLabels[r.status] || r.status}
-                      </span>
-                    </td>
-                    <td data-label="Últ. pagamento">{formatarData(r.ultimo_pagamento)}</td>
-                    <td data-label="Próx. vencimento">{formatarData(r.proximo_vencimento)}</td>
-                    <td data-label="Valor">{formatarValor(r.valor_mensal)}</td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        <button
-                          className="btn-icon icon-action-btn"
-                          onClick={() => openModal(r)}
-                          title="Editar cobrança"
-                          aria-label="Editar cobrança"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          className="btn-icon icon-action-btn"
-                          onClick={() => atualizarStatus(r, "active")}
-                          title="Ativar cobrança"
-                          aria-label="Ativar cobrança"
-                          disabled={r.status === "active"}
-                          style={{ borderColor: statusColors.active, color: statusColors.active }}
-                        >
-                          ✅
-                        </button>
-                        <button
-                          className="btn-icon icon-action-btn"
-                          onClick={() => atualizarStatus(r, "past_due")}
-                          title="Marcar como atrasada"
-                          aria-label="Marcar como atrasada"
-                          disabled={r.status === "past_due"}
-                          style={{ borderColor: statusColors.past_due, color: statusColors.past_due }}
-                        >
-                          ⏰
-                        </button>
-                        <button
-                          className="btn-icon icon-action-btn"
-                          onClick={() => atualizarStatus(r, "suspended")}
-                          title="Suspender cobrança"
-                          aria-label="Suspender cobrança"
-                          disabled={r.status === "suspended"}
-                          style={{ borderColor: statusColors.suspended, color: statusColors.suspended }}
-                        >
-                          ⏸️
-                        </button>
-                        <button
-                          className="btn-icon icon-action-btn danger"
-                          onClick={() => atualizarStatus(r, "canceled")}
-                          title="Cancelar cobrança"
-                          aria-label="Cancelar cobrança"
-                          disabled={r.status === "canceled"}
-                        >
-                          🛑
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          shellClassName="vtur-data-table-shellless"
+          className="table-default table-header-red table-mobile-cards min-w-[860px]"
+          headers={
+            <tr>
+              <th>Empresa</th>
+              <th>CNPJ</th>
+              <th>Plano</th>
+              <th>Status</th>
+              <th>Últ. pagamento</th>
+              <th>Próx. vencimento</th>
+              <th>Valor</th>
+              <th className="th-actions">Ações</th>
+            </tr>
+          }
+          empty={registros.length === 0}
+          emptyMessage="Nenhuma cobrança encontrada."
+          colSpan={8}
+        >
+          {registros.map((r) => (
+            <tr key={r.id}>
+              <td data-label="Empresa">{r.companies?.nome_fantasia || "—"}</td>
+              <td data-label="CNPJ">{r.companies?.cnpj || "—"}</td>
+              <td data-label="Plano">{r.plan?.nome || "—"}</td>
+              <td data-label="Status">
+                <span className="font-bold capitalize" style={{ color: statusColors[r.status] }}>
+                  {statusLabels[r.status] || r.status}
+                </span>
+              </td>
+              <td data-label="Últ. pagamento">{formatarData(r.ultimo_pagamento)}</td>
+              <td data-label="Próx. vencimento">{formatarData(r.proximo_vencimento)}</td>
+              <td data-label="Valor">{formatarValor(r.valor_mensal)}</td>
+              <td className="th-actions" data-label="Ações">
+                <div className="action-buttons">
+                  <button
+                    className="btn-icon icon-action-btn"
+                    onClick={() => openModal(r)}
+                    title="Editar cobrança"
+                    aria-label="Editar cobrança"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    className="btn-icon icon-action-btn"
+                    onClick={() => atualizarStatus(r, "active")}
+                    title="Ativar cobrança"
+                    aria-label="Ativar cobrança"
+                    disabled={r.status === "active"}
+                    style={{ borderColor: statusColors.active, color: statusColors.active }}
+                  >
+                    ✅
+                  </button>
+                  <button
+                    className="btn-icon icon-action-btn"
+                    onClick={() => atualizarStatus(r, "past_due")}
+                    title="Marcar como atrasada"
+                    aria-label="Marcar como atrasada"
+                    disabled={r.status === "past_due"}
+                    style={{ borderColor: statusColors.past_due, color: statusColors.past_due }}
+                  >
+                    ⏰
+                  </button>
+                  <button
+                    className="btn-icon icon-action-btn"
+                    onClick={() => atualizarStatus(r, "suspended")}
+                    title="Suspender cobrança"
+                    aria-label="Suspender cobrança"
+                    disabled={r.status === "suspended"}
+                    style={{ borderColor: statusColors.suspended, color: statusColors.suspended }}
+                  >
+                    ⏸️
+                  </button>
+                  <button
+                    className="btn-icon icon-action-btn danger"
+                    onClick={() => atualizarStatus(r, "canceled")}
+                    title="Cancelar cobrança"
+                    aria-label="Cancelar cobrança"
+                    disabled={r.status === "canceled"}
+                  >
+                    🛑
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </DataTable>
       )}
 
       {modalOpen && selecionado && (

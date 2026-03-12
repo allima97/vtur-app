@@ -10,6 +10,7 @@ import { calcularDescontoAplicado } from "../../lib/comissaoUtils";
 import { carregarTermosNaoComissionaveis, calcularNaoComissionavelPorVenda } from "../../lib/pagamentoUtils";
 import { normalizeText } from "../../lib/normalizeText";
 import { fetchGestorEquipeIdsComGestor } from "../../lib/gestorEquipe";
+import DataTable from "../ui/DataTable";
 
 type Usuario = {
   id: string;
@@ -972,74 +973,68 @@ export default function FechamentoComissaoIsland() {
         </div>
       </div>
 
-      <div
-        className="table-container overflow-x-auto"
-        style={{ maxHeight: "65vh", overflowY: "auto" }}
+      <DataTable
+        shellClassName="vtur-data-table-shellless"
+        className="table-default table-header-green table-mobile-cards min-w-[720px]"
+        containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+        headers={
+          <tr>
+            <th>Data</th>
+            <th>Qtd. Recibos</th>
+            <th>Bruto (R$)</th>
+            <th>Taxas (R$)</th>
+            <th>Líquido (R$)</th>
+          </tr>
+        }
+        empty={vendasPeriodo.length === 0}
+        emptyMessage="Nenhuma venda encontrada no período."
+        colSpan={5}
       >
-        <table className="table-default table-header-green table-mobile-cards min-w-[720px]">
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>Qtd. Recibos</th>
-              <th>Bruto (R$)</th>
-              <th>Taxas (R$)</th>
-              <th>Líquido (R$)</th>
+        {vendasPeriodo.map((v) => {
+          let bruto = 0;
+          let taxas = 0;
+
+          const recibosVenda = v.vendas_recibos || [];
+          const totalBrutoVenda = recibosVenda.reduce((acc, r) => acc + (r.valor_total ?? 0), 0);
+          const naoComissionado =
+            pagamentosNaoComissionaveis.get(v.id) ?? Number(v.valor_nao_comissionado || 0);
+          const descontoAplicado = calcularDescontoAplicado(
+            totalBrutoVenda,
+            v.valor_total_bruto,
+            v.valor_total_pago
+          );
+          const baseComissionavel = Math.max(0, totalBrutoVenda - descontoAplicado - naoComissionado);
+          const fatorComissionavel =
+            totalBrutoVenda > 0 ? Math.max(0, baseComissionavel / totalBrutoVenda) : 1;
+
+          for (const r of recibosVenda) {
+            const vt = (r.valor_total ?? 0) * fatorComissionavel;
+            const tx = r.valor_taxas ?? 0;
+            bruto += vt + tx;
+            taxas += tx;
+          }
+
+          const liquido = bruto - taxas;
+
+          return (
+            <tr key={v.id}>
+              <td data-label="Data">
+                {v.data_venda ? formatDateBR(v.data_venda) : "-"}
+              </td>
+              <td data-label="Qtd. Recibos">{v.vendas_recibos?.length || 0}</td>
+              <td data-label="Bruto (R$)">
+                {formatCurrencyBRL(bruto)}
+              </td>
+              <td data-label="Taxas (R$)">
+                {formatCurrencyBRL(taxas)}
+              </td>
+              <td data-label="Líquido (R$)">
+                {formatCurrencyBRL(liquido)}
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {vendasPeriodo.length === 0 && (
-              <tr>
-                <td colSpan={5}>Nenhuma venda encontrada no período.</td>
-              </tr>
-            )}
-
-            {vendasPeriodo.map((v) => {
-              let bruto = 0;
-              let taxas = 0;
-
-              const recibosVenda = v.vendas_recibos || [];
-              const totalBrutoVenda = recibosVenda.reduce((acc, r) => acc + (r.valor_total ?? 0), 0);
-              const naoComissionado =
-                pagamentosNaoComissionaveis.get(v.id) ?? Number(v.valor_nao_comissionado || 0);
-              const descontoAplicado = calcularDescontoAplicado(
-                totalBrutoVenda,
-                v.valor_total_bruto,
-                v.valor_total_pago
-              );
-              const baseComissionavel = Math.max(0, totalBrutoVenda - descontoAplicado - naoComissionado);
-              const fatorComissionavel =
-                totalBrutoVenda > 0 ? Math.max(0, baseComissionavel / totalBrutoVenda) : 1;
-
-              for (const r of recibosVenda) {
-                const vt = (r.valor_total ?? 0) * fatorComissionavel;
-                const tx = r.valor_taxas ?? 0;
-                bruto += vt + tx;
-                taxas += tx;
-              }
-
-              const liquido = bruto - taxas;
-
-              return (
-                <tr key={v.id}>
-                  <td data-label="Data">
-                    {v.data_venda ? formatDateBR(v.data_venda) : "-"}
-                  </td>
-                  <td data-label="Qtd. Recibos">{v.vendas_recibos?.length || 0}</td>
-                  <td data-label="Bruto (R$)">
-                    {formatCurrencyBRL(bruto)}
-                  </td>
-                  <td data-label="Taxas (R$)">
-                    {formatCurrencyBRL(taxas)}
-                  </td>
-                  <td data-label="Líquido (R$)">
-                    {formatCurrencyBRL(liquido)}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+          );
+        })}
+      </DataTable>
     </div>
   );
 }

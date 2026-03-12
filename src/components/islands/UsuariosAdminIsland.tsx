@@ -8,6 +8,7 @@ import AlertMessage from "../ui/AlertMessage";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { DEFAULT_FROM_EMAILS } from "../../lib/systemName";
+import DataTable from "../ui/DataTable";
 
 type UserRow = {
   id: string;
@@ -557,125 +558,126 @@ const UsuariosAdminIsland: React.FC = () => {
       {loading ? (
         <p className="mt-3">Carregando usuários...</p>
       ) : (
-        <div className="table-container overflow-x-auto mt-4">
-          <table className="table-default table-header-red table-mobile-cards min-w-[980px]">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>E-mail</th>
-                <th>Cargo</th>
-                <th>Empresa</th>
-                <th>Uso</th>
-                <th>Status</th>
-                <th className="th-actions">Aviso</th>
-                <th className="th-actions">Ações</th>
-              </tr>
-            </thead>
+        <DataTable
+          shellClassName="vtur-data-table-shellless mt-4"
+          className="table-default table-header-red table-mobile-cards min-w-[980px]"
+          headers={
+            <tr>
+              <th>Nome</th>
+              <th>E-mail</th>
+              <th>Cargo</th>
+              <th>Empresa</th>
+              <th>Uso</th>
+              <th>Status</th>
+              <th className="th-actions">Aviso</th>
+              <th className="th-actions">Ações</th>
+            </tr>
+          }
+          empty={usuarios.length === 0}
+          emptyMessage="Nenhum usuário encontrado."
+          colSpan={8}
+        >
+          {usuarios.map((u) => (
+            <tr key={u.id}>
+              <td data-label="Nome">{u.nome_completo}</td>
+              <td data-label="E-mail">{u.email}</td>
+              <td data-label="Cargo">
+                <select
+                  className="form-select"
+                  value={u.user_type_id || ""}
+                  onChange={(e) => atualizarTipoUsuario(u.id, e.target.value)}
+                >
+                  <option value="">Selecionar cargo</option>
+                  {userTypes.map((tipo) => (
+                    <option key={tipo.id} value={tipo.id}>
+                      {tipo.name}
+                    </option>
+                  ))}
+                </select>
+              </td>
+              <td data-label="Empresa">
+                <select
+                  className="form-select"
+                  value={u.company_id || ""}
+                  onChange={(e) => atualizarEmpresa(u.id, e.target.value)}
+                >
+                  <option value="">Sem empresa</option>
+                  {empresas.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome_fantasia}
+                    </option>
+                  ))}
+                </select>
+              </td>
 
-            <tbody>
-              {usuarios.map((u) => (
-                <tr key={u.id}>
-                  <td data-label="Nome">{u.nome_completo}</td>
-                  <td data-label="E-mail">{u.email}</td>
-                  <td data-label="Cargo">
-                    <select
-                      className="form-select"
-                      value={u.user_type_id || ""}
-                      onChange={(e) => atualizarTipoUsuario(u.id, e.target.value)}
-                    >
-                      <option value="">Selecionar cargo</option>
-                      {userTypes.map((tipo) => (
-                        <option key={tipo.id} value={tipo.id}>
-                          {tipo.name}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td data-label="Empresa">
-                    <select
-                      className="form-select"
-                      value={u.company_id || ""}
-                      onChange={(e) => atualizarEmpresa(u.id, e.target.value)}
-                    >
-                      <option value="">Sem empresa</option>
-                      {empresas.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.nome_fantasia}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
+              <td data-label="Uso">
+                <select
+                  className="form-select"
+                  value={typeof u.uso_individual === "boolean" ? String(u.uso_individual) : ""}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (!value) return;
+                    atualizarUsoIndividual(u.id, value === "true");
+                  }}
+                >
+                  <option value="">Selecionar</option>
+                  <option value="true">Individual</option>
+                  <option value="false">Corporativo</option>
+                </select>
+              </td>
 
-                  <td data-label="Uso">
-                    <select
-                      className="form-select"
-                      value={typeof u.uso_individual === "boolean" ? String(u.uso_individual) : ""}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (!value) return;
-                        atualizarUsoIndividual(u.id, value === "true");
-                      }}
-                    >
-                      <option value="">Selecionar</option>
-                      <option value="true">Individual</option>
-                      <option value="false">Corporativo</option>
-                    </select>
-                  </td>
+              <td data-label="Status">
+                <span className={u.active ? "text-emerald-500 font-bold" : "text-rose-500 font-bold"}>
+                  {u.active ? "Ativo" : "Inativo"}
+                </span>
+              </td>
 
-                  <td data-label="Status">
-                    <span className={u.active ? "text-emerald-500 font-bold" : "text-rose-500 font-bold"}>
-                      {u.active ? "Ativo" : "Inativo"}
-                    </span>
-                  </td>
+              <td className="th-actions" data-label="Aviso">
+                <div className="action-buttons">
+                  <button
+                    className="btn-icon icon-action-btn"
+                    onClick={() => openAvisoModal(u)}
+                    disabled={!u.email || avisosTemplates.length === 0}
+                    title={
+                      !u.email
+                        ? "Usuário sem e-mail cadastrado"
+                        : avisosTemplates.length === 0
+                          ? "Nenhum template de aviso disponível"
+                          : "Enviar aviso"
+                    }
+                    aria-label="Enviar aviso"
+                  >
+                    <span aria-hidden="true">📧</span>
+                    <span className="sr-only">Enviar aviso</span>
+                  </button>
+                </div>
+              </td>
 
-                  <td className="th-actions" data-label="Aviso">
-                    <div className="action-buttons">
-                      <button
-                        className="btn-icon icon-action-btn"
-                        onClick={() => openAvisoModal(u)}
-                        disabled={!u.email || avisosTemplates.length === 0}
-                        title={
-                          !u.email
-                            ? "Usuário sem e-mail cadastrado"
-                            : avisosTemplates.length === 0
-                              ? "Nenhum template de aviso disponível"
-                              : "Enviar aviso"
-                        }
-                        aria-label="Enviar aviso"
-                      >
-                        <span aria-hidden="true">📧</span>
-                        <span className="sr-only">Enviar aviso</span>
-                      </button>
-                    </div>
-                  </td>
-
-                  <td className="th-actions" data-label="Ações">
-                    <div className="action-buttons">
-                      <button
-                        className="btn-icon icon-action-btn"
-                        onClick={() => openSenhaModal(u)}
-                        title="Redefinir senha"
-                        aria-label="Redefinir senha"
-                      >
-                        <span aria-hidden="true">PW</span>
-                        <span className="sr-only">Redefinir senha</span>
-                      </button>
-                      <button
-                        className="btn-icon icon-action-btn"
-                        onClick={() => toggleAtivo(u, !u.active)}
-                        title={u.active ? "Desativar" : "Ativar"}
-                        aria-label={u.active ? "Desativar" : "Ativar"}
-                      >
-                        <span aria-hidden="true">{u.active ? "⏸️" : "✅"}</span>
-                        <span className="sr-only">{u.active ? "Desativar" : "Ativar"}</span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              <td className="th-actions" data-label="Ações">
+                <div className="action-buttons">
+                  <button
+                    className="btn-icon icon-action-btn"
+                    onClick={() => openSenhaModal(u)}
+                    title="Redefinir senha"
+                    aria-label="Redefinir senha"
+                  >
+                    <span aria-hidden="true">PW</span>
+                    <span className="sr-only">Redefinir senha</span>
+                  </button>
+                  <button
+                    className="btn-icon icon-action-btn"
+                    onClick={() => toggleAtivo(u, !u.active)}
+                    title={u.active ? "Desativar" : "Ativar"}
+                    aria-label={u.active ? "Desativar" : "Ativar"}
+                  >
+                    <span aria-hidden="true">{u.active ? "⏸️" : "✅"}</span>
+                    <span className="sr-only">{u.active ? "Desativar" : "Ativar"}</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </DataTable>
       )}
 
       {avisoModalOpen && avisoUsuario && (

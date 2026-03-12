@@ -3,6 +3,7 @@ import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { normalizeText } from "../../lib/normalizeText";
+import DataTable from "../ui/DataTable";
 
 type TermoNaoComissionavel = {
   id: string;
@@ -189,58 +190,58 @@ export default function ParametrosNaoComissionaveisIsland() {
         <h3 style={{ marginTop: 0 }}>Termos cadastrados</h3>
         {loading ? (
           <p>Carregando...</p>
-        ) : termos.length === 0 ? (
-          <p>Nenhum critério cadastrado.</p>
         ) : (
-          <div className="table-container overflow-x-auto">
-            <table className="table-default table-header-blue table-mobile-cards">
-              <thead>
-                <tr>
-                  <th>Termo</th>
-                  <th>Ativo</th>
-                  <th className="th-actions">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {termos.map((t) => (
-                  <tr key={t.id}>
-                    <td data-label="Termo">{t.termo}</td>
-                    <td data-label="Ativo">{t.ativo ? "Sim" : "Não"}</td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        {podeEditar && (
-                          <button
-                            type="button"
-                            className="btn-icon"
-                            title="Editar"
-                            onClick={() => {
-                              setEditId(t.id);
-                              setForm({
-                                termo: t.termo || "",
-                                ativo: Boolean(t.ativo),
-                              });
-                            }}
-                          >
-                            ✏️
-                          </button>
-                        )}
-                        {podeEditar && (
-                          <button
-                            type="button"
-                            className="btn-icon btn-danger"
-                            disabled={excluindoId === t.id}
-                            onClick={() => excluir(t.id)}
-                          >
-                            {excluindoId === t.id ? "…" : "🗑️"}
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            shellClassName="vtur-data-table-shellless"
+            className="table-default table-header-blue table-mobile-cards"
+            headers={
+              <tr>
+                <th>Termo</th>
+                <th>Ativo</th>
+                <th className="th-actions">Ações</th>
+              </tr>
+            }
+            empty={termos.length === 0}
+            emptyMessage="Nenhum critério cadastrado."
+            colSpan={3}
+          >
+            {termos.map((t) => (
+              <tr key={t.id}>
+                <td data-label="Termo">{t.termo}</td>
+                <td data-label="Ativo">{t.ativo ? "Sim" : "Não"}</td>
+                <td className="th-actions" data-label="Ações">
+                  <div className="action-buttons">
+                    {podeEditar && (
+                      <button
+                        type="button"
+                        className="btn-icon"
+                        title="Editar"
+                        onClick={() => {
+                          setEditId(t.id);
+                          setForm({
+                            termo: t.termo || "",
+                            ativo: Boolean(t.ativo),
+                          });
+                        }}
+                      >
+                        ✏️
+                      </button>
+                    )}
+                    {podeEditar && (
+                      <button
+                        type="button"
+                        className="btn-icon btn-danger"
+                        disabled={excluindoId === t.id}
+                        onClick={() => excluir(t.id)}
+                      >
+                        {excluindoId === t.id ? "…" : "🗑️"}
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </DataTable>
         )}
       </div>
       <ToastStack toasts={toasts} onDismiss={dismissToast} />

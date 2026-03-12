@@ -712,6 +712,14 @@
   overflow: hidden;
 }
 
+.vtur-data-table-shell.vtur-data-table-shellless {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+
 .vtur-data-table-container {
   background: transparent;
 }

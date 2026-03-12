@@ -4,6 +4,7 @@ import { usePermissoesStore } from "../../lib/permissoesStore";
 import AlertMessage from "../ui/AlertMessage";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import DataTable from "../ui/DataTable";
 
 type EmpresaRow = {
   id: string;
@@ -122,35 +123,32 @@ export default function MasterEmpresasIsland() {
       {loading ? (
         <p>Carregando empresas...</p>
       ) : (
-        <div className="table-container overflow-x-auto">
-          <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
-            <thead>
-              <tr>
-                <th>Nome Fantasia</th>
-                <th>CNPJ</th>
-                <th>Cidade/Estado</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {empresas.length === 0 && (
-                <tr>
-                  <td colSpan={4}>Nenhuma empresa vinculada.</td>
-                </tr>
-              )}
-              {empresas.map((e) => (
-                <tr key={e.id}>
-                  <td data-label="Nome Fantasia">{e.company?.nome_fantasia || "-"}</td>
-                  <td data-label="CNPJ">{formatCnpj(e.company?.cnpj || "")}</td>
-                  <td data-label="Cidade/Estado">
-                    {e.company?.cidade || "-"}/{e.company?.estado || "-"}
-                  </td>
-                  <td data-label="Status">{statusLabel[e.status] || e.status}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          shellClassName="vtur-data-table-shellless"
+          className="table-default table-header-blue table-mobile-cards min-w-[720px]"
+          headers={
+            <tr>
+              <th>Nome Fantasia</th>
+              <th>CNPJ</th>
+              <th>Cidade/Estado</th>
+              <th>Status</th>
+            </tr>
+          }
+          empty={empresas.length === 0}
+          emptyMessage="Nenhuma empresa vinculada."
+          colSpan={4}
+        >
+          {empresas.map((e) => (
+            <tr key={e.id}>
+              <td data-label="Nome Fantasia">{e.company?.nome_fantasia || "-"}</td>
+              <td data-label="CNPJ">{formatCnpj(e.company?.cnpj || "")}</td>
+              <td data-label="Cidade/Estado">
+                {e.company?.cidade || "-"}/{e.company?.estado || "-"}
+              </td>
+              <td data-label="Status">{statusLabel[e.status] || e.status}</td>
+            </tr>
+          ))}
+        </DataTable>
       )}
 
       <ToastStack toasts={toasts} onDismiss={dismissToast} />

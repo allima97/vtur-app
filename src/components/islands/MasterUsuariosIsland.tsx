@@ -6,6 +6,7 @@ import AlertMessage from "../ui/AlertMessage";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { fetchGestorEquipeVendedorIds } from "../../lib/gestorEquipe";
+import DataTable from "../ui/DataTable";
 
 type UserRow = {
   id: string;
@@ -520,54 +521,50 @@ export default function MasterUsuariosIsland() {
       {loading ? (
         <p className="mt-3">Carregando usuários...</p>
       ) : (
-        <div className="table-container overflow-x-auto mt-4">
-          <table className="table-default table-header-blue table-mobile-cards min-w-[980px]">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>E-mail</th>
-                <th>Cargo</th>
-                <th>Empresa</th>
-                <th>Status</th>
-                <th className="th-actions">Ações</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {usuariosFiltrados.length === 0 && (
-                <tr>
-                  <td colSpan={6}>Nenhum usuário corporativo encontrado.</td>
-                </tr>
-              )}
-              {usuariosFiltrados.map((u) => (
-                <tr key={u.id}>
-                  <td data-label="Nome">{u.nome_completo || "-"}</td>
-                  <td data-label="E-mail">{u.email || "-"}</td>
-                  <td data-label="Cargo">{u.user_types?.name || "-"}</td>
-                  <td data-label="Empresa">{u.companies?.nome_fantasia || "—"}</td>
-                  <td data-label="Status">
-                    <span className={u.active ? "text-emerald-500 font-bold" : "text-rose-500 font-bold"}>
-                      {u.active ? "Ativo" : "Inativo"}
-                    </span>
-                  </td>
-                  <td className="th-actions" data-label="Ações">
-                    <div className="action-buttons">
-                      <button
-                        className="btn-icon icon-action-btn"
-                        onClick={() => toggleAtivo(u, !u.active)}
-                        title={u.active ? "Desativar" : "Ativar"}
-                        aria-label={u.active ? "Desativar" : "Ativar"}
-                      >
-                        <span aria-hidden="true">{u.active ? "⏸️" : "✅"}</span>
-                        <span className="sr-only">{u.active ? "Desativar" : "Ativar"}</span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          shellClassName="vtur-data-table-shellless mt-4"
+          className="table-default table-header-blue table-mobile-cards min-w-[980px]"
+          headers={
+            <tr>
+              <th>Nome</th>
+              <th>E-mail</th>
+              <th>Cargo</th>
+              <th>Empresa</th>
+              <th>Status</th>
+              <th className="th-actions">Ações</th>
+            </tr>
+          }
+          empty={usuariosFiltrados.length === 0}
+          emptyMessage="Nenhum usuário corporativo encontrado."
+          colSpan={6}
+        >
+          {usuariosFiltrados.map((u) => (
+            <tr key={u.id}>
+              <td data-label="Nome">{u.nome_completo || "-"}</td>
+              <td data-label="E-mail">{u.email || "-"}</td>
+              <td data-label="Cargo">{u.user_types?.name || "-"}</td>
+              <td data-label="Empresa">{u.companies?.nome_fantasia || "—"}</td>
+              <td data-label="Status">
+                <span className={u.active ? "text-emerald-500 font-bold" : "text-rose-500 font-bold"}>
+                  {u.active ? "Ativo" : "Inativo"}
+                </span>
+              </td>
+              <td className="th-actions" data-label="Ações">
+                <div className="action-buttons">
+                  <button
+                    className="btn-icon icon-action-btn"
+                    onClick={() => toggleAtivo(u, !u.active)}
+                    title={u.active ? "Desativar" : "Ativar"}
+                    aria-label={u.active ? "Desativar" : "Ativar"}
+                  >
+                    <span aria-hidden="true">{u.active ? "⏸️" : "✅"}</span>
+                    <span className="sr-only">{u.active ? "Desativar" : "Ativar"}</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </DataTable>
       )}
 
       <div className="card-base card-config mt-6">
@@ -631,46 +628,43 @@ export default function MasterUsuariosIsland() {
           </div>
         )}
 
-        <div className="table-container overflow-x-auto mt-3">
-          <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
-            <thead>
-              <tr>
-                <th>Vendedor</th>
-                <th>E-mail</th>
-                <th>Status</th>
-                <th className="th-actions">Ações</th>
+        <DataTable
+          shellClassName="vtur-data-table-shellless mt-3"
+          className="table-default table-header-blue table-mobile-cards min-w-[720px]"
+          headers={
+            <tr>
+              <th>Vendedor</th>
+              <th>E-mail</th>
+              <th>Status</th>
+              <th className="th-actions">Ações</th>
+            </tr>
+          }
+          empty={vendedoresDisponiveis.length === 0}
+          emptyMessage="Nenhum vendedor nesta filial."
+          colSpan={4}
+        >
+          {vendedoresDisponiveis.map((v) => {
+            const ativo = Boolean(relacoes[v.id]);
+            return (
+              <tr key={v.id}>
+                <td data-label="Vendedor">{v.nome_completo || "Vendedor"}</td>
+                <td data-label="E-mail">{v.email || "-"}</td>
+                <td data-label="Status">{ativo ? "Na equipe" : "Fora da equipe"}</td>
+                <td className="th-actions" data-label="Ações">
+                  <div className="action-buttons">
+                    <button
+                      className="btn btn-light"
+                      onClick={() => toggleEquipe(v.id)}
+                      disabled={!gestorEquipeId || salvandoId === v.id || Boolean(gestorEquipeBaseId)}
+                    >
+                      {ativo ? "Remover" : "Adicionar"}
+                    </button>
+                  </div>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {vendedoresDisponiveis.length === 0 && (
-                <tr>
-                  <td colSpan={4}>Nenhum vendedor nesta filial.</td>
-                </tr>
-              )}
-              {vendedoresDisponiveis.map((v) => {
-                const ativo = Boolean(relacoes[v.id]);
-                return (
-                  <tr key={v.id}>
-                    <td data-label="Vendedor">{v.nome_completo || "Vendedor"}</td>
-                    <td data-label="E-mail">{v.email || "-"}</td>
-                    <td data-label="Status">{ativo ? "Na equipe" : "Fora da equipe"}</td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        <button
-                          className="btn btn-light"
-                          onClick={() => toggleEquipe(v.id)}
-                          disabled={!gestorEquipeId || salvandoId === v.id || Boolean(gestorEquipeBaseId)}
-                        >
-                          {ativo ? "Remover" : "Adicionar"}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+            );
+          })}
+        </DataTable>
       </div>
 
       <div className="card-base card-config mt-6">
@@ -678,43 +672,36 @@ export default function MasterUsuariosIsland() {
         <p className="text-sm mb-3" style={{ opacity: 0.8 }}>
           Usuarios convidados que ainda nao finalizaram o perfil.
         </p>
-        <div className="table-container overflow-x-auto">
-          <table className="table-default table-header-blue table-mobile-cards min-w-[900px]">
-            <thead>
-              <tr>
-                <th>E-mail</th>
-                <th>Cargo</th>
-                <th>Empresa</th>
-                <th>Criado por</th>
-                <th>Criado em</th>
-                <th>Expira em</th>
-              </tr>
-            </thead>
-            <tbody>
-              {convitesPendentes.length === 0 && (
-                <tr>
-                  <td colSpan={6}>Nenhum convite pendente no portfolio.</td>
-                </tr>
-              )}
-              {convitesPendentes.map((convite) => (
-                <tr key={convite.id}>
-                  <td data-label="E-mail">{convite.invited_email}</td>
-                  <td data-label="Cargo">{userTypesMap.get(convite.user_type_id || "") || "-"}</td>
-                  <td data-label="Empresa">{empresasMap.get(convite.company_id) || "-"}</td>
-                  <td data-label="Criado por">{convite.invited_by_name || "-"}</td>
-                  <td data-label="Criado em">
-                    {new Date(convite.created_at).toLocaleString("pt-BR")}
-                  </td>
-                  <td data-label="Expira em">
-                    {convite.expires_at
-                      ? new Date(convite.expires_at).toLocaleString("pt-BR")
-                      : "-"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          shellClassName="vtur-data-table-shellless"
+          className="table-default table-header-blue table-mobile-cards min-w-[900px]"
+          headers={
+            <tr>
+              <th>E-mail</th>
+              <th>Cargo</th>
+              <th>Empresa</th>
+              <th>Criado por</th>
+              <th>Criado em</th>
+              <th>Expira em</th>
+            </tr>
+          }
+          empty={convitesPendentes.length === 0}
+          emptyMessage="Nenhum convite pendente no portfolio."
+          colSpan={6}
+        >
+          {convitesPendentes.map((convite) => (
+            <tr key={convite.id}>
+              <td data-label="E-mail">{convite.invited_email}</td>
+              <td data-label="Cargo">{userTypesMap.get(convite.user_type_id || "") || "-"}</td>
+              <td data-label="Empresa">{empresasMap.get(convite.company_id) || "-"}</td>
+              <td data-label="Criado por">{convite.invited_by_name || "-"}</td>
+              <td data-label="Criado em">{new Date(convite.created_at).toLocaleString("pt-BR")}</td>
+              <td data-label="Expira em">
+                {convite.expires_at ? new Date(convite.expires_at).toLocaleString("pt-BR") : "-"}
+              </td>
+            </tr>
+          ))}
+        </DataTable>
       </div>
 
       {createModalOpen && (
