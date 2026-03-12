@@ -199,13 +199,11 @@ body.sakai-theme .vtur-app-field-control.is-date > input[type="date"] {
   padding-right: 2.75rem !important;
 }
 
-body.sakai-theme .vtur-app-field-control.is-date::after {
-  content: "\e927";
+body.sakai-theme .vtur-app-field-control.is-date .vtur-date-input-icon {
   position: absolute;
   right: 0.95rem;
   top: 50%;
   transform: translateY(-50%);
-  font-family: "primeicons";
   font-size: 0.95rem;
   line-height: 1;
   color: #64748b;
