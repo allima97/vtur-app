@@ -45,7 +45,6 @@ export default function AppField(props: AppFieldProps) {
   const controlId = id || generatedId;
   const validationStatus = validation ? validationVariant : undefined;
   const inputType = as === "input" ? (rest as React.InputHTMLAttributes<HTMLInputElement>).type : undefined;
-  const showDateIcon = inputType === "date";
   const controlWrapClassName = ["vtur-app-field-control", inputType === "date" ? "is-date" : ""]
     .filter(Boolean)
     .join(" ");
@@ -90,7 +89,6 @@ export default function AppField(props: AppFieldProps) {
             {...(rest as React.InputHTMLAttributes<HTMLInputElement>)}
           />
         )}
-        {showDateIcon ? <i className="pi pi-calendar vtur-date-input-icon" aria-hidden="true" /> : null}
       </div>
 
       {caption && <small className="vtur-app-field-caption">{caption}</small>}
