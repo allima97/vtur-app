@@ -5,6 +5,7 @@ type DataTableProps = {
   className?: string;
   containerClassName?: string;
   containerStyle?: React.CSSProperties;
+  containerRef?: React.Ref<HTMLDivElement>;
   shellClassName?: string;
   headers: React.ReactNode;
   children?: React.ReactNode;
@@ -19,6 +20,7 @@ export default function DataTable({
   className,
   containerClassName,
   containerStyle,
+  containerRef,
   shellClassName,
   headers,
   children,
@@ -35,6 +37,7 @@ export default function DataTable({
   return (
     <section className={["vtur-data-table-shell", shellClassName].filter(Boolean).join(" ")}>
       <div
+        ref={containerRef}
         className={`table-container overflow-x-auto vtur-data-table-container ${containerClassName || ""}`.trim()}
         style={containerStyle}
       >

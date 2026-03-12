@@ -7,6 +7,7 @@ import IslandErrorBoundary from "../ui/IslandErrorBoundary";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
 import { formatCurrencyBRL, formatDateBR } from "../../lib/format";
 import { useMasterScope } from "../../lib/useMasterScope";
+import DataTable from "../ui/DataTable";
 import {
   construirLinkWhatsAppComTexto,
   construirUrlCartaoAniversario,
@@ -941,33 +942,29 @@ function DashboardGestorIslandInner() {
         <div className="card-base card-purple mb-3">
           {!hideTitle && <h3 style={{ marginBottom: 8 }}>Ranking da equipe</h3>}
 
-          <div className="table-container overflow-x-auto">
-            <table className="table-default table-mobile-cards min-w-[480px]">
-              <thead>
-                <tr>
-                  <th>Vendedor</th>
-                  <th>Total vendido</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {rankingEquipe.length === 0 && (
-                  <tr>
-                    <td colSpan={2}>Sem vendas no período.</td>
-                  </tr>
-                )}
-
-                {rankingEquipe.map((item, idx) => (
-                  <tr key={item.vendedor_id}>
-                    <td data-label="Vendedor">
-                      #{idx + 1} — {item.nome}
-                    </td>
-                    <td data-label="Total vendido">{formatCurrency(item.total)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            shellClassName="vtur-data-table-shellless"
+            className="table-default table-mobile-cards min-w-[480px]"
+            headers={
+              <tr>
+                <th>Vendedor</th>
+                <th>Total vendido</th>
+              </tr>
+            }
+            loading={loadingDados}
+            empty={rankingEquipe.length === 0}
+            emptyMessage="Sem vendas no período."
+            colSpan={2}
+          >
+            {rankingEquipe.map((item, idx) => (
+              <tr key={item.vendedor_id}>
+                <td data-label="Vendedor">
+                  #{idx + 1} — {item.nome}
+                </td>
+                <td data-label="Total vendido">{formatCurrency(item.total)}</td>
+              </tr>
+            ))}
+          </DataTable>
         </div>
       );
     }
@@ -1051,33 +1048,31 @@ function DashboardGestorIslandInner() {
               Orçamentos recentes ({orcamentosRecentes.length})
             </h3>
           )}
-          <div className="table-container overflow-x-auto">
-            <table className="table-default table-mobile-cards min-w-[520px]">
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Cliente</th>
-                  <th>Destino</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orcamentosRecentes.length === 0 && (
-                  <tr>
-                    <td colSpan={4}>Nenhum orçamento no período.</td>
-                  </tr>
-                )}
-                {orcamentosRecentes.map((o) => (
-                  <tr key={o.id}>
-                    <td data-label="Data">{formatarDataParaExibicao(o.created_at)}</td>
-                    <td data-label="Cliente">{o.cliente?.nome || "—"}</td>
-                    <td data-label="Destino">{getOrcamentoDestino(o)}</td>
-                    <td data-label="Total">{formatCurrency(Number(o.total || 0))}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            shellClassName="vtur-data-table-shellless"
+            className="table-default table-mobile-cards min-w-[520px]"
+            headers={
+              <tr>
+                <th>Data</th>
+                <th>Cliente</th>
+                <th>Destino</th>
+                <th>Total</th>
+              </tr>
+            }
+            loading={loadingDados}
+            empty={orcamentosRecentes.length === 0}
+            emptyMessage="Nenhum orçamento no período."
+            colSpan={4}
+          >
+            {orcamentosRecentes.map((o) => (
+              <tr key={o.id}>
+                <td data-label="Data">{formatarDataParaExibicao(o.created_at)}</td>
+                <td data-label="Cliente">{o.cliente?.nome || "—"}</td>
+                <td data-label="Destino">{getOrcamentoDestino(o)}</td>
+                <td data-label="Total">{formatCurrency(Number(o.total || 0))}</td>
+              </tr>
+            ))}
+          </DataTable>
         </div>
       );
     }
@@ -1116,71 +1111,75 @@ function DashboardGestorIslandInner() {
               Aniversariantes (clientes e acompanhantes) — {monthLabel} ({items.length})
             </h3>
           )}
-          <div className="table-container overflow-x-auto">
-            <table className="table-default table-mobile-cards min-w-[520px]">
-              <thead>
-                <tr>
-                  <th>Cliente</th>
-                  <th>Nascimento</th>
-                  <th>Telefone</th>
-                  <th className="th-actions">Ações</th>
+          <DataTable
+            shellClassName="vtur-data-table-shellless"
+            className="table-default table-mobile-cards min-w-[520px]"
+            headers={
+              <tr>
+                <th>Cliente</th>
+                <th>Nascimento</th>
+                <th>Telefone</th>
+                <th className="th-actions">Ações</th>
+              </tr>
+            }
+            loading={loadingDados}
+            empty={items.length === 0}
+            emptyMessage="Nenhum aniversariante de cliente/acompanhante este mês."
+            colSpan={4}
+          >
+            {items.map((c) => {
+              const cardUrl = construirUrlCartaoAniversario(c.nome, assinaturaUsuario);
+              const mensagemBase = montarMensagemAniversario(c.nome, assinaturaUsuario);
+              const mensagem = cardUrl ? `${mensagemBase}\n\nCartão: ${cardUrl}` : mensagemBase;
+              const whatsappLink = construirLinkWhatsAppComTexto(c.telefone, mensagem, "55");
+              return (
+                <tr key={c.id}>
+                  <td data-label="Cliente">
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <span aria-hidden="true">{c.pessoa_tipo === "acompanhante" ? "🧑‍🤝‍🧑" : "👤"}</span>
+                      <span>{c.nome || "-"}</span>
+                    </span>
+                  </td>
+                  <td data-label="Nascimento">
+                    {c.nascimento ? formatarDataParaExibicao(c.nascimento) : "-"}
+                  </td>
+                  <td data-label="Telefone">{c.telefone || "-"}</td>
+                  <td className="th-actions" data-label="Ações">
+                    <div className="action-buttons">
+                      {whatsappLink ? (
+                        <a
+                          className="btn-icon"
+                          href={whatsappLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Enviar cartão de aniversário no WhatsApp"
+                        >
+                          🎂
+                        </a>
+                      ) : (
+                        "-"
+                      )}
+                      {c.cliente_id ? (
+                        <a
+                          className="btn-icon"
+                          href={`/clientes/cadastro?id=${c.cliente_id}`}
+                          title={
+                            c.pessoa_tipo === "acompanhante"
+                              ? "Ver cliente titular do acompanhante"
+                              : "Ver cliente"
+                          }
+                        >
+                          👤
+                        </a>
+                      ) : (
+                        "-"
+                      )}
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {items.length === 0 && (
-                  <tr>
-                    <td colSpan={4}>Nenhum aniversariante de cliente/acompanhante este mês.</td>
-                  </tr>
-                )}
-                {items.map((c) => {
-                  const cardUrl = construirUrlCartaoAniversario(c.nome, assinaturaUsuario);
-                  const mensagemBase = montarMensagemAniversario(c.nome, assinaturaUsuario);
-                  const mensagem = cardUrl ? `${mensagemBase}\n\nCartão: ${cardUrl}` : mensagemBase;
-                  const whatsappLink = construirLinkWhatsAppComTexto(c.telefone, mensagem, "55");
-                  return (
-                  <tr key={c.id}>
-                    <td data-label="Cliente">
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                        <span aria-hidden="true">{c.pessoa_tipo === "acompanhante" ? "🧑‍🤝‍🧑" : "👤"}</span>
-                        <span>{c.nome || "-"}</span>
-                      </span>
-                    </td>
-                    <td data-label="Nascimento">
-                      {c.nascimento ? formatarDataParaExibicao(c.nascimento) : "-"}
-                    </td>
-                    <td data-label="Telefone">{c.telefone || "-"}</td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        {whatsappLink ? (
-                          <a className="btn-icon" href={whatsappLink} target="_blank" rel="noreferrer" title="Enviar cartão de aniversário no WhatsApp">
-                            🎂
-                          </a>
-                        ) : (
-                          "-"
-                        )}
-                        {c.cliente_id ? (
-                          <a
-                            className="btn-icon"
-                            href={`/clientes/cadastro?id=${c.cliente_id}`}
-                            title={
-                              c.pessoa_tipo === "acompanhante"
-                                ? "Ver cliente titular do acompanhante"
-                                : "Ver cliente"
-                            }
-                          >
-                            👤
-                          </a>
-                        ) : (
-                          "-"
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+              );
+            })}
+          </DataTable>
         </div>
       );
     }
@@ -1193,43 +1192,41 @@ function DashboardGestorIslandInner() {
               Próximas viagens ({viagensProximas.length})
             </h3>
           )}
-          <div className="table-container overflow-x-auto">
-            <table className="table-default table-mobile-cards min-w-[520px]">
-              <thead>
-                <tr>
-                  <th>Data Início</th>
-                  <th>Cliente</th>
-                  <th>Destino</th>
-                  <th>Status</th>
-                  <th className="th-actions">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {viagensProximas.length === 0 && (
-                  <tr>
-                    <td colSpan={5}>Nenhuma viagem nos próximos dias.</td>
-                  </tr>
-                )}
-                {viagensProximas.map((v) => (
-                  <tr key={v.id}>
-                    <td data-label="Data Início">{formatarDataParaExibicao(v.data_inicio)}</td>
-                    <td data-label="Cliente">{v.clientes?.nome || "—"}</td>
-                    <td data-label="Destino">{v.destino || "—"}</td>
-                    <td data-label="Status">{v.status || "—"}</td>
-                    <td className="th-actions" data-label="Ver">
-                      <div className="action-buttons">
-                        {v.clientes?.id && (
-                          <a className="btn-icon" href={`/clientes/cadastro?id=${v.clientes.id}`} title="Ver cliente">
-                            👤
-                          </a>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            shellClassName="vtur-data-table-shellless"
+            className="table-default table-mobile-cards min-w-[520px]"
+            headers={
+              <tr>
+                <th>Data Início</th>
+                <th>Cliente</th>
+                <th>Destino</th>
+                <th>Status</th>
+                <th className="th-actions">Ações</th>
+              </tr>
+            }
+            loading={loadingDados}
+            empty={viagensProximas.length === 0}
+            emptyMessage="Nenhuma viagem nos próximos dias."
+            colSpan={5}
+          >
+            {viagensProximas.map((v) => (
+              <tr key={v.id}>
+                <td data-label="Data Início">{formatarDataParaExibicao(v.data_inicio)}</td>
+                <td data-label="Cliente">{v.clientes?.nome || "—"}</td>
+                <td data-label="Destino">{v.destino || "—"}</td>
+                <td data-label="Status">{v.status || "—"}</td>
+                <td className="th-actions" data-label="Ver">
+                  <div className="action-buttons">
+                    {v.clientes?.id && (
+                      <a className="btn-icon" href={`/clientes/cadastro?id=${v.clientes.id}`} title="Ver cliente">
+                        👤
+                      </a>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </DataTable>
         </div>
       );
     }
@@ -1242,63 +1239,61 @@ function DashboardGestorIslandInner() {
               Follow-up ({followUpsRecentes.length})
             </h3>
           )}
-          <div className="table-container overflow-x-auto">
-            <table className="table-default table-mobile-cards min-w-[520px]">
-              <thead>
-                <tr>
-                  <th>Retorno</th>
-                  <th>Cliente</th>
-                  <th>Destino</th>
-                  <th className="th-actions">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {followUpsRecentes.length === 0 && (
-                  <tr>
-                    <td colSpan={4}>Nenhum follow-up no período.</td>
-                  </tr>
-                )}
-                {followUpsRecentes.map((f) => (
-                  <tr key={f.id}>
-                    <td data-label="Retorno">
-                      {formatarDataParaExibicao(f.data_fim || f.venda?.data_final || "")}
-                    </td>
-                    <td data-label="Cliente">{f.venda?.clientes?.nome || "—"}</td>
-                    <td data-label="Destino">{f.venda?.destino_cidade?.nome || "—"}</td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        {f.venda?.clientes?.id && (
-                          <a className="btn-icon" href={`/clientes/cadastro?id=${f.venda.clientes.id}`} title="Ver cliente">
-                            👤
-                          </a>
-                        )}
-                        {(() => {
-                          const mensagem = montarMensagemFollowUp(f.venda?.clientes?.nome, assinaturaUsuario);
-                          const whatsappLink = construirLinkWhatsAppComTexto(
-                            f.venda?.clientes?.whatsapp || f.venda?.clientes?.telefone || null,
-                            mensagem,
-                            "55"
-                          );
-                          if (!whatsappLink) return null;
-                          return (
-                            <a
-                              className="btn-icon"
-                              href={whatsappLink}
-                              target="_blank"
-                              rel="noreferrer"
-                              title="Enviar follow-up no WhatsApp"
-                            >
-                              💬
-                            </a>
-                          );
-                        })()}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            shellClassName="vtur-data-table-shellless"
+            className="table-default table-mobile-cards min-w-[520px]"
+            headers={
+              <tr>
+                <th>Retorno</th>
+                <th>Cliente</th>
+                <th>Destino</th>
+                <th className="th-actions">Ações</th>
+              </tr>
+            }
+            loading={loadingDados}
+            empty={followUpsRecentes.length === 0}
+            emptyMessage="Nenhum follow-up no período."
+            colSpan={4}
+          >
+            {followUpsRecentes.map((f) => (
+              <tr key={f.id}>
+                <td data-label="Retorno">
+                  {formatarDataParaExibicao(f.data_fim || f.venda?.data_final || "")}
+                </td>
+                <td data-label="Cliente">{f.venda?.clientes?.nome || "—"}</td>
+                <td data-label="Destino">{f.venda?.destino_cidade?.nome || "—"}</td>
+                <td className="th-actions" data-label="Ações">
+                  <div className="action-buttons">
+                    {f.venda?.clientes?.id && (
+                      <a className="btn-icon" href={`/clientes/cadastro?id=${f.venda.clientes.id}`} title="Ver cliente">
+                        👤
+                      </a>
+                    )}
+                    {(() => {
+                      const mensagem = montarMensagemFollowUp(f.venda?.clientes?.nome, assinaturaUsuario);
+                      const whatsappLink = construirLinkWhatsAppComTexto(
+                        f.venda?.clientes?.whatsapp || f.venda?.clientes?.telefone || null,
+                        mensagem,
+                        "55"
+                      );
+                      if (!whatsappLink) return null;
+                      return (
+                        <a
+                          className="btn-icon"
+                          href={whatsappLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Enviar follow-up no WhatsApp"
+                        >
+                          💬
+                        </a>
+                      );
+                    })()}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </DataTable>
         </div>
       );
     }

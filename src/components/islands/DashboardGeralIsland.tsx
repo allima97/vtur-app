@@ -16,6 +16,7 @@ import {
   montarMensagemFollowUp,
 } from "../../lib/whatsapp";
 import CalculatorModal from "../ui/CalculatorModal";
+import DataTable from "../ui/DataTable";
 import {
   ResponsiveContainer,
   BarChart,
@@ -1732,77 +1733,79 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
                 Aniversariantes (clientes e acompanhantes) — {monthLabel} ({items.length})
               </h3>
             )}
-            <div
-              className="table-container overflow-x-auto"
-              style={{
+            <DataTable
+              shellClassName="vtur-data-table-shellless"
+              containerStyle={{
                 maxHeight: shouldScroll ? tableScrollMaxHeight : undefined,
                 overflowY: shouldScroll ? "auto" : "visible",
               }}
+              className="table-default table-mobile-cards min-w-[640px]"
+              headers={
+                <tr>
+                  <th>Cliente</th>
+                  <th>Nascimento</th>
+                  <th>Telefone</th>
+                  <th className="th-actions">Ações</th>
+                </tr>
+              }
+              loading={loadingDados}
+              empty={items.length === 0}
+              emptyMessage="Nenhum aniversariante de cliente/acompanhante este mês."
+              colSpan={4}
             >
-              <table className="table-default table-mobile-cards min-w-[640px]">
-                <thead>
-                  <tr>
-                    <th>Cliente</th>
-                    <th>Nascimento</th>
-                    <th>Telefone</th>
-                    <th className="th-actions">Ações</th>
+              {items.map((c) => {
+                const cardUrl = construirUrlCartaoAniversario(c.nome, assinaturaUsuario);
+                const mensagemBase = montarMensagemAniversario(c.nome, assinaturaUsuario);
+                const mensagem = cardUrl ? `${mensagemBase}\n\nCartão: ${cardUrl}` : mensagemBase;
+                const whatsappLink = construirLinkWhatsAppComTexto(c.telefone, mensagem, "55");
+                return (
+                  <tr key={c.id}>
+                    <td data-label="Cliente">
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <span aria-hidden="true">{c.pessoa_tipo === "acompanhante" ? "🧑‍🤝‍🧑" : "👤"}</span>
+                        <span>{c.nome || "-"}</span>
+                      </span>
+                    </td>
+                    <td data-label="Nascimento">
+                      {c.nascimento ? formatarDataParaExibicao(c.nascimento) : "-"}
+                    </td>
+                    <td data-label="Telefone">{c.telefone || "-"}</td>
+                    <td className="th-actions" data-label="Ações">
+                      <div className="action-buttons">
+                        {whatsappLink ? (
+                          <a
+                            className="btn-icon"
+                            href={whatsappLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            title="Enviar cartão de aniversário no WhatsApp"
+                          >
+                            🎂
+                          </a>
+                        ) : (
+                          "-"
+                        )}
+                        {c.cliente_id ? (
+                          <a
+                            className="btn-icon"
+                            href={`/clientes/cadastro?id=${c.cliente_id}`}
+                            title={
+                              c.pessoa_tipo === "acompanhante"
+                                ? "Ver cliente titular do acompanhante"
+                                : "Ver cliente"
+                            }
+                          >
+                            👤
+                          </a>
+                        ) : (
+                          "-"
+                        )}
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {items.length === 0 && (
-                    <tr>
-                      <td colSpan={4}>Nenhum aniversariante de cliente/acompanhante este mês.</td>
-                    </tr>
-                  )}
-                  {items.map((c) => {
-                    const cardUrl = construirUrlCartaoAniversario(c.nome, assinaturaUsuario);
-                    const mensagemBase = montarMensagemAniversario(c.nome, assinaturaUsuario);
-                    const mensagem = cardUrl ? `${mensagemBase}\n\nCartão: ${cardUrl}` : mensagemBase;
-                    const whatsappLink = construirLinkWhatsAppComTexto(c.telefone, mensagem, "55");
-                    return (
-                    <tr key={c.id}>
-                      <td data-label="Cliente">
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                          <span aria-hidden="true">{c.pessoa_tipo === "acompanhante" ? "🧑‍🤝‍🧑" : "👤"}</span>
-                          <span>{c.nome || "-"}</span>
-                        </span>
-                      </td>
-                      <td data-label="Nascimento">
-                        {c.nascimento ? formatarDataParaExibicao(c.nascimento) : "-"}
-                      </td>
-                      <td data-label="Telefone">{c.telefone || "-"}</td>
-                      <td className="th-actions" data-label="Ações">
-                        <div className="action-buttons">
-                          {whatsappLink ? (
-                            <a className="btn-icon" href={whatsappLink} target="_blank" rel="noreferrer" title="Enviar cartão de aniversário no WhatsApp">
-                              🎂
-                            </a>
-                          ) : (
-                            "-"
-                          )}
-                          {c.cliente_id ? (
-                            <a
-                              className="btn-icon"
-                              href={`/clientes/cadastro?id=${c.cliente_id}`}
-                              title={
-                                c.pessoa_tipo === "acompanhante"
-                                  ? "Ver cliente titular do acompanhante"
-                                  : "Ver cliente"
-                              }
-                            >
-                              👤
-                            </a>
-                          ) : (
-                            "-"
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                );
+              })}
+            </DataTable>
           </>
         );
 
@@ -1815,49 +1818,45 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
             {!hideTitle && (
               <h3 style={{ marginBottom: 8 }}>Orçamentos recentes ({orcamentosRecentes.length})</h3>
             )}
-            <div
-              className="table-container overflow-x-auto"
-              style={{
+            <DataTable
+              shellClassName="vtur-data-table-shellless"
+              containerStyle={{
                 maxHeight: shouldScrollOrcamentos ? tableScrollMaxHeight : undefined,
                 overflowY: shouldScrollOrcamentos ? "auto" : "visible",
               }}
+              className="table-default table-mobile-cards min-w-[680px]"
+              headers={
+                <tr>
+                  <th>Data</th>
+                  <th>Cliente</th>
+                  <th>Destino</th>
+                  <th>Status</th>
+                  <th>Valor</th>
+                  <th className="th-actions">Ações</th>
+                </tr>
+              }
+              loading={loadingDados}
+              empty={orcamentosRecentes.length === 0}
+              emptyMessage="Nenhum orçamento no período."
+              colSpan={6}
             >
-              <table className="table-default table-mobile-cards min-w-[680px]">
-                <thead>
-                  <tr>
-                    <th>Data</th>
-                    <th>Cliente</th>
-                    <th>Destino</th>
-                    <th>Status</th>
-                    <th>Valor</th>
-                    <th className="th-actions">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orcamentosRecentes.length === 0 && (
-                    <tr>
-                      <td colSpan={6}>Nenhum orçamento no período.</td>
-                    </tr>
-                  )}
-                  {orcamentosRecentes.map((o) => (
-                    <tr key={o.id}>
-                      <td data-label="Data">{formatarDataParaExibicao(o.created_at)}</td>
-                      <td data-label="Cliente">{o.cliente?.nome || "-"}</td>
-                      <td data-label="Destino">{getOrcamentoDestino(o)}</td>
-                      <td data-label="Status">{o.status_negociacao || o.status || "-"}</td>
-                      <td data-label="Valor">{formatCurrency(Number(o.total || 0))}</td>
-                      <td className="th-actions" data-label="Ver">
-                        <div className="action-buttons">
-                          <button className="btn-icon" onClick={() => setOrcamentoSelecionado(o)} title="Ver detalhes">
-                            👁️
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+              {orcamentosRecentes.map((o) => (
+                <tr key={o.id}>
+                  <td data-label="Data">{formatarDataParaExibicao(o.created_at)}</td>
+                  <td data-label="Cliente">{o.cliente?.nome || "-"}</td>
+                  <td data-label="Destino">{getOrcamentoDestino(o)}</td>
+                  <td data-label="Status">{o.status_negociacao || o.status || "-"}</td>
+                  <td data-label="Valor">{formatCurrency(Number(o.total || 0))}</td>
+                  <td className="th-actions" data-label="Ver">
+                    <div className="action-buttons">
+                      <button className="btn-icon" onClick={() => setOrcamentoSelecionado(o)} title="Ver detalhes">
+                        👁️
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </DataTable>
           </>
         );
         return isPlain ? <div className="mb-3">{conteudo}</div> : <div className="card-base card-purple mb-3">{conteudo}</div>;
@@ -1872,67 +1871,63 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
             {!podeVerConsultoria ? (
               <div>Você não possui acesso ao módulo de Consultoria.</div>
             ) : (
-              <div
-                className="table-container overflow-x-auto"
-                style={{
+              <DataTable
+                shellClassName="vtur-data-table-shellless"
+                containerStyle={{
                   maxHeight: shouldScrollConsultorias ? tableScrollMaxHeight : undefined,
                   overflowY: shouldScrollConsultorias ? "auto" : "visible",
                 }}
+                className="table-default table-mobile-cards min-w-[720px]"
+                headers={
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Lembrete</th>
+                    <th>Agendamento</th>
+                    <th>Destino</th>
+                    <th className="th-actions">Ver</th>
+                  </tr>
+                }
+                loading={loadingDados}
+                empty={lembretesDashboard.length === 0}
+                emptyMessage="Nenhum lembrete de consultoria."
+                colSpan={5}
               >
-                <table className="table-default table-mobile-cards min-w-[720px]">
-                  <thead>
-                    <tr>
-                      <th>Cliente</th>
-                      <th>Lembrete</th>
-                      <th>Agendamento</th>
-                      <th>Destino</th>
-                      <th className="th-actions">Ver</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lembretesDashboard.length === 0 && (
-                      <tr>
-                        <td colSpan={5}>Nenhum lembrete de consultoria.</td>
-                      </tr>
-                    )}
-                    {lembretesDashboard.map((item) => (
-                      <tr key={item.storageKey}>
-                        <td data-label="Cliente">{item.clienteNome}</td>
-                        <td data-label="Lembrete">
-                          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                            <span>{item.lembreteLabel}</span>
-                            <small>{item.lembreteAtLocal}</small>
-                            <small>{item.statusLabel}</small>
-                          </div>
-                        </td>
-                        <td data-label="Agendamento">
-                          {item.dataHoraLocal}
-                          <br />
-                          <small>
-                            <a className="link" href={`/api/consultorias/ics?id=${item.id}`} target="_blank" rel="noreferrer">
-                              Adicionar ao calendario
-                            </a>
-                          </small>
-                        </td>
-                        <td data-label="Destino">{item.destino || "-"}</td>
-                        <td className="th-actions" data-label="Ver">
-                          <div className="action-buttons">
-                            {item.orcamentoId ? (
-                              <a className="btn-icon" href={`/orcamentos/${item.orcamentoId}`} title="Abrir orçamento">
-                                👁️
-                              </a>
-                            ) : (
-                              <a className="btn-icon" href="/consultoria-online" title="Abrir consultorias">
-                                📅
-                              </a>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                {lembretesDashboard.map((item) => (
+                  <tr key={item.storageKey}>
+                    <td data-label="Cliente">{item.clienteNome}</td>
+                    <td data-label="Lembrete">
+                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        <span>{item.lembreteLabel}</span>
+                        <small>{item.lembreteAtLocal}</small>
+                        <small>{item.statusLabel}</small>
+                      </div>
+                    </td>
+                    <td data-label="Agendamento">
+                      {item.dataHoraLocal}
+                      <br />
+                      <small>
+                        <a className="link" href={`/api/consultorias/ics?id=${item.id}`} target="_blank" rel="noreferrer">
+                          Adicionar ao calendario
+                        </a>
+                      </small>
+                    </td>
+                    <td data-label="Destino">{item.destino || "-"}</td>
+                    <td className="th-actions" data-label="Ver">
+                      <div className="action-buttons">
+                        {item.orcamentoId ? (
+                          <a className="btn-icon" href={`/orcamentos/${item.orcamentoId}`} title="Abrir orçamento">
+                            👁️
+                          </a>
+                        ) : (
+                          <a className="btn-icon" href="/consultoria-online" title="Abrir consultorias">
+                            📅
+                          </a>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </DataTable>
             )}
           </>
         );
@@ -1950,63 +1945,59 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
             {!podeVerOperacao ? (
               <div>Você não possui acesso ao módulo de Operação/Viagens.</div>
             ) : (
-              <div
-                className="table-container overflow-x-auto"
-                style={{
+              <DataTable
+                shellClassName="vtur-data-table-shellless"
+                containerRef={viagensScrollRef}
+                containerStyle={{
                   maxHeight: shouldScrollViagens ? tableScrollMaxHeight : undefined,
                   overflowY: shouldScrollViagens ? "auto" : "visible",
                 }}
-                ref={viagensScrollRef}
+                className="table-default table-mobile-cards min-w-[760px]"
+                headers={
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Serviços</th>
+                    <th>Embarque</th>
+                    <th>Destino</th>
+                    <th className="th-actions">Ver</th>
+                  </tr>
+                }
+                loading={loadingDados}
+                empty={proximasViagensAgrupadas.length === 0}
+                emptyMessage="Nenhuma viagem futura."
+                colSpan={5}
               >
-                <table className="table-default table-mobile-cards min-w-[760px]">
-                  <thead>
-                    <tr>
-                      <th>Cliente</th>
-                      <th>Serviços</th>
-                      <th>Embarque</th>
-                      <th>Destino</th>
-                      <th className="th-actions">Ver</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {proximasViagensAgrupadas.length === 0 && (
-                      <tr>
-                        <td colSpan={5}>Nenhuma viagem futura.</td>
-                      </tr>
-                    )}
-                    {proximasViagensAgrupadas.map((v) => (
-                      <tr key={v.key}>
-                        <td data-label="Cliente">{v.clienteNome || "-"}</td>
-                        <td data-label="Serviços">
-                          {v.produtos.length === 0 ? (
-                            "-"
-                          ) : (
-                            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                              {v.produtos.map((p, idx) => (
-                                <span key={`${v.key}-prod-${idx}`}>{p}</span>
-                              ))}
-                            </div>
-                          )}
-                        </td>
-                        <td data-label="Embarque">{formatarDataParaExibicao(v.dataInicio)}</td>
-                        <td data-label="Destino">{v.destino || "-"}</td>
-                        <td className="th-actions" data-label="Ver">
-                          <div className="action-buttons">
-                            {v.clienteId && (
-                              <a className="btn-icon" href={`/clientes/cadastro?id=${v.clienteId}`} title="Ver cliente">
-                                👤
-                              </a>
-                            )}
-                            <a className="btn-icon" href={`/operacao/viagens/${v.viagemId}`} title="Ver viagem">
-                              👁️
-                            </a>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                {proximasViagensAgrupadas.map((v) => (
+                  <tr key={v.key}>
+                    <td data-label="Cliente">{v.clienteNome || "-"}</td>
+                    <td data-label="Serviços">
+                      {v.produtos.length === 0 ? (
+                        "-"
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          {v.produtos.map((p, idx) => (
+                            <span key={`${v.key}-prod-${idx}`}>{p}</span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                    <td data-label="Embarque">{formatarDataParaExibicao(v.dataInicio)}</td>
+                    <td data-label="Destino">{v.destino || "-"}</td>
+                    <td className="th-actions" data-label="Ver">
+                      <div className="action-buttons">
+                        {v.clienteId && (
+                          <a className="btn-icon" href={`/clientes/cadastro?id=${v.clienteId}`} title="Ver cliente">
+                            👤
+                          </a>
+                        )}
+                        <a className="btn-icon" href={`/operacao/viagens/${v.viagemId}`} title="Ver viagem">
+                          👁️
+                        </a>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </DataTable>
             )}
           </>
         );
@@ -2019,76 +2010,72 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
             {!hideTitle && (
               <h3 style={{ marginBottom: 8 }}>Follow-Up ({followUpsRecentes.length})</h3>
             )}
-            <div
-              className="table-container overflow-x-auto"
-              style={{
+            <DataTable
+              shellClassName="vtur-data-table-shellless"
+              containerStyle={{
                 maxHeight: shouldScrollFollowUp ? tableScrollMaxHeight : undefined,
                 overflowY: shouldScrollFollowUp ? "auto" : "visible",
               }}
+              className="table-default table-mobile-cards min-w-[640px]"
+              headers={
+                <tr>
+                  <th>Cliente</th>
+                  <th>Destino</th>
+                  <th>Embarque</th>
+                  <th>Retorno</th>
+                  <th className="th-actions">Ações</th>
+                </tr>
+              }
+              loading={loadingDados}
+              empty={followUpsRecentes.length === 0}
+              emptyMessage="Nenhum retorno no período."
+              colSpan={5}
             >
-              <table className="table-default table-mobile-cards min-w-[640px]">
-                <thead>
-                  <tr>
-                    <th>Cliente</th>
-                    <th>Destino</th>
-                    <th>Embarque</th>
-                    <th>Retorno</th>
-                    <th className="th-actions">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {followUpsRecentes.length === 0 && (
-                    <tr>
-                      <td colSpan={5}>Nenhum retorno no período.</td>
-                    </tr>
-                  )}
-                  {followUpsRecentes.map((item) => (
-                    <tr key={item.id}>
-                      <td data-label="Cliente">{item.venda?.clientes?.nome || "-"}</td>
-                      <td data-label="Destino">{item.venda?.destino_cidade?.nome || "-"}</td>
-                      <td data-label="Embarque">
-                        {formatarDataParaExibicao(item.data_inicio || item.venda?.data_embarque || "")}
-                      </td>
-                      <td data-label="Retorno">
-                        {formatarDataParaExibicao(item.data_fim || item.venda?.data_final || "")}
-                      </td>
-                      <td className="th-actions" data-label="Ações">
-                        <div className="action-buttons">
-                          {item.venda?.clientes?.id && (
-                            <a className="btn-icon" href={`/clientes/cadastro?id=${item.venda.clientes.id}`} title="Ver cliente">
-                              👤
-                            </a>
-                          )}
-                          {(() => {
-                            const mensagem = montarMensagemFollowUp(item.venda?.clientes?.nome, assinaturaUsuario);
-                            const whatsappLink = construirLinkWhatsAppComTexto(
-                              item.venda?.clientes?.whatsapp || item.venda?.clientes?.telefone || null,
-                              mensagem,
-                              "55"
-                            );
-                            if (!whatsappLink) return null;
-                            return (
-                              <a
-                                className="btn-icon"
-                                href={whatsappLink}
-                                target="_blank"
-                                rel="noreferrer"
-                                title="Enviar follow-up no WhatsApp"
-                              >
-                                💬
-                              </a>
-                            );
-                          })()}
-                          <a className="btn-icon" href={`/operacao/viagens/${item.id}`} title="Ver viagem">
-                            👁️
+              {followUpsRecentes.map((item) => (
+                <tr key={item.id}>
+                  <td data-label="Cliente">{item.venda?.clientes?.nome || "-"}</td>
+                  <td data-label="Destino">{item.venda?.destino_cidade?.nome || "-"}</td>
+                  <td data-label="Embarque">
+                    {formatarDataParaExibicao(item.data_inicio || item.venda?.data_embarque || "")}
+                  </td>
+                  <td data-label="Retorno">
+                    {formatarDataParaExibicao(item.data_fim || item.venda?.data_final || "")}
+                  </td>
+                  <td className="th-actions" data-label="Ações">
+                    <div className="action-buttons">
+                      {item.venda?.clientes?.id && (
+                        <a className="btn-icon" href={`/clientes/cadastro?id=${item.venda.clientes.id}`} title="Ver cliente">
+                          👤
+                        </a>
+                      )}
+                      {(() => {
+                        const mensagem = montarMensagemFollowUp(item.venda?.clientes?.nome, assinaturaUsuario);
+                        const whatsappLink = construirLinkWhatsAppComTexto(
+                          item.venda?.clientes?.whatsapp || item.venda?.clientes?.telefone || null,
+                          mensagem,
+                          "55"
+                        );
+                        if (!whatsappLink) return null;
+                        return (
+                          <a
+                            className="btn-icon"
+                            href={whatsappLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            title="Enviar follow-up no WhatsApp"
+                          >
+                            💬
                           </a>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        );
+                      })()}
+                      <a className="btn-icon" href={`/operacao/viagens/${item.id}`} title="Ver viagem">
+                        👁️
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </DataTable>
           </>
         );
         return isPlain ? <div className="mb-3">{conteudo}</div> : <div className="card-base card-purple mb-3">{conteudo}</div>;
