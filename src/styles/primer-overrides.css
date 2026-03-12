@@ -201,6 +201,58 @@
   color: #fff;
 }
 
+/* Padrão global para ação de exclusão por ícone:
+   - sem fundo vermelho
+   - sem borda
+   - apenas ícone vermelho */
+:where(.vtur-app-button.p-button-icon-only, .icon-action-btn, .btn-icon):has(.pi-trash),
+:where(.vtur-app-button.p-button-icon-only, .icon-action-btn, .btn-icon):is(
+  [aria-label*="excluir" i],
+  [title*="excluir" i],
+  [aria-label*="remover" i],
+  [title*="remover" i]
+) {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  color: #dc2626 !important;
+}
+
+:where(.vtur-app-button.p-button-icon-only, .icon-action-btn, .btn-icon):is(
+  :has(.pi-trash),
+  [aria-label*="excluir" i],
+  [title*="excluir" i],
+  [aria-label*="remover" i],
+  [title*="remover" i]
+):hover:not(:disabled):not(.p-disabled):not([aria-disabled="true"]) {
+  background: rgba(220, 38, 38, 0.09) !important;
+  border-color: transparent !important;
+  color: #b91c1c !important;
+  transform: none;
+}
+
+:where(.vtur-app-button.p-button-icon-only, .icon-action-btn, .btn-icon):is(
+  :has(.pi-trash),
+  [aria-label*="excluir" i],
+  [title*="excluir" i],
+  [aria-label*="remover" i],
+  [title*="remover" i]
+):is(:disabled, .p-disabled, [aria-disabled="true"]) {
+  color: #fca5a5 !important;
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+:where(.vtur-app-button.p-button-icon-only, .icon-action-btn, .btn-icon):is(
+  :has(.pi-trash),
+  [aria-label*="excluir" i],
+  [title*="excluir" i],
+  [aria-label*="remover" i],
+  [title*="remover" i]
+) :is(.pi, i, svg, [aria-hidden="true"]) {
+  color: inherit !important;
+}
+
 .vtur-app-field {
   gap: 8px;
   display: flex;
