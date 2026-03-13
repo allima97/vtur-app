@@ -897,13 +897,13 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
 }
 
 .auth-container {
-  max-width: 440px;
-  padding: 1rem;
+  max-width: 30rem;
+  padding: 0.9rem;
 }
 
 .auth-container.auth-container-wide {
-  max-width: 40rem;
-  padding: 1.1rem;
+  max-width: 30rem;
+  padding: 0.95rem;
 }
 
 .auth-card {
@@ -914,9 +914,15 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
 }
 
 .auth-container.auth-container-wide .auth-card.auth-card-lg {
-  width: min(100%, 34rem);
-  max-width: 34rem;
-  padding: 1.5rem 1.75rem;
+  width: min(100%, 24rem);
+  max-width: 24rem;
+  padding: 1rem 1.2rem;
+}
+
+.auth-container .auth-card.auth-card-reset {
+  width: min(100%, 24rem);
+  max-width: 24rem;
+  padding: 1rem 1.2rem;
 }
 
 .auth-card::before {
@@ -934,28 +940,30 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
 
 @media (min-width: 721px) {
   body.auth-body .auth-container {
-    max-width: 40rem !important;
+    max-width: 30rem !important;
   }
 
   body.auth-body .auth-container.auth-container-wide {
     width: 100%;
-    max-width: 40rem !important;
+    max-width: 30rem !important;
   }
 
   body.auth-body .auth-container .auth-card.auth-card-login,
   body.auth-body .auth-container .auth-card.auth-card-recover,
-  body.auth-body .auth-container .auth-card.auth-card-register {
-    width: min(92vw, 34rem) !important;
-    max-width: 34rem !important;
-    padding: 1.5rem 1.75rem !important;
+  body.auth-body .auth-container .auth-card.auth-card-register,
+  body.auth-body .auth-container .auth-card.auth-card-reset {
+    width: min(90vw, 24rem) !important;
+    max-width: 24rem !important;
+    padding: 1rem 1.2rem !important;
   }
 
   body.auth-body .auth-container.auth-container-wide .auth-card.auth-card-login,
   body.auth-body .auth-container.auth-container-wide .auth-card.auth-card-recover,
-  body.auth-body .auth-container.auth-container-wide .auth-card.auth-card-register {
-    width: min(92vw, 34rem) !important;
-    max-width: 34rem !important;
-    padding: 1.5rem 1.75rem !important;
+  body.auth-body .auth-container.auth-container-wide .auth-card.auth-card-register,
+  body.auth-body .auth-container.auth-container-wide .auth-card.auth-card-reset {
+    width: min(90vw, 24rem) !important;
+    max-width: 24rem !important;
+    padding: 1rem 1.2rem !important;
   }
 }
 
@@ -968,7 +976,13 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
   .auth-container.auth-container-wide .auth-card.auth-card-lg {
     width: 100%;
     max-width: 100%;
-    padding: 1.25rem;
+    padding: 1.15rem;
+  }
+
+  .auth-container .auth-card.auth-card-reset {
+    width: 100%;
+    max-width: 100%;
+    padding: 1.15rem;
   }
 }
 
