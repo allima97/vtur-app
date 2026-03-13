@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="240" height="144" viewBox="0 0 240 144" fill="none">
-  <rect width="240" height="144" rx="24" fill="white" fill-opacity="0.72"/>
-  <path d="M30 54C45 31 72 18 102 18C122 18 141 24 157 36" stroke="#1E3A8A" stroke-width="10" stroke-linecap="round"/>
-  <path d="M210 90C195 113 168 126 138 126C118 126 99 120 83 108" stroke="#059669" stroke-width="10" stroke-linecap="round"/>
-  <text x="120" y="92" text-anchor="middle" fill="#1E3A8A" font-size="66" font-family="Arial, Helvetica, sans-serif" font-weight="700">CVC</text>
-</svg>
