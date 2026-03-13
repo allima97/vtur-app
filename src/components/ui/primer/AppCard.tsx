@@ -7,6 +7,57 @@ type AppCardProps = React.HTMLAttributes<HTMLElement> & {
   tone?: "default" | "info" | "config";
 };
 
+type TableDetection = {
+  hasTable: boolean;
+  hasDataTable: boolean;
+};
+
+function mergeTableDetection(base: TableDetection, next: TableDetection): TableDetection {
+  return {
+    hasTable: base.hasTable || next.hasTable,
+    hasDataTable: base.hasDataTable || next.hasDataTable,
+  };
+}
+
+function detectTableContent(node: React.ReactNode): TableDetection {
+  if (node === null || node === undefined || typeof node === "boolean") {
+    return { hasTable: false, hasDataTable: false };
+  }
+
+  if (Array.isArray(node)) {
+    return node.reduce<TableDetection>(
+      (acc, child) => mergeTableDetection(acc, detectTableContent(child)),
+      { hasTable: false, hasDataTable: false }
+    );
+  }
+
+  if (!React.isValidElement(node)) {
+    return { hasTable: false, hasDataTable: false };
+  }
+
+  const rawType = node.type as unknown;
+  const isNativeTable = rawType === "table";
+  const componentName =
+    typeof rawType === "function"
+      ? (rawType as { displayName?: string; name?: string }).displayName ||
+        (rawType as { displayName?: string; name?: string }).name ||
+        ""
+      : "";
+  const isDataTableComponent = componentName === "DataTable";
+  const className = typeof node.props?.className === "string" ? node.props.className : "";
+  const classHintsTable = /\b(vtur-data-table-shell|vtur-data-table|table-default|table-mobile-cards|table-mobile-grid|ranking-table)\b/.test(
+    className
+  );
+  const classHintsDataTable = /\b(vtur-data-table-shell|vtur-data-table)\b/.test(className);
+
+  const own: TableDetection = {
+    hasTable: Boolean(isNativeTable || isDataTableComponent || classHintsTable),
+    hasDataTable: Boolean(isDataTableComponent || classHintsDataTable),
+  };
+
+  return mergeTableDetection(own, detectTableContent(node.props?.children));
+}
+
 export default function AppCard({
   title,
   subtitle,
@@ -16,10 +67,19 @@ export default function AppCard({
   children,
   ...props
 }: AppCardProps) {
+  const tableDetection = detectTableContent(children);
+  const tableLayoutClass = tableDetection.hasTable
+    ? tableDetection.hasDataTable
+      ? "vtur-app-card-has-datatable"
+      : "vtur-app-card-has-table"
+    : "";
+
   return (
     <section
       {...props}
-      className={["vtur-app-card", `vtur-app-card-${tone}`, className].filter(Boolean).join(" ")}
+      className={["vtur-app-card", `vtur-app-card-${tone}`, tableLayoutClass, className]
+        .filter(Boolean)
+        .join(" ")}
     >
       {(title || subtitle || actions) && (
         <div className="vtur-app-card-header">

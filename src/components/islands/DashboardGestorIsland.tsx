@@ -1006,7 +1006,7 @@ function DashboardGestorIslandInner() {
           subtitle={hideTitle ? undefined : "Resumo comercial consolidado do escopo atual."}
           tone="info"
         >
-          <div className="vtur-dashboard-kpi-grid">
+          <div className="vtur-dashboard-kpi-grid vtur-dashboard-kpi-grid-centered">
             {kpiOrder
               .filter((kpiId) => kpiAtivo(kpiId))
               .map((kpiId) => {
@@ -1034,7 +1034,7 @@ function DashboardGestorIslandInner() {
                   return (
                     <div className="vtur-dashboard-kpi-card" key={kpiId}>
                       <div className="vtur-dashboard-kpi-copy">
-                        <div className="vtur-dashboard-kpi-label">Ticket medio</div>
+                        <div className="vtur-dashboard-kpi-label">Ticket médio</div>
                         <div className="vtur-dashboard-kpi-value">{formatCurrency(ticketMedioEquipe)}</div>
                       </div>
                     </div>
@@ -1082,7 +1082,7 @@ function DashboardGestorIslandInner() {
               </tr>
             }
             empty={rankingEquipe.length === 0}
-            emptyMessage="Sem vendas no periodo."
+            emptyMessage="Sem vendas no período."
             colSpan={2}
             className="table-mobile-cards table-header-blue min-w-[480px]"
           >
@@ -1109,7 +1109,7 @@ function DashboardGestorIslandInner() {
       return (
         <AppCard
           title={hideTitle ? undefined : "Vendas por consultor"}
-          subtitle={hideTitle ? undefined : "Compare distribuicao da equipe em grafico de pizza e barras."}
+          subtitle={hideTitle ? undefined : "Compare a distribuição da equipe em gráfico de pizza e barras."}
           tone="info"
         >
           <div
@@ -1140,8 +1140,8 @@ function DashboardGestorIslandInner() {
       const evolucaoLineConfig = toLineChartConfig(evolucaoTimeline, formatCurrency);
       return (
         <AppCard
-          title={hideTitle ? undefined : "Evolucao de vendas da equipe"}
-          subtitle={hideTitle ? undefined : "Linha temporal de vendas consolidadas no periodo."}
+          title={hideTitle ? undefined : "Evolução de vendas da equipe"}
+          subtitle={hideTitle ? undefined : "Linha temporal de vendas consolidadas no período."}
           tone="info"
         >
           <div style={{ width: "100%", height: 260 }}>
@@ -1163,8 +1163,8 @@ function DashboardGestorIslandInner() {
     if (id === "orcamentos") {
       return (
         <AppCard
-          title={hideTitle ? undefined : `Orcamentos recentes (${orcamentosRecentes.length})`}
-          subtitle={hideTitle ? undefined : "Ultimas propostas geradas pela equipe."}
+          title={hideTitle ? undefined : `Orçamentos recentes (${orcamentosRecentes.length})`}
+          subtitle={hideTitle ? undefined : "Últimas propostas geradas pela equipe."}
           tone="info"
         >
           <DataTable
@@ -1177,7 +1177,7 @@ function DashboardGestorIslandInner() {
               </tr>
             }
             empty={orcamentosRecentes.length === 0}
-            emptyMessage="Nenhum orcamento no periodo."
+            emptyMessage="Nenhum orçamento no período."
             colSpan={4}
             className="table-mobile-cards table-header-blue min-w-[520px]"
           >
@@ -1237,7 +1237,7 @@ function DashboardGestorIslandInner() {
               </tr>
             }
             empty={items.length === 0}
-            emptyMessage="Nenhum aniversariante de cliente/acompanhante este mes."
+            emptyMessage="Nenhum aniversariante de cliente/acompanhante este mês."
             colSpan={4}
             className="table-mobile-cards table-header-blue min-w-[520px]"
           >
@@ -1268,7 +1268,7 @@ function DashboardGestorIslandInner() {
                               {
                                 key: "whatsapp",
                                 label: "WhatsApp",
-                                title: "Enviar cartão de aniversario no WhatsApp",
+                                title: "Enviar cartão de aniversário no WhatsApp",
                                 onClick: () => window.open(whatsappLink, "_blank", "noopener,noreferrer"),
                                 icon: <i className="pi pi-gift" aria-hidden="true" />,
                                 variant: "ghost" as const,
@@ -1306,7 +1306,7 @@ function DashboardGestorIslandInner() {
     if (id === "viagens") {
       return (
         <AppCard
-          title={hideTitle ? undefined : `Proximas viagens (${viagensProximas.length})`}
+          title={hideTitle ? undefined : `Próximas viagens (${viagensProximas.length})`}
           subtitle={hideTitle ? undefined : "Viagens futuras vinculadas ao escopo da equipe."}
           tone="info"
         >
@@ -1321,7 +1321,7 @@ function DashboardGestorIslandInner() {
               </tr>
             }
             empty={viagensProximas.length === 0}
-            emptyMessage="Nenhuma viagem nos proximos dias."
+            emptyMessage="Nenhuma viagem nos próximos dias."
             colSpan={5}
             className="table-mobile-cards table-header-blue min-w-[520px]"
           >
@@ -1362,7 +1362,7 @@ function DashboardGestorIslandInner() {
       return (
         <AppCard
           title={hideTitle ? undefined : `Follow-up (${followUpsRecentes.length})`}
-          subtitle={hideTitle ? undefined : "Clientes que ja retornaram e demandam contato da equipe."}
+          subtitle={hideTitle ? undefined : "Clientes que já retornaram e demandam contato da equipe."}
           tone="info"
         >
           <DataTable
@@ -1375,7 +1375,7 @@ function DashboardGestorIslandInner() {
               </tr>
             }
             empty={followUpsRecentes.length === 0}
-            emptyMessage="Nenhum follow-up no periodo."
+            emptyMessage="Nenhum follow-up no período."
             colSpan={4}
             className="table-mobile-cards table-header-blue min-w-[520px]"
           >
@@ -1445,7 +1445,7 @@ function DashboardGestorIslandInner() {
     return (
       <AppPrimerProvider>
         <div className="page-content-wrap dashboard-geral-page gestor-page">
-          <AppCard tone="config">Voce nao possui acesso ao Dashboard.</AppCard>
+          <AppCard tone="config">Você não possui acesso ao Dashboard.</AppCard>
         </div>
       </AppPrimerProvider>
     );
@@ -1466,7 +1466,7 @@ function DashboardGestorIslandInner() {
       <div className="page-content-wrap dashboard-geral-page gestor-page vtur-dashboard-shell">
         <AppToolbar
           title={`Dashboard ${isMaster ? "do master" : "do gestor"}`}
-          subtitle={`Periodo: ${formatDateBR(inicio)} ate ${formatDateBR(fim)}.`}
+          subtitle={`Período: ${formatDateBR(inicio)} até ${formatDateBR(fim)}.`}
           tone="info"
           sticky
           actions={
@@ -1555,8 +1555,8 @@ function DashboardGestorIslandInner() {
             if (id === "aniversariantes_clientes") {
               return `Aniversariantes (${clientesAniversariantes.length})`;
             }
-            if (id === "orcamentos") return `Orcamentos recentes (${orcamentosRecentes.length})`;
-            if (id === "viagens") return `Proximas viagens (${viagensProximas.length})`;
+            if (id === "orcamentos") return `Orçamentos recentes (${orcamentosRecentes.length})`;
+            if (id === "viagens") return `Próximas viagens (${viagensProximas.length})`;
             if (id === "follow_up") return `Follow-up (${followUpsRecentes.length})`;
             return meta?.titulo || id;
           })();

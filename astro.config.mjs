@@ -36,6 +36,13 @@ export default defineConfig({
         "react/jsx-dev-runtime",
         "react-dom/client",
         "scheduler",
+        "prop-types",
+        "react-transition-group",
+        "react-transition-group/CSSTransition",
+        "react-transition-group/Transition",
+        "react-transition-group/TransitionGroup",
+        "react-transition-group/SwitchTransition",
+        "react-transition-group/ReplaceTransition",
         "@supabase/ssr",
         "recharts",
         // @supabase/ssr importa `cookie` (parse/serialize); sem prebundle pode falhar em WebKit/Safari.

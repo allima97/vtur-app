@@ -98,7 +98,7 @@ body.sakai-theme .vtur-sidebar-nav {
 body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item {
   border-radius: 10px;
   color: #4b5563;
-  font-weight: 500;
+  font-weight: 400;
   font-size: 1.02rem;
 }
 
@@ -110,7 +110,7 @@ body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:hover {
 body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item[aria-current="page"] {
   background: transparent;
   color: #6366f1;
-  font-weight: 600;
+  font-weight: 400;
   box-shadow: none;
   border-color: transparent;
 }

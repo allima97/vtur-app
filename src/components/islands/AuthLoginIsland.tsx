@@ -249,7 +249,7 @@ export default function AuthLoginIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="auth-container">
+      <div className="auth-container auth-container-wide">
         <AppCard
           className="auth-card auth-card-lg auth-card-with-logo auth-card-login"
           title={

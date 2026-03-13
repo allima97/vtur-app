@@ -1641,77 +1641,83 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 )}
               </div>
 
-              <AppField
-                label="Lancada em"
-                wrapperClassName="min-w-[180px]"
-                type="date"
-                value={formVenda.data_lancamento}
-                onFocus={selectAllInputOnFocus}
-                onChange={(e) =>
-                  setFormVenda((prev) => ({ ...prev, data_lancamento: e.target.value }))
-                }
-              />
+              <div className="form-group min-w-[180px]">
+                <label className="form-label">Lançada em</label>
+                <input
+                  className="form-input"
+                  type="date"
+                  value={formVenda.data_lancamento}
+                  onFocus={selectAllInputOnFocus}
+                  onChange={(e) =>
+                    setFormVenda((prev) => ({ ...prev, data_lancamento: e.target.value }))
+                  }
+                />
+              </div>
 
-              <AppField
-                label={
-                  <span>
-                    Data da venda *{" "}
-                    <span
-                      title="Informe a data da venda conforme no Systur, usada para emissao de NF."
-                      style={{ color: "#0ea5e9", cursor: "help" }}
-                    >
-                      ?
-                    </span>
+              <div className="form-group min-w-[180px]">
+                <label className="form-label">
+                  Data da venda *{" "}
+                  <span
+                    title="Informe a data da venda conforme no Systur, usada para emissao de NF."
+                    style={{ color: "#0ea5e9", cursor: "help" }}
+                  >
+                    ?
                   </span>
-                }
-                wrapperClassName="min-w-[180px]"
-                type="date"
-                value={formVenda.data_venda}
-                onFocus={selectAllInputOnFocus}
-                onChange={(e) => setFormVenda((prev) => ({ ...prev, data_venda: e.target.value }))}
-                required
-              />
+                </label>
+                <input
+                  className="form-input"
+                  type="date"
+                  value={formVenda.data_venda}
+                  onFocus={selectAllInputOnFocus}
+                  onChange={(e) => setFormVenda((prev) => ({ ...prev, data_venda: e.target.value }))}
+                  required
+                />
+              </div>
 
-              <AppField
-                label="Data de embarque"
-                wrapperClassName="min-w-[180px]"
-                type="date"
-                value={formVenda.data_embarque}
-                onFocus={selectAllInputOnFocus}
-                onChange={(e) =>
-                  setFormVenda((prev) => {
-                    const proximaData = e.target.value;
-                    const minDataFinal = proximaData || "";
-                    const dataFinalAtualizada =
-                      prev.data_final && minDataFinal && prev.data_final < minDataFinal
-                        ? minDataFinal
-                        : prev.data_final;
-                    return {
-                      ...prev,
-                      data_embarque: proximaData,
-                      data_final: dataFinalAtualizada,
-                    };
-                  })
-                }
-              />
+              <div className="form-group min-w-[180px]">
+                <label className="form-label">Data de embarque</label>
+                <input
+                  className="form-input"
+                  type="date"
+                  value={formVenda.data_embarque}
+                  onFocus={selectAllInputOnFocus}
+                  onChange={(e) =>
+                    setFormVenda((prev) => {
+                      const proximaData = e.target.value;
+                      const minDataFinal = proximaData || "";
+                      const dataFinalAtualizada =
+                        prev.data_final && minDataFinal && prev.data_final < minDataFinal
+                          ? minDataFinal
+                          : prev.data_final;
+                      return {
+                        ...prev,
+                        data_embarque: proximaData,
+                        data_final: dataFinalAtualizada,
+                      };
+                    })
+                  }
+                />
+              </div>
 
-              <AppField
-                label="Data final"
-                wrapperClassName="min-w-[180px]"
-                type="date"
-                value={formVenda.data_final}
-                min={formVenda.data_embarque || undefined}
-                onFocus={selectAllInputOnFocus}
-                onChange={(e) =>
-                  setFormVenda({
-                    ...formVenda,
-                    data_final:
-                      formVenda.data_embarque && e.target.value && e.target.value < formVenda.data_embarque
-                        ? formVenda.data_embarque
-                        : e.target.value,
-                  })
-                }
-              />
+              <div className="form-group min-w-[180px]">
+                <label className="form-label">Data final</label>
+                <input
+                  className="form-input"
+                  type="date"
+                  value={formVenda.data_final}
+                  min={formVenda.data_embarque || undefined}
+                  onFocus={selectAllInputOnFocus}
+                  onChange={(e) =>
+                    setFormVenda({
+                      ...formVenda,
+                      data_final:
+                        formVenda.data_embarque && e.target.value && e.target.value < formVenda.data_embarque
+                          ? formVenda.data_embarque
+                          : e.target.value,
+                    })
+                  }
+                />
+              </div>
             </div>
 
           <AppCard

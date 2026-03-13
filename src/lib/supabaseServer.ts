@@ -45,6 +45,9 @@ export function readEnv(key: string): string | undefined {
     case "PUBLIC_SUPABASE_ANON_KEY":
       fromImportMeta = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       break;
+    case "SUPABASE_ANON_KEY":
+      fromImportMeta = import.meta.env.SUPABASE_ANON_KEY;
+      break;
     case "ENVIRONMENT":
       fromImportMeta = import.meta.env.ENVIRONMENT;
       break;
@@ -159,7 +162,7 @@ const supabaseUrl =
 
 const serviceRoleKey = readEnv("SUPABASE_SERVICE_ROLE_KEY");
 
-const anonKey = readEnv("PUBLIC_SUPABASE_ANON_KEY");
+const anonKey = readEnv("PUBLIC_SUPABASE_ANON_KEY") || readEnv("SUPABASE_ANON_KEY");
 
 let warnedAnonFallback = false;
 let supabaseServerClient: ReturnType<typeof createClient> | null = null;
@@ -179,8 +182,8 @@ function assertSupabaseServerEnv() {
   const supabaseKey = serviceRoleKey || anonKey;
   if (!supabaseKey) {
     const msg =
-      "SUPABASE_SERVICE_ROLE_KEY ou PUBLIC_SUPABASE_ANON_KEY não configurados. " +
-      "Defina SUPABASE_SERVICE_ROLE_KEY (para scripts/admin) ou PUBLIC_SUPABASE_ANON_KEY.";
+      "SUPABASE_SERVICE_ROLE_KEY ou PUBLIC_SUPABASE_ANON_KEY/SUPABASE_ANON_KEY não configurados. " +
+      "Defina SUPABASE_SERVICE_ROLE_KEY (para scripts/admin) ou uma chave anon do Supabase.";
     if (typeof console !== "undefined") {
       console.error("[supabaseServer] " + msg);
     }
