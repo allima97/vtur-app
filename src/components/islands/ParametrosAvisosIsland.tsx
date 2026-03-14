@@ -1302,76 +1302,78 @@ export default function ParametrosAvisosIsland() {
               {CARD_STYLE_SECTION_ORDER.map((section) => {
                 const style = styleForm[section];
                 return (
-                  <div key={section} className="vtur-surface-panel card-blue parametros-avisos-style-card">
-                    <div className="parametros-avisos-style-card-header">
+                  <details key={section} className="vtur-surface-panel card-blue parametros-avisos-style-card">
+                    <summary className="parametros-avisos-style-card-header parametros-avisos-style-card-summary">
                       <strong>{CARD_STYLE_SECTION_LABELS[section]}</strong>
                       <small style={{ color: "#64748b" }}>{STYLE_SECTION_SAMPLE[section]}</small>
+                    </summary>
+                    <div className="parametros-avisos-style-card-body">
+                      <div className="form-row mobile-stack parametros-avisos-style-row parametros-avisos-style-row-3">
+                        <div className="form-group parametros-avisos-style-group">
+                          <label className="form-label">Fonte</label>
+                          <select className="form-select" value={style.fontFamily || ""} onChange={(e) => atualizarStyleSection(section, "fontFamily", e.target.value)}>
+                            {CARD_FONT_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group parametros-avisos-style-group">
+                          <label className="form-label">Peso</label>
+                          <select className="form-select" value={String(style.fontWeight || "500")} onChange={(e) => atualizarStyleSection(section, "fontWeight", e.target.value)}>
+                            {CARD_WEIGHT_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group parametros-avisos-style-group">
+                          <label className="form-label">Alinhamento</label>
+                          <select className="form-select" value={style.align || "left"} onChange={(e) => atualizarStyleSection(section, "align", e.target.value)}>
+                            {CARD_ALIGN_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <div className="form-row mobile-stack parametros-avisos-style-row parametros-avisos-style-row-4">
+                        <div className="form-group parametros-avisos-style-group">
+                          <label className="form-label">Tamanho</label>
+                          <input type="number" className="form-input" value={Number(style.fontSize || 0)} onChange={(e) => atualizarStyleSection(section, "fontSize", Number(e.target.value || 0))} min={10} max={180} />
+                        </div>
+                        <div className="form-group parametros-avisos-style-group">
+                          <label className="form-label">X</label>
+                          <input type="number" className="form-input" value={Number(style.x || 0)} onChange={(e) => atualizarStyleSection(section, "x", Number(e.target.value || 0))} min={0} max={3000} />
+                        </div>
+                        <div className="form-group parametros-avisos-style-group">
+                          <label className="form-label">Y</label>
+                          <input type="number" className="form-input" value={Number(style.y || 0)} onChange={(e) => atualizarStyleSection(section, "y", Number(e.target.value || 0))} min={0} max={3000} />
+                        </div>
+                        <div className="form-group parametros-avisos-style-group">
+                          <label className="form-label">Largura</label>
+                          <input type="number" className="form-input" value={Number(style.maxWidth || style.width || 0)} onChange={(e) => atualizarStyleSection(section, "maxWidth", Number(e.target.value || 0))} min={40} max={3000} />
+                        </div>
+                      </div>
+                      <div className="form-row mobile-stack parametros-avisos-style-row parametros-avisos-style-row-3">
+                        <div className="form-group parametros-avisos-style-group">
+                          <label className="form-label">Cor</label>
+                          <input type="color" className="form-input parametros-avisos-style-color-input" value={normalizeColorInput(style.color)} onChange={(e) => atualizarStyleSection(section, "color", e.target.value)} />
+                        </div>
+                        <div className="form-group parametros-avisos-style-group">
+                          <label className="form-label">Hex</label>
+                          <input className="form-input" value={String(style.color || "")} onChange={(e) => atualizarStyleSection(section, "color", e.target.value)} />
+                        </div>
+                        <div className="form-group parametros-avisos-style-group">
+                          <label className="form-label">Altura da linha</label>
+                          <input type="number" step="0.01" className="form-input" value={Number(style.lineHeight || 1)} onChange={(e) => atualizarStyleSection(section, "lineHeight", Number(e.target.value || 1))} min={0.7} max={2.5} />
+                        </div>
+                      </div>
+                      <div className="parametros-avisos-style-checkbox-row">
+                        <label className="form-checkbox parametros-avisos-style-checkbox">
+                          <input type="checkbox" checked={style.italic === true} onChange={(e) => atualizarStyleSection(section, "italic", e.target.checked)} />
+                          <span>Itálico</span>
+                        </label>
+                      </div>
                     </div>
-                    <div className="form-row mobile-stack parametros-avisos-style-row parametros-avisos-style-row-3">
-                      <div className="form-group parametros-avisos-style-group">
-                        <label className="form-label">Fonte</label>
-                        <select className="form-select" value={style.fontFamily || ""} onChange={(e) => atualizarStyleSection(section, "fontFamily", e.target.value)}>
-                          {CARD_FONT_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-group parametros-avisos-style-group">
-                        <label className="form-label">Peso</label>
-                        <select className="form-select" value={String(style.fontWeight || "500")} onChange={(e) => atualizarStyleSection(section, "fontWeight", e.target.value)}>
-                          {CARD_WEIGHT_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-group parametros-avisos-style-group">
-                        <label className="form-label">Alinhamento</label>
-                        <select className="form-select" value={style.align || "left"} onChange={(e) => atualizarStyleSection(section, "align", e.target.value)}>
-                          {CARD_ALIGN_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="form-row mobile-stack parametros-avisos-style-row parametros-avisos-style-row-4">
-                      <div className="form-group parametros-avisos-style-group">
-                        <label className="form-label">Tamanho</label>
-                        <input type="number" className="form-input" value={Number(style.fontSize || 0)} onChange={(e) => atualizarStyleSection(section, "fontSize", Number(e.target.value || 0))} min={10} max={180} />
-                      </div>
-                      <div className="form-group parametros-avisos-style-group">
-                        <label className="form-label">X</label>
-                        <input type="number" className="form-input" value={Number(style.x || 0)} onChange={(e) => atualizarStyleSection(section, "x", Number(e.target.value || 0))} min={0} max={3000} />
-                      </div>
-                      <div className="form-group parametros-avisos-style-group">
-                        <label className="form-label">Y</label>
-                        <input type="number" className="form-input" value={Number(style.y || 0)} onChange={(e) => atualizarStyleSection(section, "y", Number(e.target.value || 0))} min={0} max={3000} />
-                      </div>
-                      <div className="form-group parametros-avisos-style-group">
-                        <label className="form-label">Largura</label>
-                        <input type="number" className="form-input" value={Number(style.maxWidth || style.width || 0)} onChange={(e) => atualizarStyleSection(section, "maxWidth", Number(e.target.value || 0))} min={40} max={3000} />
-                      </div>
-                    </div>
-                    <div className="form-row mobile-stack parametros-avisos-style-row parametros-avisos-style-row-3">
-                      <div className="form-group parametros-avisos-style-group">
-                        <label className="form-label">Cor</label>
-                        <input type="color" className="form-input parametros-avisos-style-color-input" value={normalizeColorInput(style.color)} onChange={(e) => atualizarStyleSection(section, "color", e.target.value)} />
-                      </div>
-                      <div className="form-group parametros-avisos-style-group">
-                        <label className="form-label">Hex</label>
-                        <input className="form-input" value={String(style.color || "")} onChange={(e) => atualizarStyleSection(section, "color", e.target.value)} />
-                      </div>
-                      <div className="form-group parametros-avisos-style-group">
-                        <label className="form-label">Altura da linha</label>
-                        <input type="number" step="0.01" className="form-input" value={Number(style.lineHeight || 1)} onChange={(e) => atualizarStyleSection(section, "lineHeight", Number(e.target.value || 1))} min={0.7} max={2.5} />
-                      </div>
-                    </div>
-                    <div className="parametros-avisos-style-checkbox-row">
-                      <label className="form-checkbox parametros-avisos-style-checkbox">
-                        <input type="checkbox" checked={style.italic === true} onChange={(e) => atualizarStyleSection(section, "italic", e.target.checked)} />
-                        <span>Itálico</span>
-                      </label>
-                    </div>
-                  </div>
+                  </details>
                 );
               })}
             </div>

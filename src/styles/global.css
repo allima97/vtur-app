@@ -1000,6 +1000,35 @@ body {
   margin-bottom: 10px;
 }
 
+.parametros-avisos-style-card-summary {
+  cursor: pointer;
+  list-style: none;
+  margin-bottom: 0;
+}
+
+.parametros-avisos-style-card-summary::-webkit-details-marker {
+  display: none;
+}
+
+.parametros-avisos-style-card-summary::marker {
+  content: "";
+}
+
+.parametros-avisos-style-card-summary::after {
+  content: "▾";
+  margin-left: auto;
+  color: #475569;
+  transition: transform 0.2s ease;
+}
+
+.parametros-avisos-style-card[open] .parametros-avisos-style-card-summary::after {
+  transform: rotate(180deg);
+}
+
+.parametros-avisos-style-card-body {
+  margin-top: 10px;
+}
+
 .parametros-avisos-style-card-header small {
   min-width: 0;
   text-align: right;

@@ -15,8 +15,8 @@ export type CardStyle = {
   fontWeight?: number | string;
   color?: string;
   fontFamily?: string;
-  align?: "left" | "center" | "right";
-  textAlign?: "left" | "center" | "right";
+  align?: "left" | "center" | "right" | "justify";
+  textAlign?: "left" | "center" | "right" | "justify";
   lineHeight?: number;
   italic?: boolean;
   fontStyle?: "normal" | "italic";
@@ -117,24 +117,83 @@ function wrapText(text: string, style: CardStyle) {
   return lines;
 }
 
+function estimateWordWidth(word: string, fontSize: number) {
+  const normalized = String(word || "").trim();
+  if (!normalized) return Math.max(1, fontSize * 0.28);
+  return Math.max(fontSize * 0.3, normalized.length * fontSize * 0.56);
+}
+
+function resolveAlign(value?: string | null): "left" | "center" | "right" | "justify" {
+  const align = String(value || "").trim().toLowerCase();
+  if (align === "left" || align === "center" || align === "right" || align === "justify") return align;
+  return "center";
+}
+
 function drawTextBlock(text: string, style: CardStyle) {
   const lines = wrapText(text, style);
   if (!lines.length) return "";
   const x = Number(style.x || 540);
   const y = Number(style.y || 760);
+  const maxWidth = Number(style.maxWidth || style.width || 860);
   const fontSize = Number(style.fontSize || 52);
   const fontWeight = String(style.fontWeight || "500");
   const color = escapeXml(String(style.color || "#0A0A0A"));
   const fontFamily = escapeXml(String(style.fontFamily || "Alegreya Sans, Arial, sans-serif"));
-  const align = String(style.align || style.textAlign || "center").toLowerCase() as "left" | "center" | "right";
+  const align = resolveAlign(style.align || style.textAlign || "center");
   const lineHeight = Number(style.lineHeight || 1.2);
   const italic = style.italic || style.fontStyle === "italic" ? "italic" : "normal";
-  const anchor = align === "center" ? "middle" : align === "right" ? "end" : "start";
   const step = Math.round(fontSize * lineHeight);
-  const tspans = lines
-    .map((line, idx) => `<tspan x="${x}" dy="${idx === 0 ? 0 : step}">${escapeXml(line || " ")}</tspan>`)
+  const textAttrs = `font-family="${fontFamily}" font-size="${fontSize}" font-weight="${fontWeight}" fill="${color}" font-style="${italic}"`;
+
+  if (align !== "justify") {
+    const anchor = align === "center" ? "middle" : align === "right" ? "end" : "start";
+    const tspans = lines
+      .map((line, idx) => `<tspan x="${x}" dy="${idx === 0 ? 0 : step}">${escapeXml(line || " ")}</tspan>`)
+      .join("");
+    return `<text x="${x}" y="${y}" text-anchor="${anchor}" ${textAttrs}>${tspans}</text>`;
+  }
+
+  const lastNonEmptyLineIdx = (() => {
+    for (let i = lines.length - 1; i >= 0; i -= 1) {
+      if (String(lines[i] || "").trim()) return i;
+    }
+    return -1;
+  })();
+
+  const justifiedLines = lines
+    .map((line, idx) => {
+      const trimmedLine = String(line || "").trim();
+      if (!trimmedLine) return "";
+      const lineY = y + idx * step;
+      const isLastLine = idx >= lastNonEmptyLineIdx;
+      const words = trimmedLine.split(/\s+/).filter(Boolean);
+
+      if (isLastLine || words.length < 2) {
+        return `<text x="${x}" y="${lineY}" text-anchor="start" ${textAttrs}>${escapeXml(trimmedLine)}</text>`;
+      }
+
+      const totalWordWidth = words.reduce((acc, word) => acc + estimateWordWidth(word, fontSize), 0);
+      const gapCount = words.length - 1;
+      const calculatedGap = (maxWidth - totalWordWidth) / gapCount;
+      const minGap = fontSize * 0.14;
+
+      if (!Number.isFinite(calculatedGap) || calculatedGap < minGap) {
+        return `<text x="${x}" y="${lineY}" text-anchor="start" ${textAttrs}>${escapeXml(trimmedLine)}</text>`;
+      }
+
+      let cursorX = x;
+      return words
+        .map((word, wordIndex) => {
+          const node = `<text x="${cursorX.toFixed(2)}" y="${lineY}" text-anchor="start" ${textAttrs}>${escapeXml(word)}</text>`;
+          cursorX += estimateWordWidth(word, fontSize);
+          if (wordIndex < words.length - 1) cursorX += calculatedGap;
+          return node;
+        })
+        .join("");
+    })
     .join("");
-  return `<text x="${x}" y="${y}" text-anchor="${anchor}" font-family="${fontFamily}" font-size="${fontSize}" font-weight="${fontWeight}" fill="${color}" font-style="${italic}">${tspans}</text>`;
+
+  return justifiedLines;
 }
 
 function drawPhotoBlock(photoUrl: string, slot: CardThemePhotoSlot) {
