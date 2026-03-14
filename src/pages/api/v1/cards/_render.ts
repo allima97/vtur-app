@@ -216,10 +216,16 @@ function extractSignatureTextConfig(signatureStyle?: unknown) {
   const content = isRecord(signatureStyle) && isRecord(signatureStyle.content)
     ? signatureStyle.content
     : null;
+  const hasFooterLead =
+    !!content && Object.prototype.hasOwnProperty.call(content, "footerLead");
+  const hasConsultantRole =
+    !!content && Object.prototype.hasOwnProperty.call(content, "consultantRole");
 
   return {
     footerLead: String(content?.footerLead || "").trim(),
     consultantRole: String(content?.consultantRole || "").trim(),
+    hasFooterLead,
+    hasConsultantRole,
   };
 }
 
@@ -277,6 +283,7 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
   const nome = String(url.searchParams.get("nome") || "Cliente").trim() || "Cliente";
   const tituloRaw = String(url.searchParams.get("titulo") || "").trim();
   const corpoRaw = String(url.searchParams.get("corpo") || "").trim();
+  const hasFooterLeadParam = url.searchParams.has("footer_lead");
   const footerLeadRaw = String(url.searchParams.get("footer_lead") || "").trim();
   const assinaturaRaw = String(url.searchParams.get("assinatura") || "").trim();
   const consultorRaw = String(url.searchParams.get("consultor") || "").trim();
@@ -393,14 +400,22 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
     corpoRaw ||
     templateRow?.corpo ||
     "Que seu novo ano seja cheio de viagens, conquistas e momentos inesquecíveis.";
-  const signatureTextConfig = {
-    ...extractSignatureTextConfig(themeRow?.signature_style),
-    ...extractSignatureTextConfig(templateRow?.signature_style),
-  };
+  const signatureTheme = extractSignatureTextConfig(themeRow?.signature_style);
+  const signatureTemplate = extractSignatureTextConfig(templateRow?.signature_style);
+  const hasFooterLeadConfig = signatureTemplate.hasFooterLead || signatureTheme.hasFooterLead;
+  const hasConsultantRoleConfig = signatureTemplate.hasConsultantRole || signatureTheme.hasConsultantRole;
+  const footerLeadConfig = signatureTemplate.hasFooterLead ? signatureTemplate.footerLead : signatureTheme.footerLead;
+  const consultantRoleConfig = signatureTemplate.hasConsultantRole
+    ? signatureTemplate.consultantRole
+    : signatureTheme.consultantRole;
   const assinatura = assinaturaRaw || templateRow?.assinatura || consultorRaw || "";
   const consultor = consultorRaw || assinatura || "Equipe vtur";
-  const footerLead = footerLeadRaw || signatureTextConfig.footerLead || "Com carinho";
-  const cargoConsultor = cargoConsultorRaw || signatureTextConfig.consultantRole || "Consultor de viagens";
+  const footerLead = hasFooterLeadParam
+    ? footerLeadRaw
+    : hasFooterLeadConfig
+      ? footerLeadConfig
+      : "Com carinho";
+  const cargoConsultor = cargoConsultorRaw || (hasConsultantRoleConfig ? consultantRoleConfig : "Consultor de viagens");
 
   const renderVars = {
     nomeCompleto: nome,

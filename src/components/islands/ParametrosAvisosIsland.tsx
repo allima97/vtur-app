@@ -204,10 +204,15 @@ function extractSignatureTextConfig(signatureStyle?: unknown) {
   const content = isRecord(signatureStyle) && isRecord(signatureStyle.content)
     ? signatureStyle.content
     : null;
+  const footerLeadRaw = content?.footerLead;
+  const consultantRoleRaw = content?.consultantRole;
 
   return {
-    footerLead: String(content?.footerLead || "Com carinho").trim() || "Com carinho",
-    consultantRole: String(content?.consultantRole || "Consultor de viagens").trim() || "Consultor de viagens",
+    footerLead: footerLeadRaw == null ? "Com carinho" : String(footerLeadRaw).trim(),
+    consultantRole:
+      consultantRoleRaw == null
+        ? "Consultor de viagens"
+        : String(consultantRoleRaw).trim() || "Consultor de viagens",
   };
 }
 
@@ -242,6 +247,7 @@ export default function ParametrosAvisosIsland() {
   const [themes, setThemes] = useState<Theme[]>([]);
   const [clientesPreview, setClientesPreview] = useState<PreviewCliente[]>([]);
   const [previewClienteId, setPreviewClienteId] = useState("");
+  const [previewNomeClienteManual, setPreviewNomeClienteManual] = useState("");
   const [form, setForm] = useState<TemplateForm>(initialTemplateForm);
   const [styleForm, setStyleForm] = useState<CardStyleMap>(() => createDefaultCardStyleMap());
   const [themeForm, setThemeForm] = useState<ThemeForm>(initialThemeForm);
@@ -249,6 +255,8 @@ export default function ParametrosAvisosIsland() {
   const [salvando, setSalvando] = useState(false);
   const [salvandoTheme, setSalvandoTheme] = useState(false);
   const [carregandoPadrao, setCarregandoPadrao] = useState(false);
+  const [mostrarListaArtes, setMostrarListaArtes] = useState(false);
+  const [filtroThemeTabelaId, setFiltroThemeTabelaId] = useState("");
 
   async function carregar() {
     try {
@@ -320,15 +328,22 @@ export default function ParametrosAvisosIsland() {
     return temasDaCategoria.length > 0 ? temasDaCategoria : themes;
   }, [themes, form.categoria]);
 
+  const themesTabela = useMemo(() => {
+    if (!filtroThemeTabelaId) return themes;
+    return themes.filter((theme) => theme.id === filtroThemeTabelaId);
+  }, [themes, filtroThemeTabelaId]);
+
   const previewClienteSelecionado = useMemo(
     () => clientesPreview.find((item) => item.id === previewClienteId) || null,
     [clientesPreview, previewClienteId],
   );
 
   const previewNomeCliente = useMemo(() => {
+    const nomeManual = String(previewNomeClienteManual || "").trim();
+    if (nomeManual) return nomeManual;
     const nome = String(previewClienteSelecionado?.nome || "").trim();
     return nome || "Carlos Eduardo Silva";
-  }, [previewClienteSelecionado]);
+  }, [previewClienteSelecionado, previewNomeClienteManual]);
 
   const previewCardTitle = useMemo(
     () => String(form.titulo || form.nome || form.categoria || "Aviso").trim() || "Aviso",
@@ -368,18 +383,13 @@ export default function ParametrosAvisosIsland() {
     return `/api/v1/cards/render.svg?${previewBaseParams.toString()}`;
   }, [previewBaseParams]);
 
-  const previewThemePngUrl = useMemo(() => {
-    if (!previewBaseParams) return "";
-    return `/api/v1/cards/render.png?${previewBaseParams.toString()}`;
-  }, [previewBaseParams]);
-
   const previewWhatsappUrl = useMemo(() => {
-    if (!previewThemePngUrl) return "";
+    if (!previewThemeSvgUrl) return "";
     const telefone = previewClienteSelecionado?.whatsapp || previewClienteSelecionado?.telefone || "";
     if (!telefone) return "";
-    const texto = `${previewText}\n\nCartão:\n${typeof window !== "undefined" ? `${window.location.origin}${previewThemePngUrl}` : previewThemePngUrl}`;
+    const texto = `${previewText}\n\nCartão:\n${typeof window !== "undefined" ? `${window.location.origin}${previewThemeSvgUrl}` : previewThemeSvgUrl}`;
     return construirLinkWhatsAppComTexto(telefone, texto) || "";
-  }, [previewThemePngUrl, previewClienteSelecionado, previewText]);
+  }, [previewThemeSvgUrl, previewClienteSelecionado, previewText]);
 
   function resetForm() {
     setForm(initialTemplateForm);
@@ -563,7 +573,7 @@ export default function ParametrosAvisosIsland() {
       const titulo = form.titulo.trim() || form.nome.trim();
       const serializedStyles = serializeCardStyleMap(styleForm);
       const signatureTextConfig = {
-        footerLead: form.footerLead.trim() || "Com carinho",
+        footerLead: form.footerLead.trim(),
         consultantRole: form.consultantRole.trim() || "Consultor de viagens",
       };
       const payload = {
@@ -849,83 +859,122 @@ export default function ParametrosAvisosIsland() {
           </div>
         </form>
 
-        <div className="table-container overflow-x-auto mt-3">
-          <table className="table-default table-header-blue table-mobile-cards min-w-[820px]">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Categoria</th>
-                <th>Preview</th>
-                <th>Dimensão</th>
-                <th>Status</th>
-                <th className="th-actions">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {carregandoDados && (
-                <tr>
-                  <td colSpan={6}>Carregando artes...</td>
-                </tr>
-              )}
-              {!carregandoDados && themes.length === 0 && (
-                <tr>
-                  <td colSpan={6}>Nenhuma arte cadastrada.</td>
-                </tr>
-              )}
-              {!carregandoDados && themes.map((theme) => {
-                const resolvedThemeAsset = resolveThemeAssetMeta(theme);
-                return (
-                  <tr key={theme.id}>
-                    <td data-label="Nome">{theme.nome}</td>
-                    <td data-label="Categoria">{theme.categoria}</td>
-                    <td data-label="Preview">
-                      <img
-                        src={resolvedThemeAsset.asset_url || theme.asset_url}
-                        alt={theme.nome}
-                        style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 8, border: "1px solid #cbd5e1" }}
-                      />
-                    </td>
-                    <td data-label="Dimensão">
-                      {resolvedThemeAsset.width_px || theme.width_px}x{resolvedThemeAsset.height_px || theme.height_px}
-                    </td>
-                    <td data-label="Status">{theme.ativo ? "Ativo" : "Inativo"}</td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        <AppButton
-                          type="button"
-                          variant="ghost"
-                          icon="pi pi-pencil"
-                          className="p-button-rounded p-button-sm"
-                          onClick={() => editarTheme(theme)}
-                          title="Editar arte"
-                          aria-label="Editar arte"
-                        />
-                        <AppButton
-                          type="button"
-                          variant="ghost"
-                          icon="pi pi-eye"
-                          className="p-button-rounded p-button-sm"
-                          onClick={() => window.open(resolvedThemeAsset.asset_url || theme.asset_url, "_blank", "noopener,noreferrer")}
-                          title="Visualizar arte"
-                          aria-label="Visualizar arte"
-                        />
-                        <AppButton
-                          type="button"
-                          variant="danger"
-                          icon="pi pi-trash"
-                          className="p-button-rounded p-button-sm"
-                          onClick={() => void removerTheme(theme.id)}
-                          title="Excluir arte"
-                          aria-label="Excluir arte"
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="form-row mobile-stack" style={{ gap: 12, marginTop: 12, gridTemplateColumns: "1fr auto" }}>
+          <div className="form-group">
+            <label className="form-label">Filtrar arte para visualização</label>
+            <select
+              className="form-select"
+              value={filtroThemeTabelaId}
+              onChange={(e) => setFiltroThemeTabelaId(e.target.value)}
+              disabled={!mostrarListaArtes}
+            >
+              <option value="">Todas</option>
+              {themes.map((theme) => (
+                <option key={theme.id} value={theme.id}>
+                  {theme.categoria} • {theme.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group" style={{ alignSelf: "end" }}>
+            <AppButton
+              type="button"
+              variant="secondary"
+              onClick={() => setMostrarListaArtes((prev) => !prev)}
+            >
+              {mostrarListaArtes ? "Ocultar artes salvas" : "Mostrar artes salvas"}
+            </AppButton>
+          </div>
         </div>
+
+        {mostrarListaArtes ? (
+          <div className="table-container overflow-x-auto mt-3">
+            <table className="table-default table-header-blue table-mobile-cards min-w-[820px]">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Categoria</th>
+                  <th>Preview</th>
+                  <th>Dimensão</th>
+                  <th>Status</th>
+                  <th className="th-actions">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {carregandoDados && (
+                  <tr>
+                    <td colSpan={6}>Carregando artes...</td>
+                  </tr>
+                )}
+                {!carregandoDados && themes.length === 0 && (
+                  <tr>
+                    <td colSpan={6}>Nenhuma arte cadastrada.</td>
+                  </tr>
+                )}
+                {!carregandoDados && themes.length > 0 && themesTabela.length === 0 && (
+                  <tr>
+                    <td colSpan={6}>Nenhuma arte encontrada para o filtro selecionado.</td>
+                  </tr>
+                )}
+                {!carregandoDados && themesTabela.map((theme) => {
+                  const resolvedThemeAsset = resolveThemeAssetMeta(theme);
+                  return (
+                    <tr key={theme.id}>
+                      <td data-label="Nome">{theme.nome}</td>
+                      <td data-label="Categoria">{theme.categoria}</td>
+                      <td data-label="Preview">
+                        <img
+                          src={resolvedThemeAsset.asset_url || theme.asset_url}
+                          alt={theme.nome}
+                          style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 8, border: "1px solid #cbd5e1" }}
+                        />
+                      </td>
+                      <td data-label="Dimensão">
+                        {resolvedThemeAsset.width_px || theme.width_px}x{resolvedThemeAsset.height_px || theme.height_px}
+                      </td>
+                      <td data-label="Status">{theme.ativo ? "Ativo" : "Inativo"}</td>
+                      <td className="th-actions" data-label="Ações">
+                        <div className="action-buttons">
+                          <AppButton
+                            type="button"
+                            variant="ghost"
+                            icon="pi pi-pencil"
+                            className="p-button-rounded p-button-sm"
+                            onClick={() => editarTheme(theme)}
+                            title="Editar arte"
+                            aria-label="Editar arte"
+                          />
+                          <AppButton
+                            type="button"
+                            variant="ghost"
+                            icon="pi pi-eye"
+                            className="p-button-rounded p-button-sm"
+                            onClick={() => window.open(resolvedThemeAsset.asset_url || theme.asset_url, "_blank", "noopener,noreferrer")}
+                            title="Visualizar arte"
+                            aria-label="Visualizar arte"
+                          />
+                          <AppButton
+                            type="button"
+                            variant="danger"
+                            icon="pi pi-trash"
+                            className="p-button-rounded p-button-sm"
+                            onClick={() => void removerTheme(theme.id)}
+                            title="Excluir arte"
+                            aria-label="Excluir arte"
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <small style={{ color: "#64748b", display: "block", marginTop: 8 }}>
+            Lista de artes oculta para reduzir poluição visual. Clique em "Mostrar artes salvas" quando precisar consultar.
+          </small>
+        )}
       </AppCard>
 
       <AppCard tone="config" className="mb-3">
@@ -934,7 +983,7 @@ export default function ParametrosAvisosIsland() {
           Cada configuração liga uma arte a uma mensagem curta de WhatsApp. Essa configuração é a mesma usada no disparo pelo cadastro do cliente.
         </small>
 
-        <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "1.5fr 1fr 1fr" }}>
+        <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "1.2fr 1fr 1fr 1fr" }}>
           <div className="form-group">
             <label className="form-label">Configuração salva</label>
             <select
@@ -968,6 +1017,15 @@ export default function ParametrosAvisosIsland() {
                 </option>
               ))}
             </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Nome do cliente (manual)</label>
+            <input
+              className="form-input"
+              value={previewNomeClienteManual}
+              onChange={(e) => setPreviewNomeClienteManual(e.target.value)}
+              placeholder="Ex.: Maria Fernanda"
+            />
           </div>
           <div className="form-group">
             <label className="form-label">Arte vinculada *</label>
@@ -1063,7 +1121,7 @@ export default function ParametrosAvisosIsland() {
                 placeholder={"Ex.: Com carinho\nCom admiração"}
               />
               <small style={{ color: "#64748b", display: "block", marginTop: 8 }}>
-                Também aceita `Enter`.
+                Também aceita `Enter`. Se ficar vazio, essa linha some do card.
               </small>
             </div>
             <div className="form-group">
@@ -1238,9 +1296,6 @@ export default function ParametrosAvisosIsland() {
               <AppButton type="button" variant="secondary" onClick={() => window.open(previewThemeSvgUrl, "_blank", "noopener,noreferrer")}>
                 Abrir SVG
               </AppButton>
-              <AppButton type="button" variant="secondary" onClick={() => window.open(previewThemePngUrl, "_blank", "noopener,noreferrer")}>
-                Abrir PNG
-              </AppButton>
               {previewWhatsappUrl ? (
                 <AppButton type="button" variant="secondary" onClick={() => window.open(previewWhatsappUrl, "_blank", "noopener,noreferrer")}>
                   Abrir WhatsApp
@@ -1251,6 +1306,9 @@ export default function ParametrosAvisosIsland() {
                 </AppButton>
               )}
             </div>
+            <small style={{ color: "#64748b", display: "block", marginTop: 6 }}>
+              Neste ambiente o preview usa somente SVG.
+            </small>
           </>
         ) : (
           <small style={{ color: "#64748b" }}>Selecione uma arte e preencha a mensagem para pré-visualizar o cartão final.</small>
