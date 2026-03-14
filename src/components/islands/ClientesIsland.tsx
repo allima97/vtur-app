@@ -17,6 +17,7 @@ import { matchesCpfSearch } from "../../lib/searchNormalization";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import { renderTemplateText } from "../../lib/messageTemplates";
 import { resolveThemeAssetMeta } from "../../lib/cards/officialLibrary";
+import { renderSvgUrlToPngObjectUrl, validarPngServidor } from "../../lib/cards/browserPng";
 import AlertMessage from "../ui/AlertMessage";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import DataTable from "../ui/DataTable";
@@ -109,6 +110,7 @@ type AvisoPreviewState = {
   cardPngUrl: string;
   cardSvgUrl: string;
   cardMime: "image/png" | "image/svg+xml";
+  cardSource: "server_png" | "browser_png" | "svg";
   text: string;
   subject: string;
   recipientId: string;
@@ -723,6 +725,14 @@ export default function ClientesIsland() {
     setMsgAviso(null);
   }, [formAviso.recipientId, formAviso.templateId, formAviso.themeId, formAviso.canal, modalAvisoCliente?.id]);
 
+  useEffect(() => {
+    return () => {
+      if (previewAviso?.cardSource === "browser_png" && previewAviso.cardUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(previewAviso.cardUrl);
+      }
+    };
+  }, [previewAviso?.cardUrl, previewAviso?.cardSource]);
+
   async function montarContextoAviso() {
     if (!modalAvisoCliente) throw new Error("Cliente não selecionado.");
     const tpl = templatesAviso.find((t) => t.id === formAviso.templateId);
@@ -787,46 +797,6 @@ export default function ClientesIsland() {
     };
   }
 
-  async function validarPngServidor(cardPngUrl: string) {
-    const response = await fetch(cardPngUrl, {
-      method: "GET",
-      headers: { Accept: "image/png" },
-      cache: "no-store",
-    });
-    if (response.ok) {
-      const contentType = String(response.headers.get("content-type") || "").toLowerCase();
-      if (contentType.includes("image/png")) {
-        return {
-          ok: true as const,
-        };
-      }
-      return {
-        ok: false as const,
-        reason: "not_png" as const,
-        message: "A rota /render.png não retornou PNG real.",
-      };
-    }
-
-    let payload: any = null;
-    try {
-      payload = await response.json();
-    } catch {
-      payload = null;
-    }
-    const apiError = String(payload?.error || "").trim().toLowerCase();
-    if (apiError === "png_render_unavailable" || response.status === 503) {
-      return {
-        ok: false as const,
-        reason: "png_unavailable" as const,
-        message: "PNG indisponível no runtime atual do servidor.",
-      };
-    }
-
-    const textDetail = await response.text().catch(() => "");
-    const detail = String(payload?.message || payload?.error || textDetail || "").trim();
-    throw new Error(detail || "Falha ao renderizar cartão PNG.");
-  }
-
   async function gerarPreviewAviso() {
     try {
       setRenderingPreviewAviso(true);
@@ -835,19 +805,29 @@ export default function ClientesIsland() {
       const payload = await montarContextoAviso();
       let cardUrl = payload.cardPngUrl;
       let cardMime: "image/png" | "image/svg+xml" = "image/png";
+      let cardSource: AvisoPreviewState["cardSource"] = "server_png";
       let previewMsg = "Prévia do cartão gerada. Agora você pode copiar/baixar e abrir o WhatsApp.";
 
       const pngStatus = await validarPngServidor(payload.cardPngUrl);
       if (!pngStatus.ok) {
-        cardUrl = payload.cardSvgUrl;
-        cardMime = "image/svg+xml";
-        previewMsg = "PNG indisponível no runtime atual. Prévia gerada em SVG (fiel ao template).";
+        try {
+          cardUrl = await renderSvgUrlToPngObjectUrl(payload.cardSvgUrl);
+          cardMime = "image/png";
+          cardSource = "browser_png";
+          previewMsg = "PNG indisponível no servidor. Prévia PNG gerada localmente no navegador.";
+        } catch {
+          cardUrl = payload.cardSvgUrl;
+          cardMime = "image/svg+xml";
+          cardSource = "svg";
+          previewMsg = "PNG indisponível no runtime atual. Prévia gerada em SVG (fiel ao template).";
+        }
       }
       setPreviewAviso({
         cardUrl,
         cardPngUrl: payload.cardPngUrl,
         cardSvgUrl: payload.cardSvgUrl,
         cardMime,
+        cardSource,
         text: payload.text,
         subject: payload.subject,
         recipientId: payload.recipient.id,
@@ -2629,6 +2609,11 @@ export default function ClientesIsland() {
                     {previewAviso.cardMime !== "image/png" && (
                       <div className="vtur-inline-note">
                         PNG indisponivel no runtime atual. Use o SVG ou ajuste o ambiente para PNG no servidor.
+                      </div>
+                    )}
+                    {previewAviso.cardMime === "image/png" && previewAviso.cardSource === "browser_png" && (
+                      <div className="vtur-inline-note">
+                        PNG gerado localmente no navegador (fallback automatico).
                       </div>
                     )}
                   </div>

@@ -62,7 +62,7 @@ export function construirUrlCartaoAniversario(
     assinatura,
     v: String(Date.now()),
   });
-  return `${baseOrigin}/api/v1/cards/render.png?${params.toString()}`;
+  return `${baseOrigin}/api/v1/cards/render.svg?${params.toString()}`;
 }
 
 export function montarMensagemFollowUp(nomeCompleto?: string | null, assinatura = "André Lima") {

@@ -4,7 +4,8 @@ import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import AlertMessage from "../ui/AlertMessage";
 import { renderTemplateText } from "../../lib/messageTemplates";
-import { construirLinkWhatsAppComTexto } from "../../lib/whatsapp";
+import { construirLinkWhatsAppComTexto, getPrimeiroNome } from "../../lib/whatsapp";
+import { renderSvgUrlToPngObjectUrl, validarPngServidor } from "../../lib/cards/browserPng";
 import AppCard from "../ui/primer/AppCard";
 import AppButton from "../ui/primer/AppButton";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
@@ -263,6 +264,10 @@ export default function ParametrosAvisosIsland() {
   const [mostrarFormularioTema, setMostrarFormularioTema] = useState(false);
   const [mostrarListaArtes, setMostrarListaArtes] = useState(false);
   const [filtroThemeTabelaId, setFiltroThemeTabelaId] = useState("");
+  const [previewResolvedUrl, setPreviewResolvedUrl] = useState("");
+  const [previewResolvedMime, setPreviewResolvedMime] = useState<"image/png" | "image/svg+xml">("image/svg+xml");
+  const [previewResolvedSource, setPreviewResolvedSource] = useState<"server_png" | "browser_png" | "svg">("svg");
+  const [gerandoPreviewPng, setGerandoPreviewPng] = useState(false);
 
   async function carregar() {
     try {
@@ -394,6 +399,68 @@ export default function ParametrosAvisosIsland() {
     return `/api/v1/cards/render.svg?${previewBaseParams.toString()}`;
   }, [previewBaseParams]);
 
+  const previewThemePngUrl = useMemo(() => {
+    if (!previewBaseParams) return "";
+    return `/api/v1/cards/render.png?${previewBaseParams.toString()}`;
+  }, [previewBaseParams]);
+
+  useEffect(() => {
+    let active = true;
+    let objectUrlToRevoke: string | null = null;
+
+    async function resolverPreviewComPng() {
+      if (!previewThemeSvgUrl) {
+        setPreviewResolvedUrl("");
+        setPreviewResolvedMime("image/svg+xml");
+        setPreviewResolvedSource("svg");
+        setGerandoPreviewPng(false);
+        return;
+      }
+
+      setPreviewResolvedUrl(previewThemeSvgUrl);
+      setPreviewResolvedMime("image/svg+xml");
+      setPreviewResolvedSource("svg");
+      if (!previewThemePngUrl) return;
+
+      setGerandoPreviewPng(true);
+      try {
+        const pngStatus = await validarPngServidor(previewThemePngUrl);
+        if (!active) return;
+        if (pngStatus.ok) {
+          setPreviewResolvedUrl(previewThemePngUrl);
+          setPreviewResolvedMime("image/png");
+          setPreviewResolvedSource("server_png");
+          return;
+        }
+
+        try {
+          const browserPngUrl = await renderSvgUrlToPngObjectUrl(previewThemeSvgUrl);
+          if (!active) {
+            URL.revokeObjectURL(browserPngUrl);
+            return;
+          }
+          objectUrlToRevoke = browserPngUrl;
+          setPreviewResolvedUrl(browserPngUrl);
+          setPreviewResolvedMime("image/png");
+          setPreviewResolvedSource("browser_png");
+        } catch {
+          setPreviewResolvedUrl(previewThemeSvgUrl);
+          setPreviewResolvedMime("image/svg+xml");
+          setPreviewResolvedSource("svg");
+        }
+      } finally {
+        if (active) setGerandoPreviewPng(false);
+      }
+    }
+
+    void resolverPreviewComPng();
+
+    return () => {
+      active = false;
+      if (objectUrlToRevoke) URL.revokeObjectURL(objectUrlToRevoke);
+    };
+  }, [previewThemeSvgUrl, previewThemePngUrl]);
+
   const previewWhatsappUrl = useMemo(() => {
     if (!previewThemeSvgUrl) return "";
     const telefone = previewClienteSelecionado?.whatsapp || previewClienteSelecionado?.telefone || "";
@@ -401,6 +468,25 @@ export default function ParametrosAvisosIsland() {
     const texto = `${previewText}\n\nCartão:\n${typeof window !== "undefined" ? `${window.location.origin}${previewThemeSvgUrl}` : previewThemeSvgUrl}`;
     return construirLinkWhatsAppComTexto(telefone, texto) || "";
   }, [previewThemeSvgUrl, previewClienteSelecionado, previewText]);
+
+  function abrirPreviewCartao(url: string) {
+    if (!url) return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  function baixarPreviewCartao() {
+    if (!previewResolvedUrl) return;
+    const link = document.createElement("a");
+    const slug = (getPrimeiroNome(previewNomeCliente) || "cliente")
+      .replace(/[^a-zA-Z0-9_-]+/g, "_")
+      .toLowerCase();
+    const ext = previewResolvedMime === "image/png" ? "png" : "svg";
+    link.href = previewResolvedUrl;
+    link.download = `cartao-${slug}-${Date.now()}.${ext}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 
   function resetForm() {
     setForm(initialTemplateForm);
@@ -1334,12 +1420,18 @@ export default function ParametrosAvisosIsland() {
           </div>
         </div>
 
-        {previewThemeSvgUrl ? (
+        {previewResolvedUrl ? (
           <>
-            <img src={previewThemeSvgUrl} alt="Prévia do cartão" style={{ maxWidth: 320, borderRadius: 12, border: "1px solid #cbd5e1" }} />
+            <img src={previewResolvedUrl} alt="Prévia do cartão" style={{ maxWidth: 320, borderRadius: 12, border: "1px solid #cbd5e1" }} />
             <div className="mobile-stack-buttons" style={{ marginTop: 8 }}>
-              <AppButton type="button" variant="secondary" onClick={() => window.open(previewThemeSvgUrl, "_blank", "noopener,noreferrer")}>
-                Abrir SVG
+              <AppButton type="button" variant="secondary" onClick={() => abrirPreviewCartao(previewResolvedUrl)}>
+                {previewResolvedMime === "image/png" ? "Abrir PNG" : "Abrir SVG"}
+              </AppButton>
+              <AppButton type="button" variant="secondary" onClick={baixarPreviewCartao}>
+                Baixar cartão
+              </AppButton>
+              <AppButton type="button" variant="secondary" onClick={() => abrirPreviewCartao(previewThemeSvgUrl)}>
+                Abrir SVG original
               </AppButton>
               {previewWhatsappUrl ? (
                 <AppButton type="button" variant="secondary" onClick={() => window.open(previewWhatsappUrl, "_blank", "noopener,noreferrer")}>
@@ -1352,7 +1444,13 @@ export default function ParametrosAvisosIsland() {
               )}
             </div>
             <small style={{ color: "#64748b", display: "block", marginTop: 6 }}>
-              Neste ambiente o preview usa somente SVG.
+              {gerandoPreviewPng
+                ? "Gerando PNG automaticamente..."
+                : previewResolvedSource === "server_png"
+                  ? "PNG gerado no servidor."
+                  : previewResolvedSource === "browser_png"
+                    ? "PNG gerado localmente no navegador (fallback automático)."
+                    : "PNG indisponível no runtime atual. Preview mantido em SVG."}
             </small>
           </>
         ) : (
