@@ -1114,7 +1114,7 @@ export default function ParametrosAvisosIsland() {
           Cada configuração liga uma arte a uma mensagem curta de WhatsApp. Essa configuração é a mesma usada no disparo pelo cadastro do cliente.
         </small>
 
-        <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "1.2fr 1fr 1fr 1fr" }}>
+        <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "1fr" }}>
           <div className="form-group">
             <label className="form-label">Configuração salva</label>
             <select
@@ -1138,6 +1138,11 @@ export default function ParametrosAvisosIsland() {
               ))}
             </select>
           </div>
+        </div>
+
+        {form.id ? (
+          <>
+        <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "1fr 1fr 1fr" }}>
           <div className="form-group">
             <label className="form-label">Cliente para teste</label>
             <select className="form-select" value={previewClienteId} onChange={(e) => setPreviewClienteId(e.target.value)}>
@@ -1184,8 +1189,6 @@ export default function ParametrosAvisosIsland() {
           </div>
         </div>
 
-        {form.id ? (
-          <>
         <form onSubmit={salvarConfiguracao}>
           <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "2fr 1fr 1fr" }}>
             <div className="form-group">
