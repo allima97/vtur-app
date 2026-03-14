@@ -1184,6 +1184,8 @@ export default function ParametrosAvisosIsland() {
           </div>
         </div>
 
+        {form.id ? (
+          <>
         <form onSubmit={salvarConfiguracao}>
           <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "2fr 1fr 1fr" }}>
             <div className="form-group">
@@ -1457,6 +1459,12 @@ export default function ParametrosAvisosIsland() {
           </>
         ) : (
           <small style={{ color: "#64748b" }}>Selecione uma arte e preencha a mensagem para pré-visualizar o cartão final.</small>
+        )}
+          </>
+        ) : (
+          <small style={{ color: "#64748b", display: "block", marginTop: 12 }}>
+            Os campos de edição e preview ficam fechados por padrão. Selecione uma configuração salva para abrir.
+          </small>
         )}
       </AppCard>
     </div>
