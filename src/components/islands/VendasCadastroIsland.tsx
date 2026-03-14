@@ -1832,10 +1832,10 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                     ]}
                   />
 
-                  <div className="form-group min-w-[220px]">
+                  <div className="form-group min-w-0">
                     <label className="form-label">Produto *</label>
                     <input
-                      className="form-input search-input-field"
+                      className="form-input search-input-field w-full"
                       list={`listaProdutos-${i}`}
                       placeholder={placeholderProduto}
                       value={
@@ -1901,7 +1901,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                     onChange={(e) => updateRecibo(i, "numero_reserva", e.target.value)}
                   />
 
-                  <div className="form-group min-w-[180px]">
+                  <div className="form-group min-w-0">
                     <label className="form-label">Tipo de Pacote</label>
                     <select
                       className="form-select"

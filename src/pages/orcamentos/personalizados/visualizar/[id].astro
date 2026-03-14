@@ -351,11 +351,11 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
                     <div class="text-sm font-semibold text-slate-900">{header}</div>
                     {dateLabel ? <div class="mt-1 text-xs font-medium text-slate-500">{dateLabel}</div> : null}
                     {items.length > 0 ? (
-                      <ul class="mt-3 list-disc pl-5 text-sm text-slate-700 space-y-1">
+                      <div class="mt-3 text-sm text-slate-700 space-y-1">
                         {items.map((it, i) => (
-                          <li key={i}>{it}</li>
+                          <p key={i}>{it}</p>
                         ))}
-                      </ul>
+                      </div>
                     ) : null}
                   </div>
                 );
