@@ -137,14 +137,32 @@ async function fetchCidadeSuggestions(params: { query: string; limit?: number; s
   qs.set("q", query);
   qs.set("limite", String(params.limit ?? 60));
   qs.set("no_cache", "1");
-  const response = await fetch(`/api/v1/vendas/cidades-busca?${qs.toString()}`, {
-    signal: params.signal,
-  });
-  if (!response.ok) {
-    throw new Error(await response.text());
+  const endpoints = [
+    "/api/v1/vendas/cidades-busca",
+    "/api/v1/orcamentos/cidades-busca",
+    "/api/v1/relatorios/cidades-busca",
+  ];
+
+  let lastError = "Erro ao buscar cidades.";
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(`${endpoint}?${qs.toString()}`, {
+        signal: params.signal,
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        lastError = text || lastError;
+        continue;
+      }
+      const data = (await response.json()) as CidadeSugestao[];
+      if (Array.isArray(data)) return data;
+    } catch (err: any) {
+      if (params.signal?.aborted) throw err;
+      lastError = err?.message || lastError;
+    }
   }
-  const data = (await response.json()) as CidadeSugestao[];
-  return Array.isArray(data) ? data : [];
+
+  throw new Error(lastError);
 }
 
 function isLocacaoCarroTerm(value?: string | null) {
@@ -523,12 +541,26 @@ export default function VendaContratoImportIsland() {
         if (controller.signal.aborted) return;
         console.error("Erro ao buscar cidades via endpoint:", err);
         setErroCidade("Erro ao buscar cidades (API). Tentando fallback...");
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from("cidades")
-          .select("id, nome")
-          .ilike("nome", `%${buscaCidade.trim()}%`)
-          .order("nome")
-          .limit(60);
+        let fallbackData: CidadeSugestao[] | null = null;
+        let fallbackError: any = null;
+
+        const { data: rpcData, error: rpcError } = await supabase.rpc("buscar_cidades", {
+          q: buscaCidade.trim(),
+          limite: 60,
+        });
+        if (!rpcError && Array.isArray(rpcData) && rpcData.length > 0) {
+          fallbackData = rpcData as CidadeSugestao[];
+        } else {
+          const tableFallback = await supabase
+            .from("cidades")
+            .select("id, nome")
+            .ilike("nome", `%${buscaCidade.trim()}%`)
+            .order("nome")
+            .limit(60);
+          fallbackData = (tableFallback.data as CidadeSugestao[]) || [];
+          fallbackError = tableFallback.error || rpcError;
+        }
+
         if (controller.signal.aborted) return;
         if (fallbackError) {
           console.error("Erro no fallback de cidades:", fallbackError);
@@ -1054,9 +1086,14 @@ export default function VendaContratoImportIsland() {
                     }
                   }}
                 />
-                <label htmlFor="contrato-file-input" className="vtur-import-upload-trigger">
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  className="vtur-import-upload-button"
+                  onClick={() => fileInputRef.current?.click()}
+                >
                   Escolher arquivo
-                </label>
+                </AppButton>
                 <span className="vtur-import-file-name">{file?.name || "Nenhum arquivo selecionado"}</span>
               </div>
               <div className="vtur-form-actions orcamentos-action-bar">

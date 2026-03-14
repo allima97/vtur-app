@@ -1,5 +1,5 @@
 import { kvCache } from "../../../../lib/kvCache";
-import { buildAuthClient, requireModuloLevel } from "./_utils";
+import { buildAuthClient, getUserScope, requireModuloLevel } from "./_utils";
 import { searchCidades } from "../_shared/cidadesSearch";
 
 type CacheEntry = {
@@ -59,14 +59,25 @@ export async function GET({ request }: { request: Request }) {
       });
     }
 
-    const denied = await requireModuloLevel(
-      client,
-      user.id,
-      ["vendas", "vendas_cadastro", "vendas_consulta", "vendas_importar"],
-      1,
-      "Sem acesso a Vendas."
-    );
-    if (denied) return denied;
+    const scope = await getUserScope(client, user.id);
+    if (scope.papel !== "ADMIN") {
+      const denied = await requireModuloLevel(
+        client,
+        user.id,
+        [
+          "vendas",
+          "vendas_cadastro",
+          "vendas_consulta",
+          "vendas_importar",
+          "importar contratos",
+          "importar_contratos",
+          "importarcontratos",
+        ],
+        1,
+        "Sem acesso a Vendas."
+      );
+      if (denied) return denied;
+    }
 
     const cacheKey = ["v1", "vendas", "cidades-busca", user.id, query, String(limite)].join("|");
 

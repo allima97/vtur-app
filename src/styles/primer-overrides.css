@@ -1518,19 +1518,11 @@
   gap: 12px;
 }
 
-.vtur-import-upload-trigger {
-  display: inline-flex;
-  align-items: center;
+.vtur-import-upload-button.vtur-app-button {
+  border-radius: 12px;
+  min-height: 42px;
+  padding: 10px 16px;
   justify-content: center;
-  min-height: 40px;
-  padding: 0 18px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  background: rgba(255, 255, 255, 0.98);
-  color: var(--vtur-primer-ink);
-  font-weight: 700;
-  cursor: pointer;
-  text-decoration: none;
 }
 
 .vtur-import-file-name {
@@ -1883,7 +1875,7 @@
     justify-content: center;
   }
 
-  .vtur-import-upload-trigger {
+  .vtur-import-upload-button.vtur-app-button {
     width: 100%;
   }
 
