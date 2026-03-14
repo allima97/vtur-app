@@ -183,12 +183,17 @@ function normalizarCategoria(value?: string | null) {
     .replace(/^_+|_+$/g, "");
 }
 
-function buildMensagemDisparo(texto: string, assinatura: string, nomeCliente: string) {
+function buildMensagemDisparo(
+  texto: string,
+  assinatura: string,
+  nomeCliente: string,
+  options?: { useFullNameAsFirstName?: boolean }
+) {
   return renderTemplateText(texto, {
     nomeCompleto: nomeCliente,
     assinatura,
     consultor: assinatura,
-  }).trim();
+  }, options).trim();
 }
 
 function normalizeColorInput(value: unknown, fallback = "#000000") {
@@ -299,9 +304,6 @@ export default function ParametrosAvisosIsland() {
       if (!clientesResp.error) {
         const lista = (clientesResp.data || []) as PreviewCliente[];
         setClientesPreview(lista);
-        if (!previewClienteId && lista.length > 0) {
-          setPreviewClienteId(String(lista[0].id));
-        }
       }
     } catch (e: any) {
       setErro(e?.message || "Erro ao carregar avisos.");
@@ -352,8 +354,11 @@ export default function ParametrosAvisosIsland() {
 
   const previewText = useMemo(() => {
     const assinatura = form.assinatura.trim() || nomeUsuario;
-    return buildMensagemDisparo(form.corpo, assinatura, previewNomeCliente);
-  }, [form.corpo, form.assinatura, nomeUsuario, previewNomeCliente]);
+    const hasNomeManual = String(previewNomeClienteManual || "").trim().length > 0;
+    return buildMensagemDisparo(form.corpo, assinatura, previewNomeCliente, {
+      useFullNameAsFirstName: hasNomeManual,
+    });
+  }, [form.corpo, form.assinatura, nomeUsuario, previewNomeCliente, previewNomeClienteManual]);
 
   const previewBaseParams = useMemo(() => {
     if (!selectedThemeForForm) return null;
@@ -372,7 +377,10 @@ export default function ParametrosAvisosIsland() {
       v: String(Date.now()),
     });
 
-    if (nomeManual) params.set("cliente_nome", nomeManual);
+    if (nomeManual) {
+      params.set("cliente_nome", nomeManual);
+      params.set("cliente_nome_literal", nomeManual);
+    }
     if (resolvedThemeAsset.asset_url) params.set("theme_asset_url", resolvedThemeAsset.asset_url);
     if (resolvedThemeAsset.width_px) params.set("width", String(resolvedThemeAsset.width_px));
     if (resolvedThemeAsset.height_px) params.set("height", String(resolvedThemeAsset.height_px));
@@ -1154,8 +1162,8 @@ export default function ParametrosAvisosIsland() {
             </div>
           </div>
 
-          <details style={{ marginBottom: 16 }} open>
-            <summary style={{ cursor: "pointer", fontWeight: 600 }}>Ajustes visuais do card</summary>
+          <details style={{ marginBottom: 16 }}>
+            <summary style={{ cursor: "pointer", fontWeight: 600 }}>Ajustes visuais do card (clique para exibir)</summary>
             <small style={{ color: "#64748b", display: "block", marginTop: 8 }}>
               Ajuste fonte, cor, tamanho e posição de cada bloco. O preview abaixo reflete as mudanças antes de salvar.
             </small>

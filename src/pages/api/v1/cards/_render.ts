@@ -281,6 +281,7 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
   const client = buildAuthClient(request);
 
   const nome = String(url.searchParams.get("nome") || "Cliente").trim() || "Cliente";
+  const clienteNomeLiteralRaw = String(url.searchParams.get("cliente_nome_literal") || "").trim();
   const tituloRaw = String(url.searchParams.get("titulo") || "").trim();
   const corpoRaw = String(url.searchParams.get("corpo") || "").trim();
   const hasFooterLeadParam = url.searchParams.has("footer_lead");
@@ -432,11 +433,20 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
     mensagem: mensagemRaw,
   };
 
-  const titleText = renderTemplateText(titulo, renderVars);
-  const clientNameText = renderTemplateText(String(url.searchParams.get("cliente_nome") || "[PRIMEIRO_NOME],"), renderVars);
+  const forceNomeCompleto = Boolean(clienteNomeLiteralRaw);
+  const titleText = renderTemplateText(titulo, renderVars, {
+    useFullNameAsFirstName: forceNomeCompleto,
+  });
+  const clientNameText = clienteNomeLiteralRaw
+    ? clienteNomeLiteralRaw
+    : renderTemplateText(String(url.searchParams.get("cliente_nome") || "[PRIMEIRO_NOME],"), renderVars, {
+        useFullNameAsFirstName: forceNomeCompleto,
+      });
   const bodyTextRaw = renderTemplateText(corpo, {
     ...renderVars,
     mensagem: mensagemRaw || corpo,
+  }, {
+    useFullNameAsFirstName: forceNomeCompleto,
   });
   const bodyTextNoFooter = bodyTextRaw
     .replace(/\n+\s*com carinho\s*$/i, "")
@@ -444,7 +454,9 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
     .replace(new RegExp(`\\n+\\s*${escapeRegex(consultor)}\\s*$`, "i"), "")
     .trim();
   const bodyText = bodyTextNoFooter || bodyTextRaw;
-  const footerLeadText = renderTemplateText(footerLead, renderVars);
+  const footerLeadText = renderTemplateText(footerLead, renderVars, {
+    useFullNameAsFirstName: forceNomeCompleto,
+  });
   const consultantNameText = renderTemplateText("[CONSULTOR]", renderVars);
   const consultantRoleText = renderTemplateText("[CARGO_CONSULTOR]", renderVars);
   const showPhoto = Boolean(photoUrlRaw && themeLayout?.photo);

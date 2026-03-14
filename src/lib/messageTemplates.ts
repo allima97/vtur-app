@@ -15,9 +15,19 @@ export type MessageTemplateVars = {
   mensagem?: string | null;
 };
 
-export function renderTemplateText(template: string, vars: MessageTemplateVars) {
+type RenderTemplateOptions = {
+  useFullNameAsFirstName?: boolean;
+};
+
+export function renderTemplateText(
+  template: string,
+  vars: MessageTemplateVars,
+  options?: RenderTemplateOptions
+) {
   const nomeCompleto = (vars.nomeCompleto || "").trim();
-  const primeiroNome = getPrimeiroNome(nomeCompleto) || nomeCompleto || "Cliente";
+  const primeiroNome = options?.useFullNameAsFirstName
+    ? nomeCompleto || "Cliente"
+    : getPrimeiroNome(nomeCompleto) || nomeCompleto || "Cliente";
   const assinatura = (vars.assinatura || vars.consultor || "").trim();
   const consultor = assinatura;
   const cargoConsultor = (vars.cargoConsultor || "Consultor(a) de viagens").trim();
