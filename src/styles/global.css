@@ -3452,11 +3452,17 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   justify-content: center;
   z-index: 40;
 }
+.modal-backdrop.modal-venda {
+  z-index: 1200;
+}
 .modal-backdrop.modal-recibo {
-  z-index: 60;
+  z-index: 1210;
+}
+.modal-backdrop.modal-venda .modal-panel {
+  z-index: 1201;
 }
 .modal-backdrop.modal-recibo .modal-panel {
-  z-index: 61;
+  z-index: 1211;
 }
 
 .modal-panel {

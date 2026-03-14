@@ -1754,7 +1754,7 @@ export default function CircuitosIsland() {
                     ) : null}
 
                     {previewData.datas.length > 0 ? (
-                      <AppCard title="Datas de inicio" className="vtur-modal-section-card">
+                      <AppCard title="Datas de início" className="vtur-modal-section-card">
                         <div className="vtur-modal-list">
                           {previewData.datas.map((d, idx) => (
                             <div key={`${d.data_inicio}-${idx}`} className="vtur-modal-list-item">
@@ -1773,22 +1773,27 @@ export default function CircuitosIsland() {
                       </AppCard>
                     ) : null}
 
-                    <AppCard title="Itinerario do circuito" className="vtur-modal-section-card">
-                      <div className="vtur-modal-list">
-                        {previewData.dias.map((dia) => (
-                          <div key={dia.dia_numero} className="vtur-modal-list-item">
-                            <strong>
-                              Dia {dia.dia_numero}
-                              {dia.titulo ? `: ${dia.titulo}` : ""}
-                            </strong>
-                            {dia.cidades.length > 0 ? (
-                              <span>Cidades: {dia.cidades.join(" • ")}</span>
-                            ) : null}
-                            <div style={{ whiteSpace: "pre-line" }}>{dia.descricao}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </AppCard>
+                    {previewData.dias.length > 0 ? (
+                      <>
+                        <AppCard className="vtur-modal-section-card">
+                          <strong>Itinerário do circuito</strong>
+                        </AppCard>
+                        <div className="vtur-modal-list">
+                          {previewData.dias.map((dia) => (
+                            <div key={dia.dia_numero} className="vtur-modal-list-item">
+                              <strong>
+                                Dia {dia.dia_numero}
+                                {dia.titulo ? `: ${dia.titulo}` : ""}
+                              </strong>
+                              {dia.cidades.length > 0 ? (
+                                <span>Cidades: {dia.cidades.join(" • ")}</span>
+                              ) : null}
+                              <div style={{ whiteSpace: "pre-line" }}>{dia.descricao}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : null}
                   </div>
                 </AppCard>
               ) : null}

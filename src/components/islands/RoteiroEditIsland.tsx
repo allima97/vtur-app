@@ -71,10 +71,10 @@ type DiaBanco = { id: string; percurso?: string; cidade: string; descricao: stri
 
 type AbaId = "hoteis" | "passeios" | "transporte" | "itinerario" | "investimento" | "pagamento" | "inclusoes" | "informacoes";
 const ABAS: { id: AbaId; label: string }[] = [
+  { id: "itinerario", label: "Itinerário Personalizado" },
   { id: "hoteis", label: "Hotéis Sugeridos" },
   { id: "passeios", label: "Passeios Principais" },
   { id: "transporte", label: "Transporte Incluído" },
-  { id: "itinerario", label: "Itinerário Detalhado" },
   { id: "investimento", label: "Investimento" },
   { id: "pagamento", label: "Formas de Pagamento" },
   { id: "inclusoes", label: "Incluído / Não Incluído" },
@@ -513,7 +513,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
   );
 
   // ─── UI state
-  const [abaAtiva, setAbaAtiva] = useState<AbaId>("hoteis");
+  const [abaAtiva, setAbaAtiva] = useState<AbaId>("itinerario");
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [currentId, setCurrentId] = useState<string | null>(isNew ? null : roteiroId);
