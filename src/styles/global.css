@@ -980,6 +980,36 @@ body {
   gap: 6px;
 }
 
+.parametros-avisos-saved-config-row,
+.parametros-avisos-preview-fields-row {
+  min-width: 0;
+}
+
+.parametros-avisos-saved-config-row .form-group,
+.parametros-avisos-preview-fields-row .form-group {
+  min-width: 0;
+}
+
+.parametros-avisos-saved-config-row .form-input,
+.parametros-avisos-saved-config-row .form-select,
+.parametros-avisos-preview-fields-row .form-input,
+.parametros-avisos-preview-fields-row .form-select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.parametros-avisos-preview-fields-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+  .parametros-avisos-preview-fields-row {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 .parametros-avisos-style-grid {
   display: grid;
   gap: 12px;
