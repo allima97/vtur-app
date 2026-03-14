@@ -64,7 +64,7 @@ function isClientesRlsMessage(value: string) {
 }
 
 const CLIENTES_RLS_IMPORT_MESSAGE =
-  "Nao foi possivel criar o cliente automaticamente por politica de seguranca (RLS). " +
+  "Não foi possível criar o cliente automaticamente devido à política de segurança (RLS). " +
   "Cadastre o cliente em Clientes e tente importar novamente.";
 
 const CLIENTE_SELECT = "id, cpf, nome, nascimento, endereco, numero, cidade, estado, cep, rg";

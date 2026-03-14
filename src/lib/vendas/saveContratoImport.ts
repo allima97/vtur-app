@@ -64,6 +64,7 @@ function isRlsInsertError(error: any) {
     message.includes("row-level security") ||
     message.includes("violates row-level security") ||
     message.includes("politica de seguranca (rls)") ||
+    message.includes("política de segurança (rls)") ||
     (message.includes("cadastre o cliente em clientes") && message.includes("import"))
   );
 }
@@ -597,7 +598,7 @@ export async function saveContratoImport(params: {
     } catch (error: any) {
       if (isRlsInsertError(error)) {
         throw new Error(
-          "Nao foi possivel criar o cliente automaticamente por politica de seguranca (RLS). " +
+          "Não foi possível criar o cliente automaticamente devido à política de segurança (RLS). " +
             "Cadastre o cliente em Clientes e tente importar novamente."
         );
       }

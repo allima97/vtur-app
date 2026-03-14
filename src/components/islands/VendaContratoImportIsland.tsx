@@ -50,7 +50,7 @@ type TipoPacote = {
 };
 
 const IMPORT_CLIENTE_RLS_MESSAGE =
-  "Nao foi possivel criar o cliente automaticamente por politica de seguranca (RLS). " +
+  "Não foi possível criar o cliente automaticamente devido à política de segurança (RLS). " +
   "Cadastre o cliente em Clientes e tente importar novamente.";
 
 function formatCurrency(value?: number | null) {
