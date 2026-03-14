@@ -96,7 +96,8 @@ async function loadDossie(client: any, params: { viagemId: string; companyId: st
           cpf,
           rg,
           telefone,
-          grau_parentesco
+          grau_parentesco,
+          data_nascimento
         )
       ),
       viagem_servicos (
@@ -155,7 +156,7 @@ async function loadDossie(client: any, params: { viagemId: string; companyId: st
   if (clienteBaseId) {
     const { data: acompDisp, error: acompErr } = await client
       .from("cliente_acompanhantes")
-      .select("id, nome_completo, cpf, telefone, grau_parentesco")
+      .select("id, nome_completo, cpf, telefone, grau_parentesco, data_nascimento")
       .eq("cliente_id", clienteBaseId)
       .eq("ativo", true)
       .order("nome_completo", { ascending: true });
