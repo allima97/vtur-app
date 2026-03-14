@@ -260,6 +260,7 @@ export default function ParametrosAvisosIsland() {
   const [salvando, setSalvando] = useState(false);
   const [salvandoTheme, setSalvandoTheme] = useState(false);
   const [carregandoPadrao, setCarregandoPadrao] = useState(false);
+  const [mostrarFormularioTema, setMostrarFormularioTema] = useState(false);
   const [mostrarListaArtes, setMostrarListaArtes] = useState(false);
   const [filtroThemeTabelaId, setFiltroThemeTabelaId] = useState("");
 
@@ -517,6 +518,7 @@ export default function ParametrosAvisosIsland() {
 
       setMsg(themeForm.id ? "Arte atualizada." : "Arte cadastrada.");
       resetThemeForm();
+      setMostrarFormularioTema(false);
       await carregar();
     } catch (e: any) {
       setErro(e?.message || "Erro ao salvar arte.");
@@ -536,6 +538,7 @@ export default function ParametrosAvisosIsland() {
       ativo: theme.ativo,
     });
     setThemeFile(null);
+    setMostrarFormularioTema(true);
     setErro(null);
     setMsg(null);
   }
@@ -817,57 +820,89 @@ export default function ParametrosAvisosIsland() {
         <small style={{ color: "#64748b", display: "block", marginBottom: 12 }}>
           A arte sobe praticamente pronta. O sistema só injeta o primeiro nome do cliente no ponto definido para o tema.
         </small>
-        <form onSubmit={salvarTheme}>
-          <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "2fr 1fr 1fr 1fr" }}>
-            <div className="form-group">
-              <label className="form-label">Nome da arte *</label>
-              <input className="form-input" value={themeForm.nome} onChange={(e) => setThemeForm((prev) => ({ ...prev, nome: e.target.value }))} required />
+        <div className="mobile-stack-buttons" style={{ marginBottom: 12 }}>
+          <AppButton
+            variant="primary"
+            type="button"
+            onClick={() => setMostrarFormularioTema(true)}
+            disabled={salvandoTheme}
+          >
+            Cadastrar arte
+          </AppButton>
+          <AppButton
+            variant="secondary"
+            type="button"
+            onClick={() => {
+              resetThemeForm();
+              setMostrarFormularioTema(true);
+            }}
+            disabled={salvandoTheme}
+          >
+            Nova arte
+          </AppButton>
+        </div>
+
+        {mostrarFormularioTema ? (
+          <form onSubmit={salvarTheme}>
+            <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "2fr 1fr 1fr 1fr" }}>
+              <div className="form-group">
+                <label className="form-label">Nome da arte *</label>
+                <input className="form-input" value={themeForm.nome} onChange={(e) => setThemeForm((prev) => ({ ...prev, nome: e.target.value }))} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Categoria/Assunto *</label>
+                <input
+                  className="form-input"
+                  list="aviso-categorias-list"
+                  value={themeForm.categoria}
+                  onChange={(e) => setThemeForm((prev) => ({ ...prev, categoria: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Largura (px)</label>
+                <input type="number" className="form-input" value={themeForm.width_px} readOnly disabled />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Altura (px)</label>
+                <input type="number" className="form-input" value={themeForm.height_px} readOnly disabled />
+              </div>
             </div>
-            <div className="form-group">
-              <label className="form-label">Categoria/Assunto *</label>
-              <input
-                className="form-input"
-                list="aviso-categorias-list"
-                value={themeForm.categoria}
-                onChange={(e) => setThemeForm((prev) => ({ ...prev, categoria: e.target.value }))}
-                required
-              />
+            <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "1fr 2fr 1fr" }}>
+              <div className="form-group">
+                <label className="form-label">Arquivo da arte</label>
+                <input type="file" className="form-input" accept="image/*" onChange={(e) => void handleThemeFileSelected(e.target.files?.[0] || null)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">URL da arte (opcional)</label>
+                <input className="form-input" value={themeForm.asset_url} onChange={(e) => setThemeForm((prev) => ({ ...prev, asset_url: e.target.value }))} placeholder="https://..." />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Ativo</label>
+                <select className="form-select" value={themeForm.ativo ? "true" : "false"} onChange={(e) => setThemeForm((prev) => ({ ...prev, ativo: e.target.value === "true" }))}>
+                  <option value="true">Sim</option>
+                  <option value="false">Não</option>
+                </select>
+              </div>
             </div>
-            <div className="form-group">
-              <label className="form-label">Largura (px)</label>
-              <input type="number" className="form-input" value={themeForm.width_px} readOnly disabled />
+            <div className="mobile-stack-buttons">
+              <AppButton variant="primary" type="submit" disabled={salvandoTheme}>
+                {salvandoTheme ? "Salvando..." : themeForm.id ? "Salvar arte" : "Cadastrar arte"}
+              </AppButton>
+              <AppButton variant="secondary" type="button" onClick={resetThemeForm} disabled={salvandoTheme}>
+                Nova arte
+              </AppButton>
+              <AppButton
+                variant="ghost"
+                type="button"
+                onClick={() => setMostrarFormularioTema(false)}
+                disabled={salvandoTheme}
+              >
+                Fechar formulário
+              </AppButton>
             </div>
-            <div className="form-group">
-              <label className="form-label">Altura (px)</label>
-              <input type="number" className="form-input" value={themeForm.height_px} readOnly disabled />
-            </div>
-          </div>
-          <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "1fr 2fr 1fr" }}>
-            <div className="form-group">
-              <label className="form-label">Arquivo da arte</label>
-              <input type="file" className="form-input" accept="image/*" onChange={(e) => void handleThemeFileSelected(e.target.files?.[0] || null)} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">URL da arte (opcional)</label>
-              <input className="form-input" value={themeForm.asset_url} onChange={(e) => setThemeForm((prev) => ({ ...prev, asset_url: e.target.value }))} placeholder="https://..." />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Ativo</label>
-              <select className="form-select" value={themeForm.ativo ? "true" : "false"} onChange={(e) => setThemeForm((prev) => ({ ...prev, ativo: e.target.value === "true" }))}>
-                <option value="true">Sim</option>
-                <option value="false">Não</option>
-              </select>
-            </div>
-          </div>
-          <div className="mobile-stack-buttons">
-            <AppButton variant="primary" type="submit" disabled={salvandoTheme}>
-              {salvandoTheme ? "Salvando..." : themeForm.id ? "Salvar arte" : "Cadastrar arte"}
-            </AppButton>
-            <AppButton variant="secondary" type="button" onClick={resetThemeForm} disabled={salvandoTheme}>
-              Nova arte
-            </AppButton>
-          </div>
-        </form>
+          </form>
+        ) : null}
 
         <div className="form-row mobile-stack" style={{ gap: 12, marginTop: 12, gridTemplateColumns: "1fr auto" }}>
           <div className="form-group">
