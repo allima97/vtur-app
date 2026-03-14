@@ -62,7 +62,9 @@ function isRlsInsertError(error: any) {
   return (
     error?.code === "42501" ||
     message.includes("row-level security") ||
-    message.includes("violates row-level security")
+    message.includes("violates row-level security") ||
+    message.includes("politica de seguranca (rls)") ||
+    (message.includes("cadastre o cliente em clientes") && message.includes("import"))
   );
 }
 
@@ -580,17 +582,27 @@ export async function saveContratoImport(params: {
 
   let cliente = await findClienteByCpf(cpfContrato);
   if (!cliente) {
-    cliente = await resolveClienteImportViaApi({
-      cpf: cpfContrato,
-      nome: contratante.nome || "",
-      nascimento: nascimentoContratante,
-      endereco: contratante.endereco || null,
-      numero: contratante.numero || null,
-      cidade: contratante.cidade || null,
-      estado: contratante.uf || null,
-      cep: contratante.cep || null,
-      rg: contratante.rg || null,
-    });
+    try {
+      cliente = await resolveClienteImportViaApi({
+        cpf: cpfContrato,
+        nome: contratante.nome || "",
+        nascimento: nascimentoContratante,
+        endereco: contratante.endereco || null,
+        numero: contratante.numero || null,
+        cidade: contratante.cidade || null,
+        estado: contratante.uf || null,
+        cep: contratante.cep || null,
+        rg: contratante.rg || null,
+      });
+    } catch (error: any) {
+      if (isRlsInsertError(error)) {
+        throw new Error(
+          "Nao foi possivel criar o cliente automaticamente por politica de seguranca (RLS). " +
+            "Cadastre o cliente em Clientes e tente importar novamente."
+        );
+      }
+      throw error;
+    }
 
     if (!cliente) throw new Error("Não foi possível resolver o cliente do contratante.");
   } else {
@@ -873,11 +885,20 @@ export async function saveContratoImport(params: {
 
       let clientePassageiro: { id?: string } | null = null;
       if (cpf) {
-        clientePassageiro = await resolveClienteImportViaApi({
-          cpf,
-          nome: nomeAcompanhante || "",
-          nascimento,
-        });
+        try {
+          clientePassageiro = await resolveClienteImportViaApi({
+            cpf,
+            nome: nomeAcompanhante || "",
+            nascimento,
+          });
+        } catch (error: any) {
+          if (isRlsInsertError(error)) {
+            // Mantém a importação: registra como acompanhante local mesmo sem vínculo em clientes.
+            clientePassageiro = null;
+          } else {
+            throw error;
+          }
+        }
       }
 
       let existente: { id: string; nome_completo?: string | null; cpf?: string | null; data_nascimento?: string | null } | null = null;

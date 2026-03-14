@@ -49,6 +49,10 @@ type TipoPacote = {
   ativo?: boolean | null;
 };
 
+const IMPORT_CLIENTE_RLS_MESSAGE =
+  "Nao foi possivel criar o cliente automaticamente por politica de seguranca (RLS). " +
+  "Cadastre o cliente em Clientes e tente importar novamente.";
+
 function formatCurrency(value?: number | null) {
   if (value == null || Number.isNaN(Number(value))) return "-";
   const num = Number(value);
@@ -111,6 +115,15 @@ function calcAge(birthIso?: string | null, refIso?: string | null) {
 
 function formatCidadeLabel(cidade: CidadeSugestao) {
   return cidade.subdivisao_nome ? `${cidade.nome} (${cidade.subdivisao_nome})` : cidade.nome;
+}
+
+function normalizeImportErrorMessage(error: any) {
+  const raw = String(error?.message || error || "").trim();
+  const message = raw.toLowerCase();
+  if (message.includes("row-level security") && message.includes("clientes")) {
+    return IMPORT_CLIENTE_RLS_MESSAGE;
+  }
+  return raw || "Erro ao salvar venda.";
 }
 
 function sanitizeCidadeSeed(value?: string | null) {
@@ -884,7 +897,7 @@ export default function VendaContratoImportIsland() {
           mensagem: `${alvo} já foi cadastrado no sistema. Só é possível cadastrar ${alvo.toLowerCase()}s novos.`,
         });
       } else {
-        const message = e?.message || "Erro ao salvar venda.";
+        const message = normalizeImportErrorMessage(e);
         setError(message);
         showToast(message, "error");
       }
@@ -1583,11 +1596,12 @@ export default function VendaContratoImportIsland() {
             </AppCard>
 
             <AppCard
+              className="vtur-import-destination-card"
               title="Destino principal da venda"
               subtitle="Confirme cidade, produto e data da venda. Esses dados determinam o contexto comercial salvo."
             >
               <div className="vtur-form-grid vtur-form-grid-3">
-                <div className="form-group min-w-0 vtur-city-picker">
+                <div className={`form-group min-w-0 vtur-city-picker${mostrarSugestoesCidade ? " is-open" : ""}`}>
                   <label className="form-label">Cidade *</label>
                   <input
                     className="form-input"
@@ -1600,7 +1614,7 @@ export default function VendaContratoImportIsland() {
                     disabled={cidadeAutoIndefinida || loadingCidadeIndefinida}
                   />
                   {mostrarSugestoesCidade && (buscandoCidade || buscaCidade.trim().length >= 2) ? (
-                    <div className="vtur-city-dropdown">
+                    <div className="vtur-city-dropdown vtur-city-dropdown-inline">
                       {buscandoCidade ? (
                         <div className="vtur-city-helper">Buscando cidades...</div>
                       ) : null}

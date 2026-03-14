@@ -57,6 +57,16 @@ function isRlsInsertError(error: any) {
   );
 }
 
+function isClientesRlsMessage(value: string) {
+  const message = String(value || "").toLowerCase();
+  if (!message) return false;
+  return message.includes("row-level security") && message.includes("clientes");
+}
+
+const CLIENTES_RLS_IMPORT_MESSAGE =
+  "Nao foi possivel criar o cliente automaticamente por politica de seguranca (RLS). " +
+  "Cadastre o cliente em Clientes e tente importar novamente.";
+
 const CLIENTE_SELECT = "id, cpf, nome, nascimento, endereco, numero, cidade, estado, cep, rg";
 
 async function getCompanyId(client: any, userId: string) {
@@ -101,6 +111,20 @@ export async function POST({ request }: { request: Request }) {
     const companyId = await getCompanyId(authClient, user.id);
     if (!companyId) return new Response("Usuario sem company_id.", { status: 403 });
 
+    const linkByCpfAndRead = async () => {
+      const { data: linkedId, error: linkErr } = await authClient.rpc("clientes_link_by_cpf", { p_cpf: cpf });
+      if (linkErr) throw linkErr;
+      const clienteId = String(linkedId || "").trim();
+      if (!clienteId) return null;
+      const { data: linkedCliente, error: linkedSelectErr } = await authClient
+        .from("clientes")
+        .select(CLIENTE_SELECT)
+        .eq("id", clienteId)
+        .maybeSingle();
+      if (linkedSelectErr) throw linkedSelectErr;
+      return linkedCliente || null;
+    };
+
     const { data: alreadyVisible, error: alreadyErr } = await authClient
       .from("clientes")
       .select(CLIENTE_SELECT)
@@ -128,9 +152,8 @@ export async function POST({ request }: { request: Request }) {
         await ensureClienteCompanyLink(dataClient, existingId, companyId);
       }
     } else {
-      const { data: linkedId, error: linkErr } = await authClient.rpc("clientes_link_by_cpf", { p_cpf: cpf });
-      if (linkErr) throw linkErr;
-      existingId = String(linkedId || "").trim();
+      const linked = await linkByCpfAndRead();
+      existingId = String((linked as any)?.id || "").trim();
     }
 
     if (existingId) {
@@ -164,8 +187,10 @@ export async function POST({ request }: { request: Request }) {
       active: true,
     };
     const compatPayloads: any[] = [
-      { ...basePayload, created_by: user.id },
       { ...basePayload, created_by: user.id, company_id: companyId },
+      { ...basePayload, created_by: null, company_id: companyId },
+      { ...basePayload, created_by: user.id },
+      { ...basePayload, created_by: null },
     ];
 
     let lastInsertError: any = null;
@@ -185,13 +210,35 @@ export async function POST({ request }: { request: Request }) {
         });
       }
       lastInsertError = error;
-      if (!isRlsInsertError(error)) break;
+
+      if (String(error?.code || "") === "23505") {
+        const linked = await linkByCpfAndRead();
+        if (linked) {
+          return new Response(JSON.stringify({ cliente: linked }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      }
+
+      if (isRlsInsertError(error)) {
+        const linked = await linkByCpfAndRead().catch(() => null);
+        if (linked) {
+          return new Response(JSON.stringify({ cliente: linked }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      }
     }
 
     if (lastInsertError) throw lastInsertError;
     return new Response("Nao foi possivel resolver cliente.", { status: 500 });
   } catch (error: any) {
     const message = String(error?.message || "Erro ao resolver cliente para importacao.");
+    if (isRlsInsertError(error) || isClientesRlsMessage(message)) {
+      return new Response(CLIENTES_RLS_IMPORT_MESSAGE, { status: 403 });
+    }
     return new Response(message, { status: 500 });
   }
 }

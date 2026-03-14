@@ -288,6 +288,11 @@ body.sakai-theme .vtur-app-card .vtur-app-card-body {
   padding: 1.25rem;
 }
 
+body.sakai-theme .vtur-app-card.vtur-import-destination-card,
+body.sakai-theme .vtur-app-card.vtur-import-destination-card .vtur-app-card-body {
+  overflow: visible;
+}
+
 /* Tabelas em cards: separar visualmente cabecalho/filtros da grade em caixas distintas. */
 body.sakai-theme .vtur-app-card.vtur-app-card-has-table,
 body.sakai-theme .vtur-app-card.vtur-app-card-has-datatable {
