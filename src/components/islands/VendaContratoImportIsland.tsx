@@ -1059,7 +1059,7 @@ export default function VendaContratoImportIsland() {
                 </label>
                 <span className="vtur-import-file-name">{file?.name || "Nenhum arquivo selecionado"}</span>
               </div>
-              <div className="vtur-form-actions">
+              <div className="vtur-form-actions orcamentos-action-bar">
                 <AppButton
                   type="button"
                   variant="primary"

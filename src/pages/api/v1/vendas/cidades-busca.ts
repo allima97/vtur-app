@@ -62,7 +62,7 @@ export async function GET({ request }: { request: Request }) {
     const denied = await requireModuloLevel(
       client,
       user.id,
-      ["vendas", "vendas_cadastro", "vendas_consulta"],
+      ["vendas", "vendas_cadastro", "vendas_consulta", "vendas_importar"],
       1,
       "Sem acesso a Vendas."
     );
