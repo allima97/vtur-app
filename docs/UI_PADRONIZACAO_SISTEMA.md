@@ -1,5 +1,7 @@
 # UI Padronizacao do Sistema
 
+Ultima atualizacao: 2026-03-14.
+
 ## Objetivo
 Este documento define os padroes visuais e de interacao do sistema para reduzir inconsistencias entre telas e acelerar novas implementacoes.
 
@@ -82,6 +84,29 @@ Aplica-se a:
 - Acao destrutiva: `variant="danger"`.
 - Evitar misturar varios estilos para a mesma funcao na mesma tela.
 
+### Orcamentos (padrao oficial de barras de acao)
+- Todas as barras de acao do modulo `orcamentos/*` devem usar a classe `orcamentos-action-bar`.
+- Containers recomendados:
+  - `mobile-stack-buttons orcamentos-action-bar`
+  - `vtur-quote-top-actions orcamentos-action-bar`
+- Botoes de acao (nao icon-only) nesse contexto devem seguir:
+  - `border-radius: 12px`
+  - `min-height: 42px`
+  - `padding: 10px 16px`
+  - sem sombra no botao principal da barra
+- Excecoes:
+  - botoes icon-only (`.btn-icon` / `.p-button-icon-only`) mantem o padrao proprio de icones.
+  - em `orcamentos/personalizados/[id]` (editor de roteiro), no desktop os botoes da barra de info podem usar `min-width: 150px` para manter legibilidade.
+- Referencia de implementacao:
+  - `src/styles/global.css` (classe `orcamentos-action-bar`)
+  - `src/components/islands/QuoteManualIsland.tsx`
+  - `src/components/islands/QuoteImportIsland.tsx`
+  - `src/components/islands/QuoteDetailIsland.tsx`
+  - `src/components/islands/RoteiroListIsland.tsx`
+  - `src/components/islands/RoteiroEditIsland.tsx`
+  - `src/pages/orcamentos/consulta.astro`
+  - `src/pages/orcamentos/personalizados/visualizar/[id].astro`
+
 ## Formularios
 - Usar `AppField` para inputs, selects e textareas.
 - Labels curtas e claras.
@@ -116,3 +141,4 @@ Aplica-se a:
 ## Governanca
 - Em novas demandas de layout/estilo, este documento deve ser a referencia inicial.
 - Caso seja necessario desviar do padrao, registrar a justificativa no PR/commit.
+- Sempre que um ajuste de padrao visual global/modular for aplicado, atualizar este documento no mesmo PR/commit.

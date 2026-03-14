@@ -605,7 +605,7 @@ export default function QuoteDetailIsland(props: {
           title="Detalhe do orcamento"
           subtitle={`Quote ${props.quote.id} · Status operacional ${status} · Negociacao ${statusNegociacao}`}
           actions={
-            <div className="vtur-quote-top-actions">
+            <div className="vtur-quote-top-actions orcamentos-action-bar">
               <AppButton
                 type="button"
                 variant="primary"

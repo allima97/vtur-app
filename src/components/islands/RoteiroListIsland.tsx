@@ -77,7 +77,7 @@ export default function RoteiroListIsland() {
           title="Roteiros personalizados"
           subtitle="Busque, edite e remova roteiros salvos."
           actions={(
-            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+            <div className="mobile-stack-buttons orcamentos-action-bar" style={{ justifyContent: "flex-end" }}>
               <AppButton as="a" href="/orcamentos/personalizados/novo" variant="primary">
                 Novo Roteiro
               </AppButton>

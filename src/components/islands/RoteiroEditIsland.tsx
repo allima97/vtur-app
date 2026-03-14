@@ -831,7 +831,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
           title={isNew ? "Novo roteiro personalizado" : "Editar roteiro personalizado"}
           subtitle="Gerencie hotéis, passeios, transporte, itinerário, investimento e pagamento."
           actions={(
-            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+            <div className="mobile-stack-buttons orcamentos-action-bar" style={{ justifyContent: "flex-end" }}>
               <AppButton
                 type="button"
                 onClick={() => (window.location.href = "/orcamentos/personalizados")}
@@ -886,7 +886,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                 placeholder="Ex: Lisboa"
               />
             </div>
-            <div className="mobile-stack-buttons roteiro-info-actions">
+            <div className="mobile-stack-buttons roteiro-info-actions orcamentos-action-bar">
               {saveMsg && (
                 <AlertMessage variant="success" className="mb-0 roteiro-info-feedback">
                   {saveMsg}
@@ -938,7 +938,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                 onChange={(e) => setImportFile(e.target.files?.[0] || null)}
               />
             </div>
-            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+            <div className="mobile-stack-buttons orcamentos-action-bar" style={{ justifyContent: "flex-end" }}>
               <AppButton
                 type="button"
                 onClick={handleImportRoteiroFile}
