@@ -888,7 +888,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
             </div>
             <div className="mobile-stack-buttons roteiro-info-actions">
               {saveMsg && (
-                <AlertMessage variant="success" className="mb-0">
+                <AlertMessage variant="success" className="mb-0 roteiro-info-feedback">
                   {saveMsg}
                 </AlertMessage>
               )}

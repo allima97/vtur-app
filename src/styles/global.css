@@ -510,19 +510,23 @@ body {
 
   /* sobrescreve o .mobile-stack-buttons (que é flex) */
   .roteiro-info-actions.mobile-stack-buttons {
-    display: grid !important;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    display: flex !important;
+    flex-wrap: wrap;
     gap: 10px;
-    align-items: stretch;
+    align-items: center;
   }
 
-  .roteiro-info-actions.mobile-stack-buttons > span {
-    grid-column: 1 / -1;
+  .roteiro-info-actions .roteiro-info-feedback {
+    flex: 1 1 100%;
+    margin-bottom: 2px;
   }
 
-  .roteiro-info-actions.mobile-stack-buttons > button {
-    width: 100%;
-    min-height: 36px;
+  .roteiro-info-actions.mobile-stack-buttons > :is(button, a, .vtur-app-button) {
+    width: auto;
+    min-width: 190px;
+    min-height: 42px;
+    border-radius: 12px;
+    justify-content: center;
   }
 }
 
@@ -544,6 +548,13 @@ body {
     grid-column: 1 / -1;
     justify-self: stretch;
   }
+}
+
+.orcamentos-consulta-header-actions .btn {
+  border-radius: 12px;
+  min-height: 42px;
+  padding: 10px 16px;
+  box-shadow: none;
 }
 
 /* Documentação */
