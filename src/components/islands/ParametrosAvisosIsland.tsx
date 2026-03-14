@@ -360,6 +360,7 @@ export default function ParametrosAvisosIsland() {
     const resolvedThemeAsset = resolveThemeAssetMeta(selectedThemeForForm);
 
     const assinatura = form.assinatura.trim() || nomeUsuario || "";
+    const nomeManual = String(previewNomeClienteManual || "").trim();
     const params = new URLSearchParams({
       theme_id: selectedThemeForForm.id,
       nome: previewNomeCliente,
@@ -371,12 +372,13 @@ export default function ParametrosAvisosIsland() {
       v: String(Date.now()),
     });
 
+    if (nomeManual) params.set("cliente_nome", nomeManual);
     if (resolvedThemeAsset.asset_url) params.set("theme_asset_url", resolvedThemeAsset.asset_url);
     if (resolvedThemeAsset.width_px) params.set("width", String(resolvedThemeAsset.width_px));
     if (resolvedThemeAsset.height_px) params.set("height", String(resolvedThemeAsset.height_px));
     params.set("style_overrides", JSON.stringify(styleForm));
     return params;
-  }, [selectedThemeForForm, previewNomeCliente, previewCardTitle, form.corpo, form.footerLead, form.assinatura, form.consultantRole, nomeUsuario, styleForm]);
+  }, [selectedThemeForForm, previewNomeCliente, previewCardTitle, form.corpo, form.footerLead, form.assinatura, form.consultantRole, nomeUsuario, styleForm, previewNomeClienteManual]);
 
   const previewThemeSvgUrl = useMemo(() => {
     if (!previewBaseParams) return "";
