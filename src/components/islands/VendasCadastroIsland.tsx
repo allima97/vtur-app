@@ -1644,7 +1644,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
               <div className="form-group min-w-0">
                 <label className="form-label">Lançada em</label>
                 <input
-                  className="form-input"
+                  className="form-input vtur-date-native"
                   type="date"
                   value={formVenda.data_lancamento}
                   onFocus={selectAllInputOnFocus}
@@ -1665,7 +1665,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                   </span>
                 </label>
                 <input
-                  className="form-input"
+                  className="form-input vtur-date-native"
                   type="date"
                   value={formVenda.data_venda}
                   onFocus={selectAllInputOnFocus}
@@ -1677,7 +1677,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
               <div className="form-group min-w-0">
                 <label className="form-label">Data de embarque</label>
                 <input
-                  className="form-input"
+                  className="form-input vtur-date-native"
                   type="date"
                   value={formVenda.data_embarque}
                   onFocus={selectAllInputOnFocus}
@@ -1702,7 +1702,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
               <div className="form-group min-w-0">
                 <label className="form-label">Data final</label>
                 <input
-                  className="form-input"
+                  className="form-input vtur-date-native"
                   type="date"
                   value={formVenda.data_final}
                   min={formVenda.data_embarque || undefined}

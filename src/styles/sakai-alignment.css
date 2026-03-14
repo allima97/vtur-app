@@ -453,6 +453,16 @@ body.sakai-theme input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
 }
 
+/* Use only the native browser calendar icon for specific fields (avoid duplicated icon). */
+body.sakai-theme .form-input[type="date"].vtur-date-native {
+  background-image: none !important;
+  padding-right: 12px !important;
+}
+
+body.sakai-theme .form-input[type="date"].vtur-date-native::-webkit-calendar-picker-indicator {
+  opacity: 1 !important;
+}
+
 body.sakai-theme .vtur-app-button {
   border-radius: 8px;
 }

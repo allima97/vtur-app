@@ -165,6 +165,39 @@ async function fetchCidadeSuggestions(params: { query: string; limit?: number; s
   throw new Error(lastError);
 }
 
+async function fetchCidadeSuggestionsFallback(query: string, limit = 60) {
+  const term = String(query || "").trim();
+  if (term.length < 2) {
+    return { data: [] as CidadeSugestao[], error: null as any };
+  }
+
+  const { data: rpcData, error: rpcError } = await supabase.rpc("buscar_cidades", {
+    q: term,
+    limite: limit,
+  });
+  if (!rpcError && Array.isArray(rpcData) && rpcData.length > 0) {
+    return { data: rpcData as CidadeSugestao[], error: null as any };
+  }
+
+  const tableFallback = await supabase
+    .from("cidades")
+    .select("id, nome")
+    .ilike("nome", `%${term}%`)
+    .order("nome")
+    .limit(limit);
+  if (tableFallback.error) {
+    return {
+      data: [] as CidadeSugestao[],
+      error: tableFallback.error || rpcError || new Error("Erro ao buscar cidades."),
+    };
+  }
+
+  return {
+    data: (tableFallback.data as CidadeSugestao[]) || [],
+    error: null as any,
+  };
+}
+
 function isLocacaoCarroTerm(value?: string | null) {
   const term = normalizeText(value || "");
   if (!term) return false;
@@ -535,39 +568,34 @@ export default function VendaContratoImportIsland() {
           signal: controller.signal,
         });
         if (controller.signal.aborted) return;
-        setResultadosCidade(data);
+        if (Array.isArray(data) && data.length > 0) {
+          setResultadosCidade(data);
+          setErroCidade(null);
+          return;
+        }
+
+        const fallback = await fetchCidadeSuggestionsFallback(buscaCidade.trim(), 60);
+        if (controller.signal.aborted) return;
+        if (fallback.error) {
+          console.error("Erro no fallback de cidades:", fallback.error);
+          setErroCidade("Erro ao buscar cidades.");
+          setResultadosCidade([]);
+          return;
+        }
+        setResultadosCidade(fallback.data || []);
         setErroCidade(null);
       } catch (err) {
         if (controller.signal.aborted) return;
         console.error("Erro ao buscar cidades via endpoint:", err);
         setErroCidade("Erro ao buscar cidades (API). Tentando fallback...");
-        let fallbackData: CidadeSugestao[] | null = null;
-        let fallbackError: any = null;
-
-        const { data: rpcData, error: rpcError } = await supabase.rpc("buscar_cidades", {
-          q: buscaCidade.trim(),
-          limite: 60,
-        });
-        if (!rpcError && Array.isArray(rpcData) && rpcData.length > 0) {
-          fallbackData = rpcData as CidadeSugestao[];
-        } else {
-          const tableFallback = await supabase
-            .from("cidades")
-            .select("id, nome")
-            .ilike("nome", `%${buscaCidade.trim()}%`)
-            .order("nome")
-            .limit(60);
-          fallbackData = (tableFallback.data as CidadeSugestao[]) || [];
-          fallbackError = tableFallback.error || rpcError;
-        }
-
+        const fallback = await fetchCidadeSuggestionsFallback(buscaCidade.trim(), 60);
         if (controller.signal.aborted) return;
-        if (fallbackError) {
-          console.error("Erro no fallback de cidades:", fallbackError);
+        if (fallback.error) {
+          console.error("Erro no fallback de cidades:", fallback.error);
           setErroCidade("Erro ao buscar cidades.");
           setResultadosCidade([]);
         } else {
-          setResultadosCidade((fallbackData as CidadeSugestao[]) || []);
+          setResultadosCidade(fallback.data || []);
           setErroCidade(null);
         }
       } finally {
@@ -1559,17 +1587,17 @@ export default function VendaContratoImportIsland() {
               subtitle="Confirme cidade, produto e data da venda. Esses dados determinam o contexto comercial salvo."
             >
               <div className="vtur-form-grid vtur-form-grid-3">
-                <div className="vtur-city-picker">
-                  <AppField
-                    label="Cidade"
+                <div className="form-group min-w-0 vtur-city-picker">
+                  <label className="form-label">Cidade *</label>
+                  <input
+                    className="form-input"
                     placeholder="Digite o nome da cidade"
                     value={buscaCidade}
                     onChange={(e) => handleCidadeInput(e.target.value)}
                     onFocus={() => setMostrarSugestoesCidade(true)}
                     onBlur={() => setTimeout(() => setMostrarSugestoesCidade(false), 150)}
+                    autoComplete="off"
                     disabled={cidadeAutoIndefinida || loadingCidadeIndefinida}
-                    validation={!cidadeId && buscaCidade.trim() ? "Selecione uma cidade na lista para confirmar." : undefined}
-                    validationVariant="error"
                   />
                   {mostrarSugestoesCidade && (buscandoCidade || buscaCidade.trim().length >= 2) ? (
                     <div className="vtur-city-dropdown">
@@ -1610,6 +1638,9 @@ export default function VendaContratoImportIsland() {
                           })
                         : null}
                     </div>
+                  ) : null}
+                  {!cidadeId && buscaCidade.trim() ? (
+                    <div className="vtur-city-helper error">Selecione uma cidade na lista para confirmar.</div>
                   ) : null}
                   {loadingCidadeIndefinida ? (
                     <div className="vtur-city-helper">Definindo cidade automaticamente...</div>
