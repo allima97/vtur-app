@@ -1515,7 +1515,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 <AppField
                   as="select"
                   label="Vendedor *"
-                  wrapperClassName="min-w-[220px]"
+                  wrapperClassName="min-w-0"
                   value={formVenda.vendedor_id}
                   onChange={(e) =>
                     setFormVenda((prev) => ({ ...prev, vendedor_id: e.target.value }))
@@ -1528,7 +1528,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 />
               )}
 
-              <div className="form-group min-w-[220px] vtur-city-picker">
+              <div className="form-group min-w-0 vtur-city-picker">
                 <label className="form-label">Cliente *</label>
                 <input
                   className="form-input"
@@ -1588,7 +1588,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 )}
               </div>
 
-              <div className="form-group min-w-[220px] vtur-city-picker">
+              <div className="form-group min-w-0 vtur-city-picker">
                 <label className="form-label">Cidade de Destino *</label>
                 <input
                   className="form-input"
@@ -1641,7 +1641,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 )}
               </div>
 
-              <div className="form-group min-w-[180px]">
+              <div className="form-group min-w-0">
                 <label className="form-label">Lançada em</label>
                 <input
                   className="form-input"
@@ -1654,7 +1654,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 />
               </div>
 
-              <div className="form-group min-w-[180px]">
+              <div className="form-group min-w-0">
                 <label className="form-label">
                   Data da venda *{" "}
                   <span
@@ -1674,7 +1674,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 />
               </div>
 
-              <div className="form-group min-w-[180px]">
+              <div className="form-group min-w-0">
                 <label className="form-label">Data de embarque</label>
                 <input
                   className="form-input"
@@ -1699,7 +1699,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 />
               </div>
 
-              <div className="form-group min-w-[180px]">
+              <div className="form-group min-w-0">
                 <label className="form-label">Data final</label>
                 <input
                   className="form-input"
@@ -2020,7 +2020,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 </div>
 
                 <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 16 }}>
-                  <div className="form-group min-w-[220px]">
+                  <div className="form-group min-w-0">
                     <label className="form-label">Contrato (PDF)</label>
                     <input
                       type="file"

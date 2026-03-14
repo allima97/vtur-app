@@ -366,7 +366,7 @@ function RowActions({
           title="Subir"
           aria-label="Subir"
         >
-          ▲
+          <i className="pi pi-chevron-up" aria-hidden="true" />
         </AppButton>
         <AppButton
           type="button"
@@ -377,7 +377,7 @@ function RowActions({
           title="Descer"
           aria-label="Descer"
         >
-          ▼
+          <i className="pi pi-chevron-down" aria-hidden="true" />
         </AppButton>
         <AppButton
           type="button"
@@ -388,7 +388,7 @@ function RowActions({
           title="Adicionar abaixo"
           aria-label="Adicionar abaixo"
         >
-          +
+          <i className="pi pi-plus" aria-hidden="true" />
         </AppButton>
         <AppButton
           type="button"
@@ -1365,9 +1365,15 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                   />
                 </div>
                 <div style={{ display: "flex", gap: 4, flexShrink: 0, paddingTop: 20 }}>
-                  <AppButton type="button" variant="secondary" onClick={() => diaOps.moveUp(i)} style={actionBtnSt} title="Subir">▲</AppButton>
-                  <AppButton type="button" variant="secondary" onClick={() => diaOps.moveDown(i)} style={actionBtnSt} title="Descer">▼</AppButton>
-                  <AppButton type="button" variant="secondary" onClick={() => diaOps.add(i)} style={actionBtnSt} title="Adicionar">+</AppButton>
+                  <AppButton type="button" variant="secondary" className="btn-icon" onClick={() => diaOps.moveUp(i)} style={actionBtnSt} title="Subir" aria-label="Subir">
+                    <i className="pi pi-chevron-up" aria-hidden="true" />
+                  </AppButton>
+                  <AppButton type="button" variant="secondary" className="btn-icon" onClick={() => diaOps.moveDown(i)} style={actionBtnSt} title="Descer" aria-label="Descer">
+                    <i className="pi pi-chevron-down" aria-hidden="true" />
+                  </AppButton>
+                  <AppButton type="button" variant="secondary" className="btn-icon" onClick={() => diaOps.add(i)} style={actionBtnSt} title="Adicionar" aria-label="Adicionar">
+                    <i className="pi pi-plus" aria-hidden="true" />
+                  </AppButton>
                   <AppButton type="button" variant="danger" onClick={() => diaOps.remove(i)} style={{ ...actionBtnSt, color: "#dc2626" }} title="Excluir">
                     <i className="pi pi-trash" aria-hidden="true" />
                   </AppButton>
