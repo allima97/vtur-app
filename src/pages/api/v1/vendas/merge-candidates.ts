@@ -17,6 +17,10 @@ function parseIds(raw?: string | null) {
     .slice(0, 300);
 }
 
+function normalizeCpf(value?: string | null) {
+  return String(value || "").replace(/\D/g, "");
+}
+
 export async function GET({ request }: { request: Request }) {
   try {
     const client = buildAuthClient(request);
@@ -48,7 +52,7 @@ export async function GET({ request }: { request: Request }) {
 
     let vendaQuery = client
       .from("vendas")
-      .select("id, cliente_id, vendedor_id, company_id")
+      .select("id, cliente_id, vendedor_id, company_id, clientes(cpf)")
       .eq("id", vendaId)
       .maybeSingle();
     vendaQuery = applyScopeToQuery(vendaQuery, scope, companyId);
@@ -56,14 +60,40 @@ export async function GET({ request }: { request: Request }) {
     if (vendaErr) throw vendaErr;
     if (!venda) return new Response("Venda nao encontrada.", { status: 404 });
 
+    const vendaCpf = normalizeCpf((venda as any)?.clientes?.cpf || "");
+
+    let clienteIds = [String((venda as any)?.cliente_id || "").trim()].filter((id) => isUuid(id));
+    if (vendaCpf) {
+      const { data: clientesMesmoCpf, error: clientesErr } = await client
+        .from("clientes")
+        .select("id")
+        .eq("cpf", vendaCpf)
+        .limit(300);
+      if (clientesErr) throw clientesErr;
+
+      const idsMesmoCpf = (clientesMesmoCpf || [])
+        .map((row: any) => String(row?.id || "").trim())
+        .filter((id: string) => isUuid(id));
+      if (idsMesmoCpf.length > 0) {
+        clienteIds = Array.from(new Set(idsMesmoCpf));
+      }
+    }
+
     let query = client
       .from("vendas")
       .select(
         "id, vendedor_id, cliente_id, destino_id, destino_cidade_id, company_id, data_lancamento, data_venda, data_embarque, data_final, valor_total, clientes(nome), destinos:produtos!destino_id (nome, cidade_id), destino_cidade:cidades!destino_cidade_id (id, nome), vendedor:users!vendedor_id (nome_completo)"
       )
-      .eq("cliente_id", venda.cliente_id)
       .neq("id", venda.id)
       .order("data_venda", { ascending: false });
+
+    if (clienteIds.length > 1) {
+      query = query.in("cliente_id", clienteIds);
+    } else if (clienteIds.length === 1) {
+      query = query.eq("cliente_id", clienteIds[0]);
+    } else {
+      query = query.eq("cliente_id", venda.cliente_id);
+    }
 
     query = applyScopeToQuery(query, scope, companyId);
 
