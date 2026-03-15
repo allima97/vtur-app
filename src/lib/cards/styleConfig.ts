@@ -51,6 +51,7 @@ export const CARD_ALIGN_OPTIONS = [
   { label: "Esquerda", value: "left" },
   { label: "Centro", value: "center" },
   { label: "Direita", value: "right" },
+  { label: "Justificado", value: "justify" },
 ] as const;
 
 export const CARD_WEIGHT_OPTIONS = [
@@ -148,8 +149,17 @@ function sanitizeStyle(input: unknown): CardThemeStyle {
   if (raw.fontWeight !== undefined && raw.fontWeight !== null && String(raw.fontWeight).trim()) style.fontWeight = String(raw.fontWeight).trim();
   if (typeof raw.color === "string" && raw.color.trim()) style.color = raw.color.trim();
   if (typeof raw.fontFamily === "string" && raw.fontFamily.trim()) style.fontFamily = raw.fontFamily.trim();
-  if (raw.align === "left" || raw.align === "center" || raw.align === "right") style.align = raw.align;
-  if (raw.textAlign === "left" || raw.textAlign === "center" || raw.textAlign === "right") style.textAlign = raw.textAlign;
+  if (raw.align === "left" || raw.align === "center" || raw.align === "right" || raw.align === "justify") {
+    style.align = raw.align;
+  }
+  if (
+    raw.textAlign === "left" ||
+    raw.textAlign === "center" ||
+    raw.textAlign === "right" ||
+    raw.textAlign === "justify"
+  ) {
+    style.textAlign = raw.textAlign;
+  }
   if (Number.isFinite(Number(raw.lineHeight))) style.lineHeight = Number(raw.lineHeight);
   if (typeof raw.italic === "boolean") style.italic = raw.italic;
   if (raw.fontStyle === "normal" || raw.fontStyle === "italic") style.fontStyle = raw.fontStyle;

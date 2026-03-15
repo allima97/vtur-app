@@ -1462,9 +1462,9 @@ function toLineChartConfig(
     if (id === "aniversariantes_clientes") {
       return `Aniversariantes (clientes e acompanhantes) (${clientesAniversariantes.length})`;
     }
-    if (id === "orcamentos") return `Orcamentos recentes (${orcamentosRecentes.length})`;
+    if (id === "orcamentos") return `Orçamentos recentes (${orcamentosRecentes.length})`;
     if (id === "consultorias") return `Lembretes de consultoria (${lembretesDashboard.length})`;
-    if (id === "viagens") return `Proximas viagens (${proximasViagensAgrupadas.length})`;
+    if (id === "viagens") return `Próximas viagens (${proximasViagensAgrupadas.length})`;
     if (id === "follow_up") return `Follow-Up (${followUpsRecentes.length})`;
     return ALL_WIDGETS.find((w) => w.id === id)?.titulo || id;
   };
@@ -1475,7 +1475,7 @@ function toLineChartConfig(
     options: Array<{ value: ChartType; label: string }>
   ) => (
     <Select
-      aria-label="Selecionar tipo de grafico"
+      aria-label="Selecionar tipo de gráfico"
       value={value}
       onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onChange(e.target.value as ChartType)}
       className="vtur-dashboard-select"
@@ -1497,11 +1497,11 @@ function toLineChartConfig(
       case "kpis":
         return (
           <AppCard
-            title={hideTitle ? undefined : "Indicadores do periodo"}
-            subtitle={hideTitle ? undefined : "KPIs configuraveis para vendas, metas e produtos comissionaveis."}
+            title={hideTitle ? undefined : "Indicadores do período"}
+            subtitle={hideTitle ? undefined : "KPIs configuráveis para vendas, metas e produtos comissionáveis."}
             tone="info"
           >
-            <div className="vtur-dashboard-kpi-grid">
+            <div className="vtur-dashboard-kpi-grid vtur-dashboard-kpi-grid-centered">
               {kpiOrderEffective
                 .filter((id) => kpiVisibleEffective[id] !== false)
                 .map((id) => {
@@ -1513,7 +1513,7 @@ function toLineChartConfig(
                         style={{ color: "#ca8a04" }}
                       >
                         <div className="vtur-dashboard-kpi-copy">
-                          <div className="vtur-dashboard-kpi-label">Vendas no periodo</div>
+                          <div className="vtur-dashboard-kpi-label">Vendas no período</div>
                           <div className="vtur-dashboard-kpi-value">{formatCurrency(totalVendas)}</div>
                         </div>
                       </div>
@@ -1541,7 +1541,7 @@ function toLineChartConfig(
                         style={{ color: "#0ea5e9" }}
                       >
                         <div className="vtur-dashboard-kpi-copy">
-                          <div className="vtur-dashboard-kpi-label">Ticket medio</div>
+                          <div className="vtur-dashboard-kpi-label">Ticket médio</div>
                           <div className="vtur-dashboard-kpi-value">{formatCurrency(ticketMedio)}</div>
                         </div>
                       </div>
@@ -1555,7 +1555,7 @@ function toLineChartConfig(
                         style={{ color: "#16a34a" }}
                       >
                         <div className="vtur-dashboard-kpi-copy">
-                          <div className="vtur-dashboard-kpi-label">Orcamentos</div>
+                          <div className="vtur-dashboard-kpi-label">Orçamentos</div>
                           <div className="vtur-dashboard-kpi-value">{totalOrcamentos}</div>
                         </div>
                       </div>
@@ -1583,7 +1583,7 @@ function toLineChartConfig(
                         style={{ color: "#16a34a" }}
                       >
                         <div className="vtur-dashboard-kpi-copy">
-                          <div className="vtur-dashboard-kpi-label">Meta do mes</div>
+                          <div className="vtur-dashboard-kpi-label">Meta do mês</div>
                           <div className="vtur-dashboard-kpi-value">{formatCurrency(metaSomada)}</div>
                         </div>
                       </div>
@@ -1597,7 +1597,7 @@ function toLineChartConfig(
                         style={{ color: "#0ea5e9" }}
                       >
                         <div className="vtur-dashboard-kpi-copy">
-                          <div className="vtur-dashboard-kpi-label">Meta diaria</div>
+                          <div className="vtur-dashboard-kpi-label">Meta diária</div>
                           <div className="vtur-dashboard-kpi-value">{formatCurrency(metaDiaria)}</div>
                         </div>
                       </div>
@@ -1657,7 +1657,7 @@ function toLineChartConfig(
       case "vendas_destino": {
         const tituloDestino =
           chartPrefsEffective.vendas_destino === "bar"
-            ? "Vendas por Destino (Visao completa)"
+            ? "Vendas por Destino (Visão completa)"
             : "Vendas por destino (Top 5)";
         const destinoBarConfig = toBarChartConfig(
           vendasPorDestinoFull.map((item) => ({ label: item.name, value: item.value })),
@@ -1668,7 +1668,7 @@ function toLineChartConfig(
         return (
           <AppCard
             title={hideTitle ? undefined : tituloDestino}
-            subtitle={hideTitle ? undefined : "Compare distribuicao geografica das vendas no periodo."}
+            subtitle={hideTitle ? undefined : "Compare a distribuição geográfica das vendas no período."}
             tone="info"
             actions={
               renderChartSelect(chartPrefsEffective.vendas_destino || "bar", (next) => alterarChart("vendas_destino", next), [
@@ -1749,7 +1749,7 @@ function toLineChartConfig(
         return (
           <AppCard
             title={hideTitle ? undefined : "Vendas por produto"}
-            subtitle={hideTitle ? undefined : "Distribuicao de receita por tipo de produto vendido."}
+            subtitle={hideTitle ? undefined : "Distribuição de receita por tipo de produto vendido."}
             tone="info"
             actions={
               renderChartSelect(chartPrefsEffective.vendas_produto || "bar", (next) => alterarChart("vendas_produto", next), [
@@ -1829,7 +1829,7 @@ function toLineChartConfig(
         );
         return (
           <AppCard
-            title={hideTitle ? undefined : "Evolucao das vendas no periodo"}
+            title={hideTitle ? undefined : "Evolução das vendas no período"}
             subtitle={hideTitle ? undefined : "Linha temporal para acompanhar o ritmo comercial."}
             tone="info"
             actions={renderChartSelect(chartPrefs.timeline || "line", (next) => alterarChart("timeline", next), [
@@ -1886,7 +1886,7 @@ function toLineChartConfig(
         return (
           <AppCard
             title={hideTitle ? undefined : `Aniversariantes - ${monthLabel} (${items.length})`}
-            subtitle={hideTitle ? undefined : "Clientes e acompanhantes com aniversario neste mes."}
+            subtitle={hideTitle ? undefined : "Clientes e acompanhantes com aniversário neste mês."}
             tone="info"
           >
             <DataTable
@@ -1899,7 +1899,7 @@ function toLineChartConfig(
                 </tr>
               }
               empty={items.length === 0}
-              emptyMessage="Nenhum aniversariante de cliente/acompanhante este mes."
+              emptyMessage="Nenhum aniversariante de cliente/acompanhante este mês."
               colSpan={4}
               className="table-mobile-cards table-header-blue min-w-[640px]"
               containerStyle={{
@@ -1934,7 +1934,7 @@ function toLineChartConfig(
                                 {
                                   key: "whatsapp",
                                   label: "WhatsApp",
-                                  title: "Enviar cartão de aniversario no WhatsApp",
+                                  title: "Enviar cartão de aniversário no WhatsApp",
                                   onClick: () => window.open(whatsappLink, "_blank", "noopener,noreferrer"),
                                   icon: <i className="pi pi-gift" aria-hidden="true" />,
                                   variant: "ghost" as const,
@@ -1972,8 +1972,8 @@ function toLineChartConfig(
         const shouldScrollOrcamentos = orcamentosRecentes.length > 3;
         return (
           <AppCard
-            title={hideTitle ? undefined : `Orcamentos recentes (${orcamentosRecentes.length})`}
-            subtitle={hideTitle ? undefined : "Ultimas propostas comerciais do periodo."}
+            title={hideTitle ? undefined : `Orçamentos recentes (${orcamentosRecentes.length})`}
+            subtitle={hideTitle ? undefined : "Últimas propostas comerciais do período."}
             tone="info"
           >
             <DataTable
@@ -1988,7 +1988,7 @@ function toLineChartConfig(
                 </tr>
               }
               empty={orcamentosRecentes.length === 0}
-              emptyMessage="Nenhum orcamento no periodo."
+              emptyMessage="Nenhum orçamento no período."
               colSpan={6}
               className="table-mobile-cards table-header-blue min-w-[680px]"
               containerStyle={{
@@ -2032,7 +2032,7 @@ function toLineChartConfig(
             tone="info"
           >
             {!podeVerConsultoria ? (
-              <AlertMessage variant="warning">Voce nao possui acesso ao modulo de Consultoria.</AlertMessage>
+              <AlertMessage variant="warning">Você não possui acesso ao módulo de Consultoria.</AlertMessage>
             ) : (
               <DataTable
                 headers={
@@ -2068,7 +2068,7 @@ function toLineChartConfig(
                       <br />
                       <small>
                         <a className="link" href={`/api/consultorias/ics?id=${item.id}`} target="_blank" rel="noreferrer">
-                          Adicionar ao calendario
+                          Adicionar ao calendário
                         </a>
                       </small>
                     </td>
@@ -2079,7 +2079,7 @@ function toLineChartConfig(
                           item.orcamentoId
                             ? {
                                 key: "orcamento",
-                                label: "Orcamento",
+                                label: "Orçamento",
                                 title: "Abrir orçamento",
                                 onClick: () => {
                                   window.location.href = `/orcamentos/${item.orcamentoId}`;
@@ -2111,18 +2111,18 @@ function toLineChartConfig(
         const shouldScrollViagens = proximasViagensAgrupadas.length > 3;
         return (
           <AppCard
-            title={hideTitle ? undefined : `Proximas viagens (${proximasViagensAgrupadas.length})`}
+            title={hideTitle ? undefined : `Próximas viagens (${proximasViagensAgrupadas.length})`}
             subtitle={hideTitle ? undefined : "Embarques futuros agrupados por venda."}
             tone="info"
           >
             {!podeVerOperacao ? (
-              <AlertMessage variant="warning">Voce nao possui acesso ao modulo de Operacao/Viagens.</AlertMessage>
+              <AlertMessage variant="warning">Você não possui acesso ao módulo de Operação/Viagens.</AlertMessage>
             ) : (
               <DataTable
                 headers={
                   <tr>
                     <th>Cliente</th>
-                    <th>Servicos</th>
+                    <th>Serviços</th>
                     <th>Embarque</th>
                     <th>Destino</th>
                     <th className="th-actions">Ações</th>
@@ -2141,7 +2141,7 @@ function toLineChartConfig(
                 {proximasViagensAgrupadas.map((v) => (
                   <tr key={v.key}>
                     <td data-label="Cliente">{v.clienteNome || "-"}</td>
-                    <td data-label="Servicos">
+                    <td data-label="Serviços">
                       {v.produtos.length === 0 ? (
                         "-"
                       ) : (
@@ -2196,7 +2196,7 @@ function toLineChartConfig(
         return (
           <AppCard
             title={hideTitle ? undefined : `Follow-Up (${followUpsRecentes.length})`}
-            subtitle={hideTitle ? undefined : "Clientes que ja retornaram e precisam de contato."}
+            subtitle={hideTitle ? undefined : "Clientes que já retornaram e precisam de contato."}
             tone="info"
           >
             <DataTable
@@ -2210,7 +2210,7 @@ function toLineChartConfig(
                 </tr>
               }
               empty={followUpsRecentes.length === 0}
-              emptyMessage="Nenhum retorno no periodo."
+              emptyMessage="Nenhum retorno no período."
               colSpan={5}
               className="table-mobile-cards table-header-blue min-w-[640px]"
               containerStyle={{
@@ -2306,7 +2306,7 @@ function toLineChartConfig(
     return (
       <AppPrimerProvider>
         <div className="page-content-wrap dashboard-geral-page">
-          <AppCard tone="config">Voce nao possui acesso ao modulo de Dashboard.</AppCard>
+          <AppCard tone="config">Você não possui acesso ao módulo de Dashboard.</AppCard>
         </div>
       </AppPrimerProvider>
     );
@@ -2318,7 +2318,7 @@ function toLineChartConfig(
       <div className="page-content-wrap dashboard-geral-page vtur-dashboard-shell">
         <AppToolbar
           title="Dashboard comercial"
-          subtitle="Acompanhe vendas, metas, orcamentos, consultorias, viagens e follow-up com personalizacao por widget."
+          subtitle="Acompanhe vendas, metas, orçamentos, consultorias, viagens e follow-up com personalização por widget."
           tone="info"
           sticky
           actions={
@@ -2356,14 +2356,14 @@ function toLineChartConfig(
                 variant={presetPeriodo === "mes_atual" ? "primary" : "secondary"}
                 onClick={() => aplicarPreset("mes_atual")}
               >
-                Mes atual
+                Mês atual
               </AppButton>
               <AppButton
                 type="button"
                 variant={presetPeriodo === "ultimos_30" ? "primary" : "secondary"}
                 onClick={() => aplicarPreset("ultimos_30")}
               >
-                Ultimos 30 dias
+                Últimos 30 dias
               </AppButton>
               <AppButton
                 type="button"
@@ -2415,7 +2415,7 @@ function toLineChartConfig(
             ]}
           >
             <div className="vtur-modal-body-stack">
-              <AppCard title="Periodo" subtitle="Defina rapidamente o recorte temporal do dashboard.">
+              <AppCard title="Período" subtitle="Defina rapidamente o recorte temporal do dashboard.">
                 <div className="vtur-form-grid vtur-form-grid-2">
                   <AppField
                     as="select"
@@ -2423,8 +2423,8 @@ function toLineChartConfig(
                     value={presetPeriodo}
                     onChange={(e) => aplicarPreset(e.target.value as PresetPeriodo)}
                     options={[
-                      { value: "mes_atual", label: "Mes atual" },
-                      { value: "ultimos_30", label: "Ultimos 30 dias" },
+                      { value: "mes_atual", label: "Mês atual" },
+                      { value: "ultimos_30", label: "Últimos 30 dias" },
                       { value: "personalizado", label: "Personalizado" },
                     ]}
                   />
@@ -2614,7 +2614,7 @@ function toLineChartConfig(
             <div className="vtur-modal-body-stack">
               <AppCard
                 tone="info"
-                title="Resumo do orcamento"
+                title="Resumo do orçamento"
                 subtitle={`Status ${orcamentoSelecionado.status_negociacao || orcamentoSelecionado.status || "-"} · Total ${formatCurrency(Number(orcamentoSelecionado.total || 0))}`}
               >
                 <div className="vtur-dashboard-detail-grid">
@@ -2633,7 +2633,7 @@ function toLineChartConfig(
                 </div>
               </AppCard>
 
-              <AppCard title="Itens do orcamento" subtitle="Resumo dos itens vinculados a esta proposta.">
+              <AppCard title="Itens do orçamento" subtitle="Resumo dos itens vinculados a esta proposta.">
                 <DataTable
                   headers={
                     <tr>

@@ -1,3 +1,5 @@
+import { isCacheDisabled } from "./cachePolicy";
+
 type CacheEntry = {
   expiresAt: number;
   value: unknown;
@@ -39,6 +41,9 @@ export async function queryLite<T>(
   fetcher: () => Promise<T>,
   options?: { ttlMs?: number }
 ): Promise<T> {
+  if (isCacheDisabled()) {
+    return fetcher();
+  }
   const store = getStore();
   const ttlMs = typeof options?.ttlMs === "number" ? options.ttlMs : 0;
   const useCache = ttlMs > 0;
@@ -89,4 +94,3 @@ export function clearQueryLite() {
   store.cache.clear();
   store.inflight.clear();
 }
-

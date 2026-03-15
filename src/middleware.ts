@@ -9,7 +9,7 @@ import {
 } from "./lib/adminAccess";
 
 const supabaseUrl = readEnv("SUPABASE_URL") || readEnv("PUBLIC_SUPABASE_URL");
-const supabaseAnonKey = readEnv("PUBLIC_SUPABASE_ANON_KEY");
+const supabaseAnonKey = readEnv("PUBLIC_SUPABASE_ANON_KEY") || readEnv("SUPABASE_ANON_KEY");
 const MENU_CACHE_COOKIE = "vtur_menu_cache";
 const LEGACY_MENU_CACHE_COOKIE = "sgtur_menu_cache";
 const MENU_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -174,10 +174,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   if (!supabaseUrl || !supabaseAnonKey) {
     console.error(
-      "PUBLIC_SUPABASE_URL ou PUBLIC_SUPABASE_ANON_KEY ausentes. Configure as variáveis de ambiente (Pages → Settings → Environment Variables)."
+      "SUPABASE_URL/PUBLIC_SUPABASE_URL ou SUPABASE_ANON_KEY/PUBLIC_SUPABASE_ANON_KEY ausentes. Configure as variáveis de ambiente (Pages/Workers → Settings → Environment Variables)."
     );
     return makeMutable(new Response(
-      "Faltam PUBLIC_SUPABASE_URL/PUBLIC_SUPABASE_ANON_KEY. Configure no Cloudflare Pages ou no .env local.",
+      "Faltam SUPABASE_URL/PUBLIC_SUPABASE_URL ou SUPABASE_ANON_KEY/PUBLIC_SUPABASE_ANON_KEY. Configure no Cloudflare e no .env local.",
       { status: 500 }
     ));
   }

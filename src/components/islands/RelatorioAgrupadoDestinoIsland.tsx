@@ -681,13 +681,11 @@ export default function RelatorioAgrupadoDestinoIsland() {
 
   const escopoResumo =
     userCtx && userCtx.papel !== "ADMIN"
-      ? `Relatorio limitado a ${
-          userCtx.papel === "GESTOR"
-            ? "sua equipe"
-            : userCtx.papel === "MASTER"
-            ? "seu portfolio selecionado"
-            : "suas vendas"
-        }.`
+      ? userCtx.papel === "GESTOR"
+        ? "Relatório limitado à sua equipe."
+        : userCtx.papel === "MASTER"
+        ? "Relatório limitado ao seu portfólio selecionado."
+        : "Relatório limitado à suas vendas."
       : null;
 
   const renderPeriodButtons = () => (
@@ -819,8 +817,8 @@ export default function RelatorioAgrupadoDestinoIsland() {
           sticky
           tone="config"
           className="mb-3 list-toolbar-sticky"
-          title="Relatorio agrupado por destino"
-          subtitle={`Periodo: ${periodoResumo}. Consolidacao por destino e cidade no recorte atual.`}
+          title="Relatório agrupado por destino"
+          subtitle={`Período: ${periodoResumo}. Consolidação por destino e cidade no recorte atual.`}
           actions={
             <div className="vtur-quote-top-actions">
               <AppButton type="button" variant="secondary" className="sm:hidden" onClick={() => setShowFilters(true)}>
@@ -840,7 +838,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
 
         {showFilters ? (
           <Dialog
-            title="Filtros do relatorio"
+            title="Filtros do relatório"
             width="xlarge"
             onClose={() => setShowFilters(false)}
             footerButtons={[
@@ -859,7 +857,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
             <div className="vtur-modal-body-stack">
               <AppCard
                 title="Refine o recorte comercial"
-                subtitle="Ajuste datas, escopo, status e busca por destino antes de atualizar o relatorio."
+                subtitle="Ajuste datas, escopo, status e busca por destino antes de atualizar o relatório."
               >
                 {renderFiltersGrid()}
               </AppCard>
@@ -869,7 +867,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
 
         {showExport ? (
           <Dialog
-            title="Exportar relatorio"
+            title="Exportar relatório"
             width="large"
             onClose={() => setShowExport(false)}
             footerButtons={[
@@ -891,8 +889,8 @@ export default function RelatorioAgrupadoDestinoIsland() {
           >
             <div className="vtur-modal-body-stack">
               <AppCard
-                title="Formato da exportacao"
-                subtitle="Escolha o formato final respeitando as permissoes definidas nos parametros da empresa."
+                title="Formato da exportação"
+                subtitle="Escolha o formato final respeitando as permissões definidas nos parâmetros da empresa."
               >
                 <div className="vtur-quote-top-actions">
                   <AppButton
@@ -922,7 +920,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
                 {exportDisabled ? (
                   <div style={{ marginTop: 16 }}>
                     <AlertMessage variant="warning">
-                      O formato selecionado esta desabilitado nos parametros da empresa.
+                      O formato selecionado está desabilitado nos parâmetros da empresa.
                     </AlertMessage>
                   </div>
                 ) : null}
@@ -932,7 +930,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
         ) : null}
 
         {escopoResumo ? (
-          <AlertMessage variant="info" className="mb-3">
+          <AlertMessage variant="warning" className="mb-3 vtur-alert-inline">
             {escopoResumo}
           </AlertMessage>
         ) : null}
@@ -945,7 +943,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
 
         <AppCard
           title="Resumo por destino"
-          subtitle="Quantidade, faturamento e ticket medio consolidados por destino e cidade."
+          subtitle="Quantidade, faturamento e ticket médio consolidados por destino e cidade."
         >
           <div className="vtur-quote-summary-grid">
             <div className="vtur-quote-summary-item">
@@ -961,7 +959,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
               <strong>{formatCurrencyBRL(totalGeral)}</strong>
             </div>
             <div className="vtur-quote-summary-item">
-              <span className="vtur-quote-summary-label">Ticket medio</span>
+              <span className="vtur-quote-summary-label">Ticket médio</span>
               <strong>{formatCurrencyBRL(ticketGeral)}</strong>
             </div>
           </div>
@@ -990,17 +988,17 @@ export default function RelatorioAgrupadoDestinoIsland() {
                   Faturamento {ordenacao === "total" ? (ordemDesc ? "↓" : "↑") : ""}
                 </th>
                 <th style={{ cursor: "pointer" }} onClick={() => mudarOrdenacao("ticket")}>
-                  Ticket medio {ordenacao === "ticket" ? (ordemDesc ? "↓" : "↑") : ""}
+                  Ticket médio {ordenacao === "ticket" ? (ordemDesc ? "↓" : "↑") : ""}
                 </th>
               </tr>
             }
             loading={loading}
-            loadingMessage="Carregando consolidacao por destino..."
+            loadingMessage="Carregando consolidação por destino..."
             empty={!loading && linhasExibidas.length === 0}
             emptyMessage={
               <EmptyState
                 title="Nenhum destino encontrado"
-                description="Ajuste datas, escopo, status ou busca para ampliar o recorte do relatorio."
+                description="Ajuste datas, escopo, status ou busca para ampliar o recorte do relatório."
               />
             }
             colSpan={4}
@@ -1011,7 +1009,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
                 <td data-label="Destino">{linha.destino_nome}</td>
                 <td data-label="Qtde">{linha.quantidade}</td>
                 <td data-label="Faturamento">{formatCurrencyBRL(linha.total)}</td>
-                <td data-label="Ticket medio">{formatCurrencyBRL(linha.ticketMedio)}</td>
+                <td data-label="Ticket médio">{formatCurrencyBRL(linha.ticketMedio)}</td>
               </tr>
             ))}
           </DataTable>

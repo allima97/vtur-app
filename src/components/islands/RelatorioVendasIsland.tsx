@@ -1637,13 +1637,11 @@ export default function RelatorioVendasIsland() {
 
   const escopoResumo =
     userCtx && userCtx.papel !== "ADMIN"
-      ? `Relatorio limitado a ${
-          userCtx.papel === "GESTOR"
-            ? "sua equipe"
-            : userCtx.papel === "MASTER"
-            ? "seu portfolio"
-            : "suas vendas"
-        }.`
+      ? userCtx.papel === "GESTOR"
+        ? "Relatório limitado à sua equipe."
+        : userCtx.papel === "MASTER"
+        ? "Relatório limitado ao seu portfólio."
+        : "Relatório limitado à suas vendas."
       : null;
 
   const renderClienteField = () => (
@@ -1913,8 +1911,8 @@ export default function RelatorioVendasIsland() {
           sticky
           tone="config"
           className="mb-3 list-toolbar-sticky"
-          title="Relatorio de vendas"
-          subtitle={`Periodo: ${periodoResumo}. ${filtrosLocaisAtivos ? "Filtros locais ativos." : "Sem filtros locais de cliente, cidade ou produto."}`}
+          title="Relatório de vendas"
+          subtitle={`Período: ${periodoResumo}. ${filtrosLocaisAtivos ? "Filtros locais ativos." : "Sem filtros locais de cliente, cidade ou produto."}`}
           actions={
             <div className="vtur-quote-top-actions">
               <AppButton
@@ -1939,7 +1937,7 @@ export default function RelatorioVendasIsland() {
 
         {showFilters ? (
           <Dialog
-            title="Filtros do relatorio"
+            title="Filtros do relatório"
             width="xlarge"
             onClose={() => setShowFilters(false)}
             footerButtons={[
@@ -1968,7 +1966,7 @@ export default function RelatorioVendasIsland() {
 
         {showExport ? (
           <Dialog
-            title="Exportar relatorio"
+            title="Exportar relatório"
             width="large"
             onClose={() => setShowExport(false)}
             footerButtons={[
@@ -1990,8 +1988,8 @@ export default function RelatorioVendasIsland() {
           >
             <div className="vtur-modal-body-stack">
               <AppCard
-                title="Formato da exportacao"
-                subtitle="Escolha o formato final respeitando as permissoes definidas nos parametros da empresa."
+                title="Formato da exportação"
+                subtitle="Escolha o formato final respeitando as permissões definidas nos parâmetros da empresa."
               >
                 <div className="vtur-quote-top-actions">
                   <AppButton
@@ -2021,7 +2019,7 @@ export default function RelatorioVendasIsland() {
                 {exportDisabled ? (
                   <div style={{ marginTop: 16 }}>
                     <AlertMessage variant="warning">
-                      O formato selecionado esta desabilitado nos parametros da empresa.
+                      O formato selecionado está desabilitado nos parâmetros da empresa.
                     </AlertMessage>
                   </div>
                 ) : null}
@@ -2031,7 +2029,7 @@ export default function RelatorioVendasIsland() {
         ) : null}
 
         {escopoResumo ? (
-          <AlertMessage variant="info" className="mb-3">
+          <AlertMessage variant="warning" className="mb-3 vtur-alert-inline">
             {escopoResumo}
           </AlertMessage>
         ) : null}
@@ -2044,8 +2042,8 @@ export default function RelatorioVendasIsland() {
 
         <AppCard
           className="mb-3"
-          title="Resumo do relatorio"
-          subtitle="Volume de recibos, faturamento, taxas, liquido, ticket medio e comissao do recorte atual."
+          title="Resumo do relatório"
+          subtitle="Volume de recibos, faturamento, taxas, líquido, ticket médio e comissão do recorte atual."
         >
           <div className="vtur-quote-summary-grid">
             <div className="vtur-quote-summary-item">
@@ -2061,15 +2059,15 @@ export default function RelatorioVendasIsland() {
               <strong>{formatCurrency(somaTaxas)}</strong>
             </div>
             <div className="vtur-quote-summary-item">
-              <span className="vtur-quote-summary-label">Liquido</span>
+              <span className="vtur-quote-summary-label">Líquido</span>
               <strong>{formatCurrency(somaLiquido)}</strong>
             </div>
             <div className="vtur-quote-summary-item">
-              <span className="vtur-quote-summary-label">Ticket medio</span>
+              <span className="vtur-quote-summary-label">Ticket médio</span>
               <strong>{formatCurrency(ticketMedio)}</strong>
             </div>
             <div className="vtur-quote-summary-item">
-              <span className="vtur-quote-summary-label">Comissao</span>
+              <span className="vtur-quote-summary-label">Comissão</span>
               <strong>{formatCurrency(somaComissao)}</strong>
             </div>
           </div>
@@ -2083,7 +2081,7 @@ export default function RelatorioVendasIsland() {
 
         <AppCard
           title="Recibos encontrados"
-          subtitle="Listagem consolidada com produto, cidade, embarque, valores, taxas e comissao por recibo."
+          subtitle="Listagem consolidada com produto, cidade, embarque, valores, taxas e comissão por recibo."
         >
           <div className="mb-3">
             <PaginationControls
@@ -2111,8 +2109,8 @@ export default function RelatorioVendasIsland() {
                 <th>Data embarque</th>
                 <th>Valor total</th>
                 <th>Taxas</th>
-                <th>Valor liquido</th>
-                <th>Comissao</th>
+                <th>Valor líquido</th>
+                <th>Comissão</th>
               </tr>
             }
             loading={loading}
@@ -2121,7 +2119,7 @@ export default function RelatorioVendasIsland() {
             emptyMessage={
               <EmptyState
                 title="Nenhum recibo encontrado"
-                description="Ajuste datas, escopo ou filtros locais para ampliar o recorte do relatorio."
+                description="Ajuste datas, escopo ou filtros locais para ampliar o recorte do relatório."
               />
             }
             colSpan={12}
@@ -2143,8 +2141,8 @@ export default function RelatorioVendasIsland() {
                   </td>
                   <td data-label="Valor total">{formatCurrency(getBrutoRecibo(recibo))}</td>
                   <td data-label="Taxas">{formatCurrency(getTaxasEfetivas(recibo))}</td>
-                  <td data-label="Valor liquido">{formatCurrency(getLiquidoComissionavel(recibo))}</td>
-                  <td data-label="Comissao">{formatCurrency(comissao)}</td>
+                  <td data-label="Valor líquido">{formatCurrency(getLiquidoComissionavel(recibo))}</td>
+                  <td data-label="Comissão">{formatCurrency(comissao)}</td>
                 </tr>
               );
             })}

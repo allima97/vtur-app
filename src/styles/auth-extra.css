@@ -21,6 +21,11 @@
   justify-content: center;
 }
 
+.auth-container.auth-container-wide {
+  max-width: 620px;
+  padding: 18px;
+}
+
 .auth-wrapper {
   width: 100%;
   max-width: 380px;
@@ -34,12 +39,53 @@
   padding: 16px 18px;
   border: 1px solid #e2e8f0;
   color: #0f172a;
+  box-sizing: border-box;
   width: 100%;
   max-width: 400px;
 }
 
 .auth-card-lg {
   max-width: 460px;
+}
+
+.auth-container.auth-container-wide .auth-card.auth-card-lg {
+  max-width: 560px;
+  padding: 24px 26px;
+}
+
+.auth-card-with-logo .vtur-app-card-header {
+  justify-content: center;
+  text-align: center;
+}
+
+.auth-card-with-logo .vtur-app-card-copy {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.auth-brand-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  line-height: 1.05;
+}
+
+.auth-brand-logo {
+  display: block;
+  width: 4.6rem;
+  height: 4.6rem;
+}
+
+.auth-card-with-logo .vtur-app-card-title {
+  font-size: 1.34rem;
+}
+
+.auth-card-with-logo .vtur-app-card-subtitle {
+  max-width: 34ch;
+  text-align: center;
 }
 
 .auth-header {
@@ -174,6 +220,12 @@
   min-height: 3.25rem;
   justify-content: center;
   font-size: 1rem;
+}
+
+.auth-actions a.vtur-app-button {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
 }
 
 .auth-actions .vtur-app-button .p-button-label,
@@ -317,6 +369,16 @@
     padding: 20px;
   }
 
+  .auth-container.auth-container-wide {
+    max-width: 100%;
+    padding: 20px;
+  }
+
+  .auth-container.auth-container-wide .auth-card.auth-card-lg {
+    max-width: 100%;
+    padding: 24px;
+  }
+
   .auth-card {
     padding: 24px;
     max-width: 100%;
@@ -332,6 +394,11 @@
 
   .auth-subtitle {
     font-size: 0.95rem;
+  }
+
+  .auth-brand-logo {
+    width: 4.6rem;
+    height: 4.6rem;
   }
 
   .auth-form {

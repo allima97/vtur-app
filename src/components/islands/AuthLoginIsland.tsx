@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { registrarLog } from "../../lib/logs";
-import { SUPPORT_EMAIL, SYSTEM_NAME } from "../../lib/systemName";
+import { SUPPORT_EMAIL } from "../../lib/systemName";
 import { clearPermissoesCache } from "../../lib/permissoesCache";
 import { refreshPermissoes } from "../../lib/permissoesStore";
 import AlertMessage from "../ui/AlertMessage";
@@ -249,10 +249,15 @@ export default function AuthLoginIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="auth-container">
+      <div className="auth-container auth-container-wide">
         <AppCard
-          className="auth-card auth-card-lg"
-          title={`Bem-vindo ao ${SYSTEM_NAME}`}
+          className="auth-card auth-card-lg auth-card-with-logo auth-card-login"
+          title={
+            <span className="auth-brand-title">
+              <img className="auth-brand-logo" src="/brand/vtur-logo-stacked.svg" alt="VTUR" />
+              <span>Bem-vindo!</span>
+            </span>
+          }
           subtitle="Use seu e-mail e senha para acessar ou faça seu cadastro"
         >
           {mensagem && (

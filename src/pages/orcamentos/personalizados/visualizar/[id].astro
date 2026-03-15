@@ -46,12 +46,6 @@ function formatDate(value?: string | null) {
   }
 }
 
-function formatCurrency(value?: number | null) {
-  const n = Number(value || 0);
-  if (!Number.isFinite(n)) return "R$ 0,00";
-  return `R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
 function splitParagraphs(text?: string | null): string[] {
   const raw = String(text || "").trim();
   if (!raw) return [];
@@ -68,6 +62,84 @@ function splitLines(text?: string | null): string[] {
     .split(/\n+/)
     .map((line) => line.replace(/\s+/g, " ").trim())
     .filter(Boolean);
+}
+
+function textValue(value?: string | null) {
+  return String(value || "").trim();
+}
+
+function normalizeLookup(value?: string | null) {
+  return textValue(value).toLocaleLowerCase();
+}
+
+function hasPositiveNumber(value?: number | string | null) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0;
+}
+
+function formatCurrencyOptional(value?: number | null) {
+  const n = Number(value || 0);
+  if (!Number.isFinite(n) || n <= 0) return "";
+  return `R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function hasMeaningfulHotel(h: any) {
+  return Boolean(
+    textValue(h?.cidade) ||
+      textValue(h?.hotel) ||
+      textValue(h?.data_inicio) ||
+      textValue(h?.data_fim) ||
+      textValue(h?.apto) ||
+      textValue(h?.categoria) ||
+      textValue(h?.regime) ||
+      hasPositiveNumber(h?.noites)
+  );
+}
+
+function hasMeaningfulPasseio(p: any) {
+  const tipoNorm = normalizeLookup(p?.tipo);
+  const ingressosNorm = normalizeLookup(p?.ingressos);
+  const tipoDefault = tipoNorm === "compartilhado";
+  const ingressosDefault = ingressosNorm === "inclui ingressos";
+  return Boolean(
+    textValue(p?.cidade) ||
+      textValue(p?.passeio) ||
+      textValue(p?.data_inicio) ||
+      textValue(p?.data_fim) ||
+      (textValue(p?.tipo) && !tipoDefault) ||
+      (textValue(p?.ingressos) && !ingressosDefault)
+  );
+}
+
+function hasMeaningfulTransporte(t: any) {
+  return Boolean(
+    textValue(t?.tipo) ||
+      textValue(t?.fornecedor) ||
+      textValue(t?.descricao) ||
+      textValue(t?.data_inicio) ||
+      textValue(t?.data_fim) ||
+      textValue(t?.categoria) ||
+      textValue(t?.observacao)
+  );
+}
+
+function hasMeaningfulInvestimento(i: any) {
+  const qtd = Number(i?.qtd_apto || 0);
+  return Boolean(
+    textValue(i?.tipo) ||
+      hasPositiveNumber(i?.valor_por_pessoa) ||
+      hasPositiveNumber(i?.valor_por_apto) ||
+      (Number.isFinite(qtd) && qtd > 1)
+  );
+}
+
+function hasMeaningfulPagamento(p: any) {
+  return Boolean(
+    textValue(p?.servico) ||
+      textValue(p?.forma_pagamento) ||
+      hasPositiveNumber(p?.valor_total_com_taxas) ||
+      hasPositiveNumber(p?.taxas)
+  );
 }
 
 function normalizeDiaKey(d: { cidade?: string | null; percurso?: string | null; data?: string | null; descricao?: string | null }): string {
@@ -156,68 +228,27 @@ const dias = normalizeDiasForView(roteiro.roteiro_dia || []);
 const hoteis = (roteiro.roteiro_hotel || [])
   .slice()
   .sort((a: any, b: any) => (a.ordem ?? 0) - (b.ordem ?? 0))
-  .filter((h: any) => {
-    return Boolean(
-      String(h.cidade || "").trim() ||
-        String(h.hotel || "").trim() ||
-        String(h.data_inicio || "").trim() ||
-        String(h.data_fim || "").trim() ||
-        String(h.apto || "").trim() ||
-        String(h.regime || "").trim() ||
-        String(h.categoria || "").trim() ||
-        Number.isFinite(Number(h.noites))
-    );
-  });
+  .filter((h: any) => hasMeaningfulHotel(h));
 
 const passeios = (roteiro.roteiro_passeio || [])
   .slice()
   .sort((a: any, b: any) => (a.ordem ?? 0) - (b.ordem ?? 0))
-  .filter((p: any) => {
-    return Boolean(
-      String(p.cidade || "").trim() ||
-        String(p.passeio || "").trim() ||
-        String(p.data_inicio || "").trim() ||
-        String(p.data_fim || "").trim() ||
-        String(p.tipo || "").trim() ||
-        String(p.ingressos || "").trim()
-    );
-  });
+  .filter((p: any) => hasMeaningfulPasseio(p));
 
 const transportes = (roteiro.roteiro_transporte || [])
   .slice()
   .sort((a: any, b: any) => (a.ordem ?? 0) - (b.ordem ?? 0))
-  .filter((t: any) => {
-    return Boolean(
-      String(t.tipo || "").trim() ||
-        String(t.fornecedor || "").trim() ||
-        String(t.descricao || "").trim() ||
-        String(t.data_inicio || "").trim() ||
-        String(t.data_fim || "").trim() ||
-        String(t.categoria || "").trim() ||
-        String(t.observacao || "").trim()
-    );
-  });
+  .filter((t: any) => hasMeaningfulTransporte(t));
 
 const investimentos = (roteiro.roteiro_investimento || [])
   .slice()
   .sort((a: any, b: any) => (a.ordem ?? 0) - (b.ordem ?? 0))
-  .filter((i: any) => {
-    return Boolean(
-      Number(i.valor_por_pessoa || 0) > 0 || Number(i.qtd_apto || 0) > 0 || Number(i.valor_por_apto || 0) > 0
-    );
-  });
+  .filter((i: any) => hasMeaningfulInvestimento(i));
 
 const pagamentos = (roteiro.roteiro_pagamento || [])
   .slice()
   .sort((a: any, b: any) => (a.ordem ?? 0) - (b.ordem ?? 0))
-  .filter((p: any) => {
-    return Boolean(
-      String(p.servico || "").trim() ||
-        String(p.forma_pagamento || "").trim() ||
-        Number(p.valor_total_com_taxas || 0) > 0 ||
-        Number(p.taxas || 0) > 0
-    );
-  });
+  .filter((p: any) => hasMeaningfulPagamento(p));
 
 const incluiItems = splitLines(roteiro?.inclui_texto);
 const naoIncluiItems = splitLines(roteiro?.nao_inclui_texto);
@@ -255,6 +286,19 @@ if (dateCandidates.length) {
   endDate = dateCandidates.reduce((max, d) => (d.getTime() > max.getTime() ? d : max), dateCandidates[0]);
 }
 
+const periodLabel =
+  startDate && endDate
+    ? `${startDate.toLocaleDateString("pt-BR")} a ${endDate.toLocaleDateString("pt-BR")}`
+    : hasPositiveNumber(roteiro?.duracao)
+      ? `${Number(roteiro.duracao)} dias`
+      : "";
+
+const resumoViagem = [
+  { label: "Origem", value: textValue(roteiro?.inicio_cidade) },
+  { label: "Destino", value: textValue(roteiro?.fim_cidade) },
+  { label: "Período", value: periodLabel },
+].filter((item) => Boolean(item.value));
+
 const activePage = "orcamentos";
 const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
 ---
@@ -266,7 +310,7 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
     color="blue"
     stackActionsOnMobile={true}
   >
-    <div class="mobile-stack-buttons">
+    <div class="mobile-stack-buttons orcamentos-action-bar">
       <a class="vtur-app-button vtur-app-button-primary" href={`/orcamentos/personalizados/${roteiroId}`}>Editar</a>
       <a class="vtur-app-button" href="/orcamentos/personalizados">Voltar</a>
     </div>
@@ -274,217 +318,232 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
 
   <div class="px-6 pb-10">
     <div class="max-w-5xl mx-auto space-y-4">
-      <div class="bg-white border border-slate-200 rounded-xl p-5">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <div class="text-xs font-semibold text-slate-600">Origem</div>
-            <div class="text-base text-slate-900 mt-1">{roteiro?.inicio_cidade || "—"}</div>
-          </div>
-          <div>
-            <div class="text-xs font-semibold text-slate-600">Destino</div>
-            <div class="text-base text-slate-900 mt-1">{roteiro?.fim_cidade || "—"}</div>
-          </div>
-          <div>
-            <div class="text-xs font-semibold text-slate-600">Período</div>
-            <div class="text-base text-slate-900 mt-1">
-              {startDate && endDate ? `${startDate.toLocaleDateString("pt-BR")} a ${endDate.toLocaleDateString("pt-BR")}` : (roteiro?.duracao ? `${roteiro.duracao} dias` : "—")}
-            </div>
+      {resumoViagem.length > 0 ? (
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {resumoViagem.map((item) => (
+              <div>
+                <div class="text-xs font-semibold text-slate-600">{item.label}</div>
+                <div class="text-base text-slate-900 mt-1">{item.value}</div>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      ) : null}
 
       {dias.length > 0 ? (
-        <>
-          <!-- Itinerário Detalhado -->
-          <div class="bg-white border border-slate-200 rounded-xl p-4">
-            <div class="text-lg md:text-xl font-extrabold text-blue-title">Itinerário Detalhado</div>
-          </div>
-          <div class="bg-white border border-slate-200 rounded-xl p-5">
-            <div class="space-y-4">
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+          <div class="vtur-quote-circuit-panel" style={{ padding: 0, borderTop: "none" }}>
+            <div class="vtur-quote-circuit-days-head">
+              <div>
+                <div class="text-lg md:text-xl font-extrabold text-blue-title">Itinerário Detalhado</div>
+                <p>Dia a dia no mesmo padrão visual de Circuitos.</p>
+              </div>
+            </div>
+            <div class="vtur-quote-circuit-days-list">
               {dias.map((d: any, idx: number) => {
-                const place = String(d.percurso || "").trim() || String(d.cidade || "").trim();
-                const header = [formatDate(d.data), `Dia ${idx + 1}${place ? `: ${place}` : ""}`].filter(Boolean).join(" — ");
+                const place = textValue(d.percurso) || textValue(d.cidade);
+                const header = `Dia ${idx + 1}${place ? `: ${place}` : ""}`;
+                const dateLabel = formatDate(d.data);
                 const items = splitParagraphs(d.descricao);
                 return (
-                  <div class="border border-slate-200 rounded-lg p-4" key={d.id || idx}>
-                    <div class="text-sm font-semibold text-slate-900">{header || `Dia ${idx + 1}`}</div>
+                  <div class="vtur-quote-circuit-day" key={d.id || idx}>
+                    <div class="text-sm font-semibold text-slate-900">{header}</div>
+                    {dateLabel ? <div class="mt-1 text-xs font-medium text-slate-500">{dateLabel}</div> : null}
                     {items.length > 0 ? (
-                      <ul class="mt-2 list-disc pl-5 text-sm text-slate-700 space-y-1">
+                      <div class="mt-3 text-sm text-slate-700 space-y-1">
                         {items.map((it, i) => (
-                          <li key={i}>{it}</li>
+                          <p key={i}>{it}</p>
                         ))}
-                      </ul>
+                      </div>
                     ) : null}
                   </div>
                 );
               })}
             </div>
           </div>
-        </>
+        </div>
       ) : null}
 
       {hoteis.length > 0 ? (
-        <>
-          <!-- Hotéis Sugeridos -->
-          <div class="bg-white border border-slate-200 rounded-xl p-4">
-            <div class="text-lg md:text-xl font-extrabold text-blue-title">Hotéis Sugeridos</div>
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+          <div class="text-lg md:text-xl font-extrabold text-blue-title">Hotéis Sugeridos</div>
+          <div class="mt-4 space-y-3">
+            {hoteis.map((h: any, idx: number) => {
+              const cidade = textValue(h.cidade);
+              const hotel = textValue(h.hotel);
+              const title = [cidade, hotel].filter(Boolean).join(" | ") || `Hospedagem ${idx + 1}`;
+              const range = [formatDate(h.data_inicio), formatDate(h.data_fim)].filter(Boolean).join(" a ");
+              const details = [
+                range ? `Período: ${range}` : "",
+                hasPositiveNumber(h.noites) ? `${Number(h.noites)} noite${Number(h.noites) === 1 ? "" : "s"}` : "",
+                textValue(h.categoria) ? `Categoria: ${textValue(h.categoria)}` : "",
+                textValue(h.regime) ? `Regime: ${textValue(h.regime)}` : "",
+                textValue(h.apto) ? `Apto: ${textValue(h.apto)}` : "",
+              ].filter(Boolean);
+              if (!title && details.length === 0) return null;
+              return (
+                <div class="border border-slate-200 rounded-lg p-4" key={h.id || idx}>
+                  {title ? <div class="text-sm font-semibold text-slate-900">{title}</div> : null}
+                  {details.length > 0 ? (
+                    <ul class="mt-2 list-disc pl-5 text-sm text-slate-700 space-y-1">
+                      {details.map((item, i) => (
+                        <li key={i}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
-          <div class="bg-white border border-slate-200 rounded-xl p-5">
-            <div class="space-y-3">
-              {hoteis.map((h: any, idx: number) => {
-                const title = [h.cidade, h.hotel].filter(Boolean).join(" | ") || `Hotel ${idx + 1}`;
-                const range = [formatDate(h.data_inicio), formatDate(h.data_fim)].filter(Boolean).join(" a ");
-                return (
-                  <div class="border border-slate-200 rounded-lg p-4" key={h.id || idx}>
-                    <div class="text-sm font-semibold text-slate-900">{title}</div>
-                    <div class="mt-1 text-sm text-slate-700">
-                      {[range, h.noites ? `${h.noites} noite${Number(h.noites) === 1 ? "" : "s"}` : ""].filter(Boolean).join(" • ")}
-                    </div>
-                    <div class="mt-1 text-xs text-slate-600">
-                      {[
-                        h.categoria ? `Categoria: ${h.categoria}` : "",
-                        h.regime ? `Regime: ${h.regime}` : "",
-                        h.apto ? `Apto: ${h.apto}` : "",
-                      ].filter(Boolean).join(" • ")}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </>
+        </div>
       ) : null}
 
       {passeios.length > 0 ? (
-        <>
-          <!-- Passeios Principais -->
-          <div class="bg-white border border-slate-200 rounded-xl p-4">
-            <div class="text-lg md:text-xl font-extrabold text-blue-title">Passeios Principais</div>
-          </div>
-          <div class="bg-white border border-slate-200 rounded-xl p-5">
-            <div class="space-y-3">
-              {passeios.map((p: any, idx: number) => {
-            const title = [p.cidade, p.passeio].filter(Boolean).join(" | ") || `Passeio ${idx + 1}`;
-            const di = formatDate(p.data_inicio);
-            const df = formatDate(p.data_fim);
-            const when = di && df ? (di === df ? di : `${di} a ${df}`) : (di || df);
-            return (
-              <div class="border border-slate-200 rounded-lg p-4" key={p.id || idx}>
-                <div class="text-sm font-semibold text-slate-900">{title}</div>
-                <div class="mt-1 text-sm text-slate-700">
-                  {[when, p.tipo, p.ingressos].filter(Boolean).join(" • ") || "—"}
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+          <div class="text-lg md:text-xl font-extrabold text-blue-title">Passeios Principais</div>
+          <div class="mt-4 space-y-3">
+            {passeios.map((p: any, idx: number) => {
+              const cidade = textValue(p.cidade);
+              const passeio = textValue(p.passeio);
+              const title = [cidade, passeio].filter(Boolean).join(" | ") || `Passeio ${idx + 1}`;
+              const di = formatDate(p.data_inicio);
+              const df = formatDate(p.data_fim);
+              const when = di && df ? (di === df ? di : `${di} a ${df}`) : di || df;
+              const details = [
+                when ? `Data: ${when}` : "",
+                textValue(p.tipo) ? `Tipo: ${textValue(p.tipo)}` : "",
+                textValue(p.ingressos) ? `Ingressos: ${textValue(p.ingressos)}` : "",
+              ].filter(Boolean);
+              if (!title && details.length === 0) return null;
+              return (
+                <div class="border border-slate-200 rounded-lg p-4" key={p.id || idx}>
+                  {title ? <div class="text-sm font-semibold text-slate-900">{title}</div> : null}
+                  {details.length > 0 ? (
+                    <ul class="mt-2 list-disc pl-5 text-sm text-slate-700 space-y-1">
+                      {details.map((item, i) => (
+                        <li key={i}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </div>
-              </div>
-            );
-              })}
-            </div>
+              );
+            })}
           </div>
-        </>
+        </div>
       ) : null}
 
       {transportes.length > 0 ? (
-        <>
-          <!-- Transporte Incluído -->
-          <div class="bg-white border border-slate-200 rounded-xl p-4">
-            <div class="text-lg md:text-xl font-extrabold text-blue-title">Transporte Incluído</div>
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+          <div class="text-lg md:text-xl font-extrabold text-blue-title">Transporte Incluído</div>
+          <div class="mt-4 space-y-3">
+            {transportes.map((t: any, idx: number) => {
+              const di = formatDate(t.data_inicio);
+              const df = formatDate(t.data_fim);
+              const when = di && df ? (di === df ? di : `${di} a ${df}`) : di || df;
+              const title = [textValue(t.tipo), textValue(t.fornecedor)].filter(Boolean).join(" | ") || `Transporte ${idx + 1}`;
+              const details = [
+                when ? `Período: ${when}` : "",
+                textValue(t.descricao) ? `Descrição: ${textValue(t.descricao)}` : "",
+                textValue(t.categoria) ? `Categoria: ${textValue(t.categoria)}` : "",
+                textValue(t.observacao) ? `Observação: ${textValue(t.observacao)}` : "",
+              ].filter(Boolean);
+              if (!title && details.length === 0) return null;
+              return (
+                <div class="border border-slate-200 rounded-lg p-4" key={t.id || idx}>
+                  {title ? <div class="text-sm font-semibold text-slate-900">{title}</div> : null}
+                  {details.length > 0 ? (
+                    <ul class="mt-2 list-disc pl-5 text-sm text-slate-700 space-y-1">
+                      {details.map((item, i) => (
+                        <li key={i}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
-          <div class="bg-white border border-slate-200 rounded-xl p-5">
-            <div class="space-y-3">
-              {transportes.map((t: any, idx: number) => {
-            const di = formatDate(t.data_inicio);
-            const df = formatDate(t.data_fim);
-            const when = di && df ? (di === df ? di : `${di} a ${df}`) : (di || df);
-            const title = [t.tipo, t.fornecedor].filter(Boolean).join(" | ") || `Transporte ${idx + 1}`;
-            return (
-              <div class="border border-slate-200 rounded-lg p-4" key={t.id || idx}>
-                <div class="text-sm font-semibold text-slate-900">{title}</div>
-                <div class="mt-1 text-sm text-slate-700">{[when, t.descricao, t.categoria].filter(Boolean).join(" • ") || "—"}</div>
-                {t.observacao ? <div class="mt-1 text-xs text-slate-600">Obs.: {t.observacao}</div> : null}
-              </div>
-            );
-              })}
-            </div>
-          </div>
-        </>
+        </div>
       ) : null}
 
       {investimentos.length > 0 ? (
-        <>
-          <!-- Investimento -->
-          <div class="bg-white border border-slate-200 rounded-xl p-4">
-            <div class="text-lg md:text-xl font-extrabold text-blue-title">Investimento</div>
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+          <div class="text-lg md:text-xl font-extrabold text-blue-title">Investimento</div>
+          <div class="mt-4 space-y-3">
+            {investimentos.map((i: any, idx: number) => {
+              const tipo = textValue(i.tipo);
+              const valorPessoa = formatCurrencyOptional(i.valor_por_pessoa);
+              const valorApto = formatCurrencyOptional(i.valor_por_apto);
+              const qtd = Number(i.qtd_apto || 0);
+              const showQtd =
+                Number.isFinite(qtd) &&
+                qtd > 0 &&
+                (qtd > 1 || Boolean(valorPessoa) || Boolean(valorApto));
+              const details = [
+                valorPessoa ? `Valor por pessoa: ${valorPessoa}` : "",
+                showQtd ? `Qte Pax: ${qtd}` : "",
+                valorApto ? `Valor por apto: ${valorApto}` : "",
+              ].filter(Boolean);
+              if (!tipo && details.length === 0) return null;
+              return (
+                <div class="border border-slate-200 rounded-lg p-4" key={i.id || idx}>
+                  {tipo ? <div class="text-sm font-semibold text-slate-900">{tipo}</div> : null}
+                  {details.length > 0 ? (
+                    <ul class="mt-2 list-disc pl-5 text-sm text-slate-700 space-y-1">
+                      {details.map((item, i2) => (
+                        <li key={i2}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
-          <div class="bg-white border border-slate-200 rounded-xl p-5">
-            <div class="overflow-x-auto">
-              <table class="table-default table-header-blue table-mobile-cards w-full text-sm">
-                <thead>
-                  <tr class="text-left text-slate-600">
-                    <th>Tipo</th>
-                    <th class="whitespace-nowrap">Valor por Pessoa</th>
-                    <th class="whitespace-nowrap">Qte Pax</th>
-                    <th class="whitespace-nowrap">Valor por Apto</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {investimentos.map((i: any, idx: number) => (
-                    <tr class="border-t border-slate-200" key={i.id || idx}>
-                      <td data-label="Tipo" class="text-slate-900">{i.tipo || "—"}</td>
-                      <td data-label="Valor por Pessoa" class="text-slate-700 whitespace-nowrap">{formatCurrency(i.valor_por_pessoa)}</td>
-                      <td data-label="Qte Pax" class="text-slate-700 whitespace-nowrap">{Number(i.qtd_apto || 0) || "—"}</td>
-                      <td data-label="Valor por Apto" class="text-slate-700 whitespace-nowrap">{formatCurrency(i.valor_por_apto)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
+        </div>
       ) : null}
 
       {pagamentos.length > 0 ? (
-        <>
-          <!-- Formas de Pagamento -->
-          <div class="bg-white border border-slate-200 rounded-xl p-4">
-            <div class="text-lg md:text-xl font-extrabold text-blue-title">Formas de Pagamento</div>
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+          <div class="text-lg md:text-xl font-extrabold text-blue-title">Formas de Pagamento</div>
+          <div class="mt-4 space-y-3">
+            {pagamentos.map((p: any, idx: number) => {
+              const servico = textValue(p.servico);
+              const valorTotal = formatCurrencyOptional(p.valor_total_com_taxas);
+              const taxas = formatCurrencyOptional(p.taxas);
+              const formas = splitLines(p.forma_pagamento || "");
+              const details = [
+                valorTotal ? `Valor total c/ taxas: ${valorTotal}` : "",
+                taxas ? `Taxas: ${taxas}` : "",
+              ].filter(Boolean);
+              if (!servico && details.length === 0 && formas.length === 0) return null;
+              return (
+                <div class="border border-slate-200 rounded-lg p-4" key={p.id || idx}>
+                  {servico ? <div class="text-sm font-semibold text-slate-900">{servico}</div> : null}
+                  {details.length > 0 ? (
+                    <ul class="mt-2 list-disc pl-5 text-sm text-slate-700 space-y-1">
+                      {details.map((item, i) => (
+                        <li key={i}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {formas.length === 1 ? (
+                    <div class="mt-2 text-sm text-slate-700">Forma: {formas[0]}</div>
+                  ) : null}
+                  {formas.length > 1 ? (
+                    <div class="mt-2">
+                      <div class="text-sm font-semibold text-slate-900">Formas</div>
+                      <ul class="mt-1 list-disc pl-5 text-sm text-slate-700 space-y-1">
+                        {formas.map((it: string, i) => (
+                          <li key={i}>{it}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
-          <div class="bg-white border border-slate-200 rounded-xl p-5">
-            <div class="overflow-x-auto">
-              <table class="table-default table-header-blue table-mobile-cards w-full text-sm">
-                <thead>
-                  <tr class="text-left text-slate-600">
-                    <th>Serviço</th>
-                    <th class="whitespace-nowrap">Valor Total c/ Taxas</th>
-                    <th class="whitespace-nowrap">Taxas</th>
-                    <th class="whitespace-nowrap">Forma</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pagamentos.map((p: any, idx: number) => (
-                    <tr class="border-t border-slate-200" key={p.id || idx}>
-                      <td data-label="Serviço" class="text-slate-900">{p.servico || "—"}</td>
-                      <td data-label="Valor Total c/ Taxas" class="text-slate-700 whitespace-nowrap">{formatCurrency(p.valor_total_com_taxas)}</td>
-                      <td data-label="Taxas" class="text-slate-700 whitespace-nowrap">{formatCurrency(p.taxas)}</td>
-                      <td data-label="Forma" class="text-slate-700">
-                        {(() => {
-                          const lines = splitLines(p.forma_pagamento || "");
-                          if (!lines.length) return "—";
-                          if (lines.length === 1) return lines[0];
-                          return (
-                            <ul class="list-disc pl-5 text-sm text-slate-700 space-y-1">
-                              {lines.map((it: string, i: number) => (
-                                <li key={i}>{it}</li>
-                              ))}
-                            </ul>
-                          );
-                        })()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
+        </div>
       ) : null}
 
       {incluiItems.length > 0 || naoIncluiItems.length > 0 ? (

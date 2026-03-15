@@ -94,8 +94,6 @@ export default function QuoteListIsland() {
   const [statusFiltro, setStatusFiltro] = useState("all");
   const [deletandoId, setDeletandoId] = useState<string | null>(null);
   const [visualizandoQuote, setVisualizandoQuote] = useState<QuoteRow | null>(null);
-  const [exportingQuoteId, setExportingQuoteId] = useState<string | null>(null);
-  const [exportError, setExportError] = useState<string | null>(null);
   const [interacaoQuote, setInteracaoQuote] = useState<QuoteRow | null>(null);
   const [quoteParaExcluir, setQuoteParaExcluir] = useState<QuoteRow | null>(null);
   const [interactionDate, setInteractionDate] = useState("");
@@ -162,27 +160,6 @@ export default function QuoteListIsland() {
     ).length;
     return `${quotesFiltrados.length} orcamentos no recorte atual · ${negociando} negociando · ${fechados} fechados`;
   }, [quotes, quotesFiltrados]);
-
-  async function handleExportPdf(quoteId: string) {
-    setExportError(null);
-    setExportingQuoteId(quoteId);
-    try {
-      await new Promise<void>((resolve) => {
-        if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
-          window.requestAnimationFrame(() => resolve());
-          return;
-        }
-        setTimeout(resolve, 0);
-      });
-      const { exportQuotePdfById } = await import("../../lib/quote/exportQuotePdfClient");
-      await exportQuotePdfById({ quoteId, showItemValues: false, showSummary: false });
-    } catch (err: any) {
-      console.error("Erro ao exportar PDF:", err);
-      setExportError(err?.message || "Nao foi possivel gerar o PDF.");
-    } finally {
-      setExportingQuoteId(null);
-    }
-  }
 
   async function excluirQuote(id: string) {
     setDeletandoId(id);
@@ -323,12 +300,6 @@ export default function QuoteListIsland() {
             {erro}
           </AlertMessage>
         )}
-        {exportError && (
-          <AlertMessage variant="error" className="mb-3">
-            {exportError}
-          </AlertMessage>
-        )}
-
         <AppCard
           tone="config"
           title="Orcamentos recentes"
@@ -384,7 +355,8 @@ export default function QuoteListIsland() {
                 {
                   key: "interaction",
                   label: "CRM",
-                  variant: "light" as const,
+                  icon: "pi pi-comments",
+                  variant: "ghost" as const,
                   onClick: () => abrirInteracaoModal(quote),
                   title: quote.last_interaction_at
                     ? `Ultima interacao: ${formatDateTime(quote.last_interaction_at)}`
@@ -393,7 +365,8 @@ export default function QuoteListIsland() {
                 {
                   key: "sale",
                   label: "Venda",
-                  variant: "primary" as const,
+                  icon: "pi pi-shopping-cart",
+                  variant: "ghost" as const,
                   onClick: () => converterParaVenda(quote.id),
                   disabled: isFechado,
                   title: "Converter em venda",
@@ -401,23 +374,17 @@ export default function QuoteListIsland() {
                 {
                   key: "view",
                   label: "Abrir",
+                  icon: "pi pi-eye",
                   variant: "ghost" as const,
                   onClick: () => setVisualizandoQuote(quote),
                   title: "Visualizar orcamento",
-                },
-                {
-                  key: "pdf",
-                  label: exportingQuoteId === quote.id ? "..." : "PDF",
-                  variant: "light" as const,
-                  onClick: () => handleExportPdf(quote.id),
-                  disabled: exportingQuoteId === quote.id,
-                  title: "Visualizar PDF",
                 },
                 ...(!isFechado
                   ? [
                       {
                         key: "edit",
                         label: "Editar",
+                        icon: "pi pi-pencil",
                         variant: "ghost" as const,
                         onClick: () => {
                           if (typeof window !== "undefined") {
@@ -431,6 +398,7 @@ export default function QuoteListIsland() {
                 {
                   key: "delete",
                   label: deletandoId === quote.id ? "..." : "Excluir",
+                  icon: "pi pi-trash",
                   variant: "danger" as const,
                   onClick: () => solicitarExclusao(quote),
                   disabled: deletandoId === quote.id,

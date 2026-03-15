@@ -1,4 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <path fill="#8e28e2" d="M143 71 L509 71 L465 147 L97 147 Z"/>
-  <path fill="#8e28e2" d="M3 147 L94 147 L140 223 L228 223 L154 373 L235 373 L327 221 L416 221 L309 398 C292 425 276 441 246 447 C214 452 184 442 164 419 Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-label="VTUR logo horizontal">
+  <defs>
+    <linearGradient id="vturGradientH" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#A53AF5"/>
+      <stop offset="100%" stop-color="#7A2BE2"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(16 20) scale(0.62)">
+    <path fill="url(#vturGradientH)" d="M143 71 L509 71 L465 147 L97 147 Z"/>
+    <path fill="url(#vturGradientH)" d="M3 147 L94 147 L140 223 L228 223 L154 373 L235 373 L327 221 L416 221 L309 398 C292 425 276 441 246 447 C214 452 184 442 164 419 Z"/>
+  </g>
+  <text x="382" y="205" fill="#7A2BE2" font-family="Inter, Poppins, Montserrat, Arial, sans-serif" font-size="150" font-weight="800" letter-spacing="10">VTUR</text>
 </svg>

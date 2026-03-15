@@ -1,4 +1,5 @@
 import { buildQueryLiteKey, queryLite } from "./queryLite";
+import { isCacheDisabled } from "./cachePolicy";
 
 type ReferencePayload = {
   paises?: Array<{ id: string; nome: string }>;
@@ -58,27 +59,34 @@ export async function fetchReferenceData(options?: {
   include?: string[];
   noCache?: boolean;
 }): Promise<ReferencePayload> {
+  const forceNoCache = options?.noCache || isCacheDisabled();
   const include = normalizeInclude(options?.include);
   const includeKey = include.join(",");
   const storageKey = `sgtur_ref_data_v2:${includeKey}`;
 
-  if (!options?.noCache) {
+  if (!forceNoCache) {
     const cached = readLocalCache(storageKey);
     if (cached) return cached;
+  } else if (canUseStorage()) {
+    try {
+      window.localStorage.removeItem(storageKey);
+    } catch {
+      // ignore
+    }
   }
 
-  const key = buildQueryLiteKey(["referenceData", includeKey, options?.noCache ? "no-cache" : "cache"]);
+  const key = buildQueryLiteKey(["referenceData", includeKey, forceNoCache ? "no-cache" : "cache"]);
 
   return queryLite(
     key,
     async () => {
       const qs = new URLSearchParams();
       qs.set("include", includeKey);
-      if (options?.noCache) qs.set("no_cache", "1");
+      if (forceNoCache) qs.set("no_cache", "1");
       const resp = await fetch(`/api/v1/reference-data?${qs.toString()}`);
       if (!resp.ok) throw new Error(await resp.text());
       const payload = (await resp.json()) as ReferencePayload;
-      if (!options?.noCache) writeLocalCache(storageKey, payload);
+      if (!forceNoCache) writeLocalCache(storageKey, payload);
       return payload;
     },
     { ttlMs: 5 * 60 * 1000 }

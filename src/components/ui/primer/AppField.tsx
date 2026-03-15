@@ -44,6 +44,10 @@ export default function AppField(props: AppFieldProps) {
   const generatedId = useId();
   const controlId = id || generatedId;
   const validationStatus = validation ? validationVariant : undefined;
+  const inputType = as === "input" ? (rest as React.InputHTMLAttributes<HTMLInputElement>).type : undefined;
+  const controlWrapClassName = ["vtur-app-field-control", inputType === "date" ? "is-date" : ""]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div className={["vtur-app-field", wrapperClassName].filter(Boolean).join(" ")}>
@@ -51,39 +55,41 @@ export default function AppField(props: AppFieldProps) {
         {label}
       </label>
 
-      {as === "textarea" ? (
-        <InputTextarea
-          id={controlId}
-          className={block ? "w-full" : undefined}
-          disabled={disabled}
-          required={required}
-          invalid={validationStatus === "error"}
-          {...(rest as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
-        />
-      ) : as === "select" ? (
-        <select
-          id={controlId}
-          className={["p-inputtext p-component", block ? "w-full" : ""].filter(Boolean).join(" ")}
-          disabled={disabled}
-          required={required}
-          {...(rest as React.SelectHTMLAttributes<HTMLSelectElement>)}
-        >
-          {options.map((option) => (
-            <option key={option.value} value={option.value} disabled={option.disabled}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <InputText
-          id={controlId}
-          className={block ? "w-full" : undefined}
-          disabled={disabled}
-          required={required}
-          invalid={validationStatus === "error"}
-          {...(rest as React.InputHTMLAttributes<HTMLInputElement>)}
-        />
-      )}
+      <div className={controlWrapClassName}>
+        {as === "textarea" ? (
+          <InputTextarea
+            id={controlId}
+            className={block ? "w-full" : undefined}
+            disabled={disabled}
+            required={required}
+            invalid={validationStatus === "error"}
+            {...(rest as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
+          />
+        ) : as === "select" ? (
+          <select
+            id={controlId}
+            className={["p-inputtext p-component", block ? "w-full" : ""].filter(Boolean).join(" ")}
+            disabled={disabled}
+            required={required}
+            {...(rest as React.SelectHTMLAttributes<HTMLSelectElement>)}
+          >
+            {options.map((option) => (
+              <option key={option.value} value={option.value} disabled={option.disabled}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <InputText
+            id={controlId}
+            className={block ? "w-full" : undefined}
+            disabled={disabled}
+            required={required}
+            invalid={validationStatus === "error"}
+            {...(rest as React.InputHTMLAttributes<HTMLInputElement>)}
+          />
+        )}
+      </div>
 
       {caption && <small className="vtur-app-field-caption">{caption}</small>}
       {validation && (

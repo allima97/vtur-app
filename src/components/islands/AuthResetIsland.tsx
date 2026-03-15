@@ -119,7 +119,7 @@ export default function AuthResetIsland() {
     <AppPrimerProvider>
       <div className="auth-container">
         <AppCard
-          className="auth-card auth-card-lg"
+          className="auth-card auth-card-lg auth-card-reset"
           title="Definir nova senha"
           subtitle={`Crie uma nova senha para voltar a usar o ${SYSTEM_NAME}.`}
         >

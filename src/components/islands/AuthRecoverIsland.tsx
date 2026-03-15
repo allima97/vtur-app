@@ -131,10 +131,15 @@ export default function AuthRecoverIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="auth-container">
+      <div className="auth-container auth-container-wide">
         <AppCard
-          className="auth-card auth-card-lg"
-          title="Recuperar senha"
+          className="auth-card auth-card-lg auth-card-with-logo auth-card-recover"
+          title={
+            <span className="auth-brand-title">
+              <img className="auth-brand-logo" src="/brand/vtur-logo-stacked.svg" alt="VTUR" />
+              <span>Recuperar senha</span>
+            </span>
+          }
           subtitle="Enviaremos um link para redefinir sua senha."
         >
           {erro && <AlertMessage variant="error" className="mb-3">{erro}</AlertMessage>}

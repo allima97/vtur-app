@@ -1173,13 +1173,11 @@ export default function RelatorioAgrupadoProdutoIsland() {
 
   const escopoResumo =
     userCtx && userCtx.papel !== "ADMIN"
-      ? `Relatorio limitado a ${
-          userCtx.papel === "GESTOR"
-            ? "sua equipe"
-            : userCtx.papel === "MASTER"
-            ? "seu portfolio selecionado"
-            : "suas vendas"
-        }.`
+      ? userCtx.papel === "GESTOR"
+        ? "Relatório limitado à sua equipe."
+        : userCtx.papel === "MASTER"
+        ? "Relatório limitado ao seu portfólio selecionado."
+        : "Relatório limitado à suas vendas."
       : null;
 
   const renderCidadeField = () => (
@@ -1393,8 +1391,8 @@ export default function RelatorioAgrupadoProdutoIsland() {
           sticky
           tone="config"
           className="mb-3 list-toolbar-sticky"
-          title="Relatorio agrupado por produto"
-          subtitle={`Periodo: ${periodoResumo}. ${activeTab === "recibos" ? "Visao por recibo." : "Resumo consolidado por tipo de produto."}`}
+          title="Relatório agrupado por produto"
+          subtitle={`Período: ${periodoResumo}. ${activeTab === "recibos" ? "Visão por recibo." : "Resumo consolidado por tipo de produto."}`}
           actions={
             <div className="vtur-quote-top-actions">
               <AppButton type="button" variant="secondary" className="sm:hidden" onClick={() => setShowFilters(true)}>
@@ -1412,7 +1410,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
           <div className="hidden sm:block">{renderFiltersGrid()}</div>
         </AppToolbar>
 
-        <AppCard className="mb-3" title="Modo de leitura" subtitle="Alterne entre a consolidacao por tipo e a visao analitica por recibo.">
+        <AppCard className="mb-3" title="Modo de leitura" subtitle="Alterne entre a consolidação por tipo e a visão analítica por recibo.">
           <div className="vtur-quote-top-actions">
             {tabOptions.map((tab) => (
               <AppButton
@@ -1429,7 +1427,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
 
         {showFilters ? (
           <Dialog
-            title="Filtros do relatorio"
+            title="Filtros do relatório"
             width="xlarge"
             onClose={() => setShowFilters(false)}
             footerButtons={[
@@ -1448,7 +1446,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
             <div className="vtur-modal-body-stack">
               <AppCard
                 title="Refine o recorte comercial"
-                subtitle="Ajuste datas, escopo, cidade, status e filtros de produto antes de atualizar o relatorio."
+                subtitle="Ajuste datas, escopo, cidade, status e filtros de produto antes de atualizar o relatório."
               >
                 {renderFiltersGrid()}
               </AppCard>
@@ -1458,7 +1456,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
 
         {showExport ? (
           <Dialog
-            title="Exportar relatorio"
+            title="Exportar relatório"
             width="large"
             onClose={() => setShowExport(false)}
             footerButtons={[
@@ -1480,8 +1478,8 @@ export default function RelatorioAgrupadoProdutoIsland() {
           >
             <div className="vtur-modal-body-stack">
               <AppCard
-                title="Formato da exportacao"
-                subtitle="Escolha o formato final respeitando as permissoes definidas nos parametros da empresa."
+                title="Formato da exportação"
+                subtitle="Escolha o formato final respeitando as permissões definidas nos parâmetros da empresa."
               >
                 <div className="vtur-quote-top-actions">
                   <AppButton
@@ -1511,7 +1509,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
                 {exportDisabled ? (
                   <div style={{ marginTop: 16 }}>
                     <AlertMessage variant="warning">
-                      O formato selecionado esta desabilitado nos parametros da empresa.
+                      O formato selecionado está desabilitado nos parâmetros da empresa.
                     </AlertMessage>
                   </div>
                 ) : null}
@@ -1521,7 +1519,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
         ) : null}
 
         {escopoResumo ? (
-          <AlertMessage variant="info" className="mb-3">
+          <AlertMessage variant="warning" className="mb-3 vtur-alert-inline">
             {escopoResumo}
           </AlertMessage>
         ) : null}
@@ -1535,7 +1533,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
         {activeTab === "agrupado" ? (
           <AppCard
             title="Resumo por tipo de produto"
-            subtitle="Quantidade, faturamento e ticket medio consolidados no recorte atual."
+            subtitle="Quantidade, faturamento e ticket médio consolidados no recorte atual."
           >
             <div className="vtur-quote-summary-grid">
               <div className="vtur-quote-summary-item">
@@ -1551,7 +1549,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
                 <strong>{formatCurrency(totalGeral)}</strong>
               </div>
               <div className="vtur-quote-summary-item">
-                <span className="vtur-quote-summary-label">Ticket medio</span>
+                <span className="vtur-quote-summary-label">Ticket médio</span>
                 <strong>{formatCurrency(ticketGeral)}</strong>
               </div>
             </div>
@@ -1580,17 +1578,17 @@ export default function RelatorioAgrupadoProdutoIsland() {
                     Faturamento {ordenacao === "total" ? (ordemDesc ? "↓" : "↑") : ""}
                   </th>
                   <th style={{ cursor: "pointer" }} onClick={() => mudarOrdenacao("ticket")}>
-                    Ticket medio {ordenacao === "ticket" ? (ordemDesc ? "↓" : "↑") : ""}
+                    Ticket médio {ordenacao === "ticket" ? (ordemDesc ? "↓" : "↑") : ""}
                   </th>
                 </tr>
               }
               loading={loading}
-              loadingMessage="Carregando consolidacao por produto..."
+              loadingMessage="Carregando consolidação por produto..."
               empty={!loading && linhasExibidas.length === 0}
               emptyMessage={
                 <EmptyState
                   title="Nenhum produto encontrado"
-                  description="Ajuste datas, escopo ou busca para ampliar o recorte do relatorio."
+                  description="Ajuste datas, escopo ou busca para ampliar o recorte do relatório."
                 />
               }
               colSpan={4}
@@ -1601,7 +1599,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
                   <td data-label="Tipo de Produto">{linha.produto_nome}</td>
                   <td data-label="Qtde">{linha.quantidade}</td>
                   <td data-label="Faturamento">{formatCurrency(linha.total)}</td>
-                  <td data-label="Ticket medio">{formatCurrency(linha.ticketMedio)}</td>
+                  <td data-label="Ticket médio">{formatCurrency(linha.ticketMedio)}</td>
                 </tr>
               ))}
             </DataTable>
@@ -1609,7 +1607,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
         ) : (
           <AppCard
             title="Produtos por recibo"
-            subtitle="Visao analitica dos recibos com produto, cidade, destino, valor total e taxas."
+            subtitle="Visão analítica dos recibos com produto, cidade, destino, valor total e taxas."
           >
             <div className="vtur-quote-summary-grid">
               <div className="vtur-quote-summary-item">
@@ -1625,7 +1623,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
                 <strong>{formatCurrency(totalRecibosTaxas)}</strong>
               </div>
               <div className="vtur-quote-summary-item">
-                <span className="vtur-quote-summary-label">Liquido</span>
+                <span className="vtur-quote-summary-label">Líquido</span>
                 <strong>{formatCurrency(totalRecibosValor - totalRecibosTaxas)}</strong>
               </div>
             </div>

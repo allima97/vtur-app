@@ -4,7 +4,8 @@ import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import AlertMessage from "../ui/AlertMessage";
 import { renderTemplateText } from "../../lib/messageTemplates";
-import { construirLinkWhatsAppComTexto } from "../../lib/whatsapp";
+import { construirLinkWhatsAppComTexto, getPrimeiroNome } from "../../lib/whatsapp";
+import { renderSvgUrlToPngObjectUrl, validarPngServidor } from "../../lib/cards/browserPng";
 import AppCard from "../ui/primer/AppCard";
 import AppButton from "../ui/primer/AppButton";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
@@ -183,12 +184,17 @@ function normalizarCategoria(value?: string | null) {
     .replace(/^_+|_+$/g, "");
 }
 
-function buildMensagemDisparo(texto: string, assinatura: string, nomeCliente: string) {
+function buildMensagemDisparo(
+  texto: string,
+  assinatura: string,
+  nomeCliente: string,
+  options?: { useFullNameAsFirstName?: boolean }
+) {
   return renderTemplateText(texto, {
     nomeCompleto: nomeCliente,
     assinatura,
     consultor: assinatura,
-  }).trim();
+  }, options).trim();
 }
 
 function normalizeColorInput(value: unknown, fallback = "#000000") {
@@ -204,10 +210,15 @@ function extractSignatureTextConfig(signatureStyle?: unknown) {
   const content = isRecord(signatureStyle) && isRecord(signatureStyle.content)
     ? signatureStyle.content
     : null;
+  const footerLeadRaw = content?.footerLead;
+  const consultantRoleRaw = content?.consultantRole;
 
   return {
-    footerLead: String(content?.footerLead || "Com carinho").trim() || "Com carinho",
-    consultantRole: String(content?.consultantRole || "Consultor de viagens").trim() || "Consultor de viagens",
+    footerLead: footerLeadRaw == null ? "Com carinho" : String(footerLeadRaw).trim(),
+    consultantRole:
+      consultantRoleRaw == null
+        ? "Consultor de viagens"
+        : String(consultantRoleRaw).trim() || "Consultor de viagens",
   };
 }
 
@@ -242,6 +253,7 @@ export default function ParametrosAvisosIsland() {
   const [themes, setThemes] = useState<Theme[]>([]);
   const [clientesPreview, setClientesPreview] = useState<PreviewCliente[]>([]);
   const [previewClienteId, setPreviewClienteId] = useState("");
+  const [previewNomeClienteManual, setPreviewNomeClienteManual] = useState("");
   const [form, setForm] = useState<TemplateForm>(initialTemplateForm);
   const [styleForm, setStyleForm] = useState<CardStyleMap>(() => createDefaultCardStyleMap());
   const [themeForm, setThemeForm] = useState<ThemeForm>(initialThemeForm);
@@ -249,6 +261,13 @@ export default function ParametrosAvisosIsland() {
   const [salvando, setSalvando] = useState(false);
   const [salvandoTheme, setSalvandoTheme] = useState(false);
   const [carregandoPadrao, setCarregandoPadrao] = useState(false);
+  const [mostrarFormularioTema, setMostrarFormularioTema] = useState(false);
+  const [mostrarListaArtes, setMostrarListaArtes] = useState(false);
+  const [filtroThemeTabelaId, setFiltroThemeTabelaId] = useState("");
+  const [previewResolvedUrl, setPreviewResolvedUrl] = useState("");
+  const [previewResolvedMime, setPreviewResolvedMime] = useState<"image/png" | "image/svg+xml">("image/svg+xml");
+  const [previewResolvedSource, setPreviewResolvedSource] = useState<"server_png" | "browser_png" | "svg">("svg");
+  const [gerandoPreviewPng, setGerandoPreviewPng] = useState(false);
 
   async function carregar() {
     try {
@@ -291,9 +310,6 @@ export default function ParametrosAvisosIsland() {
       if (!clientesResp.error) {
         const lista = (clientesResp.data || []) as PreviewCliente[];
         setClientesPreview(lista);
-        if (!previewClienteId && lista.length > 0) {
-          setPreviewClienteId(String(lista[0].id));
-        }
       }
     } catch (e: any) {
       setErro(e?.message || "Erro ao carregar avisos.");
@@ -320,15 +336,22 @@ export default function ParametrosAvisosIsland() {
     return temasDaCategoria.length > 0 ? temasDaCategoria : themes;
   }, [themes, form.categoria]);
 
+  const themesTabela = useMemo(() => {
+    if (!filtroThemeTabelaId) return themes;
+    return themes.filter((theme) => theme.id === filtroThemeTabelaId);
+  }, [themes, filtroThemeTabelaId]);
+
   const previewClienteSelecionado = useMemo(
     () => clientesPreview.find((item) => item.id === previewClienteId) || null,
     [clientesPreview, previewClienteId],
   );
 
   const previewNomeCliente = useMemo(() => {
+    const nomeManual = String(previewNomeClienteManual || "").trim();
+    if (nomeManual) return nomeManual;
     const nome = String(previewClienteSelecionado?.nome || "").trim();
     return nome || "Carlos Eduardo Silva";
-  }, [previewClienteSelecionado]);
+  }, [previewClienteSelecionado, previewNomeClienteManual]);
 
   const previewCardTitle = useMemo(
     () => String(form.titulo || form.nome || form.categoria || "Aviso").trim() || "Aviso",
@@ -337,14 +360,18 @@ export default function ParametrosAvisosIsland() {
 
   const previewText = useMemo(() => {
     const assinatura = form.assinatura.trim() || nomeUsuario;
-    return buildMensagemDisparo(form.corpo, assinatura, previewNomeCliente);
-  }, [form.corpo, form.assinatura, nomeUsuario, previewNomeCliente]);
+    const hasNomeManual = String(previewNomeClienteManual || "").trim().length > 0;
+    return buildMensagemDisparo(form.corpo, assinatura, previewNomeCliente, {
+      useFullNameAsFirstName: hasNomeManual,
+    });
+  }, [form.corpo, form.assinatura, nomeUsuario, previewNomeCliente, previewNomeClienteManual]);
 
   const previewBaseParams = useMemo(() => {
     if (!selectedThemeForForm) return null;
     const resolvedThemeAsset = resolveThemeAssetMeta(selectedThemeForForm);
 
     const assinatura = form.assinatura.trim() || nomeUsuario || "";
+    const nomeManual = String(previewNomeClienteManual || "").trim();
     const params = new URLSearchParams({
       theme_id: selectedThemeForForm.id,
       nome: previewNomeCliente,
@@ -356,12 +383,16 @@ export default function ParametrosAvisosIsland() {
       v: String(Date.now()),
     });
 
+    if (nomeManual) {
+      params.set("cliente_nome", nomeManual);
+      params.set("cliente_nome_literal", nomeManual);
+    }
     if (resolvedThemeAsset.asset_url) params.set("theme_asset_url", resolvedThemeAsset.asset_url);
     if (resolvedThemeAsset.width_px) params.set("width", String(resolvedThemeAsset.width_px));
     if (resolvedThemeAsset.height_px) params.set("height", String(resolvedThemeAsset.height_px));
     params.set("style_overrides", JSON.stringify(styleForm));
     return params;
-  }, [selectedThemeForForm, previewNomeCliente, previewCardTitle, form.corpo, form.footerLead, form.assinatura, form.consultantRole, nomeUsuario, styleForm]);
+  }, [selectedThemeForForm, previewNomeCliente, previewCardTitle, form.corpo, form.footerLead, form.assinatura, form.consultantRole, nomeUsuario, styleForm, previewNomeClienteManual]);
 
   const previewThemeSvgUrl = useMemo(() => {
     if (!previewBaseParams) return "";
@@ -373,13 +404,89 @@ export default function ParametrosAvisosIsland() {
     return `/api/v1/cards/render.png?${previewBaseParams.toString()}`;
   }, [previewBaseParams]);
 
+  useEffect(() => {
+    let active = true;
+    let objectUrlToRevoke: string | null = null;
+
+    async function resolverPreviewComPng() {
+      if (!previewThemeSvgUrl) {
+        setPreviewResolvedUrl("");
+        setPreviewResolvedMime("image/svg+xml");
+        setPreviewResolvedSource("svg");
+        setGerandoPreviewPng(false);
+        return;
+      }
+
+      setPreviewResolvedUrl(previewThemeSvgUrl);
+      setPreviewResolvedMime("image/svg+xml");
+      setPreviewResolvedSource("svg");
+      if (!previewThemePngUrl) return;
+
+      setGerandoPreviewPng(true);
+      try {
+        const pngStatus = await validarPngServidor(previewThemePngUrl);
+        if (!active) return;
+        if (pngStatus.ok) {
+          setPreviewResolvedUrl(previewThemePngUrl);
+          setPreviewResolvedMime("image/png");
+          setPreviewResolvedSource("server_png");
+          return;
+        }
+
+        try {
+          const browserPngUrl = await renderSvgUrlToPngObjectUrl(previewThemeSvgUrl);
+          if (!active) {
+            URL.revokeObjectURL(browserPngUrl);
+            return;
+          }
+          objectUrlToRevoke = browserPngUrl;
+          setPreviewResolvedUrl(browserPngUrl);
+          setPreviewResolvedMime("image/png");
+          setPreviewResolvedSource("browser_png");
+        } catch {
+          setPreviewResolvedUrl(previewThemeSvgUrl);
+          setPreviewResolvedMime("image/svg+xml");
+          setPreviewResolvedSource("svg");
+        }
+      } finally {
+        if (active) setGerandoPreviewPng(false);
+      }
+    }
+
+    void resolverPreviewComPng();
+
+    return () => {
+      active = false;
+      if (objectUrlToRevoke) URL.revokeObjectURL(objectUrlToRevoke);
+    };
+  }, [previewThemeSvgUrl, previewThemePngUrl]);
+
   const previewWhatsappUrl = useMemo(() => {
-    if (!previewThemePngUrl) return "";
+    if (!previewThemeSvgUrl) return "";
     const telefone = previewClienteSelecionado?.whatsapp || previewClienteSelecionado?.telefone || "";
     if (!telefone) return "";
-    const texto = `${previewText}\n\nCartão:\n${typeof window !== "undefined" ? `${window.location.origin}${previewThemePngUrl}` : previewThemePngUrl}`;
+    const texto = `${previewText}\n\nCartão:\n${typeof window !== "undefined" ? `${window.location.origin}${previewThemeSvgUrl}` : previewThemeSvgUrl}`;
     return construirLinkWhatsAppComTexto(telefone, texto) || "";
-  }, [previewThemePngUrl, previewClienteSelecionado, previewText]);
+  }, [previewThemeSvgUrl, previewClienteSelecionado, previewText]);
+
+  function abrirPreviewCartao(url: string) {
+    if (!url) return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  function baixarPreviewCartao() {
+    if (!previewResolvedUrl) return;
+    const link = document.createElement("a");
+    const slug = (getPrimeiroNome(previewNomeCliente) || "cliente")
+      .replace(/[^a-zA-Z0-9_-]+/g, "_")
+      .toLowerCase();
+    const ext = previewResolvedMime === "image/png" ? "png" : "svg";
+    link.href = previewResolvedUrl;
+    link.download = `cartao-${slug}-${Date.now()}.${ext}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 
   function resetForm() {
     setForm(initialTemplateForm);
@@ -497,6 +604,7 @@ export default function ParametrosAvisosIsland() {
 
       setMsg(themeForm.id ? "Arte atualizada." : "Arte cadastrada.");
       resetThemeForm();
+      setMostrarFormularioTema(false);
       await carregar();
     } catch (e: any) {
       setErro(e?.message || "Erro ao salvar arte.");
@@ -516,6 +624,7 @@ export default function ParametrosAvisosIsland() {
       ativo: theme.ativo,
     });
     setThemeFile(null);
+    setMostrarFormularioTema(true);
     setErro(null);
     setMsg(null);
   }
@@ -563,7 +672,7 @@ export default function ParametrosAvisosIsland() {
       const titulo = form.titulo.trim() || form.nome.trim();
       const serializedStyles = serializeCardStyleMap(styleForm);
       const signatureTextConfig = {
-        footerLead: form.footerLead.trim() || "Com carinho",
+        footerLead: form.footerLead.trim(),
         consultantRole: form.consultantRole.trim() || "Consultor de viagens",
       };
       const payload = {
@@ -797,135 +906,206 @@ export default function ParametrosAvisosIsland() {
         <small style={{ color: "#64748b", display: "block", marginBottom: 12 }}>
           A arte sobe praticamente pronta. O sistema só injeta o primeiro nome do cliente no ponto definido para o tema.
         </small>
-        <form onSubmit={salvarTheme}>
-          <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "2fr 1fr 1fr 1fr" }}>
-            <div className="form-group">
-              <label className="form-label">Nome da arte *</label>
-              <input className="form-input" value={themeForm.nome} onChange={(e) => setThemeForm((prev) => ({ ...prev, nome: e.target.value }))} required />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Categoria/Assunto *</label>
-              <input
-                className="form-input"
-                list="aviso-categorias-list"
-                value={themeForm.categoria}
-                onChange={(e) => setThemeForm((prev) => ({ ...prev, categoria: e.target.value }))}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Largura (px)</label>
-              <input type="number" className="form-input" value={themeForm.width_px} readOnly disabled />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Altura (px)</label>
-              <input type="number" className="form-input" value={themeForm.height_px} readOnly disabled />
-            </div>
-          </div>
-          <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "1fr 2fr 1fr" }}>
-            <div className="form-group">
-              <label className="form-label">Arquivo da arte</label>
-              <input type="file" className="form-input" accept="image/*" onChange={(e) => void handleThemeFileSelected(e.target.files?.[0] || null)} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">URL da arte (opcional)</label>
-              <input className="form-input" value={themeForm.asset_url} onChange={(e) => setThemeForm((prev) => ({ ...prev, asset_url: e.target.value }))} placeholder="https://..." />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Ativo</label>
-              <select className="form-select" value={themeForm.ativo ? "true" : "false"} onChange={(e) => setThemeForm((prev) => ({ ...prev, ativo: e.target.value === "true" }))}>
-                <option value="true">Sim</option>
-                <option value="false">Não</option>
-              </select>
-            </div>
-          </div>
-          <div className="mobile-stack-buttons">
-            <AppButton variant="primary" type="submit" disabled={salvandoTheme}>
-              {salvandoTheme ? "Salvando..." : themeForm.id ? "Salvar arte" : "Cadastrar arte"}
-            </AppButton>
-            <AppButton variant="secondary" type="button" onClick={resetThemeForm} disabled={salvandoTheme}>
-              Nova arte
-            </AppButton>
-          </div>
-        </form>
-
-        <div className="table-container overflow-x-auto mt-3">
-          <table className="table-default table-header-blue table-mobile-cards min-w-[820px]">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Categoria</th>
-                <th>Preview</th>
-                <th>Dimensão</th>
-                <th>Status</th>
-                <th className="th-actions">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {carregandoDados && (
-                <tr>
-                  <td colSpan={6}>Carregando artes...</td>
-                </tr>
-              )}
-              {!carregandoDados && themes.length === 0 && (
-                <tr>
-                  <td colSpan={6}>Nenhuma arte cadastrada.</td>
-                </tr>
-              )}
-              {!carregandoDados && themes.map((theme) => {
-                const resolvedThemeAsset = resolveThemeAssetMeta(theme);
-                return (
-                  <tr key={theme.id}>
-                    <td data-label="Nome">{theme.nome}</td>
-                    <td data-label="Categoria">{theme.categoria}</td>
-                    <td data-label="Preview">
-                      <img
-                        src={resolvedThemeAsset.asset_url || theme.asset_url}
-                        alt={theme.nome}
-                        style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 8, border: "1px solid #cbd5e1" }}
-                      />
-                    </td>
-                    <td data-label="Dimensão">
-                      {resolvedThemeAsset.width_px || theme.width_px}x{resolvedThemeAsset.height_px || theme.height_px}
-                    </td>
-                    <td data-label="Status">{theme.ativo ? "Ativo" : "Inativo"}</td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        <AppButton
-                          type="button"
-                          variant="ghost"
-                          icon="pi pi-pencil"
-                          className="p-button-rounded p-button-sm"
-                          onClick={() => editarTheme(theme)}
-                          title="Editar arte"
-                          aria-label="Editar arte"
-                        />
-                        <AppButton
-                          type="button"
-                          variant="ghost"
-                          icon="pi pi-eye"
-                          className="p-button-rounded p-button-sm"
-                          onClick={() => window.open(resolvedThemeAsset.asset_url || theme.asset_url, "_blank", "noopener,noreferrer")}
-                          title="Visualizar arte"
-                          aria-label="Visualizar arte"
-                        />
-                        <AppButton
-                          type="button"
-                          variant="danger"
-                          icon="pi pi-trash"
-                          className="p-button-rounded p-button-sm"
-                          onClick={() => void removerTheme(theme.id)}
-                          title="Excluir arte"
-                          aria-label="Excluir arte"
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="mobile-stack-buttons" style={{ marginBottom: 12 }}>
+          <AppButton
+            variant="primary"
+            type="button"
+            onClick={() => setMostrarFormularioTema(true)}
+            disabled={salvandoTheme}
+          >
+            Cadastrar arte
+          </AppButton>
+          <AppButton
+            variant="secondary"
+            type="button"
+            onClick={() => {
+              resetThemeForm();
+              setMostrarFormularioTema(true);
+            }}
+            disabled={salvandoTheme}
+          >
+            Nova arte
+          </AppButton>
         </div>
+
+        {mostrarFormularioTema ? (
+          <form onSubmit={salvarTheme}>
+            <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "2fr 1fr 1fr 1fr" }}>
+              <div className="form-group">
+                <label className="form-label">Nome da arte *</label>
+                <input className="form-input" value={themeForm.nome} onChange={(e) => setThemeForm((prev) => ({ ...prev, nome: e.target.value }))} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Categoria/Assunto *</label>
+                <input
+                  className="form-input"
+                  list="aviso-categorias-list"
+                  value={themeForm.categoria}
+                  onChange={(e) => setThemeForm((prev) => ({ ...prev, categoria: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Largura (px)</label>
+                <input type="number" className="form-input" value={themeForm.width_px} readOnly disabled />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Altura (px)</label>
+                <input type="number" className="form-input" value={themeForm.height_px} readOnly disabled />
+              </div>
+            </div>
+            <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "1fr 2fr 1fr" }}>
+              <div className="form-group">
+                <label className="form-label">Arquivo da arte</label>
+                <input type="file" className="form-input" accept="image/*" onChange={(e) => void handleThemeFileSelected(e.target.files?.[0] || null)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">URL da arte (opcional)</label>
+                <input className="form-input" value={themeForm.asset_url} onChange={(e) => setThemeForm((prev) => ({ ...prev, asset_url: e.target.value }))} placeholder="https://..." />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Ativo</label>
+                <select className="form-select" value={themeForm.ativo ? "true" : "false"} onChange={(e) => setThemeForm((prev) => ({ ...prev, ativo: e.target.value === "true" }))}>
+                  <option value="true">Sim</option>
+                  <option value="false">Não</option>
+                </select>
+              </div>
+            </div>
+            <div className="mobile-stack-buttons">
+              <AppButton variant="primary" type="submit" disabled={salvandoTheme}>
+                {salvandoTheme ? "Salvando..." : themeForm.id ? "Salvar arte" : "Cadastrar arte"}
+              </AppButton>
+              <AppButton variant="secondary" type="button" onClick={resetThemeForm} disabled={salvandoTheme}>
+                Nova arte
+              </AppButton>
+              <AppButton
+                variant="ghost"
+                type="button"
+                onClick={() => setMostrarFormularioTema(false)}
+                disabled={salvandoTheme}
+              >
+                Fechar formulário
+              </AppButton>
+            </div>
+          </form>
+        ) : null}
+
+        <div className="form-row mobile-stack" style={{ gap: 12, marginTop: 12, gridTemplateColumns: "1fr auto" }}>
+          <div className="form-group">
+            <label className="form-label">Filtrar arte para visualização</label>
+            <select
+              className="form-select"
+              value={filtroThemeTabelaId}
+              onChange={(e) => setFiltroThemeTabelaId(e.target.value)}
+              disabled={!mostrarListaArtes}
+            >
+              <option value="">Todas</option>
+              {themes.map((theme) => (
+                <option key={theme.id} value={theme.id}>
+                  {theme.categoria} • {theme.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group" style={{ alignSelf: "end" }}>
+            <AppButton
+              type="button"
+              variant="secondary"
+              onClick={() => setMostrarListaArtes((prev) => !prev)}
+            >
+              {mostrarListaArtes ? "Ocultar artes salvas" : "Mostrar artes salvas"}
+            </AppButton>
+          </div>
+        </div>
+
+        {mostrarListaArtes ? (
+          <div className="table-container overflow-x-auto mt-3">
+            <table className="table-default table-header-blue table-mobile-cards min-w-[820px]">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Categoria</th>
+                  <th>Preview</th>
+                  <th>Dimensão</th>
+                  <th>Status</th>
+                  <th className="th-actions">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {carregandoDados && (
+                  <tr>
+                    <td colSpan={6}>Carregando artes...</td>
+                  </tr>
+                )}
+                {!carregandoDados && themes.length === 0 && (
+                  <tr>
+                    <td colSpan={6}>Nenhuma arte cadastrada.</td>
+                  </tr>
+                )}
+                {!carregandoDados && themes.length > 0 && themesTabela.length === 0 && (
+                  <tr>
+                    <td colSpan={6}>Nenhuma arte encontrada para o filtro selecionado.</td>
+                  </tr>
+                )}
+                {!carregandoDados && themesTabela.map((theme) => {
+                  const resolvedThemeAsset = resolveThemeAssetMeta(theme);
+                  return (
+                    <tr key={theme.id}>
+                      <td data-label="Nome">{theme.nome}</td>
+                      <td data-label="Categoria">{theme.categoria}</td>
+                      <td data-label="Preview">
+                        <img
+                          src={resolvedThemeAsset.asset_url || theme.asset_url}
+                          alt={theme.nome}
+                          style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 8, border: "1px solid #cbd5e1" }}
+                        />
+                      </td>
+                      <td data-label="Dimensão">
+                        {resolvedThemeAsset.width_px || theme.width_px}x{resolvedThemeAsset.height_px || theme.height_px}
+                      </td>
+                      <td data-label="Status">{theme.ativo ? "Ativo" : "Inativo"}</td>
+                      <td className="th-actions" data-label="Ações">
+                        <div className="action-buttons">
+                          <AppButton
+                            type="button"
+                            variant="ghost"
+                            icon="pi pi-pencil"
+                            className="p-button-rounded p-button-sm"
+                            onClick={() => editarTheme(theme)}
+                            title="Editar arte"
+                            aria-label="Editar arte"
+                          />
+                          <AppButton
+                            type="button"
+                            variant="ghost"
+                            icon="pi pi-eye"
+                            className="p-button-rounded p-button-sm"
+                            onClick={() => window.open(resolvedThemeAsset.asset_url || theme.asset_url, "_blank", "noopener,noreferrer")}
+                            title="Visualizar arte"
+                            aria-label="Visualizar arte"
+                          />
+                          <AppButton
+                            type="button"
+                            variant="danger"
+                            icon="pi pi-trash"
+                            className="p-button-rounded p-button-sm"
+                            onClick={() => void removerTheme(theme.id)}
+                            title="Excluir arte"
+                            aria-label="Excluir arte"
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <small style={{ color: "#64748b", display: "block", marginTop: 8 }}>
+            Lista de artes oculta para reduzir poluição visual. Clique em "Mostrar artes salvas" quando precisar consultar.
+          </small>
+        )}
       </AppCard>
 
       <AppCard tone="config" className="mb-3">
@@ -934,7 +1114,7 @@ export default function ParametrosAvisosIsland() {
           Cada configuração liga uma arte a uma mensagem curta de WhatsApp. Essa configuração é a mesma usada no disparo pelo cadastro do cliente.
         </small>
 
-        <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "1.5fr 1fr 1fr" }}>
+        <div className="form-row mobile-stack parametros-avisos-saved-config-row" style={{ gap: 12, gridTemplateColumns: "1fr" }}>
           <div className="form-group">
             <label className="form-label">Configuração salva</label>
             <select
@@ -958,6 +1138,11 @@ export default function ParametrosAvisosIsland() {
               ))}
             </select>
           </div>
+        </div>
+
+        {form.id ? (
+          <>
+        <div className="form-row mobile-stack parametros-avisos-preview-fields-row" style={{ gap: 12 }}>
           <div className="form-group">
             <label className="form-label">Cliente para teste</label>
             <select className="form-select" value={previewClienteId} onChange={(e) => setPreviewClienteId(e.target.value)}>
@@ -968,6 +1153,15 @@ export default function ParametrosAvisosIsland() {
                 </option>
               ))}
             </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Nome do cliente (manual)</label>
+            <input
+              className="form-input"
+              value={previewNomeClienteManual}
+              onChange={(e) => setPreviewNomeClienteManual(e.target.value)}
+              placeholder="Ex.: Maria Fernanda"
+            />
           </div>
           <div className="form-group">
             <label className="form-label">Arte vinculada *</label>
@@ -1063,7 +1257,7 @@ export default function ParametrosAvisosIsland() {
                 placeholder={"Ex.: Com carinho\nCom admiração"}
               />
               <small style={{ color: "#64748b", display: "block", marginTop: 8 }}>
-                Também aceita `Enter`.
+                Também aceita `Enter`. Se ficar vazio, essa linha some do card.
               </small>
             </div>
             <div className="form-group">
@@ -1094,8 +1288,8 @@ export default function ParametrosAvisosIsland() {
             </div>
           </div>
 
-          <details style={{ marginBottom: 16 }} open>
-            <summary style={{ cursor: "pointer", fontWeight: 600 }}>Ajustes visuais do card</summary>
+          <details style={{ marginBottom: 16 }}>
+            <summary style={{ cursor: "pointer", fontWeight: 600 }}>Ajustes visuais do card (clique para exibir)</summary>
             <small style={{ color: "#64748b", display: "block", marginTop: 8 }}>
               Ajuste fonte, cor, tamanho e posição de cada bloco. O preview abaixo reflete as mudanças antes de salvar.
             </small>
@@ -1113,76 +1307,78 @@ export default function ParametrosAvisosIsland() {
               {CARD_STYLE_SECTION_ORDER.map((section) => {
                 const style = styleForm[section];
                 return (
-                  <div key={section} className="vtur-surface-panel card-blue parametros-avisos-style-card">
-                    <div className="parametros-avisos-style-card-header">
+                  <details key={section} className="vtur-surface-panel card-blue parametros-avisos-style-card">
+                    <summary className="parametros-avisos-style-card-header parametros-avisos-style-card-summary">
                       <strong>{CARD_STYLE_SECTION_LABELS[section]}</strong>
                       <small style={{ color: "#64748b" }}>{STYLE_SECTION_SAMPLE[section]}</small>
+                    </summary>
+                    <div className="parametros-avisos-style-card-body">
+                      <div className="form-row mobile-stack parametros-avisos-style-row parametros-avisos-style-row-3">
+                        <div className="form-group parametros-avisos-style-group">
+                          <label className="form-label">Fonte</label>
+                          <select className="form-select" value={style.fontFamily || ""} onChange={(e) => atualizarStyleSection(section, "fontFamily", e.target.value)}>
+                            {CARD_FONT_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group parametros-avisos-style-group">
+                          <label className="form-label">Peso</label>
+                          <select className="form-select" value={String(style.fontWeight || "500")} onChange={(e) => atualizarStyleSection(section, "fontWeight", e.target.value)}>
+                            {CARD_WEIGHT_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group parametros-avisos-style-group">
+                          <label className="form-label">Alinhamento</label>
+                          <select className="form-select" value={style.align || "left"} onChange={(e) => atualizarStyleSection(section, "align", e.target.value)}>
+                            {CARD_ALIGN_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <div className="form-row mobile-stack parametros-avisos-style-row parametros-avisos-style-row-4">
+                        <div className="form-group parametros-avisos-style-group">
+                          <label className="form-label">Tamanho</label>
+                          <input type="number" className="form-input" value={Number(style.fontSize || 0)} onChange={(e) => atualizarStyleSection(section, "fontSize", Number(e.target.value || 0))} min={10} max={180} />
+                        </div>
+                        <div className="form-group parametros-avisos-style-group">
+                          <label className="form-label">X</label>
+                          <input type="number" className="form-input" value={Number(style.x || 0)} onChange={(e) => atualizarStyleSection(section, "x", Number(e.target.value || 0))} min={0} max={3000} />
+                        </div>
+                        <div className="form-group parametros-avisos-style-group">
+                          <label className="form-label">Y</label>
+                          <input type="number" className="form-input" value={Number(style.y || 0)} onChange={(e) => atualizarStyleSection(section, "y", Number(e.target.value || 0))} min={0} max={3000} />
+                        </div>
+                        <div className="form-group parametros-avisos-style-group">
+                          <label className="form-label">Largura</label>
+                          <input type="number" className="form-input" value={Number(style.maxWidth || style.width || 0)} onChange={(e) => atualizarStyleSection(section, "maxWidth", Number(e.target.value || 0))} min={40} max={3000} />
+                        </div>
+                      </div>
+                      <div className="form-row mobile-stack parametros-avisos-style-row parametros-avisos-style-row-3">
+                        <div className="form-group parametros-avisos-style-group">
+                          <label className="form-label">Cor</label>
+                          <input type="color" className="form-input parametros-avisos-style-color-input" value={normalizeColorInput(style.color)} onChange={(e) => atualizarStyleSection(section, "color", e.target.value)} />
+                        </div>
+                        <div className="form-group parametros-avisos-style-group">
+                          <label className="form-label">Hex</label>
+                          <input className="form-input" value={String(style.color || "")} onChange={(e) => atualizarStyleSection(section, "color", e.target.value)} />
+                        </div>
+                        <div className="form-group parametros-avisos-style-group">
+                          <label className="form-label">Altura da linha</label>
+                          <input type="number" step="0.01" className="form-input" value={Number(style.lineHeight || 1)} onChange={(e) => atualizarStyleSection(section, "lineHeight", Number(e.target.value || 1))} min={0.7} max={2.5} />
+                        </div>
+                      </div>
+                      <div className="parametros-avisos-style-checkbox-row">
+                        <label className="form-checkbox parametros-avisos-style-checkbox">
+                          <input type="checkbox" checked={style.italic === true} onChange={(e) => atualizarStyleSection(section, "italic", e.target.checked)} />
+                          <span>Itálico</span>
+                        </label>
+                      </div>
                     </div>
-                    <div className="form-row mobile-stack parametros-avisos-style-row parametros-avisos-style-row-3">
-                      <div className="form-group parametros-avisos-style-group">
-                        <label className="form-label">Fonte</label>
-                        <select className="form-select" value={style.fontFamily || ""} onChange={(e) => atualizarStyleSection(section, "fontFamily", e.target.value)}>
-                          {CARD_FONT_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-group parametros-avisos-style-group">
-                        <label className="form-label">Peso</label>
-                        <select className="form-select" value={String(style.fontWeight || "500")} onChange={(e) => atualizarStyleSection(section, "fontWeight", e.target.value)}>
-                          {CARD_WEIGHT_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-group parametros-avisos-style-group">
-                        <label className="form-label">Alinhamento</label>
-                        <select className="form-select" value={style.align || "left"} onChange={(e) => atualizarStyleSection(section, "align", e.target.value)}>
-                          {CARD_ALIGN_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="form-row mobile-stack parametros-avisos-style-row parametros-avisos-style-row-4">
-                      <div className="form-group parametros-avisos-style-group">
-                        <label className="form-label">Tamanho</label>
-                        <input type="number" className="form-input" value={Number(style.fontSize || 0)} onChange={(e) => atualizarStyleSection(section, "fontSize", Number(e.target.value || 0))} min={10} max={180} />
-                      </div>
-                      <div className="form-group parametros-avisos-style-group">
-                        <label className="form-label">X</label>
-                        <input type="number" className="form-input" value={Number(style.x || 0)} onChange={(e) => atualizarStyleSection(section, "x", Number(e.target.value || 0))} min={0} max={3000} />
-                      </div>
-                      <div className="form-group parametros-avisos-style-group">
-                        <label className="form-label">Y</label>
-                        <input type="number" className="form-input" value={Number(style.y || 0)} onChange={(e) => atualizarStyleSection(section, "y", Number(e.target.value || 0))} min={0} max={3000} />
-                      </div>
-                      <div className="form-group parametros-avisos-style-group">
-                        <label className="form-label">Largura</label>
-                        <input type="number" className="form-input" value={Number(style.maxWidth || style.width || 0)} onChange={(e) => atualizarStyleSection(section, "maxWidth", Number(e.target.value || 0))} min={40} max={3000} />
-                      </div>
-                    </div>
-                    <div className="form-row mobile-stack parametros-avisos-style-row parametros-avisos-style-row-3">
-                      <div className="form-group parametros-avisos-style-group">
-                        <label className="form-label">Cor</label>
-                        <input type="color" className="form-input parametros-avisos-style-color-input" value={normalizeColorInput(style.color)} onChange={(e) => atualizarStyleSection(section, "color", e.target.value)} />
-                      </div>
-                      <div className="form-group parametros-avisos-style-group">
-                        <label className="form-label">Hex</label>
-                        <input className="form-input" value={String(style.color || "")} onChange={(e) => atualizarStyleSection(section, "color", e.target.value)} />
-                      </div>
-                      <div className="form-group parametros-avisos-style-group">
-                        <label className="form-label">Altura da linha</label>
-                        <input type="number" step="0.01" className="form-input" value={Number(style.lineHeight || 1)} onChange={(e) => atualizarStyleSection(section, "lineHeight", Number(e.target.value || 1))} min={0.7} max={2.5} />
-                      </div>
-                    </div>
-                    <div className="parametros-avisos-style-checkbox-row">
-                      <label className="form-checkbox parametros-avisos-style-checkbox">
-                        <input type="checkbox" checked={style.italic === true} onChange={(e) => atualizarStyleSection(section, "italic", e.target.checked)} />
-                        <span>Itálico</span>
-                      </label>
-                    </div>
-                  </div>
+                  </details>
                 );
               })}
             </div>
@@ -1231,15 +1427,18 @@ export default function ParametrosAvisosIsland() {
           </div>
         </div>
 
-        {previewThemeSvgUrl ? (
+        {previewResolvedUrl ? (
           <>
-            <img src={previewThemeSvgUrl} alt="Prévia do cartão" style={{ maxWidth: 320, borderRadius: 12, border: "1px solid #cbd5e1" }} />
+            <img src={previewResolvedUrl} alt="Prévia do cartão" style={{ maxWidth: 320, borderRadius: 12, border: "1px solid #cbd5e1" }} />
             <div className="mobile-stack-buttons" style={{ marginTop: 8 }}>
-              <AppButton type="button" variant="secondary" onClick={() => window.open(previewThemeSvgUrl, "_blank", "noopener,noreferrer")}>
-                Abrir SVG
+              <AppButton type="button" variant="secondary" onClick={() => abrirPreviewCartao(previewResolvedUrl)}>
+                {previewResolvedMime === "image/png" ? "Abrir PNG" : "Abrir SVG"}
               </AppButton>
-              <AppButton type="button" variant="secondary" onClick={() => window.open(previewThemePngUrl, "_blank", "noopener,noreferrer")}>
-                Abrir PNG
+              <AppButton type="button" variant="secondary" onClick={baixarPreviewCartao}>
+                Baixar cartão
+              </AppButton>
+              <AppButton type="button" variant="secondary" onClick={() => abrirPreviewCartao(previewThemeSvgUrl)}>
+                Abrir SVG original
               </AppButton>
               {previewWhatsappUrl ? (
                 <AppButton type="button" variant="secondary" onClick={() => window.open(previewWhatsappUrl, "_blank", "noopener,noreferrer")}>
@@ -1251,9 +1450,24 @@ export default function ParametrosAvisosIsland() {
                 </AppButton>
               )}
             </div>
+            <small style={{ color: "#64748b", display: "block", marginTop: 6 }}>
+              {gerandoPreviewPng
+                ? "Gerando PNG automaticamente..."
+                : previewResolvedSource === "server_png"
+                  ? "PNG gerado no servidor."
+                  : previewResolvedSource === "browser_png"
+                    ? "PNG gerado localmente no navegador (fallback automático)."
+                    : "PNG indisponível no runtime atual. Preview mantido em SVG."}
+            </small>
           </>
         ) : (
           <small style={{ color: "#64748b" }}>Selecione uma arte e preencha a mensagem para pré-visualizar o cartão final.</small>
+        )}
+          </>
+        ) : (
+          <small style={{ color: "#64748b", display: "block", marginTop: 12 }}>
+            Os campos de edição e preview ficam fechados por padrão. Selecione uma configuração salva para abrir.
+          </small>
         )}
       </AppCard>
     </div>

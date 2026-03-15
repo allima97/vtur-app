@@ -71,10 +71,10 @@ type DiaBanco = { id: string; percurso?: string; cidade: string; descricao: stri
 
 type AbaId = "hoteis" | "passeios" | "transporte" | "itinerario" | "investimento" | "pagamento" | "inclusoes" | "informacoes";
 const ABAS: { id: AbaId; label: string }[] = [
+  { id: "itinerario", label: "Itinerário Personalizado" },
   { id: "hoteis", label: "Hotéis Sugeridos" },
   { id: "passeios", label: "Passeios Principais" },
   { id: "transporte", label: "Transporte Incluído" },
-  { id: "itinerario", label: "Itinerário Detalhado" },
   { id: "investimento", label: "Investimento" },
   { id: "pagamento", label: "Formas de Pagamento" },
   { id: "inclusoes", label: "Incluído / Não Incluído" },
@@ -366,7 +366,7 @@ function RowActions({
           title="Subir"
           aria-label="Subir"
         >
-          ▲
+          <i className="pi pi-chevron-up" aria-hidden="true" />
         </AppButton>
         <AppButton
           type="button"
@@ -377,7 +377,7 @@ function RowActions({
           title="Descer"
           aria-label="Descer"
         >
-          ▼
+          <i className="pi pi-chevron-down" aria-hidden="true" />
         </AppButton>
         <AppButton
           type="button"
@@ -388,7 +388,7 @@ function RowActions({
           title="Adicionar abaixo"
           aria-label="Adicionar abaixo"
         >
-          +
+          <i className="pi pi-plus" aria-hidden="true" />
         </AppButton>
         <AppButton
           type="button"
@@ -513,7 +513,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
   );
 
   // ─── UI state
-  const [abaAtiva, setAbaAtiva] = useState<AbaId>("hoteis");
+  const [abaAtiva, setAbaAtiva] = useState<AbaId>("itinerario");
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [currentId, setCurrentId] = useState<string | null>(isNew ? null : roteiroId);
@@ -831,7 +831,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
           title={isNew ? "Novo roteiro personalizado" : "Editar roteiro personalizado"}
           subtitle="Gerencie hotéis, passeios, transporte, itinerário, investimento e pagamento."
           actions={(
-            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+            <div className="mobile-stack-buttons orcamentos-action-bar" style={{ justifyContent: "flex-end" }}>
               <AppButton
                 type="button"
                 onClick={() => (window.location.href = "/orcamentos/personalizados")}
@@ -886,9 +886,9 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                 placeholder="Ex: Lisboa"
               />
             </div>
-            <div className="mobile-stack-buttons roteiro-info-actions">
+            <div className="mobile-stack-buttons roteiro-info-actions orcamentos-action-bar">
               {saveMsg && (
-                <AlertMessage variant="success" className="mb-0">
+                <AlertMessage variant="success" className="mb-0 roteiro-info-feedback">
                   {saveMsg}
                 </AlertMessage>
               )}
@@ -938,7 +938,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                 onChange={(e) => setImportFile(e.target.files?.[0] || null)}
               />
             </div>
-            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+            <div className="mobile-stack-buttons orcamentos-action-bar" style={{ justifyContent: "flex-end" }}>
               <AppButton
                 type="button"
                 onClick={handleImportRoteiroFile}
@@ -1365,9 +1365,15 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                   />
                 </div>
                 <div style={{ display: "flex", gap: 4, flexShrink: 0, paddingTop: 20 }}>
-                  <AppButton type="button" variant="secondary" onClick={() => diaOps.moveUp(i)} style={actionBtnSt} title="Subir">▲</AppButton>
-                  <AppButton type="button" variant="secondary" onClick={() => diaOps.moveDown(i)} style={actionBtnSt} title="Descer">▼</AppButton>
-                  <AppButton type="button" variant="secondary" onClick={() => diaOps.add(i)} style={actionBtnSt} title="Adicionar">+</AppButton>
+                  <AppButton type="button" variant="secondary" className="btn-icon" onClick={() => diaOps.moveUp(i)} style={actionBtnSt} title="Subir" aria-label="Subir">
+                    <i className="pi pi-chevron-up" aria-hidden="true" />
+                  </AppButton>
+                  <AppButton type="button" variant="secondary" className="btn-icon" onClick={() => diaOps.moveDown(i)} style={actionBtnSt} title="Descer" aria-label="Descer">
+                    <i className="pi pi-chevron-down" aria-hidden="true" />
+                  </AppButton>
+                  <AppButton type="button" variant="secondary" className="btn-icon" onClick={() => diaOps.add(i)} style={actionBtnSt} title="Adicionar" aria-label="Adicionar">
+                    <i className="pi pi-plus" aria-hidden="true" />
+                  </AppButton>
                   <AppButton type="button" variant="danger" onClick={() => diaOps.remove(i)} style={{ ...actionBtnSt, color: "#dc2626" }} title="Excluir">
                     <i className="pi pi-trash" aria-hidden="true" />
                   </AppButton>

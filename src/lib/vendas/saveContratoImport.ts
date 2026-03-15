@@ -62,7 +62,10 @@ function isRlsInsertError(error: any) {
   return (
     error?.code === "42501" ||
     message.includes("row-level security") ||
-    message.includes("violates row-level security")
+    message.includes("violates row-level security") ||
+    message.includes("politica de seguranca (rls)") ||
+    message.includes("política de segurança (rls)") ||
+    (message.includes("cadastre o cliente em clientes") && message.includes("import"))
   );
 }
 
@@ -129,8 +132,25 @@ function buildDestinoCandidates(destino: string) {
   const base = sanitizeDestinoTerm(destino);
   add(base);
   add(destino);
-  if (base.includes(" / ")) add(base.split(" / ")[0]);
-  if (base.includes(" - ")) add(base.split(" - ")[0]);
+  base
+    .split(/\s*(?:\/|,|;|\||→|->)\s*/g)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .forEach((part) => add(part.replace(/\s*(?:\/|-)\s*[a-z]{2}$/i, "").trim()));
+  base
+    .split(/\s[-–—]\s/g)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .forEach((part) => add(part.replace(/\s*(?:\/|-)\s*[a-z]{2}$/i, "").trim()));
+
+  const normalizedWords = normalizeText(base, { trim: true, collapseWhitespace: true })
+    .split(" ")
+    .filter((token) => token.length >= 3)
+    .filter((token) => !["de", "da", "do", "das", "dos", "e", "em", "para", "com"].includes(token))
+    .sort((a, b) => b.length - a.length)
+    .slice(0, 2);
+  normalizedWords.forEach((word) => add(word));
+
   return Array.from(candidates);
 }
 
@@ -479,9 +499,13 @@ function dedupePassageiros(passageiros: PassageiroDraft[]) {
   const seen = new Set<string>();
   return passageiros.filter((p) => {
     const cpf = normalizeCpf(p.cpf);
-    if (!cpf) return false;
-    if (seen.has(cpf)) return false;
-    seen.add(cpf);
+    const cpfValido = cpf.length === 11 ? cpf : "";
+    const nome = normalizeText(p.nome || "", { trim: true, collapseWhitespace: true });
+    const nascimento = String(p.nascimento || "").trim();
+    const key = cpfValido || (nome ? `${nome}|${nascimento}` : "");
+    if (!key) return false;
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 }
@@ -550,25 +574,36 @@ export async function saveContratoImport(params: {
   if (cpfsContratos.size > 1) {
     throw new Error("Importação contém contratos de CPFs diferentes. Importe em lotes separados.");
   }
+  const nomeContratanteNorm = normalizeText(contratante.nome || "", { trim: true, collapseWhitespace: true });
 
-  const passageiros = dedupePassageiros(principal.passageiros || []);
+  const passageiros = dedupePassageiros(contratos.flatMap((c) => c.passageiros || []));
   const passageiroContratante = passageiros.find((p) => normalizeCpf(p.cpf) === cpfContrato);
   const contratanteEhPassageiro = passageiros.length === 0 ? true : Boolean(passageiroContratante);
   const nascimentoContratante = passageiroContratante?.nascimento || contratante.nascimento || null;
 
   let cliente = await findClienteByCpf(cpfContrato);
   if (!cliente) {
-    cliente = await resolveClienteImportViaApi({
-      cpf: cpfContrato,
-      nome: contratante.nome || "",
-      nascimento: nascimentoContratante,
-      endereco: contratante.endereco || null,
-      numero: contratante.numero || null,
-      cidade: contratante.cidade || null,
-      estado: contratante.uf || null,
-      cep: contratante.cep || null,
-      rg: contratante.rg || null,
-    });
+    try {
+      cliente = await resolveClienteImportViaApi({
+        cpf: cpfContrato,
+        nome: contratante.nome || "",
+        nascimento: nascimentoContratante,
+        endereco: contratante.endereco || null,
+        numero: contratante.numero || null,
+        cidade: contratante.cidade || null,
+        estado: contratante.uf || null,
+        cep: contratante.cep || null,
+        rg: contratante.rg || null,
+      });
+    } catch (error: any) {
+      if (isRlsInsertError(error)) {
+        throw new Error(
+          "Não foi possível criar o cliente automaticamente devido à política de segurança (RLS). " +
+            "Cadastre o cliente em Clientes e tente importar novamente."
+        );
+      }
+      throw error;
+    }
 
     if (!cliente) throw new Error("Não foi possível resolver o cliente do contratante.");
   } else {
@@ -830,35 +865,87 @@ export async function saveContratoImport(params: {
   });
 
   // acompanhantes
-  const acompanhantes = passageiros.filter((p) => normalizeCpf(p.cpf) !== cpfContrato);
+  const acompanhantes = passageiros.filter((p) => {
+    const cpf = normalizeCpf(p.cpf);
+    if (cpf && cpf === cpfContrato) return false;
+    if (!cpf && nomeContratanteNorm) {
+      const nomePassageiroNorm = normalizeText(p.nome || "", { trim: true, collapseWhitespace: true });
+      if (nomePassageiroNorm && nomePassageiroNorm === nomeContratanteNorm) return false;
+    }
+    return true;
+  });
   if (acompanhantes.length > 0) {
     const viagemIds = Array.from(new Set(Array.from(viagensPorRecibo.values()).filter(Boolean)));
     for (const acomp of acompanhantes) {
-      const cpf = normalizeCpf(acomp.cpf);
-      if (!cpf) continue;
+      const cpfNormalizado = normalizeCpf(acomp.cpf);
+      const cpf = cpfNormalizado.length === 11 ? cpfNormalizado : "";
+      const nascimento = acomp.nascimento || null;
+      const nomeAcompanhante = titleCaseWithExceptions(String(acomp.nome || "").trim());
+      const nomeAcompanhanteNorm = normalizeText(nomeAcompanhante || "", { trim: true, collapseWhitespace: true });
+      if (!cpf && !nomeAcompanhanteNorm) continue;
 
-      const clientePassageiro = await resolveClienteImportViaApi({
-        cpf,
-        nome: acomp.nome || "",
-        nascimento: acomp.nascimento || null,
-      });
-      if (!clientePassageiro?.id) continue;
+      let clientePassageiro: { id?: string } | null = null;
+      if (cpf) {
+        try {
+          clientePassageiro = await resolveClienteImportViaApi({
+            cpf,
+            nome: nomeAcompanhante || "",
+            nascimento,
+          });
+        } catch (error: any) {
+          if (isRlsInsertError(error)) {
+            // Mantém a importação: registra como acompanhante local mesmo sem vínculo em clientes.
+            clientePassageiro = null;
+          } else {
+            throw error;
+          }
+        }
+      }
 
-      const { data: existente } = await supabaseBrowser
-        .from("cliente_acompanhantes")
-        .select("id")
-        .eq("cliente_id", cliente.id)
-        .eq("cpf", cpf)
-        .maybeSingle();
+      let existente: { id: string; nome_completo?: string | null; cpf?: string | null; data_nascimento?: string | null } | null = null;
+      if (cpf) {
+        const { data } = await supabaseBrowser
+          .from("cliente_acompanhantes")
+          .select("id, nome_completo, cpf, data_nascimento")
+          .eq("cliente_id", cliente.id)
+          .eq("cpf", cpf)
+          .maybeSingle();
+        existente = data || null;
+      }
+      if (!existente && nomeAcompanhanteNorm) {
+        let query = supabaseBrowser
+          .from("cliente_acompanhantes")
+          .select("id, nome_completo, cpf, data_nascimento")
+          .eq("cliente_id", cliente.id)
+          .ilike("nome_completo", nomeAcompanhante)
+          .limit(1);
+        if (nascimento) query = query.eq("data_nascimento", nascimento);
+        const { data } = await query;
+        existente = (data || [])[0] || null;
+      }
 
-      let acompanhanteId = existente?.id;
+      let acompanhanteId = existente?.id || null;
+      if (acompanhanteId && existente) {
+        const updatePayload: Record<string, any> = {};
+        if (!existente.nome_completo && nomeAcompanhante) updatePayload.nome_completo = nomeAcompanhante;
+        if (!existente.cpf && cpf) updatePayload.cpf = cpf;
+        if (!existente.data_nascimento && nascimento) updatePayload.data_nascimento = nascimento;
+        if (Object.keys(updatePayload).length > 0) {
+          const { error: acompUpdateErr } = await supabaseBrowser
+            .from("cliente_acompanhantes")
+            .update(updatePayload)
+            .eq("id", acompanhanteId)
+            .eq("cliente_id", cliente.id);
+          if (acompUpdateErr) throw acompUpdateErr;
+        }
+      }
       if (!acompanhanteId) {
         const payload = {
           cliente_id: cliente.id,
           company_id: companyId,
-          nome_completo: titleCaseWithExceptions(acomp.nome),
-          cpf,
-          data_nascimento: acomp.nascimento || null,
+          nome_completo: nomeAcompanhante || "Acompanhante",
+          cpf: cpf || null,
+          data_nascimento: nascimento,
           ativo: true,
           created_by: userId,
         };
@@ -872,17 +959,19 @@ export async function saveContratoImport(params: {
       }
 
       for (const viagemId of viagemIds) {
-        const { error: passageiroVincErr } = await supabaseBrowser.from("viagem_passageiros").upsert(
-          {
-            viagem_id: viagemId,
-            cliente_id: clientePassageiro.id,
-            company_id: companyId,
-            papel: "passageiro",
-            created_by: userId,
-          },
-          { onConflict: "viagem_id,cliente_id" }
-        );
-        if (passageiroVincErr) throw passageiroVincErr;
+        if (clientePassageiro?.id) {
+          const { error: passageiroVincErr } = await supabaseBrowser.from("viagem_passageiros").upsert(
+            {
+              viagem_id: viagemId,
+              cliente_id: clientePassageiro.id,
+              company_id: companyId,
+              papel: "passageiro",
+              created_by: userId,
+            },
+            { onConflict: "viagem_id,cliente_id" }
+          );
+          if (passageiroVincErr) throw passageiroVincErr;
+        }
 
         if (acompanhanteId) {
           const { data: existingLink } = await supabaseBrowser

@@ -638,7 +638,7 @@ export default function QuoteImportIsland() {
           title="Importacao de orcamentos CVC"
           subtitle="Cole o texto do orcamento, revise os itens extraidos e confirme antes de salvar no CRM."
           actions={
-            <div className="vtur-quote-top-actions">
+            <div className="vtur-quote-top-actions orcamentos-action-bar">
               <AppButton type="button" variant="secondary" onClick={handleCancel} disabled={extracting}>
                 Cancelar
               </AppButton>

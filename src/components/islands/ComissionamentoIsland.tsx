@@ -1020,8 +1020,8 @@ export default function ComissionamentoIsland() {
   if (!podeVer) {
     return (
       <AppPrimerProvider>
-        <AppCard title="Acesso ao modulo de vendas" subtitle="Seu perfil nao possui permissao para consultar comissionamento.">
-          <p>Solicite ao gestor ou ao master a liberacao do acesso ao modulo.</p>
+        <AppCard title="Acesso ao módulo de vendas" subtitle="Seu perfil não possui permissão para consultar comissionamento.">
+          <p>Solicite ao gestor ou ao master a liberação do acesso ao módulo.</p>
         </AppCard>
       </AppPrimerProvider>
     );
@@ -1044,8 +1044,8 @@ export default function ComissionamentoIsland() {
   const periodoEditavel = preset === "personalizado";
   const periodoResumo = `${formatPeriodoLabel(periodo.inicio)} a ${formatPeriodoLabel(periodo.fim)}`;
   const periodoSubtitulo = periodoEditavel
-    ? "Periodo personalizado em analise."
-    : `Periodo consolidado: ${periodoResumo}.`;
+    ? "Período personalizado em análise."
+    : `Período consolidado: ${periodoResumo}.`;
 
   const filtrosFields = (
     <>
@@ -1098,7 +1098,7 @@ export default function ComissionamentoIsland() {
 
       <AppField
         as="select"
-        label="Periodo"
+        label="Período"
         value={preset}
         onChange={(e) => setPreset(e.target.value)}
         options={PERIODO_OPCOES.map((opcao) => ({
@@ -1139,7 +1139,7 @@ export default function ComissionamentoIsland() {
           tone="info"
           className="mb-3 list-toolbar-sticky"
           title="Comissionamento"
-          subtitle={`Resumo de meta, faturamento e comissao. ${periodoSubtitulo}`}
+          subtitle={`Resumo de meta, faturamento e comissão. ${periodoSubtitulo}`}
           actions={
             <div className="vtur-quote-top-actions">
               <AppButton type="button" variant="secondary" className="sm:hidden" onClick={() => setShowFilters(true)}>
@@ -1178,8 +1178,8 @@ export default function ComissionamentoIsland() {
           >
             <div className="vtur-modal-body-stack">
               <AppCard
-                title="Refine a leitura do periodo"
-                subtitle="Ajuste filial, equipe, vendedor e recorte de datas para recalcular a comissao."
+                title="Refine a leitura do período"
+                subtitle="Ajuste filial, equipe, vendedor e recorte de datas para recalcular a comissão."
               >
                 <div className="vtur-commission-filters-grid">{filtrosFields}</div>
                 <div className="vtur-form-actions" style={{ marginTop: 16 }}>
@@ -1202,10 +1202,10 @@ export default function ComissionamentoIsland() {
           <AppCard
             className="mb-3"
             title="Carregando dados de comissionamento"
-            subtitle="O CRM esta consolidando metas, vendas, taxas e regras do periodo selecionado."
+            subtitle="O CRM está consolidando metas, vendas, taxas e regras do período selecionado."
           >
             <p className="vtur-commission-loading">
-              Aguarde alguns instantes. Assim que o calculo terminar, os indicadores e valores a receber serao exibidos.
+              Aguarde alguns instantes. Assim que o cálculo terminar, os indicadores e valores a receber serão exibidos.
             </p>
           </AppCard>
         ) : null}
@@ -1214,12 +1214,12 @@ export default function ComissionamentoIsland() {
           <>
             <AppCard
               className="mb-3"
-              title="Como esta seu progresso"
-              subtitle="Evolucao de meta, faturamento bruto, taxas, liquido e volume comercial."
+              title="Como está seu progresso"
+              subtitle="Evolução de meta, faturamento bruto, taxas, líquido e volume comercial."
             >
               <div className="vtur-commission-kpi-grid">
                 <div className="vtur-commission-kpi-card vtur-commission-kpi-positive">
-                  <span className="vtur-commission-kpi-label">Meta do mes</span>
+                  <span className="vtur-commission-kpi-label">Meta do mês</span>
                   <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(metaGeral?.meta_geral || 0)}</strong>
                 </div>
                 <div className="vtur-commission-kpi-card vtur-commission-kpi-warning">
@@ -1231,7 +1231,7 @@ export default function ComissionamentoIsland() {
                   <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(resumo.totalTaxas)}</strong>
                 </div>
                 <div className="vtur-commission-kpi-card vtur-commission-kpi-accent">
-                  <span className="vtur-commission-kpi-label">Total liquido</span>
+                  <span className="vtur-commission-kpi-label">Total líquido</span>
                   <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(resumo.totalLiquido)}</strong>
                 </div>
                 <div className="vtur-commission-kpi-card vtur-commission-kpi-neutral">
@@ -1244,7 +1244,7 @@ export default function ComissionamentoIsland() {
             {exibeValoresReceber ? (
               <AppCard
                 title="Seus valores a receber"
-                subtitle="Consolidado da comissao geral, produtos especiais e total previsto para o periodo."
+                subtitle="Consolidado da comissão geral, produtos especiais e total previsto para o período."
               >
                 <div className="vtur-commission-kpi-grid">
                   <div className="vtur-commission-kpi-card">
@@ -1256,7 +1256,7 @@ export default function ComissionamentoIsland() {
                     <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(resumo.comissaoPassagemFacial)}</strong>
                   </div>
                   <div className="vtur-commission-kpi-card">
-                    <span className="vtur-commission-kpi-label">Comissao total</span>
+                    <span className="vtur-commission-kpi-label">Comissão total</span>
                     <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(resumo.totalComissaoKpi)}</strong>
                   </div>
                   <div className="vtur-commission-kpi-card">
@@ -1264,7 +1264,7 @@ export default function ComissionamentoIsland() {
                     <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(resumo.comissaoSeguroViagem)}</strong>
                   </div>
                   <div className="vtur-commission-kpi-card vtur-commission-kpi-highlight">
-                    <span className="vtur-commission-kpi-label">Comissao + seguro</span>
+                    <span className="vtur-commission-kpi-label">Comissão + seguro</span>
                     <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(resumo.totalComissaoKpiSeguro)}</strong>
                   </div>
                 </div>
@@ -1275,11 +1275,11 @@ export default function ComissionamentoIsland() {
 
         {!loading && !resumo ? (
           <AppCard
-            title="Sem dados para o periodo"
-            subtitle="Nao houve dados suficientes para consolidar o comissionamento no recorte atual."
+            title="Sem dados para o período"
+            subtitle="Não houve dados suficientes para consolidar o comissionamento no recorte atual."
           >
             <p className="vtur-commission-loading">
-              Ajuste filial, vendedor ou periodo para revisar outra janela de desempenho.
+              Ajuste filial, vendedor ou período para revisar outra janela de desempenho.
             </p>
           </AppCard>
         ) : null}

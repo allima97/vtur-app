@@ -68,7 +68,8 @@ async function fetchCidadesSugestoes(params: {
 }) {
   const qs = new URLSearchParams();
   qs.set("q", params.query);
-  qs.set("limite", String(params.limite ?? 10));
+  qs.set("limite", String(params.limite ?? 60));
+  qs.set("no_cache", "1");
   const resp = await fetch(`/api/v1/vendas/cidades-busca?${qs.toString()}`,
     { signal: params.signal }
   );
@@ -685,7 +686,7 @@ export default function VendasCadastroIsland() {
       try {
         const data = await fetchCidadesSugestoes({
           query: buscaDestino.trim(),
-          limite: 10,
+          limite: 60,
           signal: controller.signal,
         });
         if (!controller.signal.aborted) {
@@ -1514,7 +1515,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 <AppField
                   as="select"
                   label="Vendedor *"
-                  wrapperClassName="min-w-[220px]"
+                  wrapperClassName="min-w-0"
                   value={formVenda.vendedor_id}
                   onChange={(e) =>
                     setFormVenda((prev) => ({ ...prev, vendedor_id: e.target.value }))
@@ -1527,7 +1528,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 />
               )}
 
-              <div className="form-group min-w-[220px] vtur-city-picker">
+              <div className="form-group min-w-0 vtur-city-picker">
                 <label className="form-label">Cliente *</label>
                 <input
                   className="form-input"
@@ -1587,7 +1588,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 )}
               </div>
 
-              <div className="form-group min-w-[220px] vtur-city-picker">
+              <div className="form-group min-w-0 vtur-city-picker">
                 <label className="form-label">Cidade de Destino *</label>
                 <input
                   className="form-input"
@@ -1640,77 +1641,83 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 )}
               </div>
 
-              <AppField
-                label="Lancada em"
-                wrapperClassName="min-w-[180px]"
-                type="date"
-                value={formVenda.data_lancamento}
-                onFocus={selectAllInputOnFocus}
-                onChange={(e) =>
-                  setFormVenda((prev) => ({ ...prev, data_lancamento: e.target.value }))
-                }
-              />
+              <div className="form-group min-w-0">
+                <label className="form-label">Lançada em</label>
+                <input
+                  className="form-input vtur-date-native"
+                  type="date"
+                  value={formVenda.data_lancamento}
+                  onFocus={selectAllInputOnFocus}
+                  onChange={(e) =>
+                    setFormVenda((prev) => ({ ...prev, data_lancamento: e.target.value }))
+                  }
+                />
+              </div>
 
-              <AppField
-                label={
-                  <span>
-                    Data da venda *{" "}
-                    <span
-                      title="Informe a data da venda conforme no Systur, usada para emissao de NF."
-                      style={{ color: "#0ea5e9", cursor: "help" }}
-                    >
-                      ?
-                    </span>
+              <div className="form-group min-w-0">
+                <label className="form-label">
+                  Data da venda *{" "}
+                  <span
+                    title="Informe a data da venda conforme no Systur, usada para emissao de NF."
+                    style={{ color: "#0ea5e9", cursor: "help" }}
+                  >
+                    ?
                   </span>
-                }
-                wrapperClassName="min-w-[180px]"
-                type="date"
-                value={formVenda.data_venda}
-                onFocus={selectAllInputOnFocus}
-                onChange={(e) => setFormVenda((prev) => ({ ...prev, data_venda: e.target.value }))}
-                required
-              />
+                </label>
+                <input
+                  className="form-input vtur-date-native"
+                  type="date"
+                  value={formVenda.data_venda}
+                  onFocus={selectAllInputOnFocus}
+                  onChange={(e) => setFormVenda((prev) => ({ ...prev, data_venda: e.target.value }))}
+                  required
+                />
+              </div>
 
-              <AppField
-                label="Data de embarque"
-                wrapperClassName="min-w-[180px]"
-                type="date"
-                value={formVenda.data_embarque}
-                onFocus={selectAllInputOnFocus}
-                onChange={(e) =>
-                  setFormVenda((prev) => {
-                    const proximaData = e.target.value;
-                    const minDataFinal = proximaData || "";
-                    const dataFinalAtualizada =
-                      prev.data_final && minDataFinal && prev.data_final < minDataFinal
-                        ? minDataFinal
-                        : prev.data_final;
-                    return {
-                      ...prev,
-                      data_embarque: proximaData,
-                      data_final: dataFinalAtualizada,
-                    };
-                  })
-                }
-              />
+              <div className="form-group min-w-0">
+                <label className="form-label">Data de embarque</label>
+                <input
+                  className="form-input vtur-date-native"
+                  type="date"
+                  value={formVenda.data_embarque}
+                  onFocus={selectAllInputOnFocus}
+                  onChange={(e) =>
+                    setFormVenda((prev) => {
+                      const proximaData = e.target.value;
+                      const minDataFinal = proximaData || "";
+                      const dataFinalAtualizada =
+                        prev.data_final && minDataFinal && prev.data_final < minDataFinal
+                          ? minDataFinal
+                          : prev.data_final;
+                      return {
+                        ...prev,
+                        data_embarque: proximaData,
+                        data_final: dataFinalAtualizada,
+                      };
+                    })
+                  }
+                />
+              </div>
 
-              <AppField
-                label="Data final"
-                wrapperClassName="min-w-[180px]"
-                type="date"
-                value={formVenda.data_final}
-                min={formVenda.data_embarque || undefined}
-                onFocus={selectAllInputOnFocus}
-                onChange={(e) =>
-                  setFormVenda({
-                    ...formVenda,
-                    data_final:
-                      formVenda.data_embarque && e.target.value && e.target.value < formVenda.data_embarque
-                        ? formVenda.data_embarque
-                        : e.target.value,
-                  })
-                }
-              />
+              <div className="form-group min-w-0">
+                <label className="form-label">Data final</label>
+                <input
+                  className="form-input vtur-date-native"
+                  type="date"
+                  value={formVenda.data_final}
+                  min={formVenda.data_embarque || undefined}
+                  onFocus={selectAllInputOnFocus}
+                  onChange={(e) =>
+                    setFormVenda({
+                      ...formVenda,
+                      data_final:
+                        formVenda.data_embarque && e.target.value && e.target.value < formVenda.data_embarque
+                          ? formVenda.data_embarque
+                          : e.target.value,
+                    })
+                  }
+                />
+              </div>
             </div>
 
           <AppCard
@@ -1825,10 +1832,10 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                     ]}
                   />
 
-                  <div className="form-group min-w-[220px]">
+                  <div className="form-group min-w-0">
                     <label className="form-label">Produto *</label>
                     <input
-                      className="form-input search-input-field"
+                      className="form-input search-input-field w-full"
                       list={`listaProdutos-${i}`}
                       placeholder={placeholderProduto}
                       value={
@@ -1894,7 +1901,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                     onChange={(e) => updateRecibo(i, "numero_reserva", e.target.value)}
                   />
 
-                  <div className="form-group min-w-[180px]">
+                  <div className="form-group min-w-0">
                     <label className="form-label">Tipo de Pacote</label>
                     <select
                       className="form-select"
@@ -2013,7 +2020,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 </div>
 
                 <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 16 }}>
-                  <div className="form-group min-w-[220px]">
+                  <div className="form-group min-w-0">
                     <label className="form-label">Contrato (PDF)</label>
                     <input
                       type="file"

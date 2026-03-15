@@ -7,6 +7,7 @@ import type { SSRManifest } from "astro";
 import { App } from "astro/app";
 import { handle } from "@astrojs/cloudflare/handler";
 import { createApiApp } from "./api/apiApp";
+import { applyNoStoreHeaders, isCacheDisabled } from "./lib/cachePolicy";
 import { getMaintenanceStatus } from "./lib/maintenance";
 import { reconcilePendentes } from "./pages/api/v1/conciliacao/_reconcile";
 
@@ -137,8 +138,10 @@ export function createExports(manifest: SSRManifest) {
       );
 
       const finalizeResponse = (response: Response) => {
-        if (!shouldSetBypassCookie && !shouldClearBypassCookie) return response;
         const headers = new Headers(response.headers);
+        if (isCacheDisabled()) {
+          applyNoStoreHeaders(headers);
+        }
         if (shouldSetBypassCookie) {
           headers.append(
             "Set-Cookie",
@@ -171,12 +174,12 @@ export function createExports(manifest: SSRManifest) {
 
       if (maintenanceActive && !isMaintenanceAllowed && !bypassAllowed) {
         if (request.method === "GET" || request.method === "HEAD") {
-          return Response.redirect(new URL("/manutencao", url), 302);
+          return finalizeResponse(Response.redirect(new URL("/manutencao", url), 302));
         }
-        return new Response("Manutencao em andamento.", {
+        return finalizeResponse(new Response("Manutencao em andamento.", {
           status: 503,
           headers: { "Retry-After": "3600" },
-        });
+        }));
       }
 
       // Handle API routes with proper error handling
@@ -185,7 +188,9 @@ export function createExports(manifest: SSRManifest) {
           return finalizeResponse(await apiApp.fetch(request, env as any, context));
         } catch (error) {
           logUncaughtError({ error, request });
-          return new Response(`API Error: ${error instanceof Error ? error.message : String(error)}`, { status: 500 });
+          return finalizeResponse(
+            new Response(`API Error: ${error instanceof Error ? error.message : String(error)}`, { status: 500 })
+          );
         }
       }
 
@@ -199,24 +204,35 @@ export function createExports(manifest: SSRManifest) {
           try {
             // Try to fetch from Pages - simulating a Pages fallback
             // In production, this would be the Pages project serving these assets
-            return new Response("Static asset not found in Worker, should be served by Pages CDN", {
-              status: 404,
-              headers: { "X-Fallback": "pages" }
-            });
+            return finalizeResponse(
+              new Response("Static asset not found in Worker, should be served by Pages CDN", {
+                status: 404,
+                headers: { "X-Fallback": "pages" }
+              })
+            );
           } catch {
             // If fallback also fails, return error
             logUncaughtError({ error, request });
-            return new Response(`Asset not found: ${pathname}`, { status: 404 });
+            return finalizeResponse(new Response(`Asset not found: ${pathname}`, { status: 404 }));
           }
         }
 
         // For other errors, return generic error
         logUncaughtError({ error, request });
-        return new Response(`Erro temporário: ${error instanceof Error ? error.message : String(error)}`, { status: 503 });
+        return finalizeResponse(
+          new Response(`Erro temporário: ${error instanceof Error ? error.message : String(error)}`, { status: 503 })
+        );
       }
     } catch (error) {
       logUncaughtError({ error, request });
-      return new Response(`Erro temporário: ${error instanceof Error ? error.message : String(error)}`, { status: 503 });
+      const headers = new Headers();
+      if (isCacheDisabled()) {
+        applyNoStoreHeaders(headers);
+      }
+      return new Response(`Erro temporário: ${error instanceof Error ? error.message : String(error)}`, {
+        status: 503,
+        headers,
+      });
     }
   };
 

@@ -14,8 +14,8 @@ export type CardThemeStyle = {
   fontWeight?: number | string;
   color?: string;
   fontFamily?: string;
-  align?: "left" | "center" | "right";
-  textAlign?: "left" | "center" | "right";
+  align?: "left" | "center" | "right" | "justify";
+  textAlign?: "left" | "center" | "right" | "justify";
   lineHeight?: number;
   italic?: boolean;
   fontStyle?: "normal" | "italic";

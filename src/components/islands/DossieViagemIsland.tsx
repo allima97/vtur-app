@@ -26,6 +26,7 @@ type ViagemAcompanhante = {
     rg?: string | null;
     telefone?: string | null;
     grau_parentesco?: string | null;
+    data_nascimento?: string | null;
   } | null;
 };
 
@@ -162,7 +163,14 @@ export default function DossieViagemIsland({ viagemId }: Props) {
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [acompanhantesCliente, setAcompanhantesCliente] = useState<
-    { id: string; nome_completo: string; cpf?: string | null; telefone?: string | null; grau_parentesco?: string | null }[]
+    {
+      id: string;
+      nome_completo: string;
+      cpf?: string | null;
+      telefone?: string | null;
+      grau_parentesco?: string | null;
+      data_nascimento?: string | null;
+    }[]
   >([]);
   const [novoAcomp, setNovoAcomp] = useState<{ acompanhante_id: string; papel: string; documento_url: string; observacoes: string }>({
     acompanhante_id: "",
@@ -226,6 +234,10 @@ export default function DossieViagemIsland({ viagemId }: Props) {
   const clienteWhatsapp = viagem?.venda?.clientes?.whatsapp || null;
   const clienteWhatsappLink = construirLinkWhatsApp(clienteWhatsapp || clienteTelefone);
   const clienteBaseId = viagem?.venda?.cliente_id || null;
+  const acompanhanteSelecionado = React.useMemo(
+    () => acompanhantesCliente.find((a) => a.id === novoAcomp.acompanhante_id) || null,
+    [acompanhantesCliente, novoAcomp.acompanhante_id]
+  );
   const reciboPrincipal = React.useMemo(() => {
     const destinoId = viagem?.venda?.destino_id;
     if (!destinoId) return recibos[0] || null;
@@ -273,6 +285,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
         cpf: a.cpf,
         telefone: a.telefone,
         grau_parentesco: a.grau_parentesco,
+        data_nascimento: a.data_nascimento,
       }))
     );
     setFollowUpForm({
@@ -923,6 +936,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                     <tr>
                       <th>Nome</th>
                       <th>CPF</th>
+                      <th>Nascimento</th>
                       <th>Telefone</th>
                       <th>Parentesco</th>
                       <th>Papel</th>
@@ -933,13 +947,18 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                   <tbody>
                     {(viagem.viagem_acompanhantes || []).length === 0 && (
                       <tr>
-                        <td colSpan={podeExcluir ? 7 : 6}>Nenhum acompanhante vinculado.</td>
+                        <td colSpan={podeExcluir ? 8 : 7}>Nenhum acompanhante vinculado.</td>
                       </tr>
                     )}
                     {(viagem.viagem_acompanhantes || []).map((a) => (
                       <tr key={a.id}>
                         <td data-label="Nome">{a.cliente_acompanhantes?.nome_completo || "-"}</td>
                         <td data-label="CPF">{a.cliente_acompanhantes?.cpf || "-"}</td>
+                        <td data-label="Nascimento">
+                          {a.cliente_acompanhantes?.data_nascimento
+                            ? formatarDataParaExibicao(a.cliente_acompanhantes.data_nascimento)
+                            : "-"}
+                        </td>
                         <td data-label="Telefone">{a.cliente_acompanhantes?.telefone || "-"}</td>
                         <td data-label="Parentesco">{a.cliente_acompanhantes?.grau_parentesco || "-"}</td>
                         <td data-label="Papel">{a.papel || "-"}</td>
@@ -1187,9 +1206,24 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                           <option key={a.id} value={a.id}>
                             {a.nome_completo}
                             {a.cpf ? ` • ${a.cpf}` : ""}
+                            {a.data_nascimento ? ` • Nasc. ${formatarDataParaExibicao(a.data_nascimento)}` : ""}
                           </option>
                         ))}
                       </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Data nascimento</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        value={
+                          acompanhanteSelecionado?.data_nascimento
+                            ? formatarDataParaExibicao(acompanhanteSelecionado.data_nascimento)
+                            : ""
+                        }
+                        placeholder="Selecione um acompanhante"
+                        readOnly
+                      />
                     </div>
                     <div className="form-group">
                       <label className="form-label">Papel</label>

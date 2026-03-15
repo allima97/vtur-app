@@ -19,6 +19,7 @@ import * as TodoItem from "../pages/api/v1/todo/item";
 import * as VendasKpis from "../pages/api/v1/vendas/kpis";
 import * as VendasList from "../pages/api/v1/vendas/list";
 import * as VendasCadastroBase from "../pages/api/v1/vendas/cadastro-base";
+import * as VendasCidadesBusca from "../pages/api/v1/vendas/cidades-busca";
 import * as VendasCadastroSave from "../pages/api/v1/vendas/cadastro-save";
 import * as VendasCancel from "../pages/api/v1/vendas/cancel";
 import * as VendasReciboDelete from "../pages/api/v1/vendas/recibo-delete";
@@ -144,6 +145,9 @@ export function createApiApp(params: { astroHandle: AstroHandle }) {
   app.get("/api/v1/vendas/kpis", (c) => VendasKpis.GET({ request: c.req.raw }));
   app.get("/api/v1/vendas/cadastro-base", (c) =>
     VendasCadastroBase.GET({ request: c.req.raw })
+  );
+  app.get("/api/v1/vendas/cidades-busca", (c) =>
+    VendasCidadesBusca.GET({ request: c.req.raw })
   );
   app.post("/api/v1/vendas/cadastro-save", (c) =>
     VendasCadastroSave.POST({ request: c.req.raw })
@@ -289,4 +293,3 @@ export function createApiApp(params: { astroHandle: AstroHandle }) {
 
   return app;
 }
-

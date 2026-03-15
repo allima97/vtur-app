@@ -834,7 +834,7 @@ export default function QuoteManualIsland() {
           title="Criar orcamento manual"
           subtitle="Monte um orcamento completo com cliente, itens, destinos, datas e valores revisados antes da confirmacao."
           actions={
-            <div className="vtur-quote-top-actions">
+            <div className="vtur-quote-top-actions orcamentos-action-bar">
               <AppButton type="button" variant="secondary" onClick={handleCancel} disabled={saving}>
                 Cancelar
               </AppButton>
@@ -984,7 +984,7 @@ export default function QuoteManualIsland() {
           title="Itens do orcamento"
           subtitle={resumoItens}
           actions={
-            <div className="vtur-quote-top-actions">
+            <div className="vtur-quote-top-actions orcamentos-action-bar">
               <AppButton type="button" variant="secondary" onClick={limparItens} disabled={saving}>
                 Limpar itens
               </AppButton>

@@ -15,8 +15,8 @@ export type CardStyle = {
   fontWeight?: number | string;
   color?: string;
   fontFamily?: string;
-  align?: "left" | "center" | "right";
-  textAlign?: "left" | "center" | "right";
+  align?: "left" | "center" | "right" | "justify";
+  textAlign?: "left" | "center" | "right" | "justify";
   lineHeight?: number;
   italic?: boolean;
   fontStyle?: "normal" | "italic";
@@ -117,24 +117,83 @@ function wrapText(text: string, style: CardStyle) {
   return lines;
 }
 
+function estimateWordWidth(word: string, fontSize: number) {
+  const normalized = String(word || "").trim();
+  if (!normalized) return Math.max(1, fontSize * 0.28);
+  return Math.max(fontSize * 0.3, normalized.length * fontSize * 0.56);
+}
+
+function resolveAlign(value?: string | null): "left" | "center" | "right" | "justify" {
+  const align = String(value || "").trim().toLowerCase();
+  if (align === "left" || align === "center" || align === "right" || align === "justify") return align;
+  return "center";
+}
+
 function drawTextBlock(text: string, style: CardStyle) {
   const lines = wrapText(text, style);
   if (!lines.length) return "";
   const x = Number(style.x || 540);
   const y = Number(style.y || 760);
+  const maxWidth = Number(style.maxWidth || style.width || 860);
   const fontSize = Number(style.fontSize || 52);
   const fontWeight = String(style.fontWeight || "500");
   const color = escapeXml(String(style.color || "#0A0A0A"));
   const fontFamily = escapeXml(String(style.fontFamily || "Alegreya Sans, Arial, sans-serif"));
-  const align = String(style.align || style.textAlign || "center").toLowerCase() as "left" | "center" | "right";
+  const align = resolveAlign(style.align || style.textAlign || "center");
   const lineHeight = Number(style.lineHeight || 1.2);
   const italic = style.italic || style.fontStyle === "italic" ? "italic" : "normal";
-  const anchor = align === "center" ? "middle" : align === "right" ? "end" : "start";
   const step = Math.round(fontSize * lineHeight);
-  const tspans = lines
-    .map((line, idx) => `<tspan x="${x}" dy="${idx === 0 ? 0 : step}">${escapeXml(line || " ")}</tspan>`)
+  const textAttrs = `font-family="${fontFamily}" font-size="${fontSize}" font-weight="${fontWeight}" fill="${color}" font-style="${italic}"`;
+
+  if (align !== "justify") {
+    const anchor = align === "center" ? "middle" : align === "right" ? "end" : "start";
+    const tspans = lines
+      .map((line, idx) => `<tspan x="${x}" dy="${idx === 0 ? 0 : step}">${escapeXml(line || " ")}</tspan>`)
+      .join("");
+    return `<text x="${x}" y="${y}" text-anchor="${anchor}" ${textAttrs}>${tspans}</text>`;
+  }
+
+  const lastNonEmptyLineIdx = (() => {
+    for (let i = lines.length - 1; i >= 0; i -= 1) {
+      if (String(lines[i] || "").trim()) return i;
+    }
+    return -1;
+  })();
+
+  const justifiedLines = lines
+    .map((line, idx) => {
+      const trimmedLine = String(line || "").trim();
+      if (!trimmedLine) return "";
+      const lineY = y + idx * step;
+      const isLastLine = idx >= lastNonEmptyLineIdx;
+      const words = trimmedLine.split(/\s+/).filter(Boolean);
+
+      if (isLastLine || words.length < 2) {
+        return `<text x="${x}" y="${lineY}" text-anchor="start" ${textAttrs}>${escapeXml(trimmedLine)}</text>`;
+      }
+
+      const totalWordWidth = words.reduce((acc, word) => acc + estimateWordWidth(word, fontSize), 0);
+      const gapCount = words.length - 1;
+      const calculatedGap = (maxWidth - totalWordWidth) / gapCount;
+      const minGap = fontSize * 0.14;
+
+      if (!Number.isFinite(calculatedGap) || calculatedGap < minGap) {
+        return `<text x="${x}" y="${lineY}" text-anchor="start" ${textAttrs}>${escapeXml(trimmedLine)}</text>`;
+      }
+
+      let cursorX = x;
+      return words
+        .map((word, wordIndex) => {
+          const node = `<text x="${cursorX.toFixed(2)}" y="${lineY}" text-anchor="start" ${textAttrs}>${escapeXml(word)}</text>`;
+          cursorX += estimateWordWidth(word, fontSize);
+          if (wordIndex < words.length - 1) cursorX += calculatedGap;
+          return node;
+        })
+        .join("");
+    })
     .join("");
-  return `<text x="${x}" y="${y}" text-anchor="${anchor}" font-family="${fontFamily}" font-size="${fontSize}" font-weight="${fontWeight}" fill="${color}" font-style="${italic}">${tspans}</text>`;
+
+  return justifiedLines;
 }
 
 function drawPhotoBlock(photoUrl: string, slot: CardThemePhotoSlot) {
@@ -216,10 +275,16 @@ function extractSignatureTextConfig(signatureStyle?: unknown) {
   const content = isRecord(signatureStyle) && isRecord(signatureStyle.content)
     ? signatureStyle.content
     : null;
+  const hasFooterLead =
+    !!content && Object.prototype.hasOwnProperty.call(content, "footerLead");
+  const hasConsultantRole =
+    !!content && Object.prototype.hasOwnProperty.call(content, "consultantRole");
 
   return {
     footerLead: String(content?.footerLead || "").trim(),
     consultantRole: String(content?.consultantRole || "").trim(),
+    hasFooterLead,
+    hasConsultantRole,
   };
 }
 
@@ -275,8 +340,10 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
   const client = buildAuthClient(request);
 
   const nome = String(url.searchParams.get("nome") || "Cliente").trim() || "Cliente";
+  const clienteNomeLiteralRaw = String(url.searchParams.get("cliente_nome_literal") || "").trim();
   const tituloRaw = String(url.searchParams.get("titulo") || "").trim();
   const corpoRaw = String(url.searchParams.get("corpo") || "").trim();
+  const hasFooterLeadParam = url.searchParams.has("footer_lead");
   const footerLeadRaw = String(url.searchParams.get("footer_lead") || "").trim();
   const assinaturaRaw = String(url.searchParams.get("assinatura") || "").trim();
   const consultorRaw = String(url.searchParams.get("consultor") || "").trim();
@@ -393,14 +460,22 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
     corpoRaw ||
     templateRow?.corpo ||
     "Que seu novo ano seja cheio de viagens, conquistas e momentos inesquecíveis.";
-  const signatureTextConfig = {
-    ...extractSignatureTextConfig(themeRow?.signature_style),
-    ...extractSignatureTextConfig(templateRow?.signature_style),
-  };
+  const signatureTheme = extractSignatureTextConfig(themeRow?.signature_style);
+  const signatureTemplate = extractSignatureTextConfig(templateRow?.signature_style);
+  const hasFooterLeadConfig = signatureTemplate.hasFooterLead || signatureTheme.hasFooterLead;
+  const hasConsultantRoleConfig = signatureTemplate.hasConsultantRole || signatureTheme.hasConsultantRole;
+  const footerLeadConfig = signatureTemplate.hasFooterLead ? signatureTemplate.footerLead : signatureTheme.footerLead;
+  const consultantRoleConfig = signatureTemplate.hasConsultantRole
+    ? signatureTemplate.consultantRole
+    : signatureTheme.consultantRole;
   const assinatura = assinaturaRaw || templateRow?.assinatura || consultorRaw || "";
   const consultor = consultorRaw || assinatura || "Equipe vtur";
-  const footerLead = footerLeadRaw || signatureTextConfig.footerLead || "Com carinho";
-  const cargoConsultor = cargoConsultorRaw || signatureTextConfig.consultantRole || "Consultor de viagens";
+  const footerLead = hasFooterLeadParam
+    ? footerLeadRaw
+    : hasFooterLeadConfig
+      ? footerLeadConfig
+      : "Com carinho";
+  const cargoConsultor = cargoConsultorRaw || (hasConsultantRoleConfig ? consultantRoleConfig : "Consultor de viagens");
 
   const renderVars = {
     nomeCompleto: nome,
@@ -417,11 +492,20 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
     mensagem: mensagemRaw,
   };
 
-  const titleText = renderTemplateText(titulo, renderVars);
-  const clientNameText = renderTemplateText(String(url.searchParams.get("cliente_nome") || "[PRIMEIRO_NOME],"), renderVars);
+  const forceNomeCompleto = Boolean(clienteNomeLiteralRaw);
+  const titleText = renderTemplateText(titulo, renderVars, {
+    useFullNameAsFirstName: forceNomeCompleto,
+  });
+  const clientNameText = clienteNomeLiteralRaw
+    ? clienteNomeLiteralRaw
+    : renderTemplateText(String(url.searchParams.get("cliente_nome") || "[PRIMEIRO_NOME],"), renderVars, {
+        useFullNameAsFirstName: forceNomeCompleto,
+      });
   const bodyTextRaw = renderTemplateText(corpo, {
     ...renderVars,
     mensagem: mensagemRaw || corpo,
+  }, {
+    useFullNameAsFirstName: forceNomeCompleto,
   });
   const bodyTextNoFooter = bodyTextRaw
     .replace(/\n+\s*com carinho\s*$/i, "")
@@ -429,7 +513,9 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
     .replace(new RegExp(`\\n+\\s*${escapeRegex(consultor)}\\s*$`, "i"), "")
     .trim();
   const bodyText = bodyTextNoFooter || bodyTextRaw;
-  const footerLeadText = renderTemplateText(footerLead, renderVars);
+  const footerLeadText = renderTemplateText(footerLead, renderVars, {
+    useFullNameAsFirstName: forceNomeCompleto,
+  });
   const consultantNameText = renderTemplateText("[CONSULTOR]", renderVars);
   const consultantRoleText = renderTemplateText("[CARGO_CONSULTOR]", renderVars);
   const showPhoto = Boolean(photoUrlRaw && themeLayout?.photo);

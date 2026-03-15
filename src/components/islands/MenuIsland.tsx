@@ -22,6 +22,11 @@ import {
   writeMenuPrefs,
   type MenuPrefsV1,
 } from "../../lib/menuPrefs";
+import {
+  PRIME_DEFAULT_THEME,
+  PRIME_THEME_OPTIONS,
+} from "../../lib/primeTheme";
+import { usePrimeTheme } from "../../lib/usePrimeTheme";
 import IslandErrorBoundary from "../ui/IslandErrorBoundary";
 import AppButton from "../ui/primer/AppButton";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
@@ -56,6 +61,26 @@ function renderMenuIcon(icon: React.ReactNode, extraClassName = ""): React.React
   return <i className={`${iconClass} ${extraClassName}`.trim()} aria-hidden="true" />;
 }
 
+function labelToTooltipText(label: React.ReactNode): string {
+  if (label === null || label === undefined || typeof label === "boolean") return "";
+  if (typeof label === "string" || typeof label === "number") return String(label).trim();
+  if (Array.isArray(label)) {
+    return label
+      .map((chunk) => labelToTooltipText(chunk))
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+  if (!React.isValidElement(label)) return "";
+
+  const className =
+    typeof label.props?.className === "string" ? label.props.className : "";
+  if (/\bmenu-badge\b/.test(className)) return "";
+
+  return labelToTooltipText(label.props?.children);
+}
+
 type MenuIslandProps = {
   activePage?: string;
   initialCache?: PermissoesCache | null;
@@ -71,6 +96,9 @@ export default function MenuIsland(props: MenuIslandProps) {
 
 function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
   const MENU_PREFS_ENABLED = import.meta.env.PUBLIC_MENU_PREFS !== "0";
+  const DESKTOP_BREAKPOINT_QUERY = "(min-width: 1025px)";
+  const COMPACT_DESKTOP_QUERY = "(max-width: 1366px)";
+  const SIDEBAR_COLLAPSED_STORAGE_KEY = "vtur_sidebar_collapsed";
   const envMinutes = Number(import.meta.env.PUBLIC_AUTO_LOGOUT_MINUTES || "");
   const DEFAULT_LOGOUT_MINUTES =
     Number.isFinite(envMinutes) && envMinutes > 0 ? envMinutes : 15;
@@ -83,8 +111,15 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
   const [recadosBadge, setRecadosBadge] = useState(0);
   const [agendaBadge, setAgendaBadge] = useState(0);
   const [currentCompanyId, setCurrentCompanyId] = useState<string | null>(null);
+  const [isDesktopViewport, setIsDesktopViewport] = useState(false);
+  const [desktopCollapsed, setDesktopCollapsed] = useState(false);
   const [updatingPerms, setUpdatingPerms] = useState(false);
   const [permSyncMsg, setPermSyncMsg] = useState<string | null>(null);
+  const {
+    themeName: activePrimeTheme,
+    isApplying: switchingPrimeTheme,
+    applyTheme: applyPrimeTheme,
+  } = usePrimeTheme();
   const [menuPrefs, setMenuPrefs] = useState<MenuPrefsV1>(() =>
     MENU_PREFS_ENABLED ? readMenuPrefs(null) : { v: 1, hidden: [], order: {} }
   );
@@ -97,9 +132,12 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
   const cacheUserId = cachedPerms?.userId ?? null;
   const cacheUserType = cachedPerms?.userType ?? "";
   const menuUserType = ready ? userType : cacheUserType;
+  const isSidebarCollapsed = isDesktopViewport && desktopCollapsed;
   const menuIsMaster = /MASTER/i.test(menuUserType || "");
   const menuIsVendedor = /VENDEDOR/i.test(menuUserType || "");
   const menuIsGestor = /GESTOR/i.test(menuUserType || "");
+  const activePrimeThemeLabel =
+    PRIME_THEME_OPTIONS.find((option) => option.name === activePrimeTheme)?.label || "Padrao";
 
   const permLevel = (p?: Permissao | null): number => {
     switch (p) {
@@ -855,19 +893,24 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
         <div key={sectionKey}>
           <div className="sidebar-section-title">{sectionTitle(sectionKey)}</div>
           <NavList className="vtur-sidebar-nav" aria-label={sectionTitle(sectionKey)}>
-            {ordered.map((entry) => (
-              <NavList.Item
-                key={entry.key}
-                href={entry.href}
-                style={liStyle(sectionKey, entry.key, ordered.indexOf(entry), Boolean(entry.locked))}
-                className="vtur-sidebar-nav-item"
-                aria-current={activePage === entry.active ? "page" : undefined}
-                onClick={handleNavClick}
-              >
-                <NavList.LeadingVisual>{renderMenuIcon(entry.icon)}</NavList.LeadingVisual>
-                {entry.label}
-              </NavList.Item>
-            ))}
+            {ordered.map((entry) => {
+              const tooltip = labelToTooltipText(entry.label) || entry.key;
+              return (
+                <NavList.Item
+                  key={entry.key}
+                  href={entry.href}
+                  style={liStyle(sectionKey, entry.key, ordered.indexOf(entry), Boolean(entry.locked))}
+                  className="vtur-sidebar-nav-item"
+                  aria-current={activePage === entry.active ? "page" : undefined}
+                  aria-label={tooltip}
+                  title={tooltip}
+                  onClick={handleNavClick}
+                >
+                  <NavList.LeadingVisual>{renderMenuIcon(entry.icon)}</NavList.LeadingVisual>
+                  <span className="sidebar-item-label">{entry.label}</span>
+                </NavList.Item>
+              );
+            })}
           </NavList>
         </div>
       );
@@ -910,6 +953,54 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const desktopMq = window.matchMedia(DESKTOP_BREAKPOINT_QUERY);
+    const compactDesktopMq = window.matchMedia(COMPACT_DESKTOP_QUERY);
+
+    const syncDesktopMode = () => {
+      const isDesktop = desktopMq.matches;
+      setIsDesktopViewport(isDesktop);
+      if (!isDesktop) {
+        setDesktopCollapsed(false);
+        return;
+      }
+      try {
+        const stored = window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY);
+        if (stored === "1") {
+          setDesktopCollapsed(true);
+        } else if (stored === "0") {
+          setDesktopCollapsed(false);
+        } else {
+          setDesktopCollapsed(compactDesktopMq.matches);
+        }
+      } catch {
+        setDesktopCollapsed(compactDesktopMq.matches);
+      }
+    };
+
+    syncDesktopMode();
+
+    if (desktopMq.addEventListener) desktopMq.addEventListener("change", syncDesktopMode);
+    else desktopMq.addListener(syncDesktopMode);
+    if (compactDesktopMq.addEventListener) compactDesktopMq.addEventListener("change", syncDesktopMode);
+    else compactDesktopMq.addListener(syncDesktopMode);
+
+    return () => {
+      if (desktopMq.removeEventListener) desktopMq.removeEventListener("change", syncDesktopMode);
+      else desktopMq.removeListener(syncDesktopMode);
+      if (compactDesktopMq.removeEventListener) compactDesktopMq.removeEventListener("change", syncDesktopMode);
+      else compactDesktopMq.removeListener(syncDesktopMode);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.body.classList.toggle("sidebar-collapsed", isSidebarCollapsed);
+    return () => document.body.classList.remove("sidebar-collapsed");
+  }, [isSidebarCollapsed]);
+
+  useEffect(() => {
     if (!mobileOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setMobileOpen(false);
@@ -919,6 +1010,16 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
   }, [mobileOpen]);
 
   const toggleMobile = () => setMobileOpen((prev) => !prev);
+  const toggleDesktopCollapsed = () => {
+    if (typeof window === "undefined" || !isDesktopViewport) return;
+    setDesktopCollapsed((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  };
   const closeMobile = useCallback(() => setMobileOpen(false), []);
 
   const executarLogout = useCallback(
@@ -1195,6 +1296,28 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
     }
   }
 
+  const applyThemeFromMenu = useCallback(
+    async (themeName: string) => {
+      try {
+        await applyPrimeTheme(themeName);
+      } catch (error) {
+        console.error("Erro ao trocar tema PrimeReact:", error);
+      }
+    },
+    [applyPrimeTheme]
+  );
+
+  const handleThemeSelectChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    void applyThemeFromMenu(event.target.value);
+  };
+
+  const handleThemeCycle = () => {
+    const names = PRIME_THEME_OPTIONS.map((option) => option.name);
+    const currentIndex = names.indexOf(activePrimeTheme);
+    const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % names.length;
+    void applyThemeFromMenu(names[nextIndex] || PRIME_DEFAULT_THEME);
+  };
+
   const cadastrosMenu = [
     { name: "Produtos", href: "/cadastros/produtos", active: "produtos", icon: "pi pi-ticket", label: "Produtos" },
     { name: "Circuitos", href: "/cadastros/circuitos", active: "circuitos", icon: "pi pi-compass", label: "Circuitos" },
@@ -1235,19 +1358,24 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
     <div>
       <div className="sidebar-section-title">{title}</div>
       <NavList className="vtur-sidebar-nav" aria-label={title}>
-        {items.map((item, index) => (
-          <NavList.Item
-            key={item.key}
-            href={item.href}
-            className="vtur-sidebar-nav-item"
-            style={liStyle(sectionKey, item.key, index, Boolean(item.locked))}
-            aria-current={activePage === item.active ? "page" : undefined}
-            onClick={handleNavClick}
-          >
-            <NavList.LeadingVisual>{renderMenuIcon(item.icon)}</NavList.LeadingVisual>
-            {item.label}
-          </NavList.Item>
-        ))}
+        {items.map((item, index) => {
+          const tooltip = labelToTooltipText(item.label) || item.key;
+          return (
+            <NavList.Item
+              key={item.key}
+              href={item.href}
+              className="vtur-sidebar-nav-item"
+              style={liStyle(sectionKey, item.key, index, Boolean(item.locked))}
+              aria-current={activePage === item.active ? "page" : undefined}
+              aria-label={tooltip}
+              title={tooltip}
+              onClick={handleNavClick}
+            >
+              <NavList.LeadingVisual>{renderMenuIcon(item.icon)}</NavList.LeadingVisual>
+              <span className="sidebar-item-label">{item.label}</span>
+            </NavList.Item>
+          );
+        })}
       </NavList>
     </div>
   );
@@ -1432,7 +1560,10 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
         </AppButton>
       </nav>
 
-      <aside id={sidebarId} className={`app-sidebar ${mobileOpen ? "open" : ""}`}>
+      <aside
+        id={sidebarId}
+        className={`app-sidebar ${mobileOpen ? "open" : ""} ${isSidebarCollapsed ? "desktop-collapsed" : ""}`}
+      >
         <div className="sidebar-logo" aria-label="VTUR - CRM para Franquias CVC">
           <img className="sidebar-logo-image" src="/brand/vtur-symbol.svg" alt="vtur" />
           <div className="sidebar-logo-copy sidebar-logo-copy-inline">
@@ -1440,6 +1571,21 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
             <span className="sidebar-logo-tagline">CRM para Franquias CVC</span>
           </div>
         </div>
+        <AppButton
+          type="button"
+          variant="ghost"
+          className="sidebar-desktop-toggle"
+          onClick={toggleDesktopCollapsed}
+          aria-label={isSidebarCollapsed ? "Expandir menu lateral" : "Recolher menu lateral"}
+          title={isSidebarCollapsed ? "Expandir menu lateral" : "Recolher menu lateral"}
+        >
+          <span className="sidebar-desktop-toggle-icon" aria-hidden="true">
+            <i className={isSidebarCollapsed ? "pi pi-angle-right" : "pi pi-angle-left"} />
+          </span>
+          <span className="sidebar-desktop-toggle-label">
+            {isSidebarCollapsed ? "Expandir menu" : "Recolher menu"}
+          </span>
+        </AppButton>
 
         {renderMenuSections()}
 
@@ -1475,17 +1621,52 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
         {menuUserId && (
           <div>
             <div className="vtur-sidebar-action-group">
+              {isSidebarCollapsed ? (
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  className="sidebar-theme-cycle-btn"
+                  onClick={handleThemeCycle}
+                  disabled={switchingPrimeTheme}
+                  icon={`pi pi-palette${switchingPrimeTheme ? " pi-spin" : ""}`}
+                  title={`Tema atual: ${activePrimeThemeLabel}. Clique para alternar.`}
+                >
+                  <span className="sr-only">
+                    {switchingPrimeTheme ? "Alternando tema..." : "Alternar tema"}
+                  </span>
+                </AppButton>
+              ) : (
+                <div className="vtur-sidebar-theme-picker">
+                  <label htmlFor="sidebar-theme-select" className="vtur-sidebar-theme-label">
+                    <i className="pi pi-palette" aria-hidden="true" />
+                    <span>Tema visual</span>
+                  </label>
+                  <select
+                    id="sidebar-theme-select"
+                    className="vtur-sidebar-theme-select"
+                    value={activePrimeTheme}
+                    onChange={handleThemeSelectChange}
+                    disabled={switchingPrimeTheme}
+                  >
+                    {PRIME_THEME_OPTIONS.map((option) => (
+                      <option key={option.name} value={option.name}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <AppButton
                 type="button"
                 variant="secondary"
+                className="sidebar-refresh-perms-btn"
                 block
                 onClick={handleRefreshPermissionsNow}
                 disabled={updatingPerms}
+                icon={`pi pi-sync${updatingPerms ? " pi-spin" : ""}`}
+                title="Atualizar permissoes"
               >
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                  <i className={`pi pi-sync${updatingPerms ? " pi-spin" : ""}`} aria-hidden="true" />
-                  <span>{updatingPerms ? "Atualizando permissoes..." : "Atualizar permissoes"}</span>
-                </span>
+                {updatingPerms ? "Atualizando permissoes..." : "Atualizar permissoes"}
               </AppButton>
             </div>
             {permSyncMsg && (
@@ -1497,11 +1678,16 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
         {/* LOGOUT */}
         <div style={{ marginTop: 20 }}>
           <div className="vtur-sidebar-action-group">
-            <AppButton type="button" variant="danger" block onClick={handleLogout} disabled={saindo}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                <i className="pi pi-sign-out" aria-hidden="true" />
-                <span>{saindo ? "Saindo..." : "Sair"}</span>
-              </span>
+            <AppButton
+              type="button"
+              variant="danger"
+              block
+              onClick={handleLogout}
+              disabled={saindo}
+              icon="pi pi-sign-out"
+              title={saindo ? "Saindo..." : "Sair"}
+            >
+              {saindo ? "Saindo..." : "Sair"}
             </AppButton>
           </div>
         </div>

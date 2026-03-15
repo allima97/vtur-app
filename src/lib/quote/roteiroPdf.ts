@@ -153,6 +153,78 @@ function normalizeDiasForPdf(dias: Array<{ cidade?: string | null; percurso?: st
   return unique;
 }
 
+function textValue(value?: string | null) {
+  return String(value || "").trim();
+}
+
+function normalizeLookup(value?: string | null) {
+  return textValue(value).toLocaleLowerCase();
+}
+
+function hasPositiveNumber(value?: number | string | null) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0;
+}
+
+function hasMeaningfulHotel(h: RoteiroHotelPdf) {
+  return Boolean(
+    textValue(h.cidade) ||
+      textValue(h.hotel) ||
+      textValue(h.data_inicio) ||
+      textValue(h.data_fim) ||
+      textValue(h.apto) ||
+      textValue(h.categoria) ||
+      textValue(h.regime) ||
+      hasPositiveNumber(h.noites)
+  );
+}
+
+function hasMeaningfulPasseio(p: RoteiroPasseioPdf) {
+  const tipoNorm = normalizeLookup(p.tipo);
+  const ingressosNorm = normalizeLookup(p.ingressos);
+  const tipoDefault = tipoNorm === "compartilhado";
+  const ingressosDefault = ingressosNorm === "inclui ingressos";
+  return Boolean(
+    textValue(p.cidade) ||
+      textValue(p.passeio) ||
+      textValue(p.data_inicio) ||
+      textValue(p.data_fim) ||
+      (textValue(p.tipo) && !tipoDefault) ||
+      (textValue(p.ingressos) && !ingressosDefault)
+  );
+}
+
+function hasMeaningfulTransporte(t: RoteiroTransportePdf) {
+  return Boolean(
+    textValue(t.tipo) ||
+      textValue(t.fornecedor) ||
+      textValue(t.descricao) ||
+      textValue(t.data_inicio) ||
+      textValue(t.data_fim) ||
+      textValue(t.categoria) ||
+      textValue(t.observacao)
+  );
+}
+
+function hasMeaningfulInvestimento(i: RoteiroInvestimentoPdf) {
+  const qtd = Number(i.qtd_apto || 0);
+  return Boolean(
+    textValue(i.tipo) ||
+      hasPositiveNumber(i.valor_por_pessoa) ||
+      hasPositiveNumber(i.valor_por_apto) ||
+      (Number.isFinite(qtd) && qtd > 1)
+  );
+}
+
+function hasMeaningfulPagamento(p: RoteiroPagamentoPdf) {
+  return Boolean(
+    textValue(p.servico) ||
+      textValue(p.forma_pagamento) ||
+      hasPositiveNumber(p.valor_total_com_taxas) ||
+      hasPositiveNumber(p.taxas)
+  );
+}
+
 async function fetchImageData(url: string) {
   const res = await fetch(url);
   if (!res.ok) throw new Error("Falha ao carregar imagem.");
@@ -245,13 +317,7 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
 
   let curY = margin;
 
-  const pagamentos = (roteiro.pagamentos || []).filter((p) => {
-    const servico = String(p.servico || "").trim();
-    const formas = parseLineItems(String(p.forma_pagamento || ""));
-    const total = Number(p.valor_total_com_taxas || 0);
-    const taxas = Number(p.taxas || 0);
-    return Boolean(servico || formas.length > 0 || total > 0 || taxas > 0);
-  });
+  const pagamentos = (roteiro.pagamentos || []).filter((p) => hasMeaningfulPagamento(p));
 
   const whatsappLink = construirLinkWhatsApp(pdfSettings.whatsapp, (pdfSettings as any).whatsapp_codigo_pais);
 
@@ -848,18 +914,7 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
   }
 
   // Hotéis Sugeridos
-  const hoteis = (roteiro.hoteis || []).filter((h) => {
-    return Boolean(
-      String(h.cidade || "").trim() ||
-        String(h.hotel || "").trim() ||
-        String(h.data_inicio || "").trim() ||
-        String(h.data_fim || "").trim() ||
-        String(h.apto || "").trim() ||
-        String(h.regime || "").trim() ||
-        String(h.categoria || "").trim() ||
-        Number.isFinite(Number(h.noites))
-    );
-  });
+  const hoteis = (roteiro.hoteis || []).filter((h) => hasMeaningfulHotel(h));
   if (hoteis.length > 0) {
     drawSectionTitle("Hotéis Sugeridos");
     hoteis.forEach((h) => {
@@ -895,16 +950,7 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
   }
 
   // Principais Passeios
-  const passeios = (roteiro.passeios || []).filter((p) => {
-    return Boolean(
-      String(p.cidade || "").trim() ||
-        String(p.passeio || "").trim() ||
-        String(p.data_inicio || "").trim() ||
-        String(p.data_fim || "").trim() ||
-        String(p.tipo || "").trim() ||
-        String(p.ingressos || "").trim()
-    );
-  });
+  const passeios = (roteiro.passeios || []).filter((p) => hasMeaningfulPasseio(p));
   if (passeios.length > 0) {
     drawSectionTitle("Principais Passeios");
     passeios.forEach((p) => {
@@ -936,17 +982,7 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
   }
 
   // Transporte Incluído
-  const transportes = (roteiro.transportes || []).filter((t) => {
-    return Boolean(
-      String(t.tipo || "").trim() ||
-        String(t.fornecedor || "").trim() ||
-        String(t.descricao || "").trim() ||
-        String(t.data_inicio || "").trim() ||
-        String(t.data_fim || "").trim() ||
-        String(t.categoria || "").trim() ||
-        String(t.observacao || "").trim()
-    );
-  });
+  const transportes = (roteiro.transportes || []).filter((t) => hasMeaningfulTransporte(t));
   if (transportes.length > 0) {
     drawSectionTitle("Transporte Incluído");
     transportes.forEach((t) => {
@@ -979,19 +1015,19 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
   }
 
   // Investimento
-  const investimentos = (roteiro.investimentos || []).filter((i) => {
-    const vpp = Number(i.valor_por_pessoa || 0);
-    const qtd = Number(i.qtd_apto || 0);
-    const vpa = Number(i.valor_por_apto || 0);
-    return Boolean(vpp > 0 || qtd > 0 || vpa > 0);
-  });
+  const investimentos = (roteiro.investimentos || []).filter((i) => hasMeaningfulInvestimento(i));
   if (investimentos.length > 0) {
     drawSectionTitle("Investimento");
     investimentos.forEach((i) => {
       const tipo = (i.tipo || "").trim();
+      const qtd = Number(i.qtd_apto || 0);
+      const showQtd =
+        Number.isFinite(qtd) &&
+        qtd > 0 &&
+        (qtd > 1 || Number(i.valor_por_pessoa || 0) > 0 || Number(i.valor_por_apto || 0) > 0);
       const bulletItems = [
         { label: "Valor por Pessoa", value: Number(i.valor_por_pessoa || 0) > 0 ? formatCurrency(Number(i.valor_por_pessoa)) : "" },
-        { label: "Qte Pax", value: Number(i.qtd_apto || 0) > 0 ? String(i.qtd_apto) : "" },
+        { label: "Qte Pax", value: showQtd ? String(qtd) : "" },
         { label: "Valor por Apto", value: Number(i.valor_por_apto || 0) > 0 ? formatCurrency(Number(i.valor_por_apto)) : "" },
       ];
       const hasBulletContent = bulletItems.some((b) => Boolean(b.value));
@@ -1045,10 +1081,37 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
     const total = pagamentos.reduce((sum: number, p: any) => sum + Math.max(Number(p.valor_total_com_taxas || 0), 0), 0);
 
     const kvX = margin + activeCardIndent;
-    drawKeyValueLine("Valor do Pacote", formatCurrency(subtotal), kvX);
-    drawKeyValueLine("Taxas", formatCurrency(taxesTotal), kvX);
-    drawKeyValueLine("Total Geral", formatCurrency(total), kvX);
-    curY += 6;
+    let hasResumoValores = false;
+    if (subtotal > 0) {
+      drawKeyValueLine("Valor do Pacote", formatCurrency(subtotal), kvX);
+      hasResumoValores = true;
+    }
+    if (taxesTotal > 0) {
+      drawKeyValueLine("Taxas", formatCurrency(taxesTotal), kvX);
+      hasResumoValores = true;
+    }
+    if (total > 0) {
+      drawKeyValueLine("Total Geral", formatCurrency(total), kvX);
+      hasResumoValores = true;
+    }
+    if (hasResumoValores) curY += 6;
+
+    const servicos = Array.from(
+      new Set(
+        pagamentos
+          .map((p) => textValue(p.servico))
+          .filter(Boolean)
+      )
+    );
+    if (servicos.length > 0) {
+      ensureSpace(bodyLineHeight);
+      doc.setFont(bodyFont, "bold");
+      doc.setFontSize(bodyFontSize);
+      doc.setTextColor(0, 0, 0);
+      doc.text("Serviços:", margin + activeCardIndent, curY + bodyFontSize);
+      curY += bodyLineHeight;
+      drawBulletList(servicos.map((s) => ({ label: "", value: s })), activeCardIndent);
+    }
 
     const formas = Array.from(
       new Set(

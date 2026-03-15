@@ -45,6 +45,9 @@ export function readEnv(key: string): string | undefined {
     case "PUBLIC_SUPABASE_ANON_KEY":
       fromImportMeta = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       break;
+    case "SUPABASE_ANON_KEY":
+      fromImportMeta = import.meta.env.SUPABASE_ANON_KEY;
+      break;
     case "ENVIRONMENT":
       fromImportMeta = import.meta.env.ENVIRONMENT;
       break;
@@ -159,40 +162,63 @@ const supabaseUrl =
 
 const serviceRoleKey = readEnv("SUPABASE_SERVICE_ROLE_KEY");
 
-const anonKey = readEnv("PUBLIC_SUPABASE_ANON_KEY");
+const anonKey = readEnv("PUBLIC_SUPABASE_ANON_KEY") || readEnv("SUPABASE_ANON_KEY");
 
-if (!supabaseUrl) {
-  const msg =
-    "SUPABASE_URL ou PUBLIC_SUPABASE_URL não configurados. " +
-    "Defina SUPABASE_URL (recomendado) ou PUBLIC_SUPABASE_URL nas variáveis do Worker " +
-    "(wrangler.toml ou dashboard da Cloudflare).";
-  if (typeof console !== "undefined") {
-    console.error("[supabaseServer] " + msg);
+let warnedAnonFallback = false;
+let supabaseServerClient: ReturnType<typeof createClient> | null = null;
+
+function assertSupabaseServerEnv() {
+  if (!supabaseUrl) {
+    const msg =
+      "SUPABASE_URL ou PUBLIC_SUPABASE_URL não configurados. " +
+      "Defina SUPABASE_URL (recomendado) ou PUBLIC_SUPABASE_URL nas variáveis do Worker " +
+      "(wrangler.toml ou dashboard da Cloudflare).";
+    if (typeof console !== "undefined") {
+      console.error("[supabaseServer] " + msg);
+    }
+    throw new Error(msg);
   }
-  throw new Error(msg);
-}
 
-const supabaseKey = serviceRoleKey || anonKey;
-if (!supabaseKey) {
-  const msg =
-    "SUPABASE_SERVICE_ROLE_KEY ou PUBLIC_SUPABASE_ANON_KEY não configurados. " +
-    "Defina SUPABASE_SERVICE_ROLE_KEY (para scripts/admin) ou PUBLIC_SUPABASE_ANON_KEY.";
-  if (typeof console !== "undefined") {
-    console.error("[supabaseServer] " + msg);
+  const supabaseKey = serviceRoleKey || anonKey;
+  if (!supabaseKey) {
+    const msg =
+      "SUPABASE_SERVICE_ROLE_KEY ou PUBLIC_SUPABASE_ANON_KEY/SUPABASE_ANON_KEY não configurados. " +
+      "Defina SUPABASE_SERVICE_ROLE_KEY (para scripts/admin) ou uma chave anon do Supabase.";
+    if (typeof console !== "undefined") {
+      console.error("[supabaseServer] " + msg);
+    }
+    throw new Error(msg);
   }
-  throw new Error(msg);
+
+  if (!serviceRoleKey && !warnedAnonFallback && typeof console !== "undefined") {
+    console.warn(
+      "[supabaseServer] SUPABASE_SERVICE_ROLE_KEY ausente. Usando anon key (RLS ativo)."
+    );
+    warnedAnonFallback = true;
+  }
+
+  return { supabaseUrl, supabaseKey };
 }
 
-if (!serviceRoleKey && typeof console !== "undefined") {
-  console.warn(
-    "[supabaseServer] SUPABASE_SERVICE_ROLE_KEY ausente. Usando anon key (RLS ativo)."
-  );
+export function getSupabaseServerClient() {
+  if (supabaseServerClient) return supabaseServerClient;
+
+  const { supabaseUrl, supabaseKey } = assertSupabaseServerEnv();
+  supabaseServerClient = createClient(supabaseUrl, supabaseKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+
+  return supabaseServerClient;
 }
 
-export const supabaseServer = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
+export const supabaseServer = new Proxy({} as ReturnType<typeof createClient>, {
+  get(_target, prop) {
+    const client = getSupabaseServerClient() as any;
+    const value = client[prop];
+    return typeof value === "function" ? value.bind(client) : value;
   },
 });
 

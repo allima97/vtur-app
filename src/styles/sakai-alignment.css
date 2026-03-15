@@ -1,6 +1,15 @@
 body.sakai-theme {
-  background: #f5f7fb;
-  color: #334155;
+  --sgvtur-bg: #f4f1eb;
+  --sgvtur-ink: #09112e;
+  --sgvtur-muted: #52607a;
+  --sgvtur-accent: #8e28e2;
+  --sgvtur-accent-strong: #5630ff;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.95)),
+    radial-gradient(circle at 12% 12%, rgba(142, 40, 226, 0.1), transparent 30%),
+    radial-gradient(circle at 88% 16%, rgba(86, 48, 255, 0.08), transparent 30%),
+    var(--sgvtur-bg);
+  color: var(--sgvtur-ink);
   font-family: var(--vtur-font-family, "Inter var", sans-serif);
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   font-variation-settings: normal;
@@ -38,11 +47,12 @@ body.sakai-theme .app-sidebar {
   width: 286px;
   height: calc(100vh - 6.6rem);
   border-radius: 12px;
-  border-color: #e5e7eb;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  border-color: #1e293b;
+  box-shadow: 0 10px 26px rgba(2, 6, 23, 0.28);
   max-height: none;
   overflow-y: auto;
-  background: #ffffff;
+  background: #0f172a;
+  color: #e2e8f0;
 }
 
 body.sakai-theme .app-main {
@@ -54,7 +64,7 @@ body.sakai-theme .app-main {
 
 body.sakai-theme .sidebar-section-title {
   margin: 0.9rem 0 0.3rem;
-  color: #111827;
+  color: rgba(226, 232, 240, 0.72);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -81,39 +91,111 @@ body.sakai-theme .vtur-legacy-navitem::marker {
 }
 
 body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item {
-  border-radius: 8px;
-  color: #4b5563;
+  border-radius: 12px;
+  color: #e2e8f0;
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: 400;
   padding: 0.75rem 1rem;
 }
 
 body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:hover {
-  background: #f3f4f6;
-  color: #111827;
+  background: rgba(148, 163, 184, 0.2);
+  color: #f8fafc;
 }
 
 body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item[aria-current="page"] {
-  background: transparent;
-  color: #6366f1;
-  font-weight: 600;
+  background: #e0f2fe;
+  color: #0f172a;
+  font-weight: 400;
   box-shadow: none;
   border-color: transparent !important;
 }
 
 body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:focus-visible {
   outline: none;
-  box-shadow: none;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.35);
+}
+
+body.sakai-theme .sidebar-logo-wordmark {
+  color: #f8fafc;
+}
+
+body.sakai-theme .sidebar-logo-tagline {
+  color: rgba(226, 232, 240, 0.82);
+}
+
+body.sakai-theme .vtur-sidebar-action-note {
+  color: rgba(226, 232, 240, 0.74);
+}
+
+body.sakai-theme .sidebar-desktop-toggle {
+  display: none;
+}
+
+body.sakai-theme .vtur-sidebar-theme-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+body.sakai-theme .vtur-sidebar-theme-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-left: 0.2rem;
+  color: rgba(226, 232, 240, 0.88);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+body.sakai-theme .vtur-sidebar-theme-select {
+  width: 100%;
+  min-height: 2.45rem;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.78);
+  color: #e2e8f0;
+  font-size: 0.9rem;
+  padding: 0.5rem 0.72rem;
+}
+
+body.sakai-theme .vtur-sidebar-theme-select:focus {
+  outline: none;
+  border-color: rgba(186, 230, 253, 0.78);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.28);
+}
+
+body.sakai-theme .vtur-sidebar-theme-select:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+body.sakai-theme .vtur-sidebar-theme-select option {
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+body.sakai-theme .app-sidebar :is(.sidebar-refresh-perms-btn, .sidebar-theme-cycle-btn).vtur-app-button-secondary {
+  background: rgba(51, 65, 85, 0.55);
+  border-color: rgba(148, 163, 184, 0.5);
+  color: #e2e8f0;
+}
+
+body.sakai-theme .app-sidebar
+  :is(.sidebar-refresh-perms-btn, .sidebar-theme-cycle-btn).vtur-app-button-secondary:hover:not(:disabled):not(.p-disabled) {
+  background: rgba(71, 85, 105, 0.72);
+  border-color: rgba(186, 230, 253, 0.62);
+  color: #f8fafc;
 }
 
 body.sakai-theme .vtur-app-card,
 body.sakai-theme .vtur-app-toolbar,
 body.sakai-theme .card-base,
 body.sakai-theme .vtur-surface-panel {
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #ffffff;
-  box-shadow: none;
+  border: 1px solid rgba(9, 17, 46, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 14px 34px rgba(9, 17, 46, 0.06);
 }
 
 body.sakai-theme .vtur-app-card {
@@ -124,24 +206,175 @@ body.sakai-theme .vtur-app-card {
 body.sakai-theme .vtur-app-card .vtur-app-card-header {
   margin: 0;
   padding: 1rem 1.25rem;
-  background: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
+  background: linear-gradient(180deg, rgba(142, 40, 226, 0.08), rgba(255, 255, 255, 0.96));
+  border-bottom: 1px solid rgba(9, 17, 46, 0.1);
 }
 
 body.sakai-theme .vtur-app-card .vtur-app-card-title {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #374151;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--sgvtur-ink);
 }
 
 body.sakai-theme .vtur-app-card .vtur-app-card-subtitle {
   margin-top: 0.35rem;
-  color: #6b7280;
+  color: var(--sgvtur-muted);
   font-size: 0.9rem;
+}
+
+body.sakai-theme .vtur-page-header.vtur-app-toolbar {
+  border: 0;
+  border-bottom: 1px solid rgba(9, 17, 46, 0.14);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.sakai-theme .vtur-page-header .vtur-app-toolbar-title {
+  font-size: clamp(1.45rem, 2.1vw, 1.9rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+body.sakai-theme .vtur-page-header .vtur-app-toolbar-subtitle {
+  color: var(--sgvtur-muted);
+  line-height: 1.55;
+}
+
+body.sakai-theme .vtur-page-header-blue .vtur-app-toolbar-title {
+  color: #0a0d26;
+}
+
+body.sakai-theme .vtur-page-header-teal .vtur-app-toolbar-title {
+  color: #0f766e;
+}
+
+body.sakai-theme .vtur-page-header-green .vtur-app-toolbar-title {
+  color: #5630ff;
+}
+
+body.sakai-theme .vtur-page-header-config .vtur-app-toolbar-title {
+  color: #8e28e2;
+}
+
+body.sakai-theme .page-header h1 {
+  color: var(--sgvtur-ink);
+  letter-spacing: -0.03em;
+}
+
+body.sakai-theme .page-header p {
+  color: var(--sgvtur-muted);
+  opacity: 1;
+}
+
+body.sakai-theme .blue-header h1 {
+  color: #0a0d26;
+}
+
+body.sakai-theme .teal-header h1 {
+  color: #0f766e;
+}
+
+body.sakai-theme .green-header h1 {
+  color: #5630ff;
+}
+
+body.sakai-theme .config-header h1 {
+  color: #8e28e2;
 }
 
 body.sakai-theme .vtur-app-card .vtur-app-card-body {
   padding: 1.25rem;
+}
+
+body.sakai-theme .vtur-app-card.vtur-import-destination-card,
+body.sakai-theme .vtur-app-card.vtur-import-destination-card .vtur-app-card-body {
+  overflow: visible;
+}
+
+/* Tabelas em cards: separar visualmente cabecalho/filtros da grade em caixas distintas. */
+body.sakai-theme .vtur-app-card.vtur-app-card-has-table,
+body.sakai-theme .vtur-app-card.vtur-app-card-has-datatable {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+body.sakai-theme .vtur-app-card.vtur-app-card-has-table > .vtur-app-card-header,
+body.sakai-theme .vtur-app-card.vtur-app-card-has-datatable > .vtur-app-card-header {
+  margin-bottom: 0.9rem;
+  border: 1px solid rgba(9, 17, 46, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 14px 34px rgba(9, 17, 46, 0.06);
+  padding: 0.95rem 1.2rem;
+}
+
+body.sakai-theme .vtur-app-card.vtur-app-card-has-table > .vtur-app-card-body,
+body.sakai-theme .vtur-app-card.vtur-app-card-has-datatable > .vtur-app-card-body {
+  padding: 0;
+}
+
+body.sakai-theme .vtur-app-card.vtur-app-card-has-table > .vtur-app-card-header .vtur-app-card-title,
+body.sakai-theme .vtur-app-card.vtur-app-card-has-datatable > .vtur-app-card-header .vtur-app-card-title {
+  font-size: 1.02rem;
+  line-height: 1.35;
+}
+
+body.sakai-theme .vtur-app-card.vtur-app-card-has-table > .vtur-app-card-header .vtur-app-card-subtitle,
+body.sakai-theme .vtur-app-card.vtur-app-card-has-datatable > .vtur-app-card-header .vtur-app-card-subtitle {
+  margin-top: 0.3rem;
+  line-height: 1.45;
+}
+
+body.sakai-theme .vtur-app-card.vtur-app-card-has-table > .vtur-app-card-body > :is(.table-container, .overflow-x-auto) {
+  border: 1px solid rgba(9, 17, 46, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 14px 34px rgba(9, 17, 46, 0.06);
+  overflow: hidden;
+}
+
+body.sakai-theme .vtur-app-card.vtur-app-card-has-table > .vtur-app-card-body > :is(.table-container, .overflow-x-auto) > table {
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+
+body.sakai-theme .vtur-app-card.vtur-app-card-has-datatable > .vtur-app-card-body > .vtur-data-table-shell {
+  border-radius: 14px;
+  box-shadow: 0 14px 34px rgba(9, 17, 46, 0.06);
+}
+
+/* Estrutura legado (Astro sem AppCard React): titulo e tabela em caixas separadas. */
+body.sakai-theme .vtur-card-table-split {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  overflow: visible;
+}
+
+body.sakai-theme .vtur-card-table-split > .page-title {
+  margin: 0 0 0.9rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid rgba(9, 17, 46, 0.12);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(142, 40, 226, 0.08), rgba(255, 255, 255, 0.96));
+  box-shadow: 0 14px 34px rgba(9, 17, 46, 0.06);
+}
+
+body.sakai-theme .vtur-card-table-split > :is(.table-container, .overflow-x-auto) {
+  border: 1px solid rgba(9, 17, 46, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 14px 34px rgba(9, 17, 46, 0.06);
+  overflow: hidden;
+}
+
+body.sakai-theme .vtur-card-table-split > :is(.table-container, .overflow-x-auto) > table {
+  border: 0 !important;
+  border-radius: 0 !important;
 }
 
 body.sakai-theme :is(.p-inputtext, .p-inputtextarea, .form-input, .form-select, .form-textarea) {
@@ -188,6 +421,51 @@ body.sakai-theme .vtur-app-field .vtur-app-field-validation-error,
 body.sakai-theme .p-error {
   color: #e24c4c;
   font-weight: 500;
+}
+
+body.sakai-theme .vtur-app-field-control {
+  position: relative;
+}
+
+body.sakai-theme .vtur-app-field-control.is-date::after {
+  content: "";
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+  background-image: var(--date-input-icon);
+  background-repeat: no-repeat;
+  background-size: 18px 18px;
+}
+
+body.sakai-theme .vtur-app-field-control.is-date :is(input[type="date"], .p-inputtext[type="date"]) {
+  padding-right: 42px !important;
+}
+
+body.sakai-theme .form-input[type="date"] {
+  background-image: var(--date-input-icon) !important;
+  background-repeat: no-repeat !important;
+  background-position: right 14px center !important;
+  background-size: 18px 18px !important;
+  padding-right: 42px !important;
+}
+
+body.sakai-theme input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0 !important;
+  cursor: pointer;
+}
+
+/* Use only the native browser calendar icon for specific fields (avoid duplicated icon). */
+body.sakai-theme .form-input[type="date"].vtur-date-native {
+  background-image: none !important;
+  padding-right: 12px !important;
+}
+
+body.sakai-theme .form-input[type="date"].vtur-date-native::-webkit-calendar-picker-indicator {
+  opacity: 1 !important;
 }
 
 body.sakai-theme .vtur-app-button {
@@ -634,8 +912,13 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
 }
 
 .auth-container {
-  max-width: 440px;
-  padding: 1rem;
+  max-width: 30rem;
+  padding: 0.9rem;
+}
+
+.auth-container.auth-container-wide {
+  max-width: 30rem;
+  padding: 0.95rem;
 }
 
 .auth-card {
@@ -643,6 +926,18 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
   background: #ffffff;
+}
+
+.auth-container.auth-container-wide .auth-card.auth-card-lg {
+  width: min(100%, 24rem);
+  max-width: 24rem;
+  padding: 1rem 1.2rem;
+}
+
+.auth-container .auth-card.auth-card-reset {
+  width: min(100%, 24rem);
+  max-width: 24rem;
+  padding: 1rem 1.2rem;
 }
 
 .auth-card::before {
@@ -658,6 +953,54 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
   border-radius: 8px;
 }
 
+@media (min-width: 721px) {
+  body.auth-body .auth-container {
+    max-width: 30rem !important;
+  }
+
+  body.auth-body .auth-container.auth-container-wide {
+    width: 100%;
+    max-width: 30rem !important;
+  }
+
+  body.auth-body .auth-container .auth-card.auth-card-login,
+  body.auth-body .auth-container .auth-card.auth-card-recover,
+  body.auth-body .auth-container .auth-card.auth-card-register,
+  body.auth-body .auth-container .auth-card.auth-card-reset {
+    width: min(90vw, 24rem) !important;
+    max-width: 24rem !important;
+    padding: 1rem 1.2rem !important;
+  }
+
+  body.auth-body .auth-container.auth-container-wide .auth-card.auth-card-login,
+  body.auth-body .auth-container.auth-container-wide .auth-card.auth-card-recover,
+  body.auth-body .auth-container.auth-container-wide .auth-card.auth-card-register,
+  body.auth-body .auth-container.auth-container-wide .auth-card.auth-card-reset {
+    width: min(90vw, 24rem) !important;
+    max-width: 24rem !important;
+    padding: 1rem 1.2rem !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .auth-container.auth-container-wide {
+    max-width: 100%;
+    padding: 1rem;
+  }
+
+  .auth-container.auth-container-wide .auth-card.auth-card-lg {
+    width: 100%;
+    max-width: 100%;
+    padding: 1.15rem;
+  }
+
+  .auth-container .auth-card.auth-card-reset {
+    width: 100%;
+    max-width: 100%;
+    padding: 1.15rem;
+  }
+}
+
 @media (max-width: 1024px) {
   body.sakai-theme .app-shell {
     display: block !important;
@@ -669,6 +1012,8 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
     position: fixed;
     top: 0;
     max-height: 100vh;
+    border-radius: 0;
+    border-inline: 0;
   }
 
   body.sakai-theme .app-topbar {
@@ -679,15 +1024,112 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
     margin-left: 0 !important;
     padding: calc(5.4rem + env(safe-area-inset-top)) 1rem calc(1.2rem + env(safe-area-inset-bottom));
   }
+
+  body.sakai-theme .sidebar-mobile-trigger {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-color: #1e293b;
+    box-shadow: 0 8px 18px rgba(2, 6, 23, 0.28);
+  }
+
+  body.sakai-theme .mobile-bottom-nav {
+    background: rgba(15, 23, 42, 0.96);
+    border-top: 1px solid #1e293b;
+    backdrop-filter: none;
+  }
+
+  body.sakai-theme .mobile-bottom-nav-item {
+    color: #e2e8f0;
+  }
+
+  body.sakai-theme .mobile-bottom-nav-item.active {
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.12);
+  }
 }
 
 @media (min-width: 1025px) {
+  body.sakai-theme .sidebar-desktop-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin: 0 0 0.55rem;
+    border-radius: 10px;
+    color: #cbd5e1;
+  }
+
+  body.sakai-theme .sidebar-desktop-toggle:hover {
+    color: #f8fafc;
+    background: rgba(148, 163, 184, 0.14);
+  }
+
+  body.sakai-theme .sidebar-desktop-toggle .sidebar-desktop-toggle-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.1rem;
+  }
+
   body.sakai-theme .app-sidebar .sidebar-logo {
     display: none !important;
   }
 
   body.sakai-theme .app-sidebar .sidebar-section-title:first-of-type {
     margin-top: 0.35rem;
+  }
+
+  body.sakai-theme.sidebar-collapsed .app-sidebar {
+    width: 88px;
+    padding-inline: 0.5rem;
+  }
+
+  body.sakai-theme.sidebar-collapsed .app-main {
+    margin-left: calc(1rem + 88px + 1rem) !important;
+  }
+
+  body.sakai-theme.sidebar-collapsed .sidebar-desktop-toggle {
+    justify-content: center;
+    padding-inline: 0.45rem;
+  }
+
+  body.sakai-theme.sidebar-collapsed .sidebar-desktop-toggle .sidebar-desktop-toggle-label {
+    display: none;
+  }
+
+  body.sakai-theme.sidebar-collapsed .app-sidebar .sidebar-section-title,
+  body.sakai-theme.sidebar-collapsed .app-sidebar .vtur-sidebar-action-note {
+    display: none;
+  }
+
+  body.sakai-theme.sidebar-collapsed .app-sidebar .vtur-sidebar-nav {
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  body.sakai-theme.sidebar-collapsed .app-sidebar .vtur-sidebar-nav .vtur-sidebar-nav-item {
+    width: 48px;
+    min-width: 48px;
+    padding-inline: 0;
+    justify-content: center;
+  }
+
+  body.sakai-theme.sidebar-collapsed .app-sidebar .vtur-sidebar-nav .vtur-sidebar-nav-item .sidebar-item-label {
+    display: none;
+  }
+
+  body.sakai-theme.sidebar-collapsed .app-sidebar .vtur-sidebar-action-group .vtur-app-button {
+    justify-content: center;
+    min-width: 0;
+    padding-inline: 0.55rem;
+  }
+
+  body.sakai-theme.sidebar-collapsed .app-sidebar .vtur-sidebar-action-group .vtur-app-button .p-button-label {
+    display: none;
+  }
+
+  body.sakai-theme.sidebar-collapsed .app-sidebar .vtur-sidebar-action-group .vtur-app-button .p-button-icon {
+    margin-right: 0;
   }
 }
 
@@ -716,6 +1158,18 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
     max-width: calc(100% + 2.5rem) !important;
     margin-left: -1.25rem !important;
     margin-right: -1.25rem !important;
+  }
+
+  body.sakai-theme .vtur-app-card.vtur-app-card-has-table .vtur-app-card-body .table-container,
+  body.sakai-theme .vtur-app-card.vtur-app-card-has-table .vtur-app-card-body > table.table-mobile-cards,
+  body.sakai-theme .vtur-app-card.vtur-app-card-has-table .vtur-app-card-body > table.table-mobile-grid,
+  body.sakai-theme .vtur-app-card.vtur-app-card-has-datatable .vtur-app-card-body .table-container,
+  body.sakai-theme .vtur-app-card.vtur-app-card-has-datatable .vtur-app-card-body > table.table-mobile-cards,
+  body.sakai-theme .vtur-app-card.vtur-app-card-has-datatable .vtur-app-card-body > table.table-mobile-grid {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
   }
 
   body.sakai-theme .table-mobile-cards,
@@ -777,7 +1231,38 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
     text-align: center !important;
   }
 
-  body.sakai-theme .table-mobile-cards td.th-actions :is(.action-buttons, .vtur-table-actions, .action-buttons-quote, .action-buttons-center, .viagens-action-buttons) {
+  body.sakai-theme .table-mobile-cards td.th-actions::before {
+    display: none !important;
+  }
+
+  body.sakai-theme .table-mobile-cards td.th-actions {
+    grid-template-columns: 1fr !important;
+    justify-items: stretch !important;
+    align-items: stretch !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  body.sakai-theme .table-mobile-cards td.th-actions > :is(.action-buttons, .vtur-table-actions, .action-buttons-quote, .action-buttons-center, .viagens-action-buttons) {
+    width: 100% !important;
+    min-height: 4rem;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    overflow-x: visible !important;
+    gap: 0.5rem !important;
+    padding: 0.85rem 1rem !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+  }
+
+  body.sakai-theme .table-mobile-cards td.th-actions > .action-buttons > .vtur-table-actions,
+  body.sakai-theme .table-mobile-cards td.th-actions > .vtur-table-actions > .vtur-table-actions {
+    display: contents !important;
+  }
+
+  body.sakai-theme .table-mobile-cards td.th-actions > :is(.action-buttons, .vtur-table-actions, .action-buttons-quote, .action-buttons-center, .viagens-action-buttons) > :is(.action-buttons, .vtur-table-actions, .action-buttons-quote, .action-buttons-center, .viagens-action-buttons) {
     width: auto !important;
     justify-content: center !important;
     flex-wrap: wrap !important;
