@@ -30,7 +30,7 @@ preview_id = "60fa423718914712bec4f489d41c3dd6"
 # Production environment
 # =========================
 [env.production]
-name = "vtur-prod"
+name = "vtur-app"
 routes = [
   { pattern = "vtur.app/*", zone_name = "vtur.app" },
   { pattern = "www.vtur.app/*", zone_name = "vtur.app" }
