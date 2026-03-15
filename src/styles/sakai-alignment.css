@@ -110,8 +110,17 @@ body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item {
   padding: 0.75rem 1rem;
 }
 
+body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item [data-component="ActionList.LeadingVisual"] .pi {
+  color: rgba(226, 232, 240, 0.9);
+  transition: color 0.2s ease;
+}
+
 body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:hover {
   background: rgba(148, 163, 184, 0.2);
+  color: #f8fafc;
+}
+
+body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:hover [data-component="ActionList.LeadingVisual"] .pi {
   color: #f8fafc;
 }
 
@@ -121,6 +130,10 @@ body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item[aria-current="page"] {
   font-weight: 400;
   box-shadow: none;
   border-color: transparent !important;
+}
+
+body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item[aria-current="page"] [data-component="ActionList.LeadingVisual"] .pi {
+  color: #2563eb;
 }
 
 body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:focus-visible {
@@ -942,6 +955,23 @@ body.sakai-theme td.th-actions :is(button, .vtur-app-button, .p-button) {
 body.sakai-theme td.th-actions :is(button, .vtur-app-button, .p-button) :is(i, svg, .pi, [aria-hidden="true"]) {
   font-size: 1rem !important;
   line-height: 1 !important;
+}
+
+body.sakai-theme td.th-actions :is(.pi, i) {
+  color: #334155;
+}
+
+/* Ícones Prime (tabelas): padrão SGTUR por intenção de ação */
+body.sakai-theme td.th-actions :is(.pi-pencil, .pi-file-edit, .pi-eye, .pi-search, .pi-info-circle) {
+  color: #2563eb !important;
+}
+
+body.sakai-theme td.th-actions :is(.pi-whatsapp, .pi-comment, .pi-comments) {
+  color: #16a34a !important;
+}
+
+body.sakai-theme td.th-actions :is(.pi-trash, .pi-times, .pi-times-circle) {
+  color: #dc2626 !important;
 }
 
 body.sakai-theme td.th-actions .sr-only {
