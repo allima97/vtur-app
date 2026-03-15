@@ -2112,11 +2112,13 @@ export default function ClientesIsland() {
                 onChange={(e) => handleChange("cpf", formatDocumento(e.target.value, form.tipo_pessoa || "PF"))}
                 required
               />
-              <AppField
-                label={form.tipo_pessoa === "PJ" ? "Inscricao Estadual" : "RG"}
-                value={form.rg || ""}
-                onChange={(e) => handleChange("rg", e.target.value)}
-              />
+              {form.tipo_pessoa === "PJ" && (
+                <AppField
+                  label="Inscricao Estadual"
+                  value={form.rg || ""}
+                  onChange={(e) => handleChange("rg", e.target.value)}
+                />
+              )}
               <AppField
                 type="date"
                 label={form.tipo_pessoa === "PJ" ? "Data de Fundacao" : "Nascimento"}

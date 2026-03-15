@@ -61,5 +61,5 @@ const bootstrapThemeScript = `(function(){try{var storageKey=${JSON.stringify(PR
 <link rel="icon" type="image/png" sizes="192x192" href={BRAND_ICON_PATH} />
 <link rel="apple-touch-icon" href={APPLE_TOUCH_ICON_PATH} />
 <link id={PRIME_THEME_LINK_ID} rel="stylesheet" href={defaultPrimeThemeHref} />
-<script is:inline>{bootstrapThemeScript}</script>
+<script is:inline set:html={bootstrapThemeScript}></script>
 {noindex && <meta name="robots" content="noindex, nofollow" />}
