@@ -3532,6 +3532,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 .modal-backdrop.modal-venda {
   z-index: 1200;
+  align-items: flex-start;
+  padding: 24px 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .modal-backdrop.modal-recibo {
   z-index: 1210;
@@ -3581,6 +3585,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   gap: 8px;
 }
 
+.vtur-venda-modal-panel {
+  max-height: min(88vh, calc(100vh - 48px));
+}
+
+.vtur-venda-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding-bottom: 18px;
+}
+
 .vtur-legacy-module {
   display: flex;
   flex-direction: column;
@@ -3627,6 +3643,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 @media (max-width: 640px) {
+  .modal-backdrop.modal-venda {
+    padding: 0;
+  }
+
   .modal-panel {
     width: 100vw;
     height: 100svh;

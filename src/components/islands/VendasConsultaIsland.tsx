@@ -1714,7 +1714,10 @@ export default function VendasConsultaIsland() {
       ================================= */}
         {modalVenda && (
         <div className="modal-backdrop modal-venda">
-          <div className="modal-panel vtur-modal-panel-shell" style={{ maxWidth: "min(1100px, 95vw)" }}>
+          <div
+            className="modal-panel vtur-modal-panel-shell vtur-venda-modal-panel"
+            style={{ maxWidth: "min(1100px, 95vw)" }}
+          >
             <div className="modal-header vtur-modal-header">
               <div>
                 <div
@@ -1729,7 +1732,7 @@ export default function VendasConsultaIsland() {
               </AppButton>
             </div>
 
-            <div className="modal-body vtur-modal-body-stack" style={{ overflowX: "auto" }}>
+            <div className="modal-body vtur-modal-body-stack vtur-venda-modal-body">
               <AppCard
                 className="mb-3 vtur-modal-section-card"
                 tone="info"
