@@ -27,7 +27,8 @@
   @apply bg-blue-bg border border-blue-border;
 }
 .card-purple {
-  @apply bg-[#f3e8ff] border border-[#c084fc];
+  /* Compat legado: classe "purple" mapeada para a paleta azul SGVTUR */
+  @apply bg-blue-bg border border-blue-border;
 }
 .card-green {
   @apply bg-green-bg border border-green-border;

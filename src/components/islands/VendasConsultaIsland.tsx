@@ -1956,7 +1956,7 @@ export default function VendasConsultaIsland() {
                 <AppCard
                   className="vtur-modal-section-card"
                   title="Mesclar vendas"
-                  subtitle="Selecione vendas do mesmo cliente e vendedor para unir recibos e deduplicar pagamentos repetidos."
+                  subtitle="Selecione vendas do mesmo cliente para unir recibos e deduplicar pagamentos repetidos."
                   actions={
                     <AppButton
                       type="button"

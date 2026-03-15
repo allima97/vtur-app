@@ -730,7 +730,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
       {!erro && viagem && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {clienteNome && (
-            <div className="vtur-surface-panel card-purple sm:hidden" style={{ padding: 12 }}>
+            <div className="vtur-surface-panel card-blue sm:hidden" style={{ padding: 12 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 <div
                   style={{

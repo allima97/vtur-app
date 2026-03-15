@@ -12,10 +12,6 @@ import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 import AppToolbar from "../ui/primer/AppToolbar";
-import {
-  PRIME_THEME_OPTIONS,
-} from "../../lib/primeTheme";
-import { usePrimeTheme } from "../../lib/usePrimeTheme";
 
 type Cidade = { id: string; nome: string };
 type TipoProduto = { id: string; nome: string; tipo?: string | null };
@@ -123,11 +119,6 @@ export default function MinhasPreferenciasIsland() {
   const [sharing, setSharing] = useState(false);
 
   const [revokingShareId, setRevokingShareId] = useState<string | null>(null);
-  const {
-    themeName: temaVisual,
-    isApplying: aplicandoTemaVisual,
-    applyTheme: applyPrimeTheme,
-  } = usePrimeTheme();
 
   const sharePrefItem = useMemo(() => {
     if (!sharePrefId) return null;
@@ -424,19 +415,6 @@ export default function MinhasPreferenciasIsland() {
     }
   }
 
-  async function atualizarTemaVisual(nextThemeName: string) {
-    if (String(nextThemeName || "").trim().toLowerCase() === String(temaVisual).trim().toLowerCase()) {
-      return;
-    }
-    try {
-      await applyPrimeTheme(nextThemeName);
-      showToast("Tema visual atualizado.", "success");
-    } catch (error) {
-      console.error("Erro ao atualizar tema visual:", error);
-      showToast("Erro ao atualizar tema visual.", "error");
-    }
-  }
-
   if (loadPerm) {
     return (
       <AppPrimerProvider>
@@ -485,25 +463,6 @@ export default function MinhasPreferenciasIsland() {
             />
           </div>
         </AppToolbar>
-      )}
-
-      {!mostrarFormulario && (
-        <AppCard
-          className="mb-3"
-          title="Tema visual"
-          subtitle="A alteração é aplicada imediatamente e salva neste navegador."
-        >
-          <div className="vtur-form-grid vtur-form-grid-2">
-            <AppField
-              as="select"
-              label="Tema"
-              value={temaVisual}
-              disabled={aplicandoTemaVisual}
-              onChange={(event) => void atualizarTemaVisual(event.target.value)}
-              options={PRIME_THEME_OPTIONS.map((option) => ({ label: option.label, value: option.name }))}
-            />
-          </div>
-        </AppCard>
       )}
 
       {mostrarFormulario && (

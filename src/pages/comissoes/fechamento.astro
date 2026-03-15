@@ -1,11 +1,16 @@
 ---
 import Layout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
 import FechamentoComissaoIsland from "../../components/islands/FechamentoComissaoIsland.tsx";
 
 const pageTitle = "Fechamento de Comissão";
 ---
 
 <Layout title={pageTitle} module="Metas">
-  <h1 class="page-title">{pageTitle}</h1>
+  <HeaderPage
+    title={pageTitle}
+    subtitle="Consolide metas, base e comissão aplicada por período."
+    color="green"
+  />
   <FechamentoComissaoIsland client:load />
 </Layout>

@@ -1,14 +1,16 @@
 ---
 import Layout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
 import DocumentationPortalIsland from "../../components/islands/DocumentationPortalIsland.tsx";
 
 const pageTitle = "Documentação do Sistema";
 ---
 
 <Layout title={pageTitle} module="Admin" activePage="documentacao">
-  <div class="vtur-app-card vtur-app-card-info mb-3 list-toolbar-sticky">
-    <h1 class="page-title">{pageTitle}</h1>
-    <p class="page-subtitle">Guias e instruções para uso do sistema.</p>
-  </div>
+  <HeaderPage
+    title={pageTitle}
+    subtitle="Guias e instruções para uso do sistema."
+    color="blue"
+  />
   <DocumentationPortalIsland client:only="react" />
 </Layout>

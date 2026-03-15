@@ -910,10 +910,10 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--vtur-primer-accent, #8e28e2) 0%, var(--vtur-primer-accent-strong, #7c1fd4) 100%);
+  background: linear-gradient(135deg, var(--vtur-primer-accent, #2563eb) 0%, var(--vtur-primer-accent-strong, #1d4ed8) 100%);
   color: white;
   padding: 10px 16px;
-  box-shadow: 0 12px 24px rgba(124, 31, 212, 0.18);
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.18);
 }
 
 .btn-secondary {
@@ -3400,25 +3400,26 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   flex-wrap: wrap;
 }
 
+/* Compat legado: tokens/classes "purple" apontam para a paleta azul SGVTUR */
 :root {
-  --color-purple-bg: #eff6ff;
-  --color-purple-border: #bfdbfe;
-  --color-purple-title: #1d4ed8;
+  --color-purple-bg: var(--color-blue-bg);
+  --color-purple-border: var(--color-blue-border);
+  --color-purple-title: var(--color-blue-title);
 }
 
-/* Header purple */
+/* Header purple (alias azul) */
 .purple-header h1 { color: var(--color-purple-title); }
 
-/* Purple card */
+/* Purple card (alias azul) */
 .card-purple {
   background: var(--color-purple-bg);
   border: 1px solid var(--color-purple-border);
 }
 
-/* Purple table header */
+/* Purple table header (alias azul) */
 .table-header-purple thead th { color: var(--color-purple-title); }
 
-/* Optional purple button */
+/* Optional purple button (alias azul) */
 .btn-purple {
   background: #2563eb;
   color: white;

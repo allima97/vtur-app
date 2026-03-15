@@ -1,8 +1,20 @@
 :root {
-  --vtur-primer-accent: #8e28e2;
-  --vtur-primer-accent-strong: #5630ff;
+  --vtur-primer-accent: #2563eb;
+  --vtur-primer-accent-strong: #1d4ed8;
   --vtur-primer-ink: #09112e;
   --vtur-primer-muted: #52607a;
+  --vtur-section-blue-bg: #ebf8ff;
+  --vtur-section-blue-border: #bfdbfe;
+  --vtur-section-blue-title: #1d4ed8;
+  --vtur-section-teal-bg: #f0fdfa;
+  --vtur-section-teal-border: #99f6e4;
+  --vtur-section-teal-title: #0f766e;
+  --vtur-section-green-bg: #ecfdf3;
+  --vtur-section-green-border: #bbf7d0;
+  --vtur-section-green-title: #15803d;
+  --vtur-section-config-bg: #fff7ed;
+  --vtur-section-config-border: #fed7aa;
+  --vtur-section-config-title: #c2410c;
   --vtur-primer-surface: #ffffff;
   --vtur-primer-surface-alt: #f4f1eb;
   --vtur-primer-border: rgba(9, 17, 46, 0.14);
@@ -38,19 +50,19 @@
 }
 
 .vtur-page-header-blue :is(h1, [data-component="PH_Title"], .vtur-app-toolbar-title) {
-  color: #0a0d26;
+  color: var(--vtur-section-blue-title);
 }
 
 .vtur-page-header-teal :is(h1, [data-component="PH_Title"], .vtur-app-toolbar-title) {
-  color: #0f766e;
+  color: var(--vtur-section-teal-title);
 }
 
 .vtur-page-header-green :is(h1, [data-component="PH_Title"], .vtur-app-toolbar-title) {
-  color: #5630ff;
+  color: var(--vtur-section-green-title);
 }
 
 .vtur-page-header-config :is(h1, [data-component="PH_Title"], .vtur-app-toolbar-title) {
-  color: #8e28e2;
+  color: var(--vtur-section-config-title);
 }
 
 .vtur-page-header :is([data-component="PH_Title"], .vtur-app-toolbar-title) {
@@ -82,11 +94,13 @@
 }
 
 .vtur-app-card-info {
-  border-color: rgba(59, 130, 246, 0.22);
+  border-color: var(--vtur-section-blue-border);
+  background: linear-gradient(180deg, var(--vtur-section-blue-bg), #fff);
 }
 
 .vtur-app-card-config {
-  border-color: rgba(142, 40, 226, 0.22);
+  border-color: var(--vtur-section-config-border);
+  background: linear-gradient(180deg, var(--vtur-section-config-bg), #fff);
 }
 
 .vtur-app-card-header {
@@ -132,12 +146,13 @@
 }
 
 .vtur-app-toolbar-info {
-  border-color: rgba(59, 130, 246, 0.24);
+  border-color: var(--vtur-section-blue-border);
+  background: linear-gradient(180deg, var(--vtur-section-blue-bg), #fff);
 }
 
 .vtur-app-toolbar-config {
-  border-color: rgba(142, 40, 226, 0.24);
-  background: linear-gradient(180deg, rgba(250, 245, 255, 0.95), rgba(255, 255, 255, 0.98));
+  border-color: var(--vtur-section-config-border);
+  background: linear-gradient(180deg, var(--vtur-section-config-bg), #fff);
 }
 
 .vtur-app-toolbar-sticky {

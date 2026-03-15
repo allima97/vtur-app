@@ -18,10 +18,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppToolbar from "../ui/primer/AppToolbar";
-import {
-  PRIME_THEME_OPTIONS,
-} from "../../lib/primeTheme";
-import { usePrimeTheme } from "../../lib/usePrimeTheme";
 
 type MenuItem = {
   key: string;
@@ -58,11 +54,6 @@ function sectionTitle(section: string) {
 export default function PersonalizarMenuIsland() {
   const { ready, userId, userType, canDb, isSystemAdmin } = usePermissoesStore();
   const [prefs, setPrefs] = useState<MenuPrefsV1>(() => readMenuPrefs(null));
-  const {
-    themeName: temaVisual,
-    isApplying: aplicandoTemaVisual,
-    applyTheme: applyPrimeTheme,
-  } = usePrimeTheme();
 
   const menuUserType = String(userType || "");
   const menuIsMaster = /MASTER/i.test(menuUserType);
@@ -291,17 +282,6 @@ export default function PersonalizarMenuIsland() {
     applyPrefs(next);
   };
 
-  const onChangeTheme = async (nextThemeName: string) => {
-    if (String(nextThemeName || "").trim().toLowerCase() === String(temaVisual).trim().toLowerCase()) {
-      return;
-    }
-    try {
-      await applyPrimeTheme(nextThemeName);
-    } catch (error) {
-      console.error("Erro ao trocar tema em Personalizar menu:", error);
-    }
-  };
-
   if (!ready) {
     return <AppCard tone="config">Carregando permissoes...</AppCard>;
   }
@@ -319,18 +299,6 @@ export default function PersonalizarMenuIsland() {
         title="Personalizar menu"
         subtitle="Escolha itens visiveis e ajuste a ordem automaticamente."
       />
-      <AppCard tone="config" className="mb-3" title="Tema visual" subtitle="Alteracao imediata neste navegador.">
-        <div className="personalizar-menu-theme-grid">
-          <AppField
-            as="select"
-            label="Tema"
-            value={temaVisual}
-            disabled={aplicandoTemaVisual}
-            onChange={(event) => void onChangeTheme(event.target.value)}
-            options={PRIME_THEME_OPTIONS.map((option) => ({ value: option.name, label: option.label }))}
-          />
-        </div>
-      </AppCard>
       <AppCard tone="config">
         {grouped.length === 0 ? (
           <EmptyState title="Nenhum item disponivel" description="Nao ha itens para personalizar no seu perfil." />

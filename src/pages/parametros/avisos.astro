@@ -1,13 +1,17 @@
 ---
 import "../../styles/global.css";
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
 import ParametrosAvisosIsland from "../../components/islands/ParametrosAvisosIsland";
 
 const activePage = "parametros-avisos";
 ---
 
 <DashboardLayout title="Parâmetros • Avisos" {activePage} module="ParametrosAvisos">
-  <h1 class="page-title">Parâmetros • Avisos</h1>
-  <p class="page-subtitle">Módulo oficial de relacionamento: templates, artes/temas e preview para WhatsApp e e-mail.</p>
+  <HeaderPage
+    title="Parâmetros • Avisos"
+    subtitle="Módulo oficial de relacionamento: templates, artes/temas e preview para WhatsApp e e-mail."
+    color="config"
+  />
   <ParametrosAvisosIsland client:load />
 </DashboardLayout>

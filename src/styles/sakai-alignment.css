@@ -2,8 +2,20 @@ body.sakai-theme {
   --sgvtur-bg: #f4f1eb;
   --sgvtur-ink: #09112e;
   --sgvtur-muted: #52607a;
-  --sgvtur-accent: #8e28e2;
-  --sgvtur-accent-strong: #5630ff;
+  --sgvtur-section-blue-bg: #ebf8ff;
+  --sgvtur-section-blue-border: #bfdbfe;
+  --sgvtur-section-blue-title: #1d4ed8;
+  --sgvtur-section-teal-bg: #f0fdfa;
+  --sgvtur-section-teal-border: #99f6e4;
+  --sgvtur-section-teal-title: #0f766e;
+  --sgvtur-section-green-bg: #ecfdf3;
+  --sgvtur-section-green-border: #bbf7d0;
+  --sgvtur-section-green-title: #15803d;
+  --sgvtur-section-config-bg: #fff7ed;
+  --sgvtur-section-config-border: #fed7aa;
+  --sgvtur-section-config-title: #c2410c;
+  --sgvtur-accent: #2563eb;
+  --sgvtur-accent-strong: #1d4ed8;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.95)),
     radial-gradient(circle at 12% 12%, rgba(142, 40, 226, 0.1), transparent 30%),
@@ -206,7 +218,7 @@ body.sakai-theme .vtur-app-card {
 body.sakai-theme .vtur-app-card .vtur-app-card-header {
   margin: 0;
   padding: 1rem 1.25rem;
-  background: linear-gradient(180deg, rgba(142, 40, 226, 0.08), rgba(255, 255, 255, 0.96));
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.1), rgba(255, 255, 255, 0.96));
   border-bottom: 1px solid rgba(9, 17, 46, 0.1);
 }
 
@@ -243,19 +255,19 @@ body.sakai-theme .vtur-page-header .vtur-app-toolbar-subtitle {
 }
 
 body.sakai-theme .vtur-page-header-blue .vtur-app-toolbar-title {
-  color: #0a0d26;
+  color: var(--sgvtur-section-blue-title);
 }
 
 body.sakai-theme .vtur-page-header-teal .vtur-app-toolbar-title {
-  color: #0f766e;
+  color: var(--sgvtur-section-teal-title);
 }
 
 body.sakai-theme .vtur-page-header-green .vtur-app-toolbar-title {
-  color: #5630ff;
+  color: var(--sgvtur-section-green-title);
 }
 
 body.sakai-theme .vtur-page-header-config .vtur-app-toolbar-title {
-  color: #8e28e2;
+  color: var(--sgvtur-section-config-title);
 }
 
 body.sakai-theme .page-header h1 {
@@ -269,19 +281,69 @@ body.sakai-theme .page-header p {
 }
 
 body.sakai-theme .blue-header h1 {
-  color: #0a0d26;
+  color: var(--sgvtur-section-blue-title);
 }
 
 body.sakai-theme .teal-header h1 {
-  color: #0f766e;
+  color: var(--sgvtur-section-teal-title);
 }
 
 body.sakai-theme .green-header h1 {
-  color: #5630ff;
+  color: var(--sgvtur-section-green-title);
 }
 
 body.sakai-theme .config-header h1 {
-  color: #8e28e2;
+  color: var(--sgvtur-section-config-title);
+}
+
+body.sakai-theme :is(.card-blue, .table-wrapper.card-blue) {
+  background: var(--sgvtur-section-blue-bg);
+  border-color: var(--sgvtur-section-blue-border);
+}
+
+body.sakai-theme :is(.card-teal, .table-wrapper.card-teal) {
+  background: var(--sgvtur-section-teal-bg);
+  border-color: var(--sgvtur-section-teal-border);
+}
+
+body.sakai-theme :is(.card-green, .table-wrapper.card-green) {
+  background: var(--sgvtur-section-green-bg);
+  border-color: var(--sgvtur-section-green-border);
+}
+
+body.sakai-theme :is(.card-config, .table-wrapper.card-config) {
+  background: var(--sgvtur-section-config-bg);
+  border-color: var(--sgvtur-section-config-border);
+}
+
+body.sakai-theme .vtur-app-card.vtur-app-card-info {
+  border-color: var(--sgvtur-section-blue-border);
+  background: linear-gradient(180deg, var(--sgvtur-section-blue-bg), #fff);
+}
+
+body.sakai-theme .vtur-app-card.vtur-app-card-info .vtur-app-card-header {
+  background: linear-gradient(180deg, rgba(191, 219, 254, 0.5), rgba(255, 255, 255, 0.96));
+  border-bottom-color: var(--sgvtur-section-blue-border);
+}
+
+body.sakai-theme .vtur-app-card.vtur-app-card-config {
+  border-color: var(--sgvtur-section-config-border);
+  background: linear-gradient(180deg, var(--sgvtur-section-config-bg), #fff);
+}
+
+body.sakai-theme .vtur-app-card.vtur-app-card-config .vtur-app-card-header {
+  background: linear-gradient(180deg, rgba(254, 215, 170, 0.45), rgba(255, 255, 255, 0.96));
+  border-bottom-color: var(--sgvtur-section-config-border);
+}
+
+body.sakai-theme .vtur-app-toolbar.vtur-app-toolbar-info {
+  border-color: var(--sgvtur-section-blue-border);
+  background: linear-gradient(180deg, var(--sgvtur-section-blue-bg), #fff);
+}
+
+body.sakai-theme .vtur-app-toolbar.vtur-app-toolbar-config {
+  border-color: var(--sgvtur-section-config-border);
+  background: linear-gradient(180deg, var(--sgvtur-section-config-bg), #fff);
 }
 
 body.sakai-theme .vtur-app-card .vtur-app-card-body {
@@ -360,7 +422,7 @@ body.sakai-theme .vtur-card-table-split > .page-title {
   padding: 1rem 1.25rem;
   border: 1px solid rgba(9, 17, 46, 0.12);
   border-radius: 14px;
-  background: linear-gradient(180deg, rgba(142, 40, 226, 0.08), rgba(255, 255, 255, 0.96));
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.1), rgba(255, 255, 255, 0.96));
   box-shadow: 0 14px 34px rgba(9, 17, 46, 0.06);
 }
 

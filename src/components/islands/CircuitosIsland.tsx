@@ -1170,7 +1170,7 @@ export default function CircuitosIsland() {
       <div className="circuitos-page">
         <AppToolbar
           sticky
-          tone="config"
+          tone="info"
           className="mb-3 list-toolbar-sticky"
           title={mostrarFormulario ? (editandoId ? "Editar circuito" : "Novo circuito") : "Consulta de circuitos"}
           subtitle={
