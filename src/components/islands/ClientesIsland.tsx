@@ -1983,7 +1983,7 @@ export default function ClientesIsland() {
       {!modoVisualizacao && podeCriar && (mostrarFormAcomp || acompEditId) && (
         <AppCard
           title={acompEditId ? "Editar acompanhante" : "Novo acompanhante"}
-          tone="config"
+          tone="info"
           style={{ marginTop: 16 }}
         >
           <div className="vtur-form-grid vtur-form-grid-4">
@@ -2052,7 +2052,7 @@ export default function ClientesIsland() {
             </AppButton>
             <AppButton
               type="button"
-              variant="ghost"
+              variant="secondary"
               onClick={() => resetAcompForm(true)}
               disabled={acompSalvando}
             >
@@ -2082,14 +2082,14 @@ export default function ClientesIsland() {
               <div className="vtur-form-actions" style={{ marginTop: 0 }}>
                 <AppButton
                   type="button"
-                  variant={abaFormCliente === "dados" ? "primary" : "ghost"}
+                  variant={abaFormCliente === "dados" ? "primary" : "secondary"}
                   onClick={() => setAbaFormCliente("dados")}
                 >
                   Dados do cliente
                 </AppButton>
                 <AppButton
                   type="button"
-                  variant={abaFormCliente === "acompanhantes" ? "primary" : "ghost"}
+                  variant={abaFormCliente === "acompanhantes" ? "primary" : "secondary"}
                   onClick={() => setAbaFormCliente("acompanhantes")}
                 >
                   Acompanhantes
@@ -2295,7 +2295,7 @@ export default function ClientesIsland() {
                   <AppButton
                     key="btn-view-fechar"
                     type="button"
-                    variant="ghost"
+                    variant="secondary"
                     onClick={fecharFormularioCliente}
                   >
                     Fechar
@@ -2314,7 +2314,7 @@ export default function ClientesIsland() {
                   <AppButton
                     key="btn-edit-cancelar"
                     type="button"
-                    variant="ghost"
+                    variant="secondary"
                     onClick={fecharFormularioCliente}
                     disabled={salvando}
                   >
