@@ -146,6 +146,19 @@ const initialForm = {
   active: true,
 };
 
+function validarCamposObrigatoriosCliente(form: typeof initialForm) {
+  if (!String(form.nome || "").trim()) return "Informe o nome completo do cliente.";
+  if (!String(form.cpf || "").trim()) {
+    return form.tipo_pessoa === "PJ"
+      ? "Informe o CNPJ do cliente."
+      : "Informe o CPF do cliente.";
+  }
+  const telefoneDigits = onlyDigits(form.telefone || "");
+  if (!telefoneDigits) return "Informe o telefone do cliente.";
+  if (telefoneDigits.length < 10) return "Telefone inválido. Informe DDD e número.";
+  return null;
+}
+
 export default function ClientesIsland() {
   // =====================================
   // PERMISSÕES
@@ -624,6 +637,7 @@ export default function ClientesIsland() {
     if (!podeCriar) return;
     setEditId(null);
     setForm(initialForm);
+    setErro(null);
     setAcompanhantes([]);
     setAcompErro(null);
     setAcompEditId(null);
@@ -634,6 +648,7 @@ export default function ClientesIsland() {
   }
 
   function fecharFormularioCliente() {
+    setErro(null);
     setMostrarFormCliente(false);
     setModoVisualizacao(false);
     setForm(initialForm);
@@ -1385,6 +1400,7 @@ export default function ClientesIsland() {
 
     const tipoPessoa = c.tipo_pessoa || ((c.cpf || "").replace(/\D/g, "").length > 11 ? "PJ" : "PF");
     setEditId(c.id);
+    setErro(null);
     setForm({
       nome: c.nome,
       nascimento: c.nascimento || "",
@@ -1462,6 +1478,13 @@ export default function ClientesIsland() {
       setSalvando(true);
       setErro(null);
       setMsg(null);
+
+      const erroCamposObrigatorios = validarCamposObrigatoriosCliente(form);
+      if (erroCamposObrigatorios) {
+        setErro(erroCamposObrigatorios);
+        setSalvando(false);
+        return;
+      }
 
       const tipoPessoa = form.tipo_pessoa || "PF";
       const documentoDigits = onlyDigits(form.cpf || "");
@@ -2075,6 +2098,16 @@ export default function ClientesIsland() {
             ) : undefined
           }
         >
+          {erro && (
+            <AlertMessage variant="error" className="mb-3">
+              <strong>{erro}</strong>
+            </AlertMessage>
+          )}
+          {msg && (
+            <AlertMessage variant="success" className="mb-3">
+              <strong>{msg}</strong>
+            </AlertMessage>
+          )}
           {(!editId || abaFormCliente === "dados") && (
           <form onSubmit={salvar}>
             <fieldset disabled={modoVisualizacao} style={{ border: "none", padding: 0, margin: 0 }}>
