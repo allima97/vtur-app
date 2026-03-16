@@ -9,6 +9,7 @@ import AlertMessage from "../ui/AlertMessage";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppDialog from "../ui/primer/AppDialog";
+import AppField from "../ui/primer/AppField";
 import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
@@ -757,16 +758,14 @@ function formatCnpj(value: string) {
             </div>
           <div className="perfil-grid perfil-grid-main">
             <div className="form-group">
-              <label>Nome completo</label>
-              <input
+              <AppField
+                label="Nome completo"
                 value={perfil.nome_completo}
                 onChange={(e) => atualizarCampo("nome_completo", e.target.value)}
-                onBlur={(e) =>
-                  atualizarCampo("nome_completo", titleCaseWithExceptions(e.target.value))
-                }
+                onBlur={(e) => atualizarCampo("nome_completo", titleCaseWithExceptions(e.target.value))}
                 required
                 id="perfil-nome-completo"
-                className={`form-input${camposObrigatorios.includes("nome_completo") ? " perfil-input-pendente" : ""}`}
+                className={camposObrigatorios.includes("nome_completo") ? "perfil-input-pendente" : undefined}
                 aria-invalid={camposObrigatorios.includes("nome_completo") ? "true" : undefined}
               />
               {camposObrigatorios.includes("nome_completo") && (
@@ -776,18 +775,17 @@ function formatCnpj(value: string) {
               )}
             </div>
             <div className="form-group">
-              <label>CPF</label>
-              <input
-                className={`form-input${camposObrigatorios.includes("cpf") ? " perfil-input-pendente" : ""}`}
+              <AppField
+                label="CPF"
+                className={camposObrigatorios.includes("cpf") ? "perfil-input-pendente" : undefined}
                 value={formatCpf(perfil.cpf || "")}
                 onChange={(e) => atualizarCampo("cpf", formatCpf(e.target.value))}
                 placeholder="000.000.000-00"
               />
             </div>
             <div className="form-group">
-              <label>RG</label>
-              <input
-                className="form-input"
+              <AppField
+                label="RG"
                 value={perfil.rg || ""}
                 onChange={(e) => atualizarCampo("rg", e.target.value)}
                 placeholder="Documento"
@@ -795,9 +793,8 @@ function formatCnpj(value: string) {
               />
             </div>
             <div className="form-group">
-              <label>Data Nascimento</label>
-              <input
-                className="form-input"
+              <AppField
+                label="Data Nascimento"
                 type="date"
                 value={perfil.data_nascimento || ""}
                 onFocus={selectAllInputOnFocus}
@@ -809,9 +806,9 @@ function formatCnpj(value: string) {
 
           <div className="perfil-grid perfil-grid-address">
             <div className="form-group">
-              <label>CEP</label>
-              <input
-                className={`form-input${camposObrigatorios.includes("cep") ? " perfil-input-pendente" : ""}`}
+              <AppField
+                label="CEP"
+                className={camposObrigatorios.includes("cep") ? "perfil-input-pendente" : undefined}
                 value={formatCep(perfil.cep || "")}
                 onChange={(e) => {
                   const val = formatCep(e.target.value);
@@ -831,9 +828,8 @@ function formatCnpj(value: string) {
               </small>
             </div>
             <div className="form-group">
-              <label>Endereço</label>
-              <input
-                className="form-input"
+              <AppField
+                label="Endereço"
                 value={perfil.endereco || ""}
                 onChange={(e) => atualizarCampo("endereco", e.target.value)}
                 placeholder="Rua / Avenida"
@@ -841,9 +837,8 @@ function formatCnpj(value: string) {
               />
             </div>
             <div className="form-group">
-              <label>Número</label>
-              <input
-                className="form-input"
+              <AppField
+                label="Número"
                 value={perfil.numero || ""}
                 onChange={(e) => atualizarCampo("numero", e.target.value)}
                 placeholder="Nº"
@@ -852,9 +847,8 @@ function formatCnpj(value: string) {
               />
             </div>
             <div className="form-group">
-              <label>Complemento</label>
-              <input
-                className="form-input"
+              <AppField
+                label="Complemento"
                 value={perfil.complemento || ""}
                 onChange={(e) => atualizarCampo("complemento", e.target.value)}
                 placeholder="Opcional"
@@ -865,9 +859,8 @@ function formatCnpj(value: string) {
 
           <div className="perfil-grid perfil-grid-contact">
             <div className="form-group">
-              <label>E-mail</label>
-              <input
-                className="form-input"
+              <AppField
+                label="E-mail"
                 type="email"
                 value={perfil.email}
                 onChange={(e) => {
@@ -879,9 +872,9 @@ function formatCnpj(value: string) {
               />
             </div>
             <div className="form-group">
-              <label>Telefone</label>
-              <input
-                className={`form-input${camposObrigatorios.includes("telefone") ? " perfil-input-pendente" : ""}`}
+              <AppField
+                label="Telefone"
+                className={camposObrigatorios.includes("telefone") ? "perfil-input-pendente" : undefined}
                 value={formatTelefone(perfil.telefone || "")}
                 onChange={(e) => atualizarCampo("telefone", formatTelefone(e.target.value))}
                 placeholder="(00) 00000-0000"
@@ -895,9 +888,8 @@ function formatCnpj(value: string) {
               )}
             </div>
             <div className="form-group">
-              <label>WhatsApp</label>
-              <input
-                className="form-input"
+              <AppField
+                label="WhatsApp"
                 value={formatTelefone(perfil.whatsapp || "")}
                 onChange={(e) => atualizarCampo("whatsapp", formatTelefone(e.target.value))}
                 placeholder="(00) 00000-0000"
@@ -905,9 +897,9 @@ function formatCnpj(value: string) {
               />
             </div>
             <div className="form-group">
-              <label>Cidade</label>
-              <input
-                className={`form-input${camposObrigatorios.includes("cidade") ? " perfil-input-pendente" : ""}`}
+              <AppField
+                label="Cidade"
+                className={camposObrigatorios.includes("cidade") ? "perfil-input-pendente" : undefined}
                 value={perfil.cidade || ""}
                 onChange={(e) => atualizarCampo("cidade", e.target.value)}
                 id="perfil-cidade"
@@ -920,9 +912,9 @@ function formatCnpj(value: string) {
               )}
             </div>
             <div className="form-group">
-              <label>Estado</label>
-              <input
-                className={`form-input${camposObrigatorios.includes("estado") ? " perfil-input-pendente" : ""}`}
+              <AppField
+                label="Estado"
+                className={camposObrigatorios.includes("estado") ? "perfil-input-pendente" : undefined}
                 value={perfil.estado || ""}
                 maxLength={2}
                 onChange={(e) => atualizarCampo("estado", e.target.value.toUpperCase())}
@@ -949,9 +941,8 @@ function formatCnpj(value: string) {
           <AppCard title="Dados de acesso" tone="config" className="perfil-card-fill">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <div className="form-group perfil-access-email-group">
-                <label>E-mail de login</label>
-                <input
-                  className="form-input"
+                <AppField
+                  label="E-mail de login"
                   value={novoEmail}
                   onChange={(e) => setNovoEmail(e.target.value.toLowerCase())}
                   type="email"

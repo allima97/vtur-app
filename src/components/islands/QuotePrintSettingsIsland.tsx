@@ -6,6 +6,7 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { registrarLog } from "../../lib/logs";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
 
 type QuotePrintSettings = {
   id?: string;
@@ -318,18 +319,16 @@ export default function QuotePrintSettingsIsland() {
           )}
         </div>
         <div className="form-group">
-          <label className="form-label">Consultor</label>
-          <input
-            className="form-input"
+          <AppField
+            label="Consultor"
             value={settings.consultor_nome || ""}
             onChange={(e) => setSettings((p) => ({ ...p, consultor_nome: e.target.value }))}
             disabled={bloqueado}
           />
         </div>
         <div className="form-group">
-          <label className="form-label">Filial</label>
-          <input
-            className="form-input"
+          <AppField
+            label="Filial"
             value={settings.filial_nome || ""}
             onChange={(e) => setSettings((p) => ({ ...p, filial_nome: e.target.value }))}
             disabled={bloqueado}
@@ -339,27 +338,24 @@ export default function QuotePrintSettingsIsland() {
 
       <div className="form-row">
         <div className="form-group">
-          <label className="form-label">Endereco (linha 1)</label>
-          <input
-            className="form-input"
+          <AppField
+            label="Endereco (linha 1)"
             value={settings.endereco_linha1 || ""}
             onChange={(e) => setSettings((p) => ({ ...p, endereco_linha1: e.target.value }))}
             disabled={bloqueado}
           />
         </div>
         <div className="form-group">
-          <label className="form-label">Endereco (linha 2)</label>
-          <input
-            className="form-input"
+          <AppField
+            label="Endereco (linha 2)"
             value={settings.endereco_linha2 || ""}
             onChange={(e) => setSettings((p) => ({ ...p, endereco_linha2: e.target.value }))}
             disabled={bloqueado}
           />
         </div>
         <div className="form-group">
-          <label className="form-label">Endereco (linha 3)</label>
-          <input
-            className="form-input"
+          <AppField
+            label="Endereco (linha 3)"
             value={settings.endereco_linha3 || ""}
             onChange={(e) => setSettings((p) => ({ ...p, endereco_linha3: e.target.value }))}
             disabled={bloqueado}
@@ -369,9 +365,8 @@ export default function QuotePrintSettingsIsland() {
 
       <div className="form-row">
         <div className="form-group">
-          <label className="form-label">Codigo do pais</label>
-          <input
-            className="form-input"
+          <AppField
+            label="Codigo do pais"
             value={settings.whatsapp_codigo_pais || ""}
             onChange={(e) => setSettings((p) => ({ ...p, whatsapp_codigo_pais: e.target.value }))}
             placeholder="Ex: 55"
@@ -379,27 +374,25 @@ export default function QuotePrintSettingsIsland() {
           />
         </div>
         <div className="form-group">
-          <label className="form-label">Telefone (fixo)</label>
-          <input
-            className="form-input"
+          <AppField
+            label="Telefone (fixo)"
             value={settings.telefone || ""}
             onChange={(e) => setSettings((p) => ({ ...p, telefone: e.target.value }))}
             disabled={bloqueado}
           />
         </div>
         <div className="form-group">
-          <label className="form-label">WhatsApp</label>
-          <input
-            className="form-input"
+          <AppField
+            label="WhatsApp"
             value={settings.whatsapp || ""}
             onChange={(e) => setSettings((p) => ({ ...p, whatsapp: e.target.value }))}
             disabled={bloqueado}
           />
         </div>
         <div className="form-group">
-          <label className="form-label">E-mail</label>
-          <input
-            className="form-input"
+          <AppField
+            label="E-mail"
+            type="email"
             value={settings.email || ""}
             onChange={(e) => setSettings((p) => ({ ...p, email: e.target.value }))}
             disabled={bloqueado}
@@ -408,17 +401,15 @@ export default function QuotePrintSettingsIsland() {
       </div>
 
       <div className="form-group">
-        <label className="form-label">Rodape (informacoes importantes)</label>
-        <textarea
-          className="form-input"
+        <AppField
+          as="textarea"
+          label="Rodape (informacoes importantes)"
           rows={6}
           value={settings.rodape_texto || ""}
           onChange={(e) => setSettings((p) => ({ ...p, rodape_texto: e.target.value }))}
           disabled={bloqueado}
+          caption="Use quebras de linha para cada item."
         />
-        <small style={{ color: "#64748b" }}>
-          Use quebras de linha para cada item.
-        </small>
       </div>
 
       <div className="form-group">

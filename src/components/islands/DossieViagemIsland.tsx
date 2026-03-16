@@ -11,6 +11,7 @@ import { construirLinkWhatsApp } from "../../lib/whatsapp";
 import { parentescoOptions } from "../../lib/parentescoOptions";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
 type ViagemAcompanhante = {
@@ -852,9 +853,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       </div>
                     )}
                     <div className="form-group">
-                      <label className="form-label">Follow-up</label>
-                      <textarea
-                        className="form-textarea"
+                      <AppField
+                        as="textarea"
+                        label="Follow-up"
                         value={followUpForm.texto}
                         onChange={(e) => {
                           setFollowUpForm((prev) => ({ ...prev, texto: e.target.value }));
@@ -866,19 +867,20 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                     </div>
                     <div className="followup-actions-row">
                       <div className="form-group followup-status-group">
-                        <label className="form-label">Status</label>
-                        <select
-                          className="form-select"
+                        <AppField
+                          as="select"
+                          label="Status"
                           value={followUpForm.fechado ? "fechado" : "aberto"}
                           onChange={(e) => {
                             setFollowUpForm((prev) => ({ ...prev, fechado: e.target.value === "fechado" }));
                             setFollowUpFeedback(null);
                           }}
                           disabled={followUpDisabled}
-                        >
-                          <option value="aberto">Aberto</option>
-                          <option value="fechado">Fechado</option>
-                        </select>
+                          options={[
+                            { label: "Aberto", value: "aberto" },
+                            { label: "Fechado", value: "fechado" },
+                          ]}
+                        />
                       </div>
                       {podeCriar && (
                         <div className="form-group followup-action-group">
@@ -1043,9 +1045,8 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                   )}
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">Nome completo</label>
-                      <input
-                        className="form-input"
+                      <AppField
+                        label="Nome completo"
                         value={cadastroAcompForm.nome_completo}
                         onChange={(e) =>
                           setCadastroAcompForm((prev) => ({
@@ -1056,9 +1057,8 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">CPF</label>
-                      <input
-                        className="form-input"
+                      <AppField
+                        label="CPF"
                         value={cadastroAcompForm.cpf}
                         onChange={(e) =>
                           setCadastroAcompForm((prev) => ({ ...prev, cpf: e.target.value }))
@@ -1066,9 +1066,8 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Telefone</label>
-                      <input
-                        className="form-input"
+                      <AppField
+                        label="Telefone"
                         value={cadastroAcompForm.telefone}
                         onChange={(e) =>
                           setCadastroAcompForm((prev) => ({ ...prev, telefone: e.target.value }))
@@ -1076,9 +1075,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Parentesco</label>
-                      <select
-                        className="form-select"
+                      <AppField
+                        as="select"
+                        label="Parentesco"
                         value={cadastroAcompForm.grau_parentesco}
                         onChange={(e) =>
                           setCadastroAcompForm((prev) => ({
@@ -1086,21 +1085,17 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                             grau_parentesco: e.target.value,
                           }))
                         }
-                      >
-                        <option value="">Selecione</option>
-                        {parentescoOptions.map((opt) => (
-                          <option key={opt} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
+                        options={[
+                          { label: "Selecione", value: "" },
+                          ...parentescoOptions.map((opt) => ({ label: opt, value: opt })),
+                        ]}
+                      />
                     </div>
                   </div>
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">RG</label>
-                      <input
-                        className="form-input"
+                      <AppField
+                        label="RG"
                         value={cadastroAcompForm.rg}
                         onChange={(e) =>
                           setCadastroAcompForm((prev) => ({ ...prev, rg: e.target.value }))
@@ -1108,10 +1103,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Data nascimento</label>
-                      <input
+                      <AppField
+                        label="Data nascimento"
                         type="date"
-                        className="form-input"
                         value={cadastroAcompForm.data_nascimento}
                         onFocus={selectAllInputOnFocus}
                         onChange={(e) =>
@@ -1123,9 +1117,8 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Observações</label>
-                      <input
-                        className="form-input"
+                      <AppField
+                        label="Observações"
                         value={cadastroAcompForm.observacoes}
                         onChange={(e) =>
                           setCadastroAcompForm((prev) => ({
@@ -1192,27 +1185,24 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                   </div>
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">Acompanhante</label>
-                      <select
-                        className="form-select"
+                      <AppField
+                        as="select"
+                        label="Acompanhante"
                         value={novoAcomp.acompanhante_id}
                         onChange={(e) => setNovoAcomp((prev) => ({ ...prev, acompanhante_id: e.target.value }))}
-                      >
-                        <option value="">Selecione</option>
-                        {acompanhantesCliente.map((a) => (
-                          <option key={a.id} value={a.id}>
-                            {a.nome_completo}
-                            {a.cpf ? ` • ${a.cpf}` : ""}
-                            {a.data_nascimento ? ` • Nasc. ${formatarDataParaExibicao(a.data_nascimento)}` : ""}
-                          </option>
-                        ))}
-                      </select>
+                        options={[
+                          { label: "Selecione", value: "" },
+                          ...acompanhantesCliente.map((a) => ({
+                            label: `${a.nome_completo}${a.cpf ? ` • ${a.cpf}` : ""}${a.data_nascimento ? ` • Nasc. ${formatarDataParaExibicao(a.data_nascimento)}` : ""}`,
+                            value: a.id,
+                          })),
+                        ]}
+                      />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Data nascimento</label>
-                      <input
+                      <AppField
+                        label="Data nascimento"
                         type="text"
-                        className="form-input"
                         value={
                           acompanhanteSelecionado?.data_nascimento
                             ? formatarDataParaExibicao(acompanhanteSelecionado.data_nascimento)
@@ -1223,21 +1213,21 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Papel</label>
-                      <select
-                        className="form-select"
+                      <AppField
+                        as="select"
+                        label="Papel"
                         value={novoAcomp.papel}
                         onChange={(e) => setNovoAcomp((prev) => ({ ...prev, papel: e.target.value }))}
-                      >
-                        <option value="passageiro">Passageiro</option>
-                        <option value="responsavel">Responsável</option>
-                      </select>
+                        options={[
+                          { label: "Passageiro", value: "passageiro" },
+                          { label: "Responsável", value: "responsavel" },
+                        ]}
+                      />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Documento URL</label>
-                      <input
+                      <AppField
+                        label="Documento URL"
                         type="url"
-                        className="form-input"
                         value={novoAcomp.documento_url}
                         onChange={(e) => setNovoAcomp((prev) => ({ ...prev, documento_url: e.target.value }))}
                         placeholder="https://"
@@ -1245,9 +1235,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                     </div>
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Observações</label>
-                    <textarea
-                      className="form-textarea"
+                    <AppField
+                      as="textarea"
+                      label="Observações"
                       value={novoAcomp.observacoes}
                       onChange={(e) => setNovoAcomp((prev) => ({ ...prev, observacoes: e.target.value }))}
                     />
@@ -1418,46 +1408,46 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       </div>
                       <div className="form-row">
                         <div className="form-group">
-                          <label className="form-label">Tipo</label>
-                          <select
-                            className="form-select"
+                          <AppField
+                            as="select"
+                            label="Tipo"
                             value={servicoForm.tipo}
                             onChange={(e) => setServicoForm((prev) => ({ ...prev, tipo: e.target.value }))}
-                          >
-                            <option value="aereo">Aéreo</option>
-                            <option value="hotel">Hotel</option>
-                            <option value="terrestre">Terrestre</option>
-                            <option value="seguro">Seguro</option>
-                            <option value="passeio">Passeio</option>
-                            <option value="outro">Outro</option>
-                          </select>
+                            options={[
+                              { label: "Aéreo", value: "aereo" },
+                              { label: "Hotel", value: "hotel" },
+                              { label: "Terrestre", value: "terrestre" },
+                              { label: "Seguro", value: "seguro" },
+                              { label: "Passeio", value: "passeio" },
+                              { label: "Outro", value: "outro" },
+                            ]}
+                          />
                         </div>
                         <div className="form-group">
-                          <label className="form-label">Fornecedor</label>
-                          <input
-                            className="form-input"
+                          <AppField
+                            label="Fornecedor"
                             value={servicoForm.fornecedor}
                             onChange={(e) => setServicoForm((prev) => ({ ...prev, fornecedor: e.target.value }))}
                             placeholder="Nome do fornecedor"
                           />
                         </div>
                         <div className="form-group">
-                          <label className="form-label">Status</label>
-                          <select
-                            className="form-select"
+                          <AppField
+                            as="select"
+                            label="Status"
                             value={servicoForm.status}
                             onChange={(e) => setServicoForm((prev) => ({ ...prev, status: e.target.value }))}
-                          >
-                            <option value="ativo">Ativo</option>
-                            <option value="pendente">Pendente</option>
-                            <option value="cancelado">Cancelado</option>
-                            <option value="concluido">Concluído</option>
-                          </select>
+                            options={[
+                              { label: "Ativo", value: "ativo" },
+                              { label: "Pendente", value: "pendente" },
+                              { label: "Cancelado", value: "cancelado" },
+                              { label: "Concluído", value: "concluido" },
+                            ]}
+                          />
                         </div>
                         <div className="form-group">
-                          <label className="form-label">Voucher URL</label>
-                          <input
-                            className="form-input"
+                          <AppField
+                            label="Voucher URL"
                             value={servicoForm.voucher_url}
                             onChange={(e) => setServicoForm((prev) => ({ ...prev, voucher_url: e.target.value }))}
                             placeholder="https://"
@@ -1466,10 +1456,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       </div>
                       <div className="form-row">
                         <div className="form-group">
-                          <label className="form-label">Data Início</label>
-                          <input
+                          <AppField
+                            label="Data Início"
                             type="date"
-                            className="form-input w-full"
                             value={servicoForm.data_inicio}
                             onFocus={selectAllInputOnFocus}
                             onChange={(e) =>
@@ -1485,10 +1474,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                           />
                         </div>
                         <div className="form-group">
-                          <label className="form-label">Data Final</label>
-                          <input
+                          <AppField
+                            label="Data Final"
                             type="date"
-                            className="form-input"
                             value={servicoForm.data_fim}
                             min={servicoForm.data_inicio || undefined}
                             onFocus={selectAllInputOnFocus}
@@ -1505,39 +1493,39 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                           />
                         </div>
                         <div className="form-group">
-                          <label className="form-label">Valor</label>
-                          <input
+                          <AppField
+                            label="Valor"
                             type="number"
-                            className="form-input"
                             value={servicoForm.valor}
                             onChange={(e) => setServicoForm((prev) => ({ ...prev, valor: e.target.value }))}
                           />
                         </div>
                         <div className="form-group">
-                          <label className="form-label">Moeda</label>
-                          <select
-                            className="form-select"
+                          <AppField
+                            as="select"
+                            label="Moeda"
                             value={servicoForm.moeda}
                             onChange={(e) => setServicoForm((prev) => ({ ...prev, moeda: e.target.value }))}
-                          >
-                            <option value="BRL">BRL</option>
-                            <option value="USD">USD</option>
-                            <option value="EUR">EUR</option>
-                          </select>
+                            options={[
+                              { label: "BRL", value: "BRL" },
+                              { label: "USD", value: "USD" },
+                              { label: "EUR", value: "EUR" },
+                            ]}
+                          />
                         </div>
                       </div>
                       <div className="form-group">
-                        <label className="form-label">Descrição</label>
-                        <textarea
-                          className="form-textarea"
+                        <AppField
+                          as="textarea"
+                          label="Descrição"
                           value={servicoForm.descricao}
                           onChange={(e) => setServicoForm((prev) => ({ ...prev, descricao: e.target.value }))}
                         />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">Observações</label>
-                        <textarea
-                          className="form-textarea"
+                        <AppField
+                          as="textarea"
+                          label="Observações"
                           value={servicoForm.observacoes}
                           onChange={(e) => setServicoForm((prev) => ({ ...prev, observacoes: e.target.value }))}
                         />
@@ -1692,31 +1680,31 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       <div className="font-semibold mb-2">Enviar documento</div>
                       <div className="form-row">
                         <div className="form-group">
-                          <label className="form-label">Título</label>
-                          <input
-                            className="form-input"
+                          <AppField
+                            label="Título"
                             value={docTitulo}
                             onChange={(e) => setDocTitulo(e.target.value)}
                             placeholder="Ex: Voucher do hotel"
                           />
                         </div>
                         <div className="form-group">
-                          <label className="form-label">Tipo</label>
-                          <select
-                            className="form-select"
+                          <AppField
+                            as="select"
+                            label="Tipo"
                             value={docTipo}
                             onChange={(e) => setDocTipo(e.target.value)}
-                          >
-                            <option value="voucher">Voucher</option>
-                            <option value="bilhete">Bilhete</option>
-                            <option value="roteiro">Roteiro</option>
-                            <option value="seguro">Seguro</option>
-                            <option value="passaporte">Passaporte</option>
-                            <option value="cpf">CPF</option>
-                            <option value="rg">RG</option>
-                            <option value="cnh">CNH</option>
-                            <option value="outro">Outro</option>
-                          </select>
+                            options={[
+                              { label: "Voucher", value: "voucher" },
+                              { label: "Bilhete", value: "bilhete" },
+                              { label: "Roteiro", value: "roteiro" },
+                              { label: "Seguro", value: "seguro" },
+                              { label: "Passaporte", value: "passaporte" },
+                              { label: "CPF", value: "cpf" },
+                              { label: "RG", value: "rg" },
+                              { label: "CNH", value: "cnh" },
+                              { label: "Outro", value: "outro" },
+                            ]}
+                          />
                         </div>
                         <div className="form-group">
                           <label className="form-label">Arquivo</label>

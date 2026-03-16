@@ -1627,6 +1627,35 @@ a.vtur-app-button:visited {
   justify-content: center;
 }
 
+.vtur-import-upload-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.44);
+  background: #ffffff;
+  color: var(--vtur-primer-muted);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.1;
+  cursor: pointer;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+  white-space: nowrap;
+}
+
+.vtur-import-upload-trigger:hover {
+  background: rgba(248, 250, 252, 0.92);
+  border-color: rgba(100, 116, 139, 0.5);
+  color: var(--vtur-primer-ink);
+}
+
+.vtur-import-upload-trigger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
 .vtur-import-file-name {
   color: var(--vtur-primer-muted);
   font-size: 0.9rem;
@@ -1990,6 +2019,10 @@ a.vtur-app-button:visited {
   }
 
   .vtur-import-upload-button.vtur-app-button {
+    width: 100%;
+  }
+
+  .vtur-import-upload-trigger {
     width: 100%;
   }
 

@@ -1426,6 +1426,80 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
 }
 
+/* Camada global: normaliza campos nativos sem classe para manter homogeneidade visual
+   em formulários legados, preservando checkbox/radio/file e componentes PrimeReact. */
+.app-main :where(
+  input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not(.form-input):not(.p-inputtext):not(.p-inputnumber-input):not(.sr-only),
+  select:not(.form-select):not(.p-inputtext):not(.p-component),
+  textarea:not(.form-textarea):not(.p-inputtextarea):not(.sr-only)
+) {
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  font-size: 0.95rem;
+  background: rgba(255, 255, 255, 0.96);
+  color: #0f172a;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.app-main :where(
+  input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not(.form-input):not(.p-inputtext):not(.p-inputnumber-input):not(.sr-only),
+  select:not(.form-select):not(.p-inputtext):not(.p-component),
+  textarea:not(.form-textarea):not(.p-inputtextarea):not(.sr-only)
+):focus {
+  outline: none;
+  border-color: rgba(142, 40, 226, 0.32);
+  box-shadow: 0 0 0 3px rgba(142, 40, 226, 0.12);
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: #2563eb;
+}
+
+input[type="file"] {
+  width: 100%;
+  max-width: 100%;
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(255, 255, 255, 0.96);
+  color: #0f172a;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+input[type="file"]::file-selector-button,
+input[type="file"]::-webkit-file-upload-button {
+  margin-right: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  background: #ffffff;
+  color: #334155;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.1;
+  cursor: pointer;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+input[type="file"]:hover::file-selector-button,
+input[type="file"]:hover::-webkit-file-upload-button {
+  background: #f8fafc;
+  border-color: rgba(100, 116, 139, 0.45);
+}
+
+input[type="file"]:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+input[type="file"]:disabled::file-selector-button,
+input[type="file"]:disabled::-webkit-file-upload-button {
+  cursor: not-allowed;
+}
+
 .form-input:focus,
 .form-select:focus,
 .form-textarea:focus {

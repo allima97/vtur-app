@@ -8,6 +8,7 @@ import { construirLinkWhatsAppComTexto, getPrimeiroNome } from "../../lib/whatsa
 import { renderSvgUrlToPngObjectUrl, validarPngServidor } from "../../lib/cards/browserPng";
 import AppCard from "../ui/primer/AppCard";
 import AppButton from "../ui/primer/AppButton";
+import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 import {
   OFFICIAL_CARD_THEME_DELETE_NAMES,
@@ -930,45 +931,61 @@ export default function ParametrosAvisosIsland() {
         {mostrarFormularioTema ? (
           <form onSubmit={salvarTheme}>
             <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "2fr 1fr 1fr 1fr" }}>
-              <div className="form-group">
-                <label className="form-label">Nome da arte *</label>
-                <input className="form-input" value={themeForm.nome} onChange={(e) => setThemeForm((prev) => ({ ...prev, nome: e.target.value }))} required />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Categoria/Assunto *</label>
-                <input
-                  className="form-input"
-                  list="aviso-categorias-list"
-                  value={themeForm.categoria}
-                  onChange={(e) => setThemeForm((prev) => ({ ...prev, categoria: e.target.value }))}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Largura (px)</label>
-                <input type="number" className="form-input" value={themeForm.width_px} readOnly disabled />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Altura (px)</label>
-                <input type="number" className="form-input" value={themeForm.height_px} readOnly disabled />
-              </div>
+              <AppField
+                wrapperClassName="form-group"
+                label="Nome da arte *"
+                value={themeForm.nome}
+                onChange={(e) => setThemeForm((prev) => ({ ...prev, nome: e.target.value }))}
+                required
+              />
+              <AppField
+                wrapperClassName="form-group"
+                label="Categoria/Assunto *"
+                list="aviso-categorias-list"
+                value={themeForm.categoria}
+                onChange={(e) => setThemeForm((prev) => ({ ...prev, categoria: e.target.value }))}
+                required
+              />
+              <AppField
+                wrapperClassName="form-group"
+                label="Largura (px)"
+                type="number"
+                value={themeForm.width_px}
+                readOnly
+                disabled
+              />
+              <AppField
+                wrapperClassName="form-group"
+                label="Altura (px)"
+                type="number"
+                value={themeForm.height_px}
+                readOnly
+                disabled
+              />
             </div>
             <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "1fr 2fr 1fr" }}>
               <div className="form-group">
                 <label className="form-label">Arquivo da arte</label>
                 <input type="file" className="form-input" accept="image/*" onChange={(e) => void handleThemeFileSelected(e.target.files?.[0] || null)} />
               </div>
-              <div className="form-group">
-                <label className="form-label">URL da arte (opcional)</label>
-                <input className="form-input" value={themeForm.asset_url} onChange={(e) => setThemeForm((prev) => ({ ...prev, asset_url: e.target.value }))} placeholder="https://..." />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Ativo</label>
-                <select className="form-select" value={themeForm.ativo ? "true" : "false"} onChange={(e) => setThemeForm((prev) => ({ ...prev, ativo: e.target.value === "true" }))}>
-                  <option value="true">Sim</option>
-                  <option value="false">Não</option>
-                </select>
-              </div>
+              <AppField
+                wrapperClassName="form-group"
+                label="URL da arte (opcional)"
+                value={themeForm.asset_url}
+                onChange={(e) => setThemeForm((prev) => ({ ...prev, asset_url: e.target.value }))}
+                placeholder="https://..."
+              />
+              <AppField
+                as="select"
+                wrapperClassName="form-group"
+                label="Ativo"
+                value={themeForm.ativo ? "true" : "false"}
+                onChange={(e) => setThemeForm((prev) => ({ ...prev, ativo: e.target.value === "true" }))}
+                options={[
+                  { value: "true", label: "Sim" },
+                  { value: "false", label: "Não" },
+                ]}
+              />
             </div>
             <div className="mobile-stack-buttons">
               <AppButton variant="primary" type="submit" disabled={salvandoTheme}>
@@ -990,22 +1007,18 @@ export default function ParametrosAvisosIsland() {
         ) : null}
 
         <div className="form-row mobile-stack" style={{ gap: 12, marginTop: 12, gridTemplateColumns: "1fr auto" }}>
-          <div className="form-group">
-            <label className="form-label">Filtrar arte para visualização</label>
-            <select
-              className="form-select"
-              value={filtroThemeTabelaId}
-              onChange={(e) => setFiltroThemeTabelaId(e.target.value)}
-              disabled={!mostrarListaArtes}
-            >
-              <option value="">Todas</option>
-              {themes.map((theme) => (
-                <option key={theme.id} value={theme.id}>
-                  {theme.categoria} • {theme.nome}
-                </option>
-              ))}
-            </select>
-          </div>
+          <AppField
+            as="select"
+            wrapperClassName="form-group"
+            label="Filtrar arte para visualização"
+            value={filtroThemeTabelaId}
+            onChange={(e) => setFiltroThemeTabelaId(e.target.value)}
+            disabled={!mostrarListaArtes}
+            options={[
+              { value: "", label: "Todas" },
+              ...themes.map((theme) => ({ value: theme.id, label: `${theme.categoria} • ${theme.nome}` })),
+            ]}
+          />
           <div className="form-group" style={{ alignSelf: "end" }}>
             <AppButton
               type="button"
@@ -1114,177 +1127,165 @@ export default function ParametrosAvisosIsland() {
         </small>
 
         <div className="form-row mobile-stack parametros-avisos-saved-config-row" style={{ gap: 12, gridTemplateColumns: "1fr" }}>
-          <div className="form-group">
-            <label className="form-label">Configuração salva</label>
-            <select
-              className="form-select"
-              value={form.id}
-              onChange={(e) => {
-                const nextId = e.target.value;
-                if (!nextId) {
-                  resetForm();
-                  return;
-                }
-                const tpl = templates.find((item) => item.id === nextId);
-                if (tpl) editarConfiguracao(tpl);
-              }}
-            >
-              <option value="">Nova configuração</option>
-              {templates.map((tpl) => (
-                <option key={tpl.id} value={tpl.id}>
-                  {(tpl.categoria || "Sem ocasião")} • {tpl.nome}
-                </option>
-              ))}
-            </select>
-          </div>
+          <AppField
+            as="select"
+            wrapperClassName="form-group"
+            label="Configuração salva"
+            value={form.id}
+            onChange={(e) => {
+              const nextId = e.target.value;
+              if (!nextId) {
+                resetForm();
+                return;
+              }
+              const tpl = templates.find((item) => item.id === nextId);
+              if (tpl) editarConfiguracao(tpl);
+            }}
+            options={[
+              { value: "", label: "Nova configuração" },
+              ...templates.map((tpl) => ({
+                value: tpl.id,
+                label: `${tpl.categoria || "Sem ocasião"} • ${tpl.nome}`,
+              })),
+            ]}
+          />
         </div>
 
         {form.id ? (
           <>
         <div className="form-row mobile-stack parametros-avisos-preview-fields-row" style={{ gap: 12 }}>
-          <div className="form-group">
-            <label className="form-label">Cliente para teste</label>
-            <select className="form-select" value={previewClienteId} onChange={(e) => setPreviewClienteId(e.target.value)}>
-              <option value="">Selecione</option>
-              {clientesPreview.map((cliente) => (
-                <option key={cliente.id} value={cliente.id}>
-                  {cliente.nome || "Cliente sem nome"}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Nome do cliente (manual)</label>
-            <input
-              className="form-input"
-              value={previewNomeClienteManual}
-              onChange={(e) => setPreviewNomeClienteManual(e.target.value)}
-              placeholder="Ex.: Maria Fernanda"
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Arte vinculada *</label>
-            <select
-              className="form-select"
-              value={form.theme_id}
-              onChange={(e) => {
-                const themeId = e.target.value;
-                const theme = themes.find((item) => item.id === themeId) || null;
-                setForm((prev) => ({
-                  ...prev,
-                  theme_id: themeId,
-                  categoria: prev.categoria || theme?.categoria || "",
-                }));
-                aplicarPadraoVisual(themeId);
-              }}
-            >
-              <option value="">Selecione</option>
-              {filteredThemesByCategoria.map((theme) => (
-                <option key={theme.id} value={theme.id}>
-                  {theme.categoria} • {theme.nome}
-                </option>
-              ))}
-            </select>
-          </div>
+          <AppField
+            as="select"
+            wrapperClassName="form-group"
+            label="Cliente para teste"
+            value={previewClienteId}
+            onChange={(e) => setPreviewClienteId(e.target.value)}
+            options={[
+              { value: "", label: "Selecione" },
+              ...clientesPreview.map((cliente) => ({ value: cliente.id, label: cliente.nome || "Cliente sem nome" })),
+            ]}
+          />
+          <AppField
+            wrapperClassName="form-group"
+            label="Nome do cliente (manual)"
+            value={previewNomeClienteManual}
+            onChange={(e) => setPreviewNomeClienteManual(e.target.value)}
+            placeholder="Ex.: Maria Fernanda"
+          />
+          <AppField
+            as="select"
+            wrapperClassName="form-group"
+            label="Arte vinculada *"
+            value={form.theme_id}
+            onChange={(e) => {
+              const themeId = e.target.value;
+              const theme = themes.find((item) => item.id === themeId) || null;
+              setForm((prev) => ({
+                ...prev,
+                theme_id: themeId,
+                categoria: prev.categoria || theme?.categoria || "",
+              }));
+              aplicarPadraoVisual(themeId);
+            }}
+            options={[
+              { value: "", label: "Selecione" },
+              ...filteredThemesByCategoria.map((theme) => ({ value: theme.id, label: `${theme.categoria} • ${theme.nome}` })),
+            ]}
+          />
         </div>
 
         <form onSubmit={salvarConfiguracao}>
           <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "2fr 1fr 1fr" }}>
-            <div className="form-group">
-              <label className="form-label">Nome interno *</label>
-              <input className="form-input" value={form.nome} onChange={(e) => setForm((prev) => ({ ...prev, nome: e.target.value }))} required />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Ocasião *</label>
-              <input
-                className="form-input"
-                list="aviso-categorias-list"
-                value={form.categoria}
-                onChange={(e) => setForm((prev) => ({ ...prev, categoria: e.target.value }))}
-                placeholder="Natal, Páscoa, Aniversário..."
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Ativo</label>
-              <select className="form-select" value={form.ativo ? "true" : "false"} onChange={(e) => setForm((prev) => ({ ...prev, ativo: e.target.value === "true" }))}>
-                <option value="true">Sim</option>
-                <option value="false">Não</option>
-              </select>
-            </div>
+            <AppField
+              wrapperClassName="form-group"
+              label="Nome interno *"
+              value={form.nome}
+              onChange={(e) => setForm((prev) => ({ ...prev, nome: e.target.value }))}
+              required
+            />
+            <AppField
+              wrapperClassName="form-group"
+              label="Ocasião *"
+              list="aviso-categorias-list"
+              value={form.categoria}
+              onChange={(e) => setForm((prev) => ({ ...prev, categoria: e.target.value }))}
+              placeholder="Natal, Páscoa, Aniversário..."
+              required
+            />
+            <AppField
+              as="select"
+              wrapperClassName="form-group"
+              label="Ativo"
+              value={form.ativo ? "true" : "false"}
+              onChange={(e) => setForm((prev) => ({ ...prev, ativo: e.target.value === "true" }))}
+              options={[
+                { value: "true", label: "Sim" },
+                { value: "false", label: "Não" },
+              ]}
+            />
           </div>
 
           <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "1fr 1.4fr" }}>
-            <div className="form-group">
-              <label className="form-label">Título do card *</label>
-              <textarea
-                className="form-textarea parametros-avisos-short-textarea"
-                rows={3}
-                value={form.titulo}
-                onChange={(e) => setForm((prev) => ({ ...prev, titulo: e.target.value }))}
-                placeholder={"Ex.: Feliz Natal!\nFeliz Ano Novo!"}
-                required
-              />
-              <small style={{ color: "#64748b", display: "block", marginTop: 8 }}>
-                Use `Enter` para quebrar o título exatamente onde quiser.
-              </small>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Mensagem padrão do WhatsApp *</label>
-              <textarea
-                className="form-textarea parametros-avisos-message-textarea"
-                rows={8}
-                value={form.corpo}
-                onChange={(e) => setForm((prev) => ({ ...prev, corpo: e.target.value }))}
-                placeholder="Ex.: Olá [PRIMEIRO_NOME], passando para desejar um Feliz Natal..."
-                required
-              />
-              <small style={{ color: "#64748b", display: "block", marginTop: 8 }}>
-                Use `Enter` para controlar manualmente as quebras de linha do card. Sem `Enter`, o sistema continua quebrando automaticamente.
-              </small>
-            </div>
+            <AppField
+              as="textarea"
+              wrapperClassName="form-group"
+              label="Título do card *"
+              className="form-textarea parametros-avisos-short-textarea"
+              rows={3}
+              value={form.titulo}
+              onChange={(e) => setForm((prev) => ({ ...prev, titulo: e.target.value }))}
+              placeholder={"Ex.: Feliz Natal!\nFeliz Ano Novo!"}
+              caption="Use `Enter` para quebrar o título exatamente onde quiser."
+              required
+            />
+            <AppField
+              as="textarea"
+              wrapperClassName="form-group"
+              label="Mensagem padrão do WhatsApp *"
+              className="form-textarea parametros-avisos-message-textarea"
+              rows={8}
+              value={form.corpo}
+              onChange={(e) => setForm((prev) => ({ ...prev, corpo: e.target.value }))}
+              placeholder="Ex.: Olá [PRIMEIRO_NOME], passando para desejar um Feliz Natal..."
+              caption="Use `Enter` para controlar manualmente as quebras de linha do card. Sem `Enter`, o sistema continua quebrando automaticamente."
+              required
+            />
           </div>
 
           <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "1fr 1fr 1fr" }}>
-            <div className="form-group">
-              <label className="form-label">Linha antes da assinatura</label>
-              <textarea
-                className="form-textarea parametros-avisos-short-textarea"
-                rows={2}
-                value={form.footerLead}
-                onChange={(e) => setForm((prev) => ({ ...prev, footerLead: e.target.value }))}
-                placeholder={"Ex.: Com carinho\nCom admiração"}
-              />
-              <small style={{ color: "#64748b", display: "block", marginTop: 8 }}>
-                Também aceita `Enter`. Se ficar vazio, essa linha some do card.
-              </small>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Consultor / assinatura</label>
-              <textarea
-                className="form-textarea parametros-avisos-short-textarea"
-                rows={3}
-                value={form.assinatura}
-                onChange={(e) => setForm((prev) => ({ ...prev, assinatura: e.target.value }))}
-                placeholder={nomeUsuario || "Nome do consultor"}
-              />
-              <small style={{ color: "#64748b", display: "block", marginTop: 8 }}>
-                Pode quebrar em duas linhas com `Enter` se o nome precisar.
-              </small>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Cargo do consultor</label>
-              <textarea
-                className="form-textarea parametros-avisos-short-textarea"
-                rows={2}
-                value={form.consultantRole}
-                onChange={(e) => setForm((prev) => ({ ...prev, consultantRole: e.target.value }))}
-                placeholder={"Ex.: Consultor de viagens\nEspecialista em turismo"}
-              />
-              <small style={{ color: "#64748b", display: "block", marginTop: 8 }}>
-                O layout da arte permanece fixo. Só o texto muda.
-              </small>
-            </div>
+            <AppField
+              as="textarea"
+              wrapperClassName="form-group"
+              label="Linha antes da assinatura"
+              className="form-textarea parametros-avisos-short-textarea"
+              rows={2}
+              value={form.footerLead}
+              onChange={(e) => setForm((prev) => ({ ...prev, footerLead: e.target.value }))}
+              placeholder={"Ex.: Com carinho\nCom admiração"}
+              caption="Também aceita `Enter`. Se ficar vazio, essa linha some do card."
+            />
+            <AppField
+              as="textarea"
+              wrapperClassName="form-group"
+              label="Consultor / assinatura"
+              className="form-textarea parametros-avisos-short-textarea"
+              rows={3}
+              value={form.assinatura}
+              onChange={(e) => setForm((prev) => ({ ...prev, assinatura: e.target.value }))}
+              placeholder={nomeUsuario || "Nome do consultor"}
+              caption="Pode quebrar em duas linhas com `Enter` se o nome precisar."
+            />
+            <AppField
+              as="textarea"
+              wrapperClassName="form-group"
+              label="Cargo do consultor"
+              className="form-textarea parametros-avisos-short-textarea"
+              rows={2}
+              value={form.consultantRole}
+              onChange={(e) => setForm((prev) => ({ ...prev, consultantRole: e.target.value }))}
+              placeholder={"Ex.: Consultor de viagens\nEspecialista em turismo"}
+              caption="O layout da arte permanece fixo. Só o texto muda."
+            />
           </div>
 
           <details style={{ marginBottom: 16 }}>
@@ -1313,62 +1314,90 @@ export default function ParametrosAvisosIsland() {
                     </summary>
                     <div className="parametros-avisos-style-card-body">
                       <div className="form-row mobile-stack parametros-avisos-style-row parametros-avisos-style-row-3">
-                        <div className="form-group parametros-avisos-style-group">
-                          <label className="form-label">Fonte</label>
-                          <select className="form-select" value={style.fontFamily || ""} onChange={(e) => atualizarStyleSection(section, "fontFamily", e.target.value)}>
-                            {CARD_FONT_OPTIONS.map((option) => (
-                              <option key={option.value} value={option.value}>{option.label}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="form-group parametros-avisos-style-group">
-                          <label className="form-label">Peso</label>
-                          <select className="form-select" value={String(style.fontWeight || "500")} onChange={(e) => atualizarStyleSection(section, "fontWeight", e.target.value)}>
-                            {CARD_WEIGHT_OPTIONS.map((option) => (
-                              <option key={option.value} value={option.value}>{option.label}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="form-group parametros-avisos-style-group">
-                          <label className="form-label">Alinhamento</label>
-                          <select className="form-select" value={style.align || "left"} onChange={(e) => atualizarStyleSection(section, "align", e.target.value)}>
-                            {CARD_ALIGN_OPTIONS.map((option) => (
-                              <option key={option.value} value={option.value}>{option.label}</option>
-                            ))}
-                          </select>
-                        </div>
+                        <AppField
+                          as="select"
+                          wrapperClassName="form-group parametros-avisos-style-group"
+                          label="Fonte"
+                          value={style.fontFamily || ""}
+                          onChange={(e) => atualizarStyleSection(section, "fontFamily", e.target.value)}
+                          options={CARD_FONT_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
+                        />
+                        <AppField
+                          as="select"
+                          wrapperClassName="form-group parametros-avisos-style-group"
+                          label="Peso"
+                          value={String(style.fontWeight || "500")}
+                          onChange={(e) => atualizarStyleSection(section, "fontWeight", e.target.value)}
+                          options={CARD_WEIGHT_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
+                        />
+                        <AppField
+                          as="select"
+                          wrapperClassName="form-group parametros-avisos-style-group"
+                          label="Alinhamento"
+                          value={style.align || "left"}
+                          onChange={(e) => atualizarStyleSection(section, "align", e.target.value)}
+                          options={CARD_ALIGN_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
+                        />
                       </div>
                       <div className="form-row mobile-stack parametros-avisos-style-row parametros-avisos-style-row-4">
-                        <div className="form-group parametros-avisos-style-group">
-                          <label className="form-label">Tamanho</label>
-                          <input type="number" className="form-input" value={Number(style.fontSize || 0)} onChange={(e) => atualizarStyleSection(section, "fontSize", Number(e.target.value || 0))} min={10} max={180} />
-                        </div>
-                        <div className="form-group parametros-avisos-style-group">
-                          <label className="form-label">X</label>
-                          <input type="number" className="form-input" value={Number(style.x || 0)} onChange={(e) => atualizarStyleSection(section, "x", Number(e.target.value || 0))} min={0} max={3000} />
-                        </div>
-                        <div className="form-group parametros-avisos-style-group">
-                          <label className="form-label">Y</label>
-                          <input type="number" className="form-input" value={Number(style.y || 0)} onChange={(e) => atualizarStyleSection(section, "y", Number(e.target.value || 0))} min={0} max={3000} />
-                        </div>
-                        <div className="form-group parametros-avisos-style-group">
-                          <label className="form-label">Largura</label>
-                          <input type="number" className="form-input" value={Number(style.maxWidth || style.width || 0)} onChange={(e) => atualizarStyleSection(section, "maxWidth", Number(e.target.value || 0))} min={40} max={3000} />
-                        </div>
+                        <AppField
+                          type="number"
+                          wrapperClassName="form-group parametros-avisos-style-group"
+                          label="Tamanho"
+                          value={Number(style.fontSize || 0)}
+                          onChange={(e) => atualizarStyleSection(section, "fontSize", Number(e.target.value || 0))}
+                          min={10}
+                          max={180}
+                        />
+                        <AppField
+                          type="number"
+                          wrapperClassName="form-group parametros-avisos-style-group"
+                          label="X"
+                          value={Number(style.x || 0)}
+                          onChange={(e) => atualizarStyleSection(section, "x", Number(e.target.value || 0))}
+                          min={0}
+                          max={3000}
+                        />
+                        <AppField
+                          type="number"
+                          wrapperClassName="form-group parametros-avisos-style-group"
+                          label="Y"
+                          value={Number(style.y || 0)}
+                          onChange={(e) => atualizarStyleSection(section, "y", Number(e.target.value || 0))}
+                          min={0}
+                          max={3000}
+                        />
+                        <AppField
+                          type="number"
+                          wrapperClassName="form-group parametros-avisos-style-group"
+                          label="Largura"
+                          value={Number(style.maxWidth || style.width || 0)}
+                          onChange={(e) => atualizarStyleSection(section, "maxWidth", Number(e.target.value || 0))}
+                          min={40}
+                          max={3000}
+                        />
                       </div>
                       <div className="form-row mobile-stack parametros-avisos-style-row parametros-avisos-style-row-3">
                         <div className="form-group parametros-avisos-style-group">
                           <label className="form-label">Cor</label>
                           <input type="color" className="form-input parametros-avisos-style-color-input" value={normalizeColorInput(style.color)} onChange={(e) => atualizarStyleSection(section, "color", e.target.value)} />
                         </div>
-                        <div className="form-group parametros-avisos-style-group">
-                          <label className="form-label">Hex</label>
-                          <input className="form-input" value={String(style.color || "")} onChange={(e) => atualizarStyleSection(section, "color", e.target.value)} />
-                        </div>
-                        <div className="form-group parametros-avisos-style-group">
-                          <label className="form-label">Altura da linha</label>
-                          <input type="number" step="0.01" className="form-input" value={Number(style.lineHeight || 1)} onChange={(e) => atualizarStyleSection(section, "lineHeight", Number(e.target.value || 1))} min={0.7} max={2.5} />
-                        </div>
+                        <AppField
+                          wrapperClassName="form-group parametros-avisos-style-group"
+                          label="Hex"
+                          value={String(style.color || "")}
+                          onChange={(e) => atualizarStyleSection(section, "color", e.target.value)}
+                        />
+                        <AppField
+                          type="number"
+                          step="0.01"
+                          wrapperClassName="form-group parametros-avisos-style-group"
+                          label="Altura da linha"
+                          value={Number(style.lineHeight || 1)}
+                          onChange={(e) => atualizarStyleSection(section, "lineHeight", Number(e.target.value || 1))}
+                          min={0.7}
+                          max={2.5}
+                        />
                       </div>
                       <div className="parametros-avisos-style-checkbox-row">
                         <label className="form-checkbox parametros-avisos-style-checkbox">

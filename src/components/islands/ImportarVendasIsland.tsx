@@ -65,6 +65,7 @@ export default function ImportarVendasIsland() {
               </label>
               <input
                 id="importar-vendas-file"
+                className="form-input"
                 type="file"
                 accept=".xlsx"
                 ref={inputRef}
