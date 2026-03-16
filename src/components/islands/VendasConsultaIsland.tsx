@@ -1559,7 +1559,7 @@ export default function VendasConsultaIsland() {
                     Visualização completa do recibo
                   </div>
                 </div>
-                <AppButton type="button" variant="ghost" onClick={() => setModalReciboDetalhe(null)}>
+                <AppButton type="button" variant="secondary" onClick={() => setModalReciboDetalhe(null)}>
                   Fechar
                 </AppButton>
               </div>
@@ -1737,7 +1737,7 @@ export default function VendasConsultaIsland() {
                   Detalhes da venda
                 </div>
               </div>
-              <AppButton type="button" variant="ghost" onClick={() => setModalVenda(null)}>
+              <AppButton type="button" variant="secondary" onClick={() => setModalVenda(null)}>
                 Fechar
               </AppButton>
             </div>

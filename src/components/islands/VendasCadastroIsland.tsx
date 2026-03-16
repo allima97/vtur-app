@@ -268,7 +268,9 @@ export default function VendasCadastroIsland() {
   const [formVenda, setFormVenda] = useState<FormVenda>(initialVenda);
   const [recibos, setRecibos] = useState<FormRecibo[]>([]);
   const [reciboEmEdicao, setReciboEmEdicao] = useState<number | null>(null);
+  const [recibosExpandidos, setRecibosExpandidos] = useState<Record<number, boolean>>({});
   const [pagamentos, setPagamentos] = useState<PagamentoVenda[]>([]);
+  const [pagamentosExpandidos, setPagamentosExpandidos] = useState<Record<number, boolean>>({});
 
   const [editId, setEditId] = useState<string | null>(null);
   const [orcamentoId, setOrcamentoId] = useState<string | null>(null);
@@ -468,6 +470,7 @@ export default function VendasCadastroIsland() {
         };
       });
       setRecibos(garantirReciboPrincipal(recibosComPrincipal));
+      setRecibosExpandidos({});
 
       const { data: pagamentosData } = await supabase
         .from("vendas_pagamentos")
@@ -494,6 +497,7 @@ export default function VendasCadastroIsland() {
           : [],
       }));
       setPagamentos(pagamentosFormatados);
+      setPagamentosExpandidos({});
     } catch (e) {
       console.error(e);
       setErro("Erro ao carregar venda para edição.");
@@ -643,7 +647,9 @@ export default function VendasCadastroIsland() {
       if (recibosGerados.length) {
         setRecibos(garantirReciboPrincipal(recibosGerados));
       }
+      setRecibosExpandidos({});
       setPagamentos([]);
+      setPagamentosExpandidos({});
       if (produtosAtualizados.length !== produtosLista.length) {
         setProdutos(produtosAtualizados);
       }
@@ -811,6 +817,13 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
     });
   }
 
+  function toggleRecibo(index: number) {
+    setRecibosExpandidos((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
+  }
+
   function updateRecibo(index: number, campo: string, valor: string) {
     setRecibos((prev) => {
       const novo = [...prev];
@@ -889,6 +902,13 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
     setPagamentos((prev) => [...prev, { ...initialPagamento }]);
   }
 
+  function togglePagamento(index: number) {
+    setPagamentosExpandidos((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
+  }
+
   function updatePagamento(index: number, campo: keyof PagamentoVenda, valor: string) {
     setPagamentos((prev) => {
       const next = [...prev];
@@ -904,6 +924,15 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
 
   function removerPagamento(index: number) {
     setPagamentos((prev) => prev.filter((_, i) => i !== index));
+    setPagamentosExpandidos((prev) => {
+      const next: Record<number, boolean> = {};
+      Object.entries(prev).forEach(([key, value]) => {
+        const current = Number(key);
+        if (current < index) next[current] = value;
+        if (current > index) next[current - 1] = value;
+      });
+      return next;
+    });
   }
 
   function addParcelaPagamento(index: number) {
@@ -957,6 +986,15 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
       const novo = prev.filter((_, i) => i !== index);
       return garantirReciboPrincipal(novo);
     });
+    setRecibosExpandidos((prev) => {
+      const next: Record<number, boolean> = {};
+      Object.entries(prev).forEach(([key, value]) => {
+        const current = Number(key);
+        if (current < index) next[current] = value;
+        if (current > index) next[current - 1] = value;
+      });
+      return next;
+    });
   }
 
   function marcarReciboPrincipal(index: number) {
@@ -975,7 +1013,9 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
       data_lancamento: new Date().toISOString().substring(0, 10),
     });
     setRecibos([]);
+    setRecibosExpandidos({});
     setPagamentos([]);
+    setPagamentosExpandidos({});
     setEditId(null);
     setCidadePrefill({ id: "", nome: "" });
     setBuscaCliente("");
@@ -1495,21 +1535,29 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
     <AppPrimerProvider>
       <div className="page-content-wrap">
         <AppCard
+          className="mb-3"
           title={editId ? "Editar venda" : "Cadastro de venda"}
           subtitle={
             editId
               ? "Modo edicao: altere cliente, cidade de destino, embarque e recibos sem mudar a logica operacional."
               : "Registre a venda completa no CRM, organize recibos e mantenha o fluxo comercial padronizado."
           }
-          tone="config"
-        >
-          {erro && (
-            <AlertMessage variant="error" className="mb-3">
-              <strong>{erro}</strong>
-            </AlertMessage>
-          )}
+          tone="info"
+        />
 
-          <form onSubmit={salvarVenda}>
+        {erro && (
+          <AlertMessage variant="error" className="mb-3">
+            <strong>{erro}</strong>
+          </AlertMessage>
+        )}
+
+        <form onSubmit={salvarVenda}>
+          <AppCard
+            title="Dados da venda"
+            subtitle="Informe cliente, destino e datas da operacao comercial."
+            tone="config"
+            className="mb-3"
+          >
             <div className="vtur-form-grid vtur-form-grid-4">
               {isGestorUser && (
                 <AppField
@@ -1719,12 +1767,13 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 />
               </div>
             </div>
+          </AppCard>
 
           <AppCard
             title="Condicoes comerciais"
             subtitle="Configure o desconto comercial da venda quando houver negociacao aprovada."
             tone="info"
-            style={{ marginTop: 18 }}
+            className="mb-3"
           >
             <div className="vtur-form-grid vtur-form-grid-2">
               <AppField
@@ -1773,7 +1822,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
             title="Recibos da venda"
             subtitle="Monte os itens da venda, pagamentos e comprovantes dentro do fluxo principal do CRM."
             tone="info"
-            style={{ marginTop: 18 }}
+            className="mb-3"
             actions={
               <AppButton
                 type="button"
@@ -1786,12 +1835,14 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 <i className="pi pi-calculator" aria-hidden="true" />
               </AppButton>
             }
-          >
-            {recibos.map((r, i) => {
+          />
+
+          {recibos.map((r, i) => {
             const produtoSelecionado = produtos.find((p) => p.id === r.produto_id);
             const nomeProdutoAtual = produtoSelecionado?.nome || "";
             const produtosFiltrados = filtrarProdutos(buscaProduto, r.tipo_produto_id);
             const existeProdutoGlobal = existeProdutoGlobalParaTipo(r.tipo_produto_id);
+            const reciboAberto = Boolean(recibosExpandidos[i]);
             const produtoDesabilitado =
               !r.tipo_produto_id || (!formVenda.destino_id && !existeProdutoGlobal);
             const placeholderProduto = !r.tipo_produto_id
@@ -1810,11 +1861,32 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 }
                 className="vtur-sales-embedded-card"
                 actions={
-                  <AppButton type="button" variant="danger" onClick={() => removerRecibo(i)}>
-                    Remover recibo
-                  </AppButton>
+                  <div className="vtur-card-toolbar-actions">
+                    <AppButton
+                      type="button"
+                      variant="secondary"
+                      className="icon-action-btn"
+                      onClick={() => toggleRecibo(i)}
+                      aria-label={reciboAberto ? "Recolher recibo" : "Expandir recibo"}
+                      title={reciboAberto ? "Recolher recibo" : "Expandir recibo"}
+                    >
+                      <i className={reciboAberto ? "pi pi-chevron-up" : "pi pi-chevron-down"} aria-hidden="true" />
+                    </AppButton>
+                    <AppButton
+                      type="button"
+                      variant="danger"
+                      className="icon-action-btn danger no-border"
+                      onClick={() => removerRecibo(i)}
+                      aria-label="Remover recibo"
+                      title="Remover recibo"
+                    >
+                      <i className="pi pi-trash" aria-hidden="true" />
+                    </AppButton>
+                  </div>
                 }
               >
+                {reciboAberto ? (
+                <>
                 <div className="vtur-form-grid vtur-form-grid-4">
                   <AppField
                     as="select"
@@ -2044,6 +2116,10 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                     )}
                   </div>
                 </div>
+                </>
+                ) : (
+                  <div className="vtur-sales-empty-state">Recibo recolhido. Clique na seta para abrir.</div>
+                )}
               </AppCard>
             );
           })}
@@ -2056,6 +2132,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
 
           {pagamentos.map((p, idx) => {
             const formaSelecionada = formasPagamento.find((f) => f.id === p.forma_id);
+            const pagamentoAberto = Boolean(pagamentosExpandidos[idx]);
             return (
               <AppCard
                 key={`pag-${idx}`}
@@ -2063,11 +2140,32 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 subtitle="Defina a forma, os valores e a distribuicao em parcelas."
                 className="vtur-sales-embedded-card"
                 actions={
-                  <AppButton type="button" variant="danger" onClick={() => removerPagamento(idx)}>
-                    Remover pagamento
-                  </AppButton>
+                  <div className="vtur-card-toolbar-actions">
+                    <AppButton
+                      type="button"
+                      variant="secondary"
+                      className="icon-action-btn"
+                      onClick={() => togglePagamento(idx)}
+                      aria-label={pagamentoAberto ? "Recolher pagamento" : "Expandir pagamento"}
+                      title={pagamentoAberto ? "Recolher pagamento" : "Expandir pagamento"}
+                    >
+                      <i className={pagamentoAberto ? "pi pi-chevron-up" : "pi pi-chevron-down"} aria-hidden="true" />
+                    </AppButton>
+                    <AppButton
+                      type="button"
+                      variant="danger"
+                      className="icon-action-btn danger no-border"
+                      onClick={() => removerPagamento(idx)}
+                      aria-label="Remover pagamento"
+                      title="Remover pagamento"
+                    >
+                      <i className="pi pi-trash" aria-hidden="true" />
+                    </AppButton>
+                  </div>
                 }
               >
+                {pagamentoAberto ? (
+                <>
                 <div className="vtur-form-grid vtur-form-grid-4">
                   <AppField
                     as="select"
@@ -2156,8 +2254,15 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                     <strong>Parcelas</strong>
                     <p>Organize vencimento e valor por parcela.</p>
                   </div>
-                  <AppButton type="button" variant="secondary" onClick={() => addParcelaPagamento(idx)}>
-                    Adicionar parcela
+                  <AppButton
+                    type="button"
+                    variant="secondary"
+                    className="icon-action-btn"
+                    onClick={() => addParcelaPagamento(idx)}
+                    aria-label="Adicionar parcela"
+                    title="Adicionar parcela"
+                  >
+                    <i className="pi pi-plus" aria-hidden="true" />
                   </AppButton>
                 </div>
                 {(p.parcelas || []).length === 0 ? (
@@ -2208,11 +2313,12 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                             <AppButton
                               type="button"
                               variant="danger"
+                              className="icon-action-btn danger no-border"
                               onClick={() => removerParcelaPagamento(idx, parcelaIdx)}
                               title="Remover parcela"
                               aria-label="Remover parcela"
                             >
-                              Remover parcela
+                              <i className="pi pi-trash" aria-hidden="true" />
                             </AppButton>
                           </div>
                         </div>
@@ -2220,26 +2326,29 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                     ))}
                   </div>
                 )}
+                </>
+                ) : (
+                  <div className="vtur-sales-empty-state">Pagamento recolhido. Clique na seta para abrir.</div>
+                )}
               </AppCard>
             );
           })}
-            <div className="vtur-form-actions">
-              <AppButton type="button" variant="secondary" onClick={addPagamento}>
-                Adicionar pagamento
-              </AppButton>
-              <AppButton type="button" variant="secondary" onClick={addRecibo}>
-                Adicionar recibo
-              </AppButton>
-              <AppButton type="submit" variant="primary" disabled={salvando}>
-                {salvando ? "Salvando..." : "Salvar venda"}
-              </AppButton>
-              <AppButton type="button" variant="ghost" onClick={cancelarCadastro}>
-                Cancelar
-              </AppButton>
-            </div>
-          </AppCard>
+
+          <div className="vtur-form-actions">
+            <AppButton type="button" variant="secondary" onClick={addPagamento}>
+              Adicionar pagamento
+            </AppButton>
+            <AppButton type="button" variant="secondary" onClick={addRecibo}>
+              Adicionar recibo
+            </AppButton>
+            <AppButton type="submit" variant="primary" disabled={salvando}>
+              {salvando ? "Salvando..." : "Salvar venda"}
+            </AppButton>
+            <AppButton type="button" variant="secondary" onClick={cancelarCadastro}>
+              Cancelar
+            </AppButton>
+          </div>
         </form>
-      </AppCard>
       <AppNoticeDialog
         open={Boolean(duplicadoModal)}
         title="ATENCAO!"

@@ -470,7 +470,7 @@ export default function MinhasPreferenciasIsland() {
           tone="info"
           title={editId ? "Editar preferência" : "Nova preferência"}
           actions={
-            <AppButton type="button" variant="default" onClick={fecharFormulario} disabled={salvando}>
+            <AppButton type="button" variant="secondary" onClick={fecharFormulario} disabled={salvando}>
               Cancelar
             </AppButton>
           }
@@ -799,7 +799,7 @@ export default function MinhasPreferenciasIsland() {
               </div>
             </div>
             <div className="modal-footer">
-              <AppButton type="button" variant="default" onClick={() => setSharePrefId(null)}>
+              <AppButton type="button" variant="secondary" onClick={() => setSharePrefId(null)}>
                 Cancelar
               </AppButton>
               <AppButton type="button" variant="primary" onClick={compartilhar} disabled={sharing}>

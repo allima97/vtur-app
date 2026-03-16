@@ -1028,7 +1028,7 @@ export default function VendaContratoImportIsland() {
               <AppButton type="button" variant="secondary" onClick={resetImportacao} disabled={extracting}>
                 Limpar importação
               </AppButton>
-              <AppButton type="button" variant="ghost" onClick={handleCancelarImportacao} disabled={saving}>
+              <AppButton type="button" variant="secondary" onClick={handleCancelarImportacao} disabled={saving}>
                 Cancelar
               </AppButton>
             </div>

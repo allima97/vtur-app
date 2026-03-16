@@ -36,7 +36,7 @@ export default function AppNoticeDialog({
         onHide={onClose}
         footer={
           <div className="vtur-form-actions">
-            <AppButton variant="primary" type="button" onClick={onClose}>
+            <AppButton variant="secondary" type="button" onClick={onClose}>
               {closeLabel}
             </AppButton>
           </div>

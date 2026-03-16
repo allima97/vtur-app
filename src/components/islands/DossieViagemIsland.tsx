@@ -1775,7 +1775,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
           <div className="mobile-stack-buttons vtur-actions-end" style={{ marginTop: 12 }}>
             <AppButton
               type="button"
-              variant="primary"
+              variant="secondary"
               className="w-full sm:w-auto"
               onClick={() => window.location.assign("/operacao/viagens")}
             >

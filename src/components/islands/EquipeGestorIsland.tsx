@@ -764,7 +764,7 @@ export default function EquipeGestorIsland() {
               tone="config"
               title="Cadastrar usuário da equipe"
               actions={
-                <AppButton type="button" variant="default" onClick={() => setCreateOpen(false)}>
+                <AppButton type="button" variant="secondary" onClick={() => setCreateOpen(false)}>
                   Fechar
                 </AppButton>
               }

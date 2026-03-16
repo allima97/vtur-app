@@ -165,7 +165,7 @@ const inputSt: React.CSSProperties = {
   borderRadius: 6,
   fontSize: 14,
   outline: "none",
-  background: "#fff",
+  backgroundColor: "#fff",
   color: "#4b5563",
   boxSizing: "border-box",
 };
@@ -205,6 +205,12 @@ function addUtcDays(date: Date, days: number) {
 
 function toISODateUTC(date: Date) {
   return date.toISOString().slice(0, 10);
+}
+
+function minDatePlusOneDay(startDate?: string | null, fallbackDate?: string): string {
+  const start = toUtcDateOrNull(startDate);
+  if (!start) return String(fallbackDate || "");
+  return toISODateUTC(addUtcDays(start, 1));
 }
 
 function buildDiasFromHoteis(params: { hoteis: RotHotel[]; inicioCidade?: string | null }): RotDia[] {
@@ -1027,7 +1033,8 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                           onFocus={selectAllInputOnFocus}
                           onChange={(e) => {
                             const v = e.target.value;
-                            const fim = h.data_fim && h.data_fim < v ? v : h.data_fim;
+                            const minFim = minDatePlusOneDay(v, hoje);
+                            const fim = h.data_fim && h.data_fim >= minFim ? h.data_fim : minFim;
                             hotelOps.update(i, { data_inicio: v, data_fim: fim, noites: calcNoites(v, fim) });
                           }}
                         />
@@ -1036,12 +1043,13 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                         <input
                           style={{ ...inputSt, width: 120 }}
                           type="date"
-                          min={h.data_inicio || hoje}
+                          min={minDatePlusOneDay(h.data_inicio, hoje)}
                           value={h.data_fim}
                           onFocus={selectAllInputOnFocus}
                           onChange={(e) => {
                             const v = e.target.value;
-                            const bounded = h.data_inicio && v && v < h.data_inicio ? h.data_inicio : v;
+                            const minFim = minDatePlusOneDay(h.data_inicio, hoje);
+                            const bounded = v && v < minFim ? minFim : v;
                             hotelOps.update(i, { data_fim: bounded, noites: calcNoites(h.data_inicio, bounded) });
                           }}
                         />
@@ -1246,7 +1254,8 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                           onFocus={selectAllInputOnFocus}
                           onChange={(e) => {
                             const v = e.target.value;
-                            const fim = t.data_fim && t.data_fim < v ? v : t.data_fim;
+                            const minFim = minDatePlusOneDay(v, hoje);
+                            const fim = t.data_fim && t.data_fim >= minFim ? t.data_fim : minFim;
                             transporteOps.update(i, { data_inicio: v, data_fim: fim });
                           }}
                         />
@@ -1255,12 +1264,13 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                         <input
                           style={{ ...inputSt, width: 120 }}
                           type="date"
-                          min={t.data_inicio || hoje}
+                          min={minDatePlusOneDay(t.data_inicio, hoje)}
                           value={t.data_fim}
                           onFocus={selectAllInputOnFocus}
                           onChange={(e) => {
                             const v = e.target.value;
-                            const bounded = t.data_inicio && v && v < t.data_inicio ? t.data_inicio : v;
+                            const minFim = minDatePlusOneDay(t.data_inicio, hoje);
+                            const bounded = v && v < minFim ? minFim : v;
                             transporteOps.update(i, { data_fim: bounded });
                           }}
                         />

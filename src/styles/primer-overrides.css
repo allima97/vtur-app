@@ -132,6 +132,23 @@
   min-width: 0;
 }
 
+/* Quando um card atua apenas como container de outros cards (formularios/modais),
+   achatamos o visual para evitar card dentro de card. */
+.vtur-app-card-shell {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.vtur-app-card-shell > .vtur-app-card-header {
+  margin-bottom: 12px;
+}
+
+.vtur-app-card-shell > .vtur-app-card-body {
+  padding: 0;
+}
+
 .vtur-app-toolbar {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
   border: 1px solid var(--vtur-primer-border);

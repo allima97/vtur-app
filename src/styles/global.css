@@ -84,6 +84,11 @@
 
 /* MOBILE CORRIGIDO (corrige screenshots) */
 @media (max-width: 640px) {
+  :root {
+    /* Reserva global para o menu inferior fixo + safe area no mobile. */
+    --vtur-mobile-bottom-clearance: calc(132px + env(safe-area-inset-bottom));
+  }
+
   .table-container { 
     overflow-x: auto; 
     -webkit-overflow-scrolling: touch;
@@ -2697,7 +2702,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
   .app-main {
     padding-top: calc(16px + env(safe-area-inset-top));
-    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+    padding-bottom: var(--vtur-mobile-bottom-clearance);
+  }
+
+  .page-content-wrap {
+    padding-bottom: var(--vtur-mobile-bottom-clearance);
   }
 
   .clientes-page .table-mobile-cards.table-header-blue {
@@ -4053,10 +4062,22 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 .personalizar-menu-item-actions {
+  display: grid;
+  grid-template-columns: minmax(170px, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.personalizar-menu-item-section-field {
+  min-width: 0;
+}
+
+.personalizar-menu-item-icon-actions {
   display: flex;
   gap: 6px;
-  flex-wrap: wrap;
   justify-content: flex-end;
+  align-items: center;
+  flex-wrap: nowrap;
 }
 
 .personalizar-menu-icon-btn.p-button-icon-only {
@@ -4077,6 +4098,50 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 @media (max-width: 640px) {
+  .personalizar-menu-page {
+    padding-bottom: calc(var(--vtur-mobile-bottom-clearance, 132px) + 24px);
+  }
+
+  .personalizar-menu-page > .vtur-app-card:last-child {
+    margin-bottom: calc(var(--vtur-mobile-bottom-clearance, 132px) + 12px);
+  }
+
+  .personalizar-menu-page .personalizar-menu-list:last-child {
+    padding-bottom: 12px;
+  }
+
+  .personalizar-menu-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .personalizar-menu-item-copy {
+    width: 100%;
+  }
+
+  .personalizar-menu-item-actions {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+
+  .personalizar-menu-item-section-field {
+    width: 100%;
+  }
+
+  .personalizar-menu-item-section-field .vtur-app-field-label {
+    display: none;
+  }
+
+  .personalizar-menu-item-icon-actions {
+    justify-content: flex-start;
+  }
+
+  .personalizar-menu-section-select {
+    min-width: 0;
+    width: 100%;
+  }
+
   .perfil-grid {
     grid-template-columns: 1fr !important;
   }

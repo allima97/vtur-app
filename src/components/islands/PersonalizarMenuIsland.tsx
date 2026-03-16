@@ -328,7 +328,7 @@ export default function PersonalizarMenuIsland() {
                           label="Secao"
                           value={effectiveSection}
                           onChange={(e) => onChangeSection(item, e.target.value)}
-                          wrapperClassName="m-0"
+                          wrapperClassName="m-0 personalizar-menu-item-section-field"
                           className="personalizar-menu-section-select"
                           options={(
                             isSystemAdmin
@@ -348,34 +348,36 @@ export default function PersonalizarMenuIsland() {
                             label: sectionTitle(s),
                           }))}
                         />
-                        <AppButton
-                          type="button"
-                          variant="secondary"
-                          onClick={() => onMove(group.section, item.key, "up")}
-                          disabled={idx === 0}
-                          className="personalizar-menu-icon-btn"
-                          aria-label="Mover para cima"
-                          icon="pi pi-arrow-up"
-                        />
-                        <AppButton
-                          type="button"
-                          variant="secondary"
-                          onClick={() => onMove(group.section, item.key, "down")}
-                          disabled={idx === group.items.length - 1}
-                          className="personalizar-menu-icon-btn"
-                          aria-label="Mover para baixo"
-                          icon="pi pi-arrow-down"
-                        />
-                        <AppButton
-                          type="button"
-                          variant="secondary"
-                          onClick={() => onToggleHidden(item)}
-                          disabled={Boolean(item.locked)}
-                          className="personalizar-menu-icon-btn"
-                          aria-label={hidden ? "Mostrar item" : "Ocultar item"}
-                          title={item.locked ? "Este item nao pode ser ocultado." : undefined}
-                          icon={hidden ? "pi pi-eye" : "pi pi-eye-slash"}
-                        />
+                        <div className="personalizar-menu-item-icon-actions">
+                          <AppButton
+                            type="button"
+                            variant="secondary"
+                            onClick={() => onMove(group.section, item.key, "up")}
+                            disabled={idx === 0}
+                            className="personalizar-menu-icon-btn"
+                            aria-label="Mover para cima"
+                            icon="pi pi-arrow-up"
+                          />
+                          <AppButton
+                            type="button"
+                            variant="secondary"
+                            onClick={() => onMove(group.section, item.key, "down")}
+                            disabled={idx === group.items.length - 1}
+                            className="personalizar-menu-icon-btn"
+                            aria-label="Mover para baixo"
+                            icon="pi pi-arrow-down"
+                          />
+                          <AppButton
+                            type="button"
+                            variant="secondary"
+                            onClick={() => onToggleHidden(item)}
+                            disabled={Boolean(item.locked)}
+                            className="personalizar-menu-icon-btn"
+                            aria-label={hidden ? "Mostrar item" : "Ocultar item"}
+                            title={item.locked ? "Este item nao pode ser ocultado." : undefined}
+                            icon={hidden ? "pi pi-eye" : "pi pi-eye-slash"}
+                          />
+                        </div>
                       </div>
                     </div>
                   );

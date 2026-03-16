@@ -978,7 +978,7 @@ export default function ParametrosAvisosIsland() {
                 Nova arte
               </AppButton>
               <AppButton
-                variant="ghost"
+                variant="secondary"
                 type="button"
                 onClick={() => setMostrarFormularioTema(false)}
                 disabled={salvandoTheme}

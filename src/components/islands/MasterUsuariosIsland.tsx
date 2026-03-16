@@ -785,7 +785,7 @@ export default function MasterUsuariosIsland() {
               <h4 className="text-lg font-semibold">Cadastro de usuário corporativo</h4>
               <AppButton
                 type="button"
-                variant="default"
+                variant="secondary"
                 onClick={() => setCreateModalOpen(false)}
                 disabled={enviandoConvite}
               >
@@ -860,7 +860,7 @@ export default function MasterUsuariosIsland() {
               </AppButton>
               <AppButton
                 type="button"
-                variant="default"
+                variant="secondary"
                 onClick={() => setCreateModalOpen(false)}
                 disabled={enviandoConvite}
               >
