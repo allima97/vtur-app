@@ -569,6 +569,40 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
   const [previewingPdf, setPreviewingPdf] = useState(false);
   const pdfBusy = exportingPdf || previewingPdf;
 
+  const tabCounts = useMemo<Record<AbaId, number>>(() => {
+    const nonEmptyLineCount = (text: string) =>
+      String(text || "")
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean).length;
+
+    return {
+      itinerario: dias.filter((d) => d.cidade || d.percurso || d.data || d.descricao).length,
+      hoteis: hoteis.filter((h) => h.cidade || h.hotel || h.data_inicio || h.data_fim || h.apto || h.categoria || h.regime).length,
+      passeios: passeios.filter((p) => p.cidade || p.passeio || p.data_inicio || p.data_fim).length,
+      transporte: transportes.filter((t) => t.tipo || t.fornecedor || t.descricao || t.data_inicio || t.data_fim || t.categoria || t.observacao).length,
+      investimento: investimentos.filter((i) => i.tipo || Number(i.valor_por_pessoa) > 0 || Number(i.valor_por_apto) > 0).length,
+      pagamento: pagamentos.filter((p) => p.servico || p.forma_pagamento || Number(p.valor_total_com_taxas) > 0 || Number(p.taxas) > 0).length,
+      inclusoes: nonEmptyLineCount(incluiTexto) + nonEmptyLineCount(naoIncluiTexto),
+      informacoes: nonEmptyLineCount(informacoesImportantes),
+    };
+  }, [
+    dias,
+    hoteis,
+    passeios,
+    transportes,
+    investimentos,
+    pagamentos,
+    incluiTexto,
+    naoIncluiTexto,
+    informacoesImportantes,
+  ]);
+
+  function handleQuickOpenSection() {
+    const firstEmpty = ABAS.find((aba) => tabCounts[aba.id] === 0);
+    setAbaAtiva(firstEmpty?.id || "itinerario");
+  }
+
   // ─── Section list helpers ─────────────────────────────────────────────────
   function listOps<T extends { ordem: number }>(
     list: T[],
@@ -956,37 +990,29 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
         </AppCard>
 
         {/* ─── Tab Strip ───────────────────────────────────────────────── */}
-        <div style={{
-          display: "flex",
-          gap: 0,
-          borderBottom: "2px solid #e5e7eb",
-          marginBottom: 16,
-          overflowX: "auto",
-          WebkitOverflowScrolling: "touch" as any,
-        }}>
+        <div className="roteiro-tabs-shell" role="tablist" aria-label="Seções do roteiro">
           {ABAS.map((aba) => (
             <AppButton
               key={aba.id}
               type="button"
               variant="ghost"
               onClick={() => setAbaAtiva(aba.id)}
-              style={{
-                padding: "10px 16px",
-                background: "transparent",
-                border: "none",
-                borderBottom: abaAtiva === aba.id ? "3px solid #2563eb" : "3px solid transparent",
-                cursor: "pointer",
-                fontWeight: abaAtiva === aba.id ? 700 : 500,
-                fontSize: 13,
-                color: abaAtiva === aba.id ? "#2563eb" : "#6b7280",
-                whiteSpace: "nowrap",
-                transition: "color 0.15s, border-color 0.15s",
-                marginBottom: -2,
-              }}
+              className={`roteiro-tab-pill ${abaAtiva === aba.id ? "is-active" : ""}`}
+              aria-pressed={abaAtiva === aba.id}
             >
-              {aba.label}
+              <span className="roteiro-tab-pill-label">{aba.label}</span>
+              <span className="roteiro-tab-pill-count">{tabCounts[aba.id]}</span>
             </AppButton>
           ))}
+          <AppButton
+            type="button"
+            variant="secondary"
+            className="roteiro-tab-plus"
+            icon="pi pi-plus"
+            aria-label="Ir para próxima seção pendente"
+            title="Ir para próxima seção pendente"
+            onClick={handleQuickOpenSection}
+          />
         </div>
 
         {/* ─── Aba: Hotéis Sugeridos ───────────────────────────────────── */}
