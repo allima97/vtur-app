@@ -945,7 +945,7 @@ function formatCnpj(value: string) {
           </div>
         </AppCard>
 
-        <div className="grid md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 perfil-secondary-cards">
           <AppCard title="Dados de acesso" tone="config" className="perfil-card-fill">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <div className="form-group perfil-access-email-group">
