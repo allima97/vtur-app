@@ -6,12 +6,12 @@ import "../styles/primer-overrides.css";
 import "../styles/sakai-alignment.css";
 
 import BrandHead from "../components/BrandHead.astro";
-import MenuIsland from "../components/islands/MenuIsland.tsx";
-import PermissoesProvider from "../components/islands/PermissoesProvider.tsx";
-import ConsultoriaLembretesModalIsland from "../components/islands/ConsultoriaLembretesModalIsland.tsx";
-import PushNotificationsIsland from "../components/islands/PushNotificationsIsland.tsx";
-import HelpDrawerIsland from "../components/islands/HelpDrawerIsland.tsx";
-import NetMetricsPanelIsland from "../components/islands/NetMetricsPanelIsland.tsx";
+import MenuIsland from "../components/islands/MenuIsland";
+import PermissoesProvider from "../components/islands/PermissoesProvider";
+import ConsultoriaLembretesModalIsland from "../components/islands/ConsultoriaLembretesModalIsland";
+import PushNotificationsIsland from "../components/islands/PushNotificationsIsland";
+import HelpDrawerIsland from "../components/islands/HelpDrawerIsland";
+import NetMetricsPanelIsland from "../components/islands/NetMetricsPanelIsland";
 import { SYSTEM_NAME } from "../lib/systemName";
 import { readEnv } from "../lib/supabaseServer";
 
@@ -29,7 +29,7 @@ try {
     Astro.cookies.get("sgtur_menu_cache")?.value;
   if (raw) {
     const parsed = JSON.parse(decodeURIComponent(raw));
-    const userId = Astro.locals?.userId;
+    const userId = (Astro.locals as { userId?: string } | undefined)?.userId;
     if (!userId || parsed?.userId === userId) {
       menuCache = parsed;
     }

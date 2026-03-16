@@ -1,5 +1,5 @@
 name = "vtur-app"
-main = "dist/_worker.js"
+main = "./src/worker.ts"
 assets = { directory = "dist", binding = "ASSETS" }
 compatibility_date = "2024-12-20"
 account_id = "eaf689768c1c323ce233771e12a94859"

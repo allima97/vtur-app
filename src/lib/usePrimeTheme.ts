@@ -1,9 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   changePrimeTheme,
-  getStoredPrimeThemeName,
   PRIME_DEFAULT_THEME,
-  PRIME_THEME_UPDATED_EVENT,
   resolvePrimeThemeName,
   type PrimeThemeName,
 } from "./primeTheme";
@@ -19,20 +17,6 @@ export function usePrimeTheme(): UsePrimeThemeResult {
     resolvePrimeThemeName(PRIME_DEFAULT_THEME)
   );
   const [isApplying, setIsApplying] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    setThemeName(resolvePrimeThemeName(getStoredPrimeThemeName()));
-
-    const onThemeUpdated = (event: Event) => {
-      const detail = (event as CustomEvent<{ theme?: string }>).detail || {};
-      const nextTheme = detail.theme || getStoredPrimeThemeName();
-      setThemeName(resolvePrimeThemeName(nextTheme));
-    };
-
-    window.addEventListener(PRIME_THEME_UPDATED_EVENT, onThemeUpdated as EventListener);
-    return () => window.removeEventListener(PRIME_THEME_UPDATED_EVENT, onThemeUpdated as EventListener);
-  }, []);
 
   const applyTheme = useCallback(
     async (nextThemeName: string) => {

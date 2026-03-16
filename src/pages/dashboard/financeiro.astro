@@ -2,22 +2,42 @@
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
 import { supabaseServer as supabase } from "../../lib/supabaseServer";
 
+type SaleRecord = {
+  id: string;
+  total: number | string;
+  paid_total: number | string;
+  balance_due: number | string;
+  financial_status: string;
+  created_at?: string;
+};
+
+type CommissionRecord = {
+  amount: number | string;
+  status: string;
+};
+
+const supabaseAny = supabase as any;
+
 /* KPIs VENDAS */
-const { data: sales } = await supabase
+const { data: salesData } = await supabaseAny
   .from("sale")
   .select("total, paid_total, balance_due, financial_status");
 
 /* KPIs COMISSÃO */
-const { data: commissions } = await supabase
+const { data: commissionsData } = await supabaseAny
   .from("commission_ledger")
   .select("amount, status");
 
 /* ÚLTIMAS VENDAS */
-const { data: recentSales } = await supabase
+const { data: recentSalesData } = await supabaseAny
   .from("sale")
   .select("id, total, paid_total, balance_due, financial_status, created_at")
   .order("created_at", { ascending: false })
   .limit(10);
+
+const sales = (salesData ?? []) as SaleRecord[];
+const commissions = (commissionsData ?? []) as CommissionRecord[];
+const recentSales = (recentSalesData ?? []) as SaleRecord[];
 
 /* Agregações */
 const receitaTotal =

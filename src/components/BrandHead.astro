@@ -13,8 +13,6 @@ import {
   buildPrimeThemeHref,
   PRIME_DEFAULT_THEME,
   PRIME_THEME_LINK_ID,
-  PRIME_THEME_OPTIONS,
-  PRIME_THEME_STORAGE_KEY,
 } from "../lib/primeTheme";
 
 type Props = {
@@ -34,8 +32,6 @@ const {
 const canonicalUrl = new URL(canonicalPath, APP_URL).toString();
 const ogImageUrl = new URL(BRAND_OG_IMAGE_PATH, APP_URL).toString();
 const defaultPrimeThemeHref = buildPrimeThemeHref(PRIME_DEFAULT_THEME);
-const allowedPrimeThemes = PRIME_THEME_OPTIONS.map((option) => option.name);
-const bootstrapThemeScript = `(function(){try{var storageKey=${JSON.stringify(PRIME_THEME_STORAGE_KEY)};var defaultTheme=${JSON.stringify(PRIME_DEFAULT_THEME)};var allowed=${JSON.stringify(allowedPrimeThemes)};var theme=(window.localStorage.getItem(storageKey)||"").trim().toLowerCase();if(!/^[a-z0-9-]+$/i.test(theme)||allowed.indexOf(theme)===-1){theme=defaultTheme;}var link=document.getElementById(${JSON.stringify(PRIME_THEME_LINK_ID)});if(link){var nextHref="/themes/"+theme+"/theme.css";if(link.getAttribute("href")!==nextHref){link.setAttribute("href",nextHref);}}}catch(_err){}})();`;
 ---
 
 <meta name="theme-color" content="#0b0f2a" />
@@ -61,5 +57,4 @@ const bootstrapThemeScript = `(function(){try{var storageKey=${JSON.stringify(PR
 <link rel="icon" type="image/png" sizes="192x192" href={BRAND_ICON_PATH} />
 <link rel="apple-touch-icon" href={APPLE_TOUCH_ICON_PATH} />
 <link id={PRIME_THEME_LINK_ID} rel="stylesheet" href={defaultPrimeThemeHref} />
-<script is:inline set:html={bootstrapThemeScript}></script>
 {noindex && <meta name="robots" content="noindex, nofollow" />}

@@ -20,6 +20,19 @@ body.sakai-theme {
   --sgvtur-section-config-title: #c2410c;
   --sgvtur-accent: #2563eb;
   --sgvtur-accent-strong: #1d4ed8;
+  --primary-50: #eff6ff;
+  --primary-100: #dbeafe;
+  --primary-200: #bfdbfe;
+  --primary-300: #93c5fd;
+  --primary-400: #60a5fa;
+  --primary-500: #3b82f6;
+  --primary-600: #2563eb;
+  --primary-700: #1d4ed8;
+  --primary-800: #1e40af;
+  --primary-900: #1e3a8a;
+  --primary-color: var(--primary-600);
+  --primary-color-text: #ffffff;
+  --focus-ring: 0 0 0 0.2rem rgba(96, 165, 250, 0.28);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.95)),
     radial-gradient(circle at 12% 12%, rgba(142, 40, 226, 0.1), transparent 30%),
@@ -169,57 +182,13 @@ body.sakai-theme .sidebar-desktop-toggle {
   display: none;
 }
 
-body.sakai-theme .vtur-sidebar-theme-picker {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-body.sakai-theme .vtur-sidebar-theme-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin-left: 0.2rem;
-  color: rgba(226, 232, 240, 0.88);
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-
-body.sakai-theme .vtur-sidebar-theme-select {
-  width: 100%;
-  min-height: 2.45rem;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  border-radius: 10px;
-  background: rgba(15, 23, 42, 0.78);
-  color: #e2e8f0;
-  font-size: 0.9rem;
-  padding: 0.5rem 0.72rem;
-}
-
-body.sakai-theme .vtur-sidebar-theme-select:focus {
-  outline: none;
-  border-color: rgba(186, 230, 253, 0.78);
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.28);
-}
-
-body.sakai-theme .vtur-sidebar-theme-select:disabled {
-  opacity: 0.72;
-  cursor: not-allowed;
-}
-
-body.sakai-theme .vtur-sidebar-theme-select option {
-  color: #0f172a;
-  background: #f8fafc;
-}
-
-body.sakai-theme .app-sidebar :is(.sidebar-refresh-perms-btn, .sidebar-theme-cycle-btn).vtur-app-button-secondary {
+body.sakai-theme .app-sidebar .sidebar-refresh-perms-btn.vtur-app-button-secondary {
   background: rgba(51, 65, 85, 0.55);
   border-color: rgba(148, 163, 184, 0.5);
   color: #e2e8f0;
 }
 
-body.sakai-theme .app-sidebar
-  :is(.sidebar-refresh-perms-btn, .sidebar-theme-cycle-btn).vtur-app-button-secondary:hover:not(:disabled):not(.p-disabled) {
+body.sakai-theme .app-sidebar .sidebar-refresh-perms-btn.vtur-app-button-secondary:hover:not(:disabled):not(.p-disabled) {
   background: rgba(71, 85, 105, 0.72);
   border-color: rgba(186, 230, 253, 0.62);
   color: #f8fafc;
@@ -593,15 +562,56 @@ body.sakai-theme .vtur-app-button {
   border-radius: 8px;
 }
 
+body.sakai-theme :is(.p-button, .vtur-app-button):is(:focus, :focus-visible),
+body.sakai-theme :is(.p-button, .vtur-app-button).p-focus {
+  outline: none;
+  box-shadow: var(--focus-ring) !important;
+}
+
 body.sakai-theme .vtur-app-button-primary {
-  background: #4f46e5;
-  border-color: #4f46e5;
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+  border-color: var(--primary-700);
   box-shadow: none;
 }
 
 body.sakai-theme .vtur-app-button-primary:hover {
-  background: #4338ca;
-  border-color: #4338ca;
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+  border-color: var(--primary-600);
+}
+
+body.sakai-theme .vtur-app-button-default {
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+  border-color: var(--primary-700);
+  color: #ffffff;
+}
+
+body.sakai-theme .vtur-app-button-default:hover:not(:disabled):not(.p-disabled) {
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+  border-color: var(--primary-600);
+}
+
+body.sakai-theme .vtur-app-button-secondary {
+  background: #ffffff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+body.sakai-theme .vtur-app-button-secondary:hover:not(:disabled):not(.p-disabled) {
+  background: #eff6ff;
+  border-color: #60a5fa;
+  color: #1e40af;
+}
+
+body.sakai-theme :is(.vtur-app-button-ghost, .vtur-app-button-link) {
+  background: transparent;
+  border-color: transparent;
+  color: #2563eb;
+}
+
+body.sakai-theme :is(.vtur-app-button-ghost, .vtur-app-button-link):hover:not(:disabled):not(.p-disabled) {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: transparent;
+  color: #1d4ed8;
 }
 
 body.sakai-theme .table-default,

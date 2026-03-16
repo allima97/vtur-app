@@ -4,9 +4,50 @@ import { supabaseServer as supabase } from "../../../../lib/supabaseServer";
 import Button from "../../../../components/ui/Button.astro";
 
 const saleId = Astro.params.id;
+const pathname = new URL(Astro.request.url).pathname;
+const supabaseAny = supabase as any;
+
+type SaleRecord = {
+  id: string;
+  total: number | string;
+  paid_total: number | string;
+  balance_due: number | string;
+  currency: string;
+  status: string;
+  financial_status: string;
+};
+
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  const intent = String(formData.get("intent") ?? "");
+
+  if (intent === "refund") {
+    const amount = Number(formData.get("amount"));
+    const reason = String(formData.get("reason") ?? "");
+    const { error } = await supabaseAny.rpc("registrar_estorno", {
+      p_sale_id: saleId,
+      p_amount: amount,
+      p_reason: reason,
+    });
+    if (error) throw error;
+    return Astro.redirect(pathname);
+  }
+
+  if (intent === "cancel") {
+    const reason = String(formData.get("reason") ?? "");
+    const penalty = Number(formData.get("penalty") ?? 0);
+    const { error } = await supabaseAny.rpc("cancelar_venda", {
+      p_sale_id: saleId,
+      p_reason: reason,
+      p_penalty: penalty,
+    });
+    if (error) throw error;
+    return Astro.redirect(pathname);
+  }
+}
 
 /* 1️⃣ VENDA */
-const { data: sale, error } = await supabase
+const { data: saleData, error } = await supabaseAny
   .from("sale")
   .select(`
     id,
@@ -20,41 +61,11 @@ const { data: sale, error } = await supabase
   .eq("id", saleId)
   .single();
 
+const sale = saleData as SaleRecord | null;
+
 if (!sale) {
   console.error(error);
   throw new Error("Venda não encontrada");
-}
-
-/* 2️⃣ ACTIONS */
-
-async function estornar(formData: FormData) {
-  "use server";
-
-  const amount = Number(formData.get("amount"));
-  const reason = String(formData.get("reason") ?? "");
-
-  const { error } = await supabase.rpc("registrar_estorno", {
-    p_sale_id: saleId,
-    p_amount: amount,
-    p_reason: reason
-  });
-
-  if (error) throw error;
-}
-
-async function cancelar(formData: FormData) {
-  "use server";
-
-  const reason = String(formData.get("reason"));
-  const penalty = Number(formData.get("penalty") ?? 0);
-
-  const { error } = await supabase.rpc("cancelar_venda", {
-    p_sale_id: saleId,
-    p_reason: reason,
-    p_penalty: penalty
-  });
-
-  if (error) throw error;
 }
 ---
 
@@ -119,7 +130,8 @@ async function cancelar(formData: FormData) {
     <hr />
 
     <h2>Estorno</h2>
-    <form method="post" action={estornar}>
+    <form method="post" action={pathname}>
+      <input type="hidden" name="intent" value="refund" />
       <input
         type="number"
         step="0.01"
@@ -138,7 +150,8 @@ async function cancelar(formData: FormData) {
     <hr />
 
     <h2>Cancelar venda</h2>
-    <form method="post" action={cancelar}>
+    <form method="post" action={pathname}>
+      <input type="hidden" name="intent" value="cancel" />
       <input
         type="text"
         name="reason"

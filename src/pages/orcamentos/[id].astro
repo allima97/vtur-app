@@ -2,34 +2,10 @@
 import "../../styles/global.css";
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
 import QuoteDetailIsland from "../../components/islands/QuoteDetailIsland";
-import { createServerClient } from "@supabase/ssr";
-import { readEnv } from "../../lib/supabaseServer";
+import { createAstroServerClient } from "../../lib/supabaseAstro";
 
 const { id } = Astro.params;
-const { cookies } = Astro;
-
-const supabaseUrl = readEnv("PUBLIC_SUPABASE_URL");
-const supabaseAnonKey = readEnv("PUBLIC_SUPABASE_ANON_KEY");
-const isProd = readEnv("ENVIRONMENT") === "production" || readEnv("NODE_ENV") === "production";
-
-const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-  cookies: {
-    get: (name) => cookies.get(name)?.value ?? "",
-    set: (name, value, options) =>
-      cookies.set(name, value, {
-        ...options,
-        httpOnly: true,
-        secure: isProd,
-        sameSite: "Lax",
-        path: "/",
-      }),
-    remove: (name, options) =>
-      cookies.delete(name, {
-        ...options,
-        path: "/",
-      }),
-  },
-});
+const supabase = createAstroServerClient(Astro);
 
 const {
   data: { user },
@@ -51,6 +27,11 @@ if (quoteErr || !quote) {
   return new Response("Quote nao encontrado", { status: 404 });
 }
 
+const quoteRecord = {
+  ...quote,
+  cliente: Array.isArray(quote.cliente) ? (quote.cliente[0] ?? null) : quote.cliente,
+};
+
 const { data: items } = await supabase
   .from("quote_item")
   .select(
@@ -69,5 +50,5 @@ const activePage = "orcamentos";
 ---
 
 <DashboardLayout title="Orcamentos" {activePage}>
-  <QuoteDetailIsland client:only="react" quote={quote} items={itemsWithSegments} />
+  <QuoteDetailIsland client:only="react" quote={quoteRecord} items={itemsWithSegments} />
 </DashboardLayout>

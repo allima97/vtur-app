@@ -1,32 +1,9 @@
 ---
 import "../../../../styles/global.css";
 import DashboardLayout from "../../../../layouts/DashboardLayout.astro";
-import { createServerClient } from "@supabase/ssr";
-import { readEnv } from "../../../../lib/supabaseServer";
+import { createAstroServerClient } from "../../../../lib/supabaseAstro";
 
-const supabaseUrl = readEnv("PUBLIC_SUPABASE_URL");
-const supabaseAnonKey = readEnv("PUBLIC_SUPABASE_ANON_KEY");
-const isProd = readEnv("ENVIRONMENT") === "production" || readEnv("NODE_ENV") === "production";
-const { cookies } = Astro;
-
-const supabaseAuth = createServerClient(supabaseUrl, supabaseAnonKey, {
-  cookies: {
-    get: (name) => cookies.get(name)?.value ?? "",
-    set: (name, value, options) =>
-      cookies.set(name, value, {
-        ...options,
-        httpOnly: true,
-        secure: isProd,
-        sameSite: "Lax",
-        path: "/",
-      }),
-    remove: (name, options) =>
-      cookies.delete(name, {
-        ...options,
-        path: "/",
-      }),
-  },
-});
+const supabaseAuth = createAstroServerClient(Astro);
 
 const {
   data: { user },
@@ -351,13 +328,13 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
                 const dateLabel = formatDate(d.data);
                 const items = splitParagraphs(d.descricao);
                 return (
-                  <div class="vtur-quote-circuit-day" key={d.id || idx}>
+                  <div class="vtur-quote-circuit-day">
                     <div class="text-sm font-semibold text-slate-900">{header}</div>
                     {dateLabel ? <div class="mt-1 text-xs font-medium text-slate-500">{dateLabel}</div> : null}
                     {items.length > 0 ? (
                       <div class="mt-3 text-sm text-slate-700 space-y-1">
-                        {items.map((it, i) => (
-                          <p key={i}>{it}</p>
+                        {items.map((it) => (
+                          <p>{it}</p>
                         ))}
                       </div>
                     ) : null}
@@ -387,12 +364,12 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
               ].filter(Boolean);
               if (!title && details.length === 0) return null;
               return (
-                <div class="border border-slate-200 rounded-lg p-4" key={h.id || idx}>
+                <div class="border border-slate-200 rounded-lg p-4">
                   {title ? <div class="text-sm font-semibold text-slate-900">{title}</div> : null}
                   {details.length > 0 ? (
                     <ul class="mt-2 list-disc pl-5 text-sm text-slate-700 space-y-1">
-                      {details.map((item, i) => (
-                        <li key={i}>{item}</li>
+                      {details.map((item) => (
+                        <li>{item}</li>
                       ))}
                     </ul>
                   ) : null}
@@ -421,12 +398,12 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
               ].filter(Boolean);
               if (!title && details.length === 0) return null;
               return (
-                <div class="border border-slate-200 rounded-lg p-4" key={p.id || idx}>
+                <div class="border border-slate-200 rounded-lg p-4">
                   {title ? <div class="text-sm font-semibold text-slate-900">{title}</div> : null}
                   {details.length > 0 ? (
                     <ul class="mt-2 list-disc pl-5 text-sm text-slate-700 space-y-1">
-                      {details.map((item, i) => (
-                        <li key={i}>{item}</li>
+                      {details.map((item) => (
+                        <li>{item}</li>
                       ))}
                     </ul>
                   ) : null}
@@ -454,12 +431,12 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
               ].filter(Boolean);
               if (!title && details.length === 0) return null;
               return (
-                <div class="border border-slate-200 rounded-lg p-4" key={t.id || idx}>
+                <div class="border border-slate-200 rounded-lg p-4">
                   {title ? <div class="text-sm font-semibold text-slate-900">{title}</div> : null}
                   {details.length > 0 ? (
                     <ul class="mt-2 list-disc pl-5 text-sm text-slate-700 space-y-1">
-                      {details.map((item, i) => (
-                        <li key={i}>{item}</li>
+                      {details.map((item) => (
+                        <li>{item}</li>
                       ))}
                     </ul>
                   ) : null}
@@ -474,7 +451,7 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
         <div class="bg-white border border-slate-200 rounded-xl p-5">
           <div class="text-lg md:text-xl font-extrabold text-blue-title">Investimento</div>
           <div class="mt-4 space-y-3">
-            {investimentos.map((i: any, idx: number) => {
+            {investimentos.map((i: any) => {
               const tipo = textValue(i.tipo);
               const valorPessoa = formatCurrencyOptional(i.valor_por_pessoa);
               const valorApto = formatCurrencyOptional(i.valor_por_apto);
@@ -490,12 +467,12 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
               ].filter(Boolean);
               if (!tipo && details.length === 0) return null;
               return (
-                <div class="border border-slate-200 rounded-lg p-4" key={i.id || idx}>
+                <div class="border border-slate-200 rounded-lg p-4">
                   {tipo ? <div class="text-sm font-semibold text-slate-900">{tipo}</div> : null}
                   {details.length > 0 ? (
                     <ul class="mt-2 list-disc pl-5 text-sm text-slate-700 space-y-1">
-                      {details.map((item, i2) => (
-                        <li key={i2}>{item}</li>
+                      {details.map((item) => (
+                        <li>{item}</li>
                       ))}
                     </ul>
                   ) : null}
@@ -510,7 +487,7 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
         <div class="bg-white border border-slate-200 rounded-xl p-5">
           <div class="text-lg md:text-xl font-extrabold text-blue-title">Formas de Pagamento</div>
           <div class="mt-4 space-y-3">
-            {pagamentos.map((p: any, idx: number) => {
+            {pagamentos.map((p: any) => {
               const servico = textValue(p.servico);
               const valorTotal = formatCurrencyOptional(p.valor_total_com_taxas);
               const taxas = formatCurrencyOptional(p.taxas);
@@ -521,12 +498,12 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
               ].filter(Boolean);
               if (!servico && details.length === 0 && formas.length === 0) return null;
               return (
-                <div class="border border-slate-200 rounded-lg p-4" key={p.id || idx}>
+                <div class="border border-slate-200 rounded-lg p-4">
                   {servico ? <div class="text-sm font-semibold text-slate-900">{servico}</div> : null}
                   {details.length > 0 ? (
                     <ul class="mt-2 list-disc pl-5 text-sm text-slate-700 space-y-1">
-                      {details.map((item, i) => (
-                        <li key={i}>{item}</li>
+                      {details.map((item) => (
+                        <li>{item}</li>
                       ))}
                     </ul>
                   ) : null}
@@ -537,8 +514,8 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
                     <div class="mt-2">
                       <div class="text-sm font-semibold text-slate-900">Formas</div>
                       <ul class="mt-1 list-disc pl-5 text-sm text-slate-700 space-y-1">
-                        {formas.map((it: string, i) => (
-                          <li key={i}>{it}</li>
+                        {formas.map((it: string) => (
+                          <li>{it}</li>
                         ))}
                       </ul>
                     </div>
@@ -562,8 +539,8 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
                 <div class="border border-slate-200 rounded-lg p-4">
                   <div class="text-sm font-semibold text-slate-900">Incluído</div>
                   <ul class="mt-2 list-disc pl-5 text-sm text-slate-700 space-y-1">
-                    {incluiItems.map((it, i) => (
-                      <li key={i}>{it}</li>
+                    {incluiItems.map((it) => (
+                      <li>{it}</li>
                     ))}
                   </ul>
                 </div>
@@ -572,8 +549,8 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
                 <div class="border border-slate-200 rounded-lg p-4">
                   <div class="text-sm font-semibold text-slate-900">Não Incluído</div>
                   <ul class="mt-2 list-disc pl-5 text-sm text-slate-700 space-y-1">
-                    {naoIncluiItems.map((it, i) => (
-                      <li key={i}>{it}</li>
+                    {naoIncluiItems.map((it) => (
+                      <li>{it}</li>
                     ))}
                   </ul>
                 </div>
@@ -591,8 +568,8 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
           </div>
           <div class="bg-white border border-slate-200 rounded-xl p-5">
             <ul class="list-disc pl-5 text-sm text-slate-700 space-y-1">
-              {infoImportanteItems.map((it, i) => (
-                <li key={i}>{it}</li>
+              {infoImportanteItems.map((it) => (
+                <li>{it}</li>
               ))}
             </ul>
           </div>

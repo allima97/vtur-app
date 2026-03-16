@@ -1,6 +1,7 @@
 :root {
   --vtur-primer-accent: #2563eb;
   --vtur-primer-accent-strong: #1d4ed8;
+  --vtur-primer-accent-soft: #60a5fa;
   --vtur-primer-ink: #09112e;
   --vtur-primer-muted: #52607a;
   --vtur-section-blue-bg: #ebf8ff;
@@ -19,9 +20,43 @@
   --vtur-primer-surface-alt: #f4f1eb;
   --vtur-primer-border: rgba(9, 17, 46, 0.14);
   --vtur-primer-sidebar-hover: rgba(255, 255, 255, 0.08);
+  --vtur-button-primary-bg: linear-gradient(135deg, var(--vtur-primer-accent) 0%, var(--vtur-primer-accent-strong) 100%);
+  --vtur-button-primary-hover-bg: linear-gradient(135deg, #3b82f6 0%, var(--vtur-primer-accent) 100%);
+  --vtur-button-primary-active-bg: linear-gradient(135deg, var(--vtur-primer-accent-strong) 0%, #1e40af 100%);
+  --vtur-button-primary-border: var(--vtur-primer-accent-strong);
+  --vtur-button-primary-hover-border: var(--vtur-primer-accent);
+  --vtur-button-primary-active-border: #1e40af;
+  --vtur-button-secondary-bg: #ffffff;
+  --vtur-button-secondary-border: #93c5fd;
+  --vtur-button-secondary-text: #1d4ed8;
+  --vtur-button-secondary-hover-bg: #eff6ff;
+  --vtur-button-secondary-hover-border: #60a5fa;
+  --vtur-button-secondary-hover-text: #1e40af;
+  --vtur-button-ghost-text: #2563eb;
+  --vtur-button-ghost-hover-bg: rgba(59, 130, 246, 0.12);
+  --vtur-button-ghost-hover-text: #1d4ed8;
+  --vtur-button-focus-ring: 0 0 0 0.2rem rgba(96, 165, 250, 0.28);
   --vtur-warning-bg: #ffffff;
   --vtur-warning-border: #f97316;
   --vtur-warning-text: #f97316;
+}
+
+:where(body.sakai-theme, .vtur-primer-scope) {
+  --primary-50: #eff6ff;
+  --primary-100: #dbeafe;
+  --primary-200: #bfdbfe;
+  --primary-300: #93c5fd;
+  --primary-400: #60a5fa;
+  --primary-500: #3b82f6;
+  --primary-600: #2563eb;
+  --primary-700: #1d4ed8;
+  --primary-800: #1e40af;
+  --primary-900: #1e3a8a;
+  --primary-color: var(--primary-600);
+  --primary-color-text: #ffffff;
+  --focus-ring: var(--vtur-button-focus-ring);
+  --highlight-bg: var(--primary-50);
+  --highlight-text-color: var(--primary-700);
 }
 
 .vtur-primer-scope {
@@ -247,6 +282,17 @@
   text-decoration: none !important;
 }
 
+:where(body.sakai-theme, .vtur-primer-scope) :is(.p-button, .vtur-app-button) {
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+:where(body.sakai-theme, .vtur-primer-scope) :is(.p-button, .vtur-app-button):is(:focus, :focus-visible),
+:where(body.sakai-theme, .vtur-primer-scope) :is(.p-button, .vtur-app-button).p-focus {
+  outline: none;
+  box-shadow: var(--vtur-button-focus-ring) !important;
+}
+
 .vtur-app-button:not(.p-button-icon-only) {
   white-space: nowrap;
 }
@@ -259,28 +305,93 @@ a.vtur-app-button:visited {
   text-decoration: none !important;
 }
 
+.vtur-app-button-default,
 .vtur-app-button-primary {
-  background: linear-gradient(135deg, var(--vtur-primer-accent) 0%, var(--vtur-primer-accent-strong) 100%);
-  border-color: var(--vtur-primer-accent-strong);
+  background: var(--vtur-button-primary-bg);
+  border-color: var(--vtur-button-primary-border);
   color: #fff;
 }
 
+.vtur-app-button-default:hover:not(:disabled):not(.p-disabled),
+.vtur-app-button-primary:hover:not(:disabled):not(.p-disabled) {
+  background: var(--vtur-button-primary-hover-bg);
+  border-color: var(--vtur-button-primary-hover-border);
+}
+
+.vtur-app-button-default:active:not(:disabled):not(.p-disabled),
+.vtur-app-button-primary:active:not(:disabled):not(.p-disabled) {
+  background: var(--vtur-button-primary-active-bg);
+  border-color: var(--vtur-button-primary-active-border);
+}
+
 .vtur-app-button-secondary {
-  background: #ffffff;
-  border-color: rgba(99, 102, 241, 0.3);
-  color: #4338ca;
+  background: var(--vtur-button-secondary-bg);
+  border-color: var(--vtur-button-secondary-border);
+  color: var(--vtur-button-secondary-text);
 }
 
 .vtur-app-button-secondary.p-button-outlined {
-  background: #ffffff;
-  border-color: rgba(99, 102, 241, 0.3);
-  color: #4338ca;
+  background: var(--vtur-button-secondary-bg);
+  border-color: var(--vtur-button-secondary-border);
+  color: var(--vtur-button-secondary-text);
 }
 
 .vtur-app-button-secondary:hover:not(:disabled):not(.p-disabled) {
-  background: #f5f3ff;
-  border-color: rgba(99, 102, 241, 0.5);
-  color: #3730a3;
+  background: var(--vtur-button-secondary-hover-bg);
+  border-color: var(--vtur-button-secondary-hover-border);
+  color: var(--vtur-button-secondary-hover-text);
+}
+
+.vtur-app-button-ghost,
+.vtur-app-button-link {
+  background: transparent;
+  border-color: transparent;
+  color: var(--vtur-button-ghost-text);
+}
+
+.vtur-app-button-ghost:hover:not(:disabled):not(.p-disabled),
+.vtur-app-button-link:hover:not(:disabled):not(.p-disabled) {
+  background: var(--vtur-button-ghost-hover-bg);
+  border-color: transparent;
+  color: var(--vtur-button-ghost-hover-text);
+}
+
+:where(body.sakai-theme, .vtur-primer-scope) .p-button.p-button-warning,
+:where(body.sakai-theme, .vtur-primer-scope) .p-button-group.p-button-warning > .p-button,
+:where(body.sakai-theme, .vtur-primer-scope) .p-splitbutton.p-button-warning > .p-button,
+:where(body.sakai-theme, .vtur-primer-scope) .p-fileupload-choose.p-button-warning {
+  background: var(--vtur-button-primary-bg);
+  border-color: var(--vtur-button-primary-border);
+  color: #ffffff;
+}
+
+:where(body.sakai-theme, .vtur-primer-scope)
+  :is(.p-button.p-button-warning, .p-button-group.p-button-warning > .p-button, .p-splitbutton.p-button-warning > .p-button, .p-fileupload-choose.p-button-warning):not(:disabled):hover {
+  background: var(--vtur-button-primary-hover-bg);
+  border-color: var(--vtur-button-primary-hover-border);
+  color: #ffffff;
+}
+
+:where(body.sakai-theme, .vtur-primer-scope)
+  :is(.p-button.p-button-warning, .p-button-group.p-button-warning > .p-button, .p-splitbutton.p-button-warning > .p-button, .p-fileupload-choose.p-button-warning):not(:disabled):active {
+  background: var(--vtur-button-primary-active-bg);
+  border-color: var(--vtur-button-primary-active-border);
+  color: #ffffff;
+}
+
+:where(body.sakai-theme, .vtur-primer-scope) .p-button.p-button-warning.p-button-outlined,
+:where(body.sakai-theme, .vtur-primer-scope) .p-button.p-button-warning.p-button-text,
+:where(body.sakai-theme, .vtur-primer-scope) .p-button.p-button-warning.p-button-link {
+  background: transparent;
+  border-color: var(--vtur-button-secondary-border);
+  color: var(--vtur-button-secondary-text);
+}
+
+:where(body.sakai-theme, .vtur-primer-scope)
+  :is(.p-button.p-button-warning.p-button-outlined, .p-button.p-button-warning.p-button-text, .p-button.p-button-warning.p-button-link):not(:disabled):hover {
+  background: var(--vtur-button-secondary-hover-bg);
+  border-color: var(--vtur-button-secondary-hover-border);
+  color: var(--vtur-button-secondary-hover-text);
 }
 
 .vtur-app-button-danger {
