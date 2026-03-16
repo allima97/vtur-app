@@ -6,6 +6,7 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import PasswordField from "../ui/primer/PasswordField";
 
 function parseHashTokens(hash: string) {
   const params = new URLSearchParams((hash || "").replace(/^#/, ""));
@@ -178,9 +179,7 @@ export default function AuthConviteIsland() {
           )}
 
           <form onSubmit={handleSubmit} className="auth-form">
-            <AppField
-              as="input"
-              type="password"
+            <PasswordField
               id="senha"
               label={
                 <>
@@ -195,9 +194,7 @@ export default function AuthConviteIsland() {
               disabled={loading}
             />
 
-            <AppField
-              as="input"
-              type="password"
+            <PasswordField
               id="confirmar"
               label={
                 <>

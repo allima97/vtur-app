@@ -4,6 +4,7 @@ import AlertMessage from "../ui/AlertMessage";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
 type EmpresaOption = { id: string; nome_fantasia: string; status: string };
@@ -1239,16 +1240,17 @@ export default function MuralRecadosIsland() {
                     onChange={(e) => addAnexos(e.target.files)}
                   />
                 )}
-                <div className="form-group">
-                  <textarea
-                    className="form-input"
-                    value={conteudo}
-                    onChange={(e) => setConteudo(e.target.value)}
-                    placeholder="Escreva aqui..."
-                    rows={3}
-                    style={{ resize: "vertical" }}
-                  />
-                </div>
+                <AppField
+                  as="textarea"
+                  wrapperClassName="form-group"
+                  label="Mensagem"
+                  className="form-textarea"
+                  value={conteudo}
+                  onChange={(e) => setConteudo(e.currentTarget.value)}
+                  placeholder="Escreva aqui..."
+                  rows={3}
+                  style={{ resize: "vertical" }}
+                />
 
                 {!supportsAttachments && (
                   <small style={{ color: "#64748b" }}>
@@ -1523,16 +1525,17 @@ export default function MuralRecadosIsland() {
                       onChange={(e) => addAnexos(e.target.files)}
                     />
                   )}
-                  <div className="form-group">
-                    <textarea
-                      className="form-input"
-                      value={conteudo}
-                      onChange={(e) => setConteudo(e.target.value)}
-                      placeholder="Escreva aqui..."
-                      rows={3}
-                      style={{ resize: "vertical" }}
-                    />
-                  </div>
+                  <AppField
+                    as="textarea"
+                    wrapperClassName="form-group"
+                    label="Mensagem"
+                    className="form-textarea"
+                    value={conteudo}
+                    onChange={(e) => setConteudo(e.currentTarget.value)}
+                    placeholder="Escreva aqui..."
+                    rows={3}
+                    style={{ resize: "vertical" }}
+                  />
 
                   {!supportsAttachments && (
                     <small style={{ color: "#64748b" }}>

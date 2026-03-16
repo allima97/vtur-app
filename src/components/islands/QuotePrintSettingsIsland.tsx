@@ -7,6 +7,7 @@ import { registrarLog } from "../../lib/logs";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
+import FileUploadField from "../ui/primer/FileUploadField";
 
 type QuotePrintSettings = {
   id?: string;
@@ -288,28 +289,13 @@ export default function QuotePrintSettingsIsland() {
 
       <div className="form-row">
         <div className="form-group">
-          <label className="form-label">Logo</label>
-          <div className="file-input-stack">
-            <input
-              id="logo-file-input"
-              className="sr-only"
-              type="file"
-              accept="image/*"
-              onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-              disabled={bloqueado}
-            />
-            <AppButton
-              as="label"
-              htmlFor="logo-file-input"
-              variant="secondary"
-              className="w-full sm:w-auto"
-              style={{ opacity: bloqueado ? 0.6 : 1, pointerEvents: bloqueado ? "none" : "auto" }}
-              aria-disabled={bloqueado}
-            >
-              Escolher arquivo
-            </AppButton>
-            <span className="file-input-name">{logoFile?.name || "Nenhum arquivo escolhido"}</span>
-          </div>
+          <FileUploadField
+            label="Logo"
+            accept="image/*"
+            onChange={(e) => setLogoFile(e.currentTarget.files?.[0] || null)}
+            disabled={bloqueado}
+            fileName={logoFile?.name || "Nenhum arquivo escolhido"}
+          />
           {logoPreview && (
             <img
               src={logoPreview}
@@ -413,30 +399,13 @@ export default function QuotePrintSettingsIsland() {
       </div>
 
       <div className="form-group">
-        <label className="form-label">Imagem complementar (apos informacoes importantes)</label>
-        <div className="file-input-stack">
-          <input
-            id="complement-file-input"
-            className="sr-only"
-            type="file"
-            accept="image/*"
-            onChange={(e) => setComplementImageFile(e.target.files?.[0] || null)}
-            disabled={bloqueado}
-          />
-          <AppButton
-            as="label"
-            htmlFor="complement-file-input"
-            variant="secondary"
-            className="w-full sm:w-auto"
-            style={{ opacity: bloqueado ? 0.6 : 1, pointerEvents: bloqueado ? "none" : "auto" }}
-            aria-disabled={bloqueado}
-          >
-            Escolher arquivo
-          </AppButton>
-          <span className="file-input-name">
-            {complementImageFile?.name || "Nenhum arquivo escolhido"}
-          </span>
-        </div>
+        <FileUploadField
+          label="Imagem complementar (apos informacoes importantes)"
+          accept="image/*"
+          onChange={(e) => setComplementImageFile(e.currentTarget.files?.[0] || null)}
+          disabled={bloqueado}
+          fileName={complementImageFile?.name || "Nenhum arquivo escolhido"}
+        />
         {complementImagePreview && (
           <img
             src={complementImagePreview}

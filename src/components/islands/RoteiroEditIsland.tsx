@@ -969,12 +969,23 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
           <div className="form-row mobile-stack" style={{ gap: 12, marginTop: 12, alignItems: "flex-end" }}>
             <div style={{ flex: "1 1 360px" }}>
               <label style={labelSt}>Importar roteiro (PDF/Word)</label>
-              <input
-                style={inputSt}
-                type="file"
-                accept=".pdf,.docx,.txt"
-                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-              />
+              <div className="vtur-import-upload-stack">
+                <div className="vtur-import-upload-row">
+                  <label className="vtur-import-upload-trigger" htmlFor="roteiro-import-file-input">
+                    Escolher arquivo
+                  </label>
+                  <input
+                    id="roteiro-import-file-input"
+                    className="sr-only"
+                    type="file"
+                    accept=".pdf,.docx,.txt"
+                    onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                  />
+                  <span className="vtur-import-file-name">
+                    {importFile?.name || "Nenhum arquivo selecionado"}
+                  </span>
+                </div>
+              </div>
             </div>
             <div className="mobile-stack-buttons orcamentos-action-bar vtur-actions-end">
               <AppButton

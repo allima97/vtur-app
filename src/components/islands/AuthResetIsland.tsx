@@ -6,6 +6,7 @@ import AlertMessage from "../ui/AlertMessage";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import PasswordField from "../ui/primer/PasswordField";
 
 export default function AuthResetIsland() {
   const [password, setPassword] = useState("");
@@ -14,8 +15,6 @@ export default function AuthResetIsland() {
   const [ok, setOk] = useState(false);
   const [loading, setLoading] = useState(false);
   const [validLink, setValidLink] = useState(false);
-  const [mostrarSenha, setMostrarSenha] = useState(false);
-  const [mostrarConfirmacao, setMostrarConfirmacao] = useState(false);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -130,63 +129,25 @@ export default function AuthResetIsland() {
           </AlertMessage>
         )}
         <form onSubmit={handleSubmit} className="auth-form">
-          <div className="form-group">
-            <label htmlFor="senha">
-              <i className="pi pi-lock"></i> Nova senha
-            </label>
-            <div className="password-field">
-              <input
-                type={mostrarSenha ? "text" : "password"}
-                id="senha"
-                className="form-input"
-                placeholder="Mínimo 6 caracteres"
-                required
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-              />
-              <AppButton
-                type="button"
-                variant="ghost"
-                className="password-toggle"
-                onClick={() => setMostrarSenha((prev) => !prev)}
-                aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
-                aria-pressed={mostrarSenha}
-                tabIndex={loading ? -1 : 0}
-              >
-                <i className={mostrarSenha ? "pi pi-eye-slash" : "pi pi-eye"} />
-              </AppButton>
-            </div>
-          </div>
-          <div className="form-group">
-            <label htmlFor="confirmar">
-              <i className="pi pi-lock"></i> Confirmar nova senha
-            </label>
-            <div className="password-field">
-              <input
-                type={mostrarConfirmacao ? "text" : "password"}
-                id="confirmar"
-                className="form-input"
-                placeholder="Repita a senha"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                disabled={loading}
-              />
-              <AppButton
-                type="button"
-                variant="ghost"
-                className="password-toggle"
-                onClick={() => setMostrarConfirmacao((prev) => !prev)}
-                aria-label={mostrarConfirmacao ? "Ocultar senha" : "Mostrar senha"}
-                aria-pressed={mostrarConfirmacao}
-                tabIndex={loading ? -1 : 0}
-              >
-                <i className={mostrarConfirmacao ? "pi pi-eye-slash" : "pi pi-eye"} />
-              </AppButton>
-            </div>
-          </div>
+          <PasswordField
+            id="senha"
+            label={<><i className="pi pi-lock" aria-hidden="true"></i> Nova senha</>}
+            placeholder="Mínimo 6 caracteres"
+            required
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
+          />
+          <PasswordField
+            id="confirmar"
+            label={<><i className="pi pi-lock" aria-hidden="true"></i> Confirmar nova senha</>}
+            placeholder="Repita a senha"
+            required
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            disabled={loading}
+          />
           <div className="auth-actions">
             <AppButton type="submit" variant="primary" disabled={loading}>
               {loading ? "Salvando..." : "Salvar nova senha"}

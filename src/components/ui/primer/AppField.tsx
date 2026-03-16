@@ -44,7 +44,9 @@ export default function AppField(props: AppFieldProps) {
   const generatedId = useId();
   const controlId = id || generatedId;
   const validationStatus = validation ? validationVariant : undefined;
-  const inputType = as === "input" ? (rest as React.InputHTMLAttributes<HTMLInputElement>).type : undefined;
+  const inputProps = rest as React.InputHTMLAttributes<HTMLInputElement>;
+  const inputType = as === "input" ? inputProps.type : undefined;
+  const inputClassName = typeof inputProps.className === "string" ? inputProps.className : "";
   const controlWrapClassName = ["vtur-app-field-control", inputType === "date" ? "is-date" : ""]
     .filter(Boolean)
     .join(" ");
@@ -71,6 +73,7 @@ export default function AppField(props: AppFieldProps) {
             className={["p-inputtext p-component", block ? "w-full" : ""].filter(Boolean).join(" ")}
             disabled={disabled}
             required={required}
+            aria-invalid={validationStatus === "error" || undefined}
             {...(rest as React.SelectHTMLAttributes<HTMLSelectElement>)}
           >
             {options.map((option) => (
@@ -79,6 +82,16 @@ export default function AppField(props: AppFieldProps) {
               </option>
             ))}
           </select>
+        ) : inputType === "file" ? (
+          <input
+            id={controlId}
+            type="file"
+            className={["form-input", "vtur-app-file-input", block ? "w-full" : "", inputClassName].filter(Boolean).join(" ")}
+            disabled={disabled}
+            required={required}
+            aria-invalid={validationStatus === "error" || undefined}
+            {...inputProps}
+          />
         ) : (
           <InputText
             id={controlId}

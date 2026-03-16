@@ -21,6 +21,7 @@ import { ToastStack, useToastQueue } from "../ui/Toast";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
+import FileUploadField from "../ui/primer/FileUploadField";
 import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
@@ -1109,32 +1110,19 @@ export default function VendaContratoImportIsland() {
         >
           <div className="vtur-form-grid vtur-form-grid-2">
             <div className="vtur-import-upload-stack">
-              <label className="form-label">PDF do contrato/orçamento</label>
-              <div className="vtur-import-upload-row">
-                <input
-                  id="contrato-file-input"
-                  type="file"
-                  accept="application/pdf"
-                  className="sr-only"
-                  ref={fileInputRef}
-                  onChange={(e) => {
-                    const nextFile = e.target.files?.[0] || null;
-                    setFile(nextFile);
-                    if (nextFile) {
-                      setTextInput("");
-                    }
-                  }}
-                />
-                <AppButton
-                  type="button"
-                  variant="secondary"
-                  className="vtur-import-upload-button"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  Escolher arquivo
-                </AppButton>
-                <span className="vtur-import-file-name">{file?.name || "Nenhum arquivo selecionado"}</span>
-              </div>
+              <FileUploadField
+                label="PDF do contrato/orçamento"
+                accept="application/pdf"
+                inputRef={fileInputRef}
+                onChange={(e) => {
+                  const nextFile = e.currentTarget.files?.[0] || null;
+                  setFile(nextFile);
+                  if (nextFile) {
+                    setTextInput("");
+                  }
+                }}
+                fileName={file?.name || "Nenhum arquivo escolhido"}
+              />
               <div className="vtur-form-actions orcamentos-action-bar">
                 <AppButton
                   type="button"

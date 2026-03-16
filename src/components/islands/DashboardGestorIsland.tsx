@@ -1162,6 +1162,7 @@ function DashboardGestorIslandInner() {
     if (id === "orcamentos") {
       return (
         <AppCard
+          className={hideTitle ? undefined : "dashboard-widget-table-card"}
           title={hideTitle ? undefined : `Orçamentos recentes (${orcamentosRecentes.length})`}
           subtitle={hideTitle ? undefined : "Últimas propostas geradas pela equipe."}
           tone="info"
@@ -1222,6 +1223,7 @@ function DashboardGestorIslandInner() {
 
       return (
         <AppCard
+          className={hideTitle ? undefined : "dashboard-widget-table-card"}
           title={hideTitle ? undefined : `Aniversariantes - ${monthLabel} (${items.length})`}
           subtitle={hideTitle ? undefined : "Clientes e acompanhantes do escopo atual."}
           tone="info"
@@ -1305,6 +1307,7 @@ function DashboardGestorIslandInner() {
     if (id === "viagens") {
       return (
         <AppCard
+          className={hideTitle ? undefined : "dashboard-widget-table-card"}
           title={hideTitle ? undefined : `Próximas viagens (${viagensProximas.length})`}
           subtitle={hideTitle ? undefined : "Viagens futuras vinculadas ao escopo da equipe."}
           tone="info"
@@ -1360,6 +1363,7 @@ function DashboardGestorIslandInner() {
     if (id === "follow_up") {
       return (
         <AppCard
+          className={hideTitle ? undefined : "dashboard-widget-table-card"}
           title={hideTitle ? undefined : `Follow-up (${followUpsRecentes.length})`}
           subtitle={hideTitle ? undefined : "Clientes que já retornaram e demandam contato da equipe."}
           tone="info"

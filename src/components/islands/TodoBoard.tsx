@@ -1323,50 +1323,46 @@ export default function TodoBoard() {
             <form onSubmit={addTodo}>
               <div className="modal-body" style={{ display: "grid", gap: 10 }}>
                 <div className="form-row" style={{ gap: 10, flexWrap: "wrap" }}>
-                  <input
-                    className="form-input"
-                    style={{ minWidth: 260, flex: 1 }}
-                    placeholder="Título da tarefa"
-                    value={todoTitulo}
-                    onChange={(e) => setTodoTitulo(e.target.value)}
-                    required
-                  />
-                  <select
-                    className="form-select"
-                    value={todoPrio}
-                    onChange={(e) => setTodoPrio(e.target.value as any)}
-                    style={{ minWidth: 140 }}
-                  >
-                    {PRIORITIES.map((p) => (
-                      <option key={p.value} value={p.value}>
-                        Prioridade: {p.label}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    className="form-select"
-                    value={todoCat || ""}
-                    onChange={(e) => setTodoCat(e.target.value || null)}
-                    style={{ minWidth: 180 }}
-                  >
-                    <option value="">(Sem categoria)</option>
-                    {categorias.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.nome}
-                      </option>
-                    ))}
-                  </select>
+                  <div style={{ minWidth: 260, flex: 1 }}>
+                    <AppField
+                      label="Título da tarefa"
+                      value={todoTitulo}
+                      onChange={(e) => setTodoTitulo(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div style={{ minWidth: 140 }}>
+                    <AppField
+                      as="select"
+                      label="Prioridade"
+                      value={todoPrio}
+                      onChange={(e) => setTodoPrio(e.target.value as any)}
+                      options={PRIORITIES.map((p) => ({ value: p.value, label: p.label }))}
+                    />
+                  </div>
+                  <div style={{ minWidth: 180 }}>
+                    <AppField
+                      as="select"
+                      label="Categoria"
+                      value={todoCat || ""}
+                      onChange={(e) => setTodoCat(e.target.value || null)}
+                      options={[
+                        { value: "", label: "(Sem categoria)" },
+                        ...categorias.map((c) => ({ value: c.id, label: c.nome })),
+                      ]}
+                    />
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Descrição (opcional)</label>
-                  <textarea
-                    className="form-input"
-                    rows={3}
-                    placeholder="Detalhes, datas, links..."
-                    value={todoDesc}
-                    onChange={(e) => setTodoDesc(e.target.value)}
-                  />
-                </div>
+                <AppField
+                  as="textarea"
+                  wrapperClassName="form-group"
+                  label="Descrição (opcional)"
+                  className="form-textarea"
+                  rows={3}
+                  placeholder="Detalhes, datas, links..."
+                  value={todoDesc}
+                  onChange={(e) => setTodoDesc(e.target.value)}
+                />
                 {error && <div style={{ color: "#b91c1c" }}>{error}</div>}
               </div>
               <div className="modal-footer mobile-stack-buttons vtur-actions-end">
@@ -1397,15 +1393,13 @@ export default function TodoBoard() {
             </div>
             <form onSubmit={addCategoria}>
               <div className="modal-body" style={{ display: "grid", gap: 10 }}>
-                <div className="form-group">
-                  <label className="form-label">Nome da categoria</label>
-                  <input
-                    className="form-input"
-                    value={catNome}
-                    onChange={(e) => setCatNome(e.target.value)}
-                    required
-                  />
-                </div>
+                <AppField
+                  wrapperClassName="form-group"
+                  label="Nome da categoria"
+                  value={catNome}
+                  onChange={(e) => setCatNome(e.target.value)}
+                  required
+                />
                 <div className="form-group" style={{ position: "relative" }}>
                   <label className="form-label">Cor da categoria</label>
                   <AppButton

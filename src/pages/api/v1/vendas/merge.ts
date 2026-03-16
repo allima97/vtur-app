@@ -138,6 +138,10 @@ function parseIds(raw?: string | null) {
     .slice(0, 300);
 }
 
+function normalizeCpf(value?: string | null) {
+  return String(value || "").replace(/\D/g, "");
+}
+
 export async function POST({ request }: { request: Request }) {
   try {
     const client = buildAuthClient(request);
@@ -178,7 +182,9 @@ export async function POST({ request }: { request: Request }) {
 
     let vendasQuery = client
       .from("vendas")
-      .select("id, vendedor_id, desconto_comercial_aplicado, desconto_comercial_valor, data_embarque, data_final")
+      .select(
+        "id, cliente_id, vendedor_id, desconto_comercial_aplicado, desconto_comercial_valor, data_embarque, data_final, clientes(cpf)"
+      )
       .in("id", vendaIds);
     vendasQuery = applyScopeToQuery(vendasQuery, scope, companyId);
 
@@ -206,6 +212,28 @@ export async function POST({ request }: { request: Request }) {
 
     const vendaPrincipal = vendasLista.find((v) => v.id === vendaId);
     if (!vendaPrincipal) return new Response("Venda principal nao encontrada.", { status: 404 });
+
+    const principalCpf = normalizeCpf(vendaPrincipal?.clientes?.cpf);
+    if (principalCpf) {
+      const vendaInvalida = vendasLista.find(
+        (v) => v.id !== vendaId && normalizeCpf(v?.clientes?.cpf) !== principalCpf
+      );
+      if (vendaInvalida) {
+        return new Response("As vendas selecionadas precisam pertencer ao mesmo cliente (CPF).", {
+          status: 400,
+        });
+      }
+    } else {
+      const principalClienteId = String(vendaPrincipal?.cliente_id || "").trim();
+      const vendaInvalida = vendasLista.find(
+        (v) => v.id !== vendaId && String(v?.cliente_id || "").trim() !== principalClienteId
+      );
+      if (vendaInvalida) {
+        return new Response("As vendas selecionadas precisam pertencer ao mesmo cliente.", {
+          status: 400,
+        });
+      }
+    }
 
     const { data: recibosData, error: recibosError } = await client
       .from("vendas_recibos")

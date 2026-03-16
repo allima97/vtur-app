@@ -19,6 +19,7 @@ import { carregarTermosNaoComissionaveis, calcularNaoComissionavelPorVenda } fro
 import AlertMessage from "../ui/AlertMessage";
 import DataTable from "../ui/DataTable";
 import EmptyState from "../ui/EmptyState";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import PaginationControls from "../ui/PaginationControls";
 import { useMasterScope } from "../../lib/useMasterScope";
@@ -1862,18 +1863,6 @@ export default function RelatorioVendasIsland() {
             { label: "Confirmado", value: "confirmado" },
             { label: "Cancelado", value: "cancelado" },
           ]}
-        />
-        <AppField
-          label="Valor minimo"
-          value={valorMin}
-          onChange={(e) => setValorMin(e.target.value)}
-          placeholder="0,00"
-        />
-        <AppField
-          label="Valor maximo"
-          value={valorMax}
-          onChange={(e) => setValorMax(e.target.value)}
-          placeholder="0,00"
         />
         {renderClienteField()}
         {renderCidadeField()}

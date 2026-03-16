@@ -493,9 +493,9 @@ export default function MinhasPreferenciasIsland() {
             </div>
 
             <div className="form-group relative" style={{ minWidth: 220, flex: 1 }}>
-              <label className="form-label">Cidade</label>
-              <input
-                className="form-input"
+              <AppField
+                wrapperClassName="form-group"
+                label="Cidade"
                 placeholder="Digite a cidade"
                 value={cidadeBusca}
                 onChange={(e) => {
@@ -520,7 +520,6 @@ export default function MinhasPreferenciasIsland() {
                 }}
                 onBlur={() => setTimeout(() => setMostrarSugestoesCidade(false), 150)}
                 disabled={baseLoading}
-                style={{ marginBottom: 6 }}
               />
 
               {mostrarSugestoesCidade && (buscandoCidade || cidadeBusca.trim().length >= 2) && (

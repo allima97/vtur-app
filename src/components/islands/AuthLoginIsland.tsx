@@ -10,6 +10,7 @@ import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import PasswordField from "../ui/primer/PasswordField";
 
 export default function AuthLoginIsland() {
   const REMEMBER_EMAIL_KEY = "vtur-app:remembered-email";
@@ -19,7 +20,6 @@ export default function AuthLoginIsland() {
   const [mensagem, setMensagem] = useState<{ texto: string; tipo: "success" | "danger" | "warning" } | null>(null);
   const [loading, setLoading] = useState(false);
   const [modalSuspenso, setModalSuspenso] = useState(false);
-  const [mostrarSenha, setMostrarSenha] = useState(false);
   const [lembrarEmail, setLembrarEmail] = useState(false);
 
   async function getIP() {
@@ -312,33 +312,15 @@ export default function AuthLoginIsland() {
               value={email}
               onChange={(e) => setEmail(e.target.value.toLowerCase())}
             />
-            <div className="form-group">
-              <label htmlFor="senha" className="form-label">
-                Senha
-              </label>
-              <div className="password-field">
-                <input
-                  type={mostrarSenha ? "text" : "password"}
-                  id="senha"
-                  className="form-input"
-                  placeholder="Digite sua senha"
-                  required
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <AppButton
-                  type="button"
-                  variant="ghost"
-                  className="password-toggle"
-                  onClick={() => setMostrarSenha((prev) => !prev)}
-                  aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
-                  aria-pressed={mostrarSenha}
-                >
-                  <i className={`pi ${mostrarSenha ? "pi-eye-slash" : "pi-eye"}`} aria-hidden="true" />
-                </AppButton>
-              </div>
-            </div>
+            <PasswordField
+              id="senha"
+              label="Senha"
+              placeholder="Digite sua senha"
+              required
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
             <div className="auth-meta-row">
               <label className="auth-checkbox" htmlFor="login-remember">
                 <input

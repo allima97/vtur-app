@@ -12,6 +12,7 @@ import AppDialog from "../ui/primer/AppDialog";
 import AppField from "../ui/primer/AppField";
 import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import PasswordField from "../ui/primer/PasswordField";
 
 type Perfil = {
   nome_completo: string;
@@ -157,8 +158,6 @@ export default function PerfilIsland() {
   const [confirmaSenha, setConfirmaSenha] = useState("");
   const [novoEmail, setNovoEmail] = useState("");
   const [onboarding, setOnboarding] = useState(false);
-  const [mostrarSenha, setMostrarSenha] = useState(false);
-  const [mostrarConfirmacao, setMostrarConfirmacao] = useState(false);
   const [usoIndividual, setUsoIndividual] = useState<boolean | null>(null);
   const [empresaAtual, setEmpresaAtual] = useState<{
     id?: string | null;
@@ -931,7 +930,6 @@ function formatCnpj(value: string) {
           </div>
           <div className="mobile-stack-buttons perfil-section-actions">
             <AppButton type="button" variant="primary" onClick={salvarPerfil} disabled={salvando}>
-              <i className="pi pi-save" aria-hidden="true" />
               {salvando ? "Salvando..." : "Salvar dados"}
             </AppButton>
           </div>
@@ -958,52 +956,21 @@ function formatCnpj(value: string) {
             </div>
 
             <h4 className="perfil-password-title">Alterar senha</h4>
-            <div className="form-group perfil-password-group">
-              <label>Nova senha</label>
-              <div className="password-field">
-                <input
-                  className="form-input"
-                  type={mostrarSenha ? "text" : "password"}
-                  value={novaSenha}
-                  onChange={(e) => setNovaSenha(e.target.value)}
-                  placeholder="Mínimo 6 caracteres"
-                />
-                <AppButton
-                  type="button"
-                  variant="ghost"
-                  className="password-toggle"
-                  onClick={() => setMostrarSenha((prev) => !prev)}
-                  aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
-                  aria-pressed={mostrarSenha}
-                >
-                  <i className={mostrarSenha ? "pi pi-eye-slash" : "pi pi-eye"} />
-                </AppButton>
-              </div>
-            </div>
-            <div className="form-group perfil-password-group">
-              <label>Confirmar senha</label>
-              <div className="password-field">
-                <input
-                  className="form-input"
-                  type={mostrarConfirmacao ? "text" : "password"}
-                  value={confirmaSenha}
-                  onChange={(e) => setConfirmaSenha(e.target.value)}
-                />
-                <AppButton
-                  type="button"
-                  variant="ghost"
-                  className="password-toggle"
-                  onClick={() => setMostrarConfirmacao((prev) => !prev)}
-                  aria-label={mostrarConfirmacao ? "Ocultar senha" : "Mostrar senha"}
-                  aria-pressed={mostrarConfirmacao}
-                >
-                  <i className={mostrarConfirmacao ? "pi pi-eye-slash" : "pi pi-eye"} />
-                </AppButton>
-              </div>
-            </div>
+            <PasswordField
+              wrapperClassName="form-group perfil-password-group"
+              label="Nova senha"
+              value={novaSenha}
+              onChange={(e) => setNovaSenha(e.target.value)}
+              placeholder="Mínimo 6 caracteres"
+            />
+            <PasswordField
+              wrapperClassName="form-group perfil-password-group"
+              label="Confirmar senha"
+              value={confirmaSenha}
+              onChange={(e) => setConfirmaSenha(e.target.value)}
+            />
             <div className="mobile-stack-buttons perfil-section-actions">
               <AppButton type="button" variant="primary" onClick={alterarSenha} disabled={salvando}>
-                <i className="pi pi-key" aria-hidden="true" />
                 Alterar senha
               </AppButton>
               <AppButton
@@ -1012,13 +979,12 @@ function formatCnpj(value: string) {
                 onClick={atualizarPermissoesAgora}
                 disabled={salvando || atualizandoPermissoes}
               >
-                <i className="pi pi-refresh" aria-hidden="true" />
                 {atualizandoPermissoes ? "Atualizando permissoes..." : "Atualizar permissoes"}
               </AppButton>
             </div>
           </AppCard>
 
-          <AppCard title="Empresa" className="perfil-card-fill">
+          <AppCard title="Empresa" tone="info" className="perfil-card-fill">
             {empresaAtual ? (
               <p className="perfil-text-wrap perfil-company-summary">
                 <strong>Empresa:</strong> {empresaAtual.nome_empresa || "-"}<br />

@@ -10,6 +10,7 @@ import EmptyState from "../ui/EmptyState";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
+import FileUploadField from "../ui/primer/FileUploadField";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { DEFAULT_FROM_EMAILS } from "../../lib/systemName";
@@ -979,55 +980,41 @@ const UsuariosAdminIsland: React.FC = () => {
                   </div>
                 )}
                 <div className="perfil-grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div className="form-group">
-                    <label className="form-label">Contrato social</label>
-                    <input
-                      className="form-input"
-                      type="file"
-                      accept=".pdf,image/*"
-                      onChange={(e) => setDocContrato(e.target.files?.[0] || null)}
-                      disabled={registerForm.loading || enviandoDocs}
-                    />
-                    <small>{docContrato?.name || "Nenhum arquivo selecionado."}</small>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">RG</label>
-                    <input
-                      className="form-input"
-                      type="file"
-                      accept=".pdf,image/*"
-                      onChange={(e) => setDocRg(e.target.files?.[0] || null)}
-                      disabled={registerForm.loading || enviandoDocs}
-                    />
-                    <small>{docRg?.name || "Nenhum arquivo selecionado."}</small>
-                  </div>
+                  <FileUploadField
+                    wrapperClassName="form-group"
+                    label="Contrato social"
+                    accept=".pdf,image/*"
+                    onChange={(e) => setDocContrato(e.currentTarget.files?.[0] || null)}
+                    disabled={registerForm.loading || enviandoDocs}
+                    fileName={docContrato?.name || "Nenhum arquivo escolhido"}
+                  />
+                  <FileUploadField
+                    wrapperClassName="form-group"
+                    label="RG"
+                    accept=".pdf,image/*"
+                    onChange={(e) => setDocRg(e.currentTarget.files?.[0] || null)}
+                    disabled={registerForm.loading || enviandoDocs}
+                    fileName={docRg?.name || "Nenhum arquivo escolhido"}
+                  />
                 </div>
                 <div className="perfil-grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div className="form-group">
-                    <label className="form-label">CPF</label>
-                    <input
-                      className="form-input"
-                      type="file"
-                      accept=".pdf,image/*"
-                      onChange={(e) => setDocCpf(e.target.files?.[0] || null)}
-                      disabled={registerForm.loading || enviandoDocs}
-                    />
-                    <small>{docCpf?.name || "Nenhum arquivo selecionado."}</small>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Outros documentos</label>
-                    <input
-                      className="form-input"
-                      type="file"
-                      multiple
-                      accept=".pdf,image/*"
-                      onChange={(e) => setDocOutros(Array.from(e.target.files || []))}
-                      disabled={registerForm.loading || enviandoDocs}
-                    />
-                    <small>
-                      {docOutros.length ? `${docOutros.length} arquivo(s) selecionado(s).` : "Nenhum arquivo selecionado."}
-                    </small>
-                  </div>
+                  <FileUploadField
+                    wrapperClassName="form-group"
+                    label="CPF"
+                    accept=".pdf,image/*"
+                    onChange={(e) => setDocCpf(e.currentTarget.files?.[0] || null)}
+                    disabled={registerForm.loading || enviandoDocs}
+                    fileName={docCpf?.name || "Nenhum arquivo escolhido"}
+                  />
+                  <FileUploadField
+                    wrapperClassName="form-group"
+                    label="Outros documentos"
+                    multiple
+                    accept=".pdf,image/*"
+                    onChange={(e) => setDocOutros(Array.from(e.currentTarget.files || []))}
+                    disabled={registerForm.loading || enviandoDocs}
+                    fileName={docOutros.length ? `${docOutros.length} arquivo(s) selecionado(s)` : "Nenhum arquivo escolhido"}
+                  />
                 </div>
               </AppCard>
             )}

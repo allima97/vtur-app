@@ -110,7 +110,7 @@ body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item {
   padding: 0.75rem 1rem;
 }
 
-body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item .vtur-legacy-nav-leading .pi {
+body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item .vtur-legacy-nav-leading :is(.pi, svg) {
   color: #93c5fd !important;
   transition: color 0.2s ease;
 }
@@ -120,7 +120,7 @@ body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:hover {
   color: #f8fafc;
 }
 
-body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:hover .vtur-legacy-nav-leading .pi {
+body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:hover .vtur-legacy-nav-leading :is(.pi, svg) {
   color: #dbeafe !important;
 }
 
@@ -132,15 +132,15 @@ body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item[aria-current="page"] {
   border-color: transparent !important;
 }
 
-body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item[aria-current="page"] .vtur-legacy-nav-leading .pi {
+body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item[aria-current="page"] .vtur-legacy-nav-leading :is(.pi, svg) {
   color: #2563eb !important;
 }
 
-body.sakai-theme .mobile-bottom-nav .mobile-bottom-nav-icon .pi {
+body.sakai-theme .mobile-bottom-nav .mobile-bottom-nav-icon :is(.pi, svg) {
   color: #64748b !important;
 }
 
-body.sakai-theme .mobile-bottom-nav .mobile-bottom-nav-item.active .mobile-bottom-nav-icon .pi {
+body.sakai-theme .mobile-bottom-nav .mobile-bottom-nav-item.active .mobile-bottom-nav-icon :is(.pi, svg) {
   color: #2563eb !important;
 }
 
@@ -427,6 +427,40 @@ body.sakai-theme .vtur-app-card.vtur-app-card-has-table > .vtur-app-card-body > 
 body.sakai-theme .vtur-app-card.vtur-app-card-has-datatable > .vtur-app-card-body > .vtur-data-table-shell {
   border-radius: 14px;
   box-shadow: 0 14px 34px rgba(9, 17, 46, 0.06);
+}
+
+body.sakai-theme .dashboard-geral-page .vtur-app-card.dashboard-widget-table-card.vtur-app-card-has-datatable {
+  border: 1px solid rgba(9, 17, 46, 0.12);
+  background: linear-gradient(180deg, rgba(244, 249, 255, 0.96), rgba(255, 255, 255, 0.98));
+  box-shadow: 0 14px 34px rgba(9, 17, 46, 0.06);
+  overflow: hidden;
+}
+
+body.sakai-theme .dashboard-geral-page .vtur-app-card.dashboard-widget-table-card.vtur-app-card-has-datatable > .vtur-app-card-header {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(180deg, rgba(191, 219, 254, 0.5), rgba(255, 255, 255, 0.96));
+  border-bottom: 1px solid var(--sgvtur-section-blue-border);
+}
+
+body.sakai-theme .dashboard-geral-page .vtur-app-card.dashboard-widget-table-card.vtur-app-card-has-datatable > .vtur-app-card-body {
+  padding: 0;
+  border-top: 0;
+}
+
+body.sakai-theme .dashboard-geral-page .vtur-app-card.dashboard-widget-table-card.vtur-app-card-has-datatable > .vtur-app-card-body > .vtur-data-table-shell {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+
+body.sakai-theme .dashboard-geral-page .vtur-app-card.dashboard-widget-table-card.vtur-app-card-has-datatable > .vtur-app-card-body > .vtur-data-table-shell > .vtur-data-table-container {
+  background: transparent;
 }
 
 /* Estrutura legado (Astro sem AppCard React): titulo e tabela em caixas separadas. */

@@ -13,6 +13,7 @@ import AlertMessage from "../ui/AlertMessage";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
+import FileUploadField from "../ui/primer/FileUploadField";
 import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
@@ -2091,29 +2092,27 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 </div>
 
                 <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 16 }}>
-                  <div className="form-group min-w-0">
-                    <label className="form-label">Contrato (PDF)</label>
-                    <input
-                      type="file"
-                      accept="application/pdf"
-                      className="form-input"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] || null;
-                        setRecibos((prev) => {
-                          const next = [...prev];
-                          next[i] = { ...next[i], contrato_file: file, contrato_url: next[i].contrato_url };
-                          return next;
-                        });
-                      }}
-                    />
-                    {r.contrato_url && (
-                      <div className="vtur-sales-contract-link">
-                        <a className="link" href={r.contrato_url} target="_blank" rel="noreferrer">
-                          Ver contrato anexado
-                        </a>
-                      </div>
-                    )}
-                  </div>
+                  <FileUploadField
+                    wrapperClassName="form-group min-w-0"
+                    label="Contrato (PDF)"
+                    accept="application/pdf"
+                    onChange={(e) => {
+                      const file = e.currentTarget.files?.[0] || null;
+                      setRecibos((prev) => {
+                        const next = [...prev];
+                        next[i] = { ...next[i], contrato_file: file, contrato_url: next[i].contrato_url };
+                        return next;
+                      });
+                    }}
+                    fileName={r.contrato_file?.name || "Nenhum arquivo escolhido"}
+                  />
+                  {r.contrato_url && (
+                    <div className="vtur-sales-contract-link">
+                      <a className="link" href={r.contrato_url} target="_blank" rel="noreferrer">
+                        Ver contrato anexado
+                      </a>
+                    </div>
+                  )}
                 </div>
                 </>
                 ) : (

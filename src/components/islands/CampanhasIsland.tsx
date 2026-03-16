@@ -12,6 +12,7 @@ import TableActions from "../ui/TableActions";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
+import FileUploadField from "../ui/primer/FileUploadField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
 type CampanhaStatus = "ativa" | "inativa" | "cancelada";
@@ -422,9 +423,6 @@ export default function CampanhasIsland() {
     setCampanhas((prev) => prev.map((x) => (x.id === id ? { ...x, arquivada_em: null } : x)));
   }
 
-  if (loadingPerm) return <LoadingUsuarioContext />;
-  // Visualização é liberada para todos (controle de escrita via role/RLS).
-
   const campanhasFiltradas = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     return campanhas.filter((campanha) => {
@@ -455,6 +453,9 @@ export default function CampanhasIsland() {
       : "Selecione uma filial para visualizar e publicar campanhas."
     : "Campanhas vinculadas a sua filial atual, com acessos controlados por permissao.";
   const campanhasComAnexo = campanhasFiltradas.filter((c) => Boolean(c.imagem_url)).length;
+
+  if (loadingPerm) return <LoadingUsuarioContext />;
+  // Visualização é liberada para todos (controle de escrita via role/RLS).
 
   function closeModal() {
     setModalOpen(false);
@@ -604,7 +605,7 @@ export default function CampanhasIsland() {
                 </AppButton>
                 <AppButton
                   type="button"
-                  variant="ghost"
+                  variant="secondary"
                   onClick={() => downloadExternalUrl(anexoUrl, anexoNome)}
                 >
                   Baixar
@@ -945,13 +946,12 @@ export default function CampanhasIsland() {
                   </div>
 
                   <div className="vtur-campaign-upload-block">
-                    <label className="form-label">Anexo (imagem ou PDF)</label>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
+                    <FileUploadField
+                      label="Anexo (imagem ou PDF)"
+                      inputRef={fileInputRef}
                       accept="image/*,application/pdf"
-                      className="form-input vtur-campaign-file-input"
-                      onChange={(e) => setImagemFile(e.target.files?.[0] || null)}
+                      onChange={(e) => setImagemFile(e.currentTarget.files?.[0] || null)}
+                      fileName={imagemFile?.name || "Nenhum arquivo escolhido"}
                     />
                     {editing?.imagem_url && !imagemFile ? (
                       <div className="vtur-inline-note">
@@ -983,7 +983,7 @@ export default function CampanhasIsland() {
               },
               {
                 content: "Baixar",
-                buttonType: "primary",
+                buttonType: "default",
                 onClick: () => downloadExternalUrl(preview.url, preview.downloadName),
               },
             ]}

@@ -1884,6 +1884,7 @@ function toLineChartConfig(
         const shouldScroll = items.length > 6;
         return (
           <AppCard
+            className={hideTitle ? undefined : "dashboard-widget-table-card"}
             title={hideTitle ? undefined : `Aniversariantes - ${monthLabel} (${items.length})`}
             subtitle={hideTitle ? undefined : "Clientes e acompanhantes com aniversário neste mês."}
             tone="info"
@@ -1971,6 +1972,7 @@ function toLineChartConfig(
         const shouldScrollOrcamentos = orcamentosRecentes.length > 3;
         return (
           <AppCard
+            className={hideTitle ? undefined : "dashboard-widget-table-card"}
             title={hideTitle ? undefined : `Orçamentos recentes (${orcamentosRecentes.length})`}
             subtitle={hideTitle ? undefined : "Últimas propostas comerciais do período."}
             tone="info"
@@ -2110,6 +2112,7 @@ function toLineChartConfig(
         const shouldScrollViagens = proximasViagensAgrupadas.length > 3;
         return (
           <AppCard
+            className={hideTitle ? undefined : "dashboard-widget-table-card"}
             title={hideTitle ? undefined : `Próximas viagens (${proximasViagensAgrupadas.length})`}
             subtitle={hideTitle ? undefined : "Embarques futuros agrupados por venda."}
             tone="info"
@@ -2194,6 +2197,7 @@ function toLineChartConfig(
         const shouldScrollFollowUp = followUpsRecentes.length > 3;
         return (
           <AppCard
+            className={hideTitle ? undefined : "dashboard-widget-table-card"}
             title={hideTitle ? undefined : `Follow-Up (${followUpsRecentes.length})`}
             subtitle={hideTitle ? undefined : "Clientes que já retornaram e precisam de contato."}
             tone="info"

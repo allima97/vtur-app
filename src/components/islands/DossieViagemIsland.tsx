@@ -12,6 +12,7 @@ import { parentescoOptions } from "../../lib/parentescoOptions";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
+import FileUploadField from "../ui/primer/FileUploadField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
 type ViagemAcompanhante = {
@@ -1706,14 +1707,12 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                             ]}
                           />
                         </div>
-                        <div className="form-group">
-                          <label className="form-label">Arquivo</label>
-                          <input
-                            type="file"
-                            className="form-input"
-                            onChange={(e) => setDocFile(e.target.files?.[0] || null)}
-                          />
-                        </div>
+                        <FileUploadField
+                          wrapperClassName="form-group"
+                          label="Arquivo"
+                          onChange={(e) => setDocFile(e.currentTarget.files?.[0] || null)}
+                          fileName={docFile?.name || "Nenhum arquivo escolhido"}
+                        />
                       </div>
                       <div className="mobile-stack-buttons">
                         <AppButton

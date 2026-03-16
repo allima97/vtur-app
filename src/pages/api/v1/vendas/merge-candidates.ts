@@ -118,6 +118,10 @@ export async function GET({ request }: { request: Request }) {
 
     query = applyScopeToQuery(query, scope, companyId);
 
+    if (venda.vendedor_id) {
+      query = query.eq("vendedor_id", venda.vendedor_id);
+    }
+
     if (!scope.isAdmin && scope.papel === "GESTOR") {
       const ids = await fetchGestorEquipeIdsComGestor(client, scope.userId);
       if (ids.length === 0) {

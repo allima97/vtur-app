@@ -471,6 +471,42 @@ body {
   padding-top: 16px;
 }
 
+.dashboard-geral-page .dashboard-widget-table-card > .vtur-app-card-header {
+  margin-bottom: 0;
+}
+
+.dashboard-geral-page .dashboard-widget-table-card > .vtur-app-card-body {
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
+  padding-top: 16px;
+}
+
+.dashboard-geral-page .dashboard-widget-table-card > .vtur-app-card-body > .vtur-data-table-shell {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.dashboard-geral-page .dashboard-widget-table-card > .vtur-app-card-body > .vtur-data-table-shell > .vtur-data-table-container {
+  background: transparent;
+}
+
+@media (max-width: 640px) {
+  :is(
+    .relatorio-vendas-page,
+    .relatorio-vendas-destino-page,
+    .relatorio-vendas-produto-page,
+    .relatorio-vendas-cliente-page
+  ) .vtur-app-card.list-toolbar-sticky > .vtur-app-card-body {
+    display: none;
+    border-top: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    min-height: 0;
+  }
+}
+
 .vtur-relatorio-vendas-filters-mobile {
   display: none;
 }
@@ -1417,6 +1453,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 .form-input,
 .form-select {
+  min-height: 44px;
   padding: 10px 12px;
   border-radius: 14px;
   border: 1px solid rgba(148, 163, 184, 0.24);
@@ -1457,7 +1494,7 @@ input[type="radio"] {
   accent-color: #2563eb;
 }
 
-input[type="file"] {
+:is(input[type="file"], .vtur-app-file-input) {
   width: 100%;
   max-width: 100%;
   padding: 6px;
@@ -1468,8 +1505,8 @@ input[type="file"] {
   box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
 }
 
-input[type="file"]::file-selector-button,
-input[type="file"]::-webkit-file-upload-button {
+:is(input[type="file"], .vtur-app-file-input)::file-selector-button,
+:is(input[type="file"], .vtur-app-file-input)::-webkit-file-upload-button {
   margin-right: 10px;
   padding: 8px 12px;
   border-radius: 10px;
@@ -1484,25 +1521,26 @@ input[type="file"]::-webkit-file-upload-button {
   transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
 }
 
-input[type="file"]:hover::file-selector-button,
-input[type="file"]:hover::-webkit-file-upload-button {
+:is(input[type="file"], .vtur-app-file-input):hover::file-selector-button,
+:is(input[type="file"], .vtur-app-file-input):hover::-webkit-file-upload-button {
   background: #f8fafc;
   border-color: rgba(100, 116, 139, 0.45);
 }
 
-input[type="file"]:disabled {
+:is(input[type="file"], .vtur-app-file-input):disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
 
-input[type="file"]:disabled::file-selector-button,
-input[type="file"]:disabled::-webkit-file-upload-button {
+:is(input[type="file"], .vtur-app-file-input):disabled::file-selector-button,
+:is(input[type="file"], .vtur-app-file-input):disabled::-webkit-file-upload-button {
   cursor: not-allowed;
 }
 
 .form-input:focus,
 .form-select:focus,
-.form-textarea:focus {
+.form-textarea:focus,
+:is(input[type="file"], .vtur-app-file-input):focus {
   outline: none;
   border-color: rgba(142, 40, 226, 0.32);
   box-shadow: 0 0 0 3px rgba(142, 40, 226, 0.12);
@@ -3790,6 +3828,34 @@ input[type="file"]:disabled::-webkit-file-upload-button {
   flex-direction: column;
 }
 
+.calculator-modal-backdrop {
+  z-index: 1250;
+}
+
+.calculator-modal-panel {
+  overscroll-behavior: contain;
+}
+
+.calculator-modal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.calculator-modal-title {
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.calculator-modal-close-btn.vtur-app-button {
+  min-height: 36px;
+  padding-inline: 14px;
+}
+
 .modal-header {
   padding: 12px 16px;
   border-bottom: 1px solid var(--color-border, #e2e8f0);
@@ -3897,6 +3963,33 @@ input[type="file"]:disabled::-webkit-file-upload-button {
     bottom: 0;
     z-index: 1;
     background: #ffffff;
+  }
+
+  .calculator-modal-backdrop {
+    align-items: flex-start;
+    padding: calc(env(safe-area-inset-top, 0px) + 8px) 8px calc(env(safe-area-inset-bottom, 0px) + 8px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .calculator-modal-panel {
+    margin: 0 auto;
+    border-radius: 14px;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+  }
+
+  .calculator-modal-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding-bottom: 6px;
+    background: inherit;
+  }
+
+  .calculator-modal-close-btn.vtur-app-button {
+    min-width: 92px;
   }
 }
 
@@ -4009,6 +4102,15 @@ input[type="file"]:disabled::-webkit-file-upload-button {
   display: flex;
   flex-direction: column;
   min-height: 100%;
+}
+
+.perfil-page .vtur-app-card > .vtur-app-card-header {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.perfil-page .vtur-app-card > .vtur-app-card-body {
+  padding-top: 16px;
 }
 
 .perfil-secondary-cards {

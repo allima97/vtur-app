@@ -56,6 +56,12 @@ const setPerm = (perms: Record<string, string>, key: string, perm: string) => {
   perms[normalizedKey] = permLevel(perm) > permLevel(atual) ? perm : atual;
 };
 
+const normalizeModuloKey = (value?: string | null) => {
+  const raw = String(value || "").trim().toLowerCase();
+  if (!raw) return "";
+  return MODULO_ALIASES[raw] || raw.replace(/\s+/g, "_");
+};
+
 const buildPerms = (
   rows: Array<{ modulo: string | null; permissao: string | null; ativo: boolean | null }>
 ) => {
@@ -414,13 +420,22 @@ export const onRequest = defineMiddleware(async (context, next) => {
     ),
   );
 
+  const modulosPermitidos = new Set<string>();
+  modulosConsulta.forEach((entry) => {
+    const normalized = normalizeModuloKey(entry);
+    if (normalized) modulosPermitidos.add(normalized);
+  });
+
   const { data: accRows } = await supabase
     .from("modulo_acesso")
     .select("permissao, ativo, modulo")
-    .eq("usuario_id", user.id)
-    .in("modulo", modulosConsulta);
+    .eq("usuario_id", user.id);
 
-  const acessosValidos = (accRows || []).filter((row) => row?.ativo);
+  const acessosValidos = (accRows || []).filter((row) => {
+    if (!row?.ativo) return false;
+    const moduloKey = normalizeModuloKey(row?.modulo);
+    return moduloKey ? modulosPermitidos.has(moduloKey) : false;
+  });
   if (acessosValidos.length === 0) {
     return makeMutable(Response.redirect(new URL("/negado", url), 302));
   }

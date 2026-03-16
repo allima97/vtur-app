@@ -943,7 +943,7 @@ export default function ConciliacaoIsland() {
           <div className="vtur-import-upload-stack">
             <div className="vtur-import-upload-row">
               <label className="vtur-import-upload-trigger" htmlFor="conciliacao-upload-input">
-                Selecionar arquivo
+                Escolher arquivo
               </label>
               <input
                 id="conciliacao-upload-input"

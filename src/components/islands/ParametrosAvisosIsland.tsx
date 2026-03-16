@@ -9,6 +9,7 @@ import { renderSvgUrlToPngObjectUrl, validarPngServidor } from "../../lib/cards/
 import AppCard from "../ui/primer/AppCard";
 import AppButton from "../ui/primer/AppButton";
 import AppField from "../ui/primer/AppField";
+import FileUploadField from "../ui/primer/FileUploadField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 import {
   OFFICIAL_CARD_THEME_DELETE_NAMES,
@@ -184,6 +185,13 @@ function normalizarCategoria(value?: string | null) {
     .replace(/^_+|_+$/g, "");
 }
 
+function categoriasCoincidem(first?: string | null, second?: string | null) {
+  const categoriaA = normalizarCategoria(first);
+  const categoriaB = normalizarCategoria(second);
+  if (!categoriaA || !categoriaB) return false;
+  return categoriaA === categoriaB;
+}
+
 function buildMensagemDisparo(
   texto: string,
   assinatura: string,
@@ -332,8 +340,7 @@ export default function ParametrosAvisosIsland() {
   const filteredThemesByCategoria = useMemo(() => {
     const categoria = normalizarCategoria(form.categoria);
     if (!categoria) return themes;
-    const temasDaCategoria = themes.filter((theme) => normalizarCategoria(theme.categoria) === categoria);
-    return temasDaCategoria.length > 0 ? temasDaCategoria : themes;
+    return themes.filter((theme) => normalizarCategoria(theme.categoria) === categoria);
   }, [themes, form.categoria]);
 
   const themesTabela = useMemo(() => {
@@ -964,10 +971,13 @@ export default function ParametrosAvisosIsland() {
               />
             </div>
             <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "1fr 2fr 1fr" }}>
-              <div className="form-group">
-                <label className="form-label">Arquivo da arte</label>
-                <input type="file" className="form-input" accept="image/*" onChange={(e) => void handleThemeFileSelected(e.target.files?.[0] || null)} />
-              </div>
+              <FileUploadField
+                wrapperClassName="form-group"
+                label="Arquivo da arte"
+                accept="image/*"
+                onChange={(e) => void handleThemeFileSelected(e.currentTarget.files?.[0] || null)}
+                fileName={themeFile?.name || "Nenhum arquivo escolhido"}
+              />
               <AppField
                 wrapperClassName="form-group"
                 label="URL da arte (opcional)"
@@ -1183,7 +1193,7 @@ export default function ParametrosAvisosIsland() {
               setForm((prev) => ({
                 ...prev,
                 theme_id: themeId,
-                categoria: prev.categoria || theme?.categoria || "",
+                categoria: theme?.categoria || prev.categoria || "",
               }));
               aplicarPadraoVisual(themeId);
             }}
@@ -1208,7 +1218,24 @@ export default function ParametrosAvisosIsland() {
               label="Ocasião *"
               list="aviso-categorias-list"
               value={form.categoria}
-              onChange={(e) => setForm((prev) => ({ ...prev, categoria: e.target.value }))}
+              onChange={(e) => {
+                const categoria = e.target.value;
+                setForm((prev) => {
+                  const themeAtual = themes.find((item) => item.id === prev.theme_id) || null;
+                  const manterTheme = !themeAtual || categoriasCoincidem(themeAtual.categoria, categoria);
+                  return {
+                    ...prev,
+                    categoria,
+                    theme_id: manterTheme ? prev.theme_id : "",
+                  };
+                });
+                if (form.theme_id) {
+                  const themeAtual = themes.find((item) => item.id === form.theme_id) || null;
+                  if (themeAtual && !categoriasCoincidem(themeAtual.categoria, categoria)) {
+                    aplicarPadraoVisual("");
+                  }
+                }
+              }}
               placeholder="Natal, Páscoa, Aniversário..."
               required
             />
