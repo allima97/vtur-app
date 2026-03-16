@@ -1316,6 +1316,10 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
     word-break: break-word;
   }
 
+  body.sakai-theme .table-mobile-cards tbody td:first-child {
+    padding-left: 11px !important;
+  }
+
   body.sakai-theme .table-mobile-cards td > * {
     min-width: 0;
   }

@@ -2323,6 +2323,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 
   .mobile-stack-buttons,
+  .orcamentos-action-bar,
   .vtur-app-toolbar-actions,
   .vtur-app-card-actions,
   .action-buttons,
@@ -2354,12 +2355,21 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     padding: 10px 12px;
   }
 
+  .orcamentos-action-bar > :is(.btn, .p-button, .vtur-app-button):not(.btn-icon):not(.p-button-icon-only) {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    text-align: center;
+    padding: 10px 12px;
+  }
+
   .page-content-wrap .table-container {
     max-width: 100%;
     overflow-x: auto;
   }
 
   .mobile-stack-buttons .btn:not(.btn-icon),
+  .orcamentos-action-bar .btn:not(.btn-icon),
   .flex.flex-col.gap-2.sm\:hidden .btn:not(.btn-icon),
   .action-buttons .btn:not(.btn-icon),
   .modal-footer .btn:not(.btn-icon),
@@ -2377,6 +2387,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   .viagens-action-buttons .btn:not(.btn-icon),
   .chat-bubble-actions .btn:not(.btn-icon),
   .mobile-stack-buttons button:not(.btn-icon),
+  .orcamentos-action-bar button:not(.btn-icon),
   .flex.flex-col.gap-2.sm\:hidden button:not(.btn-icon),
   .action-buttons button:not(.btn-icon),
   .modal-footer button:not(.btn-icon),
@@ -2394,6 +2405,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   .viagens-action-buttons button:not(.btn-icon),
   .chat-bubble-actions button:not(.btn-icon),
   .mobile-stack-buttons a:not(.btn-icon),
+  .orcamentos-action-bar a:not(.btn-icon),
   .flex.flex-col.gap-2.sm\:hidden a:not(.btn-icon),
   .action-buttons a:not(.btn-icon),
   .modal-footer a:not(.btn-icon),
@@ -6892,10 +6904,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     align-items: start !important;
   }
 
+  .table-mobile-cards:not(.table-mobile-plain) tbody td:first-child {
+    padding-left: 10px !important;
+  }
+
   .table-mobile-cards:not(.table-mobile-plain) td:not(.th-actions)::before {
     font-size: 0.78rem;
     line-height: 1.15;
     margin-top: 1px;
+    text-align: left !important;
+    justify-self: start !important;
+    margin-left: 0 !important;
+    padding-left: 0 !important;
   }
 
   .table-mobile-cards:not(.table-mobile-plain) td:last-child {
