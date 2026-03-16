@@ -8,7 +8,6 @@ import EmptyState from "../ui/EmptyState";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { formatDateBR } from "../../lib/format";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
@@ -350,7 +349,7 @@ const FinanceiroAdminIsland: React.FC = () => {
 
   return (
     <div className="mt-6 admin-page admin-financeiro-page">
-      <AppToolbar
+      <AppCard
         tone="config"
         className="list-toolbar-sticky"
         title="Controle financeiro"

@@ -9,7 +9,6 @@ import { renderSvgUrlToPngObjectUrl, validarPngServidor } from "../../lib/cards/
 import AppCard from "../ui/primer/AppCard";
 import AppButton from "../ui/primer/AppButton";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 import {
   OFFICIAL_CARD_THEME_DELETE_NAMES,
   OFFICIAL_CARD_THEME_NAMES,
@@ -865,12 +864,12 @@ export default function ParametrosAvisosIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="page-content-wrap mt-6">
-        <AppToolbar
+      <div className="page-content-wrap">
+        <AppCard
           tone="info"
-          className="mb-3"
-          title="Avisos de relacionamento VTUR"
-          subtitle="Suba a arte por ocasião, vincule mensagem de WhatsApp e valide em prévia real."
+          className="mb-3 parametros-avisos-top-card"
+          title="CRM"
+          subtitle="Gerencie templates e artes com visao de CRM para WhatsApp e e-mail."
         />
       <AppCard tone="info" className="mb-3">
         <div style={{ marginTop: 10, color: "#334155", fontSize: 14 }}>
@@ -1070,7 +1069,7 @@ export default function ParametrosAvisosIsland() {
                             type="button"
                             variant="ghost"
                             icon="pi pi-pencil"
-                            className="p-button-rounded p-button-sm"
+                            className="p-button-rounded"
                             onClick={() => editarTheme(theme)}
                             title="Editar arte"
                             aria-label="Editar arte"
@@ -1079,7 +1078,7 @@ export default function ParametrosAvisosIsland() {
                             type="button"
                             variant="ghost"
                             icon="pi pi-eye"
-                            className="p-button-rounded p-button-sm"
+                            className="p-button-rounded"
                             onClick={() => window.open(resolvedThemeAsset.asset_url || theme.asset_url, "_blank", "noopener,noreferrer")}
                             title="Visualizar arte"
                             aria-label="Visualizar arte"
@@ -1088,7 +1087,7 @@ export default function ParametrosAvisosIsland() {
                             type="button"
                             variant="danger"
                             icon="pi pi-trash"
-                            className="p-button-rounded p-button-sm"
+                            className="p-button-rounded"
                             onClick={() => void removerTheme(theme.id)}
                             title="Excluir arte"
                             aria-label="Excluir arte"

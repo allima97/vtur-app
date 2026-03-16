@@ -11,7 +11,6 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type TipoProduto = { id: string; nome: string | null; tipo: string };
 type FornecedorOption = { id: string; nome_completo: string | null; nome_fantasia: string | null };
@@ -474,8 +473,9 @@ export default function ProdutosLoteIsland() {
 
   return (
     <div className="produtos-lote-page">
-      <AppToolbar
+      <AppCard
         tone="config"
+        className="mb-3"
         title="Produtos em lote"
         subtitle="Cadastre varios produtos de uma vez com atributos compartilhados."
       />
@@ -765,7 +765,7 @@ export default function ProdutosLoteIsland() {
             </DataTable>
           </div>
 
-          <div className="mt-2 mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+          <div className="mt-2 mobile-stack-buttons vtur-actions-end">
             <AppButton
               type="button"
               variant="secondary"

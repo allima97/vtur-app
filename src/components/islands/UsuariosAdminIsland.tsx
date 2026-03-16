@@ -10,7 +10,6 @@ import EmptyState from "../ui/EmptyState";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { DEFAULT_FROM_EMAILS } from "../../lib/systemName";
@@ -537,9 +536,9 @@ const UsuariosAdminIsland: React.FC = () => {
 
   return (
     <div className="mt-6 admin-page admin-usuarios-page">
-      <AppToolbar
+      <AppCard
         tone="config"
-        className="list-toolbar-sticky"
+        className="mb-3 list-toolbar-sticky"
         title="Usuarios do sistema"
         subtitle="Gerencie cargos, empresas e status de acesso."
         actions={

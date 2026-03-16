@@ -28,7 +28,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 function titleCaseAllWords(valor: string) {
   const trimmed = (valor || "").trim();
@@ -2342,11 +2341,10 @@ export default function ClientesIsland() {
       {!mostrarFormCliente && (
         <>
           {/* BUSCA */}
-          <AppToolbar
+          <AppCard
             title="Clientes"
             subtitle="Consulte, edite e acione contatos com uma visao centralizada da carteira."
             tone="info"
-            sticky
             actions={
               podeCriar ? (
                 <AppButton
@@ -2369,7 +2367,7 @@ export default function ClientesIsland() {
                 caption="Digite para consultar toda a carteira."
               />
             </div>
-          </AppToolbar>
+          </AppCard>
 
           {/* ERRO */}
           {erro && (
@@ -2420,7 +2418,7 @@ export default function ClientesIsland() {
             />
           ) : (
             <DataTable
-              containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+              containerClassName="vtur-scroll-y-65"
               headers={
                 <tr>
                   <th>Nome</th>

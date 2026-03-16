@@ -10,7 +10,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 import { matchesCpfSearch } from "../../lib/searchNormalization";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 
@@ -266,12 +265,24 @@ export default function QuoteListIsland() {
   return (
     <AppPrimerProvider>
       <div className="page-content-wrap orcamentos-consulta-page">
-        <AppToolbar
-          sticky
+        <AppCard
           tone="config"
           className="mb-3 list-toolbar-sticky"
-          title="Base de orcamentos"
-          subtitle={resumoLista}
+          title="Carteira de Orcamentos"
+          subtitle={`Gerencie seus orcamentos com visao de CRM. ${resumoLista}`}
+          actions={
+            <div className="orcamentos-action-bar">
+              <AppButton as="a" href="/orcamentos/importar" type="button" variant="secondary">
+                Importar orcamento
+              </AppButton>
+              <AppButton as="a" href="/orcamentos/criar" type="button" variant="primary">
+                Criar orcamento
+              </AppButton>
+              <AppButton as="a" href="/orcamentos/personalizados" type="button" variant="secondary">
+                Personalizados
+              </AppButton>
+            </div>
+          }
         >
           <div className="vtur-form-grid vtur-form-grid-2">
             <AppField
@@ -293,7 +304,7 @@ export default function QuoteListIsland() {
               caption="Filtre a carteira por etapa atual da negociacao."
             />
           </div>
-        </AppToolbar>
+        </AppCard>
 
         {erro && (
           <AlertMessage variant="error" className="mb-3">
@@ -307,7 +318,7 @@ export default function QuoteListIsland() {
         >
           <DataTable
             className="table-mobile-cards table-header-blue quote-list-table"
-            containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+            containerClassName="vtur-scroll-y-65"
             headers={
               <tr>
                 <th>Cliente</th>

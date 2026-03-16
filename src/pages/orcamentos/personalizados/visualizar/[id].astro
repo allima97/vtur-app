@@ -1,7 +1,6 @@
 ---
 import "../../../../styles/global.css";
 import DashboardLayout from "../../../../layouts/DashboardLayout.astro";
-import HeaderPage from "../../../../components/ui/HeaderPage.astro";
 import { createServerClient } from "@supabase/ssr";
 import { readEnv } from "../../../../lib/supabaseServer";
 
@@ -304,17 +303,22 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
 ---
 
 <DashboardLayout title={pageTitle} {activePage}>
-  <HeaderPage
-    title={roteiro?.nome || "Orçamento Personalizado"}
-    subtitle="Visualização em HTML (sem PDF)."
-    color="blue"
-    stackActionsOnMobile={true}
-  >
-    <div class="mobile-stack-buttons orcamentos-action-bar">
-      <a class="vtur-app-button vtur-app-button-primary" href={`/orcamentos/personalizados/${roteiroId}`}>Editar</a>
-      <a class="vtur-app-button" href="/orcamentos/personalizados">Voltar</a>
-    </div>
-  </HeaderPage>
+  <div class="page-content-wrap">
+    <section class="vtur-app-card vtur-app-card-info mb-3 list-toolbar-sticky">
+      <div class="vtur-app-card-header">
+        <div class="vtur-app-card-copy">
+          <h2 class="vtur-app-card-title">{roteiro?.nome || "Orçamento Personalizado"}</h2>
+          <p class="vtur-app-card-subtitle">Visualização em HTML (sem PDF).</p>
+        </div>
+      </div>
+      <div class="vtur-app-card-body">
+        <div class="mobile-stack-buttons orcamentos-action-bar vtur-actions-end">
+          <a class="vtur-app-button vtur-app-button-primary" href={`/orcamentos/personalizados/${roteiroId}`}>Editar</a>
+          <a class="vtur-app-button" href="/orcamentos/personalizados">Voltar</a>
+        </div>
+      </div>
+    </section>
+  </div>
 
   <div class="px-6 pb-10">
     <div class="max-w-5xl mx-auto space-y-4">

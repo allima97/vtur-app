@@ -11,7 +11,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type Cidade = { id: string; nome: string };
 type TipoProduto = { id: string; nome: string; tipo?: string | null };
@@ -443,11 +442,11 @@ export default function MinhasPreferenciasIsland() {
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
       {!mostrarFormulario && (
-        <AppToolbar
+        <AppCard
+          className="minhas-preferencias-top-card list-toolbar-sticky"
           title="Minhas preferências"
           subtitle="Cadastre referências pessoais, compartilhe com a equipe e gerencie convites de acesso."
           tone="info"
-          sticky
           actions={
             <AppButton type="button" variant="primary" onClick={abrirFormularioNovo} disabled={!podeCriar}>
               Adicionar preferência
@@ -462,7 +461,7 @@ export default function MinhasPreferenciasIsland() {
               placeholder="Nome, tipo, cidade, localização..."
             />
           </div>
-        </AppToolbar>
+        </AppCard>
       )}
 
       {mostrarFormulario && (
@@ -601,7 +600,7 @@ export default function MinhasPreferenciasIsland() {
 
           {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
 
-          <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+          <div className="mobile-stack-buttons vtur-actions-end">
             <AppButton
               type="submit"
               variant="primary"

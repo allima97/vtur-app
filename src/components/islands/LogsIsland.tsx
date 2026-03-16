@@ -8,7 +8,6 @@ import { formatDateTimeBR } from "../../lib/format";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type LogEntry = {
   id: string;
@@ -149,7 +148,7 @@ export default function LogsIsland() {
 
   return (
     <div className="logs-admin-page admin-page">
-      <AppToolbar
+      <AppCard
         tone="config"
         title="Logs de Auditoria"
         subtitle="Todas as acoes executadas no sistema."
@@ -217,7 +216,7 @@ export default function LogsIsland() {
       {/* TABELA */}
       <AppCard tone="config" title={`Registros (${logsFiltrados.length})`}>
         <DataTable
-          containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+          containerClassName="vtur-scroll-y-65"
           className="table-mobile-cards min-w-[820px]"
           headers={
             <tr>

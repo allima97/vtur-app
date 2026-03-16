@@ -1,16 +1,10 @@
 ---
 import Layout from "../../layouts/DashboardLayout.astro";
-import HeaderPage from "../../components/ui/HeaderPage.astro";
 import DocumentationPortalIsland from "../../components/islands/DocumentationPortalIsland.tsx";
 
 const pageTitle = "Documentação do Sistema";
 ---
 
 <Layout title={pageTitle} module="Admin" activePage="documentacao">
-  <HeaderPage
-    title={pageTitle}
-    subtitle="Guias e instruções para uso do sistema."
-    color="blue"
-  />
   <DocumentationPortalIsland client:only="react" />
 </Layout>

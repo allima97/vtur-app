@@ -6,7 +6,6 @@ import EmptyState from "../ui/EmptyState";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { formatDateBR } from "../../lib/format";
 
@@ -354,9 +353,9 @@ const EmpresasAdminIsland: React.FC = () => {
 
   return (
     <div className="mt-6 admin-page admin-empresas-page">
-      <AppToolbar
+      <AppCard
         tone="info"
-        className="list-toolbar-sticky"
+        className="mb-3 list-toolbar-sticky"
         title="Empresas cadastradas"
         subtitle="Gestao de contas e status de cobranca."
         actions={

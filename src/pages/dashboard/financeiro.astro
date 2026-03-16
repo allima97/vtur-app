@@ -1,6 +1,5 @@
 ---
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
-import HeaderPage from "../../components/ui/HeaderPage.astro";
 import { supabaseServer as supabase } from "../../lib/supabaseServer";
 
 /* KPIs VENDAS */
@@ -47,11 +46,14 @@ const comissaoAprovada =
 
 <DashboardLayout title="Dashboard Financeiro">
   <div class="page-content-wrap">
-    <HeaderPage
-      title="Dashboard Financeiro"
-      subtitle="Resumo de vendas e comissões."
-      color="blue"
-    />
+    <section class="vtur-app-card vtur-app-card-info mb-3">
+      <div class="vtur-app-card-header">
+        <div class="vtur-app-card-copy">
+          <h2 class="vtur-app-card-title">Dashboard Financeiro</h2>
+          <p class="vtur-app-card-subtitle">Resumo de vendas e comissões.</p>
+        </div>
+      </div>
+    </section>
 
     <section class="vtur-app-card mb-3">
       <h2 class="page-title">Resumo</h2>

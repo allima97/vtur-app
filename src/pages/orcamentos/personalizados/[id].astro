@@ -2,7 +2,6 @@
 import "../../../styles/global.css";
 import DashboardLayout from "../../../layouts/DashboardLayout.astro";
 import RoteiroEditIsland from "../../../components/islands/RoteiroEditIsland";
-import HeaderPage from "../../../components/ui/HeaderPage.astro";
 import { createServerClient } from "@supabase/ssr";
 import { readEnv } from "../../../lib/supabaseServer";
 
@@ -99,7 +98,6 @@ const headerSubtitleHtml = `<a class="page-subtitle-link" href="${backHref}">←
 
 <DashboardLayout title={pageTitle} {activePage}>
   <div class="page-content-wrap">
-    <HeaderPage title={headerTitle} subtitleHtml={headerSubtitleHtml} color="blue" />
     <RoteiroEditIsland client:only="react" roteiroId={id || "novo"} roteiro={roteiro} />
   </div>
 </DashboardLayout>

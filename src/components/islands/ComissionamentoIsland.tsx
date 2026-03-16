@@ -15,7 +15,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type Parametros = {
   usar_taxas_na_meta: boolean;
@@ -1134,12 +1133,11 @@ export default function ComissionamentoIsland() {
   return (
     <AppPrimerProvider>
       <div className="comissionamento-page">
-        <AppToolbar
-          sticky
+        <AppCard
           tone="info"
           className="mb-3 list-toolbar-sticky"
           title="Comissionamento"
-          subtitle={`Resumo de meta, faturamento e comissão. ${periodoSubtitulo}`}
+          subtitle={`Gerencie metas e comissoes com visao de CRM. ${periodoSubtitulo}`}
           actions={
             <div className="vtur-quote-top-actions">
               <AppButton type="button" variant="secondary" className="sm:hidden" onClick={() => setShowFilters(true)}>
@@ -1161,7 +1159,7 @@ export default function ComissionamentoIsland() {
           <div className="hidden sm:block">
             <div className="vtur-commission-filters-grid">{filtrosFields}</div>
           </div>
-        </AppToolbar>
+        </AppCard>
 
         {showFilters ? (
           <Dialog

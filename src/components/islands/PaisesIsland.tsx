@@ -15,7 +15,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type Pais = {
   id: string;
@@ -223,8 +222,7 @@ export default function PaisesIsland() {
     <AppPrimerProvider>
       <div className="paises-page">
         {!mostrarFormulario && (
-          <AppToolbar
-            sticky
+          <AppCard
             tone="config"
             className="mb-3 list-toolbar-sticky"
             title="Consulta de paises"
@@ -250,7 +248,7 @@ export default function PaisesIsland() {
                 placeholder="Digite parte do nome..."
               />
             </div>
-          </AppToolbar>
+          </AppCard>
         )}
 
         {mostrarFormulario && (
@@ -322,7 +320,7 @@ export default function PaisesIsland() {
           <DataTable
             shellClassName="mb-3"
             className="table-default table-header-blue table-mobile-cards min-w-[520px]"
-            containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+            containerClassName="vtur-scroll-y-65"
             headers={
               <tr>
                 <th>Nome</th>

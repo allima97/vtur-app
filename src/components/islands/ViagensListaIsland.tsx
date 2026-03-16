@@ -14,7 +14,6 @@ import TableActions from "../ui/TableActions";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type Viagem = {
   id: string;
@@ -647,7 +646,12 @@ export default function ViagensListaIsland() {
         )}
 
         {!showForm && (
-          <AppToolbar tone="info" sticky className="list-toolbar-sticky" title="Filtros">
+          <AppCard
+            tone="info"
+            className="list-toolbar-sticky"
+            title="Viagens"
+            subtitle="Gerencie viagens com visao de CRM, status e acompanhamento operacional."
+          >
             <div className="flex flex-col gap-2 sm:hidden">
               <AppField
                 wrapperClassName="form-group"
@@ -739,7 +743,7 @@ export default function ViagensListaIsland() {
                 </div>
               </div>
             </div>
-          </AppToolbar>
+          </AppCard>
         )}
 
         {!showForm && showFilters && (
@@ -815,7 +819,7 @@ export default function ViagensListaIsland() {
           <AppCard tone="info" title="Lista de viagens">
             <DataTable
               className="table-header-teal table-mobile-cards min-w-[760px]"
-              containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+              containerClassName="vtur-scroll-y-65"
               headers={
                 <tr>
                   <th>Cliente</th>

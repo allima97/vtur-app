@@ -8,7 +8,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 import { MODULOS_MASTER_PERMISSOES } from "../../config/modulos";
 import {
   agruparModulosPorSecao,
@@ -399,16 +398,16 @@ export default function MasterPermissoesIsland() {
   return (
     <AppPrimerProvider>
     <div className="page-content-wrap permissoes-admin-page admin-page vtur-legacy-module">
-      <AppToolbar
+      <AppCard
         title={isGestor ? "Permissões Gestor" : "Permissões Master"}
         subtitle="Defina níveis de acesso corporativo por usuário, com aplicação em bloco por seção."
         tone="info"
-        sticky
+        className="mb-3 list-toolbar-sticky"
       >
         <AppCard tone="config">
           <strong>Limite operacional:</strong> o escopo deste módulo vai até permissão de exclusão.
         </AppCard>
-      </AppToolbar>
+      </AppCard>
 
       {erro && (
         <div className="mb-3">

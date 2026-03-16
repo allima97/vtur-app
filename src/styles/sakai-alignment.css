@@ -110,8 +110,8 @@ body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item {
   padding: 0.75rem 1rem;
 }
 
-body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item [data-component="ActionList.LeadingVisual"] .pi {
-  color: rgba(226, 232, 240, 0.9);
+body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item .vtur-legacy-nav-leading .pi {
+  color: #93c5fd !important;
   transition: color 0.2s ease;
 }
 
@@ -120,8 +120,8 @@ body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:hover {
   color: #f8fafc;
 }
 
-body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:hover [data-component="ActionList.LeadingVisual"] .pi {
-  color: #f8fafc;
+body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:hover .vtur-legacy-nav-leading .pi {
+  color: #dbeafe !important;
 }
 
 body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item[aria-current="page"] {
@@ -132,8 +132,16 @@ body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item[aria-current="page"] {
   border-color: transparent !important;
 }
 
-body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item[aria-current="page"] [data-component="ActionList.LeadingVisual"] .pi {
-  color: #2563eb;
+body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item[aria-current="page"] .vtur-legacy-nav-leading .pi {
+  color: #2563eb !important;
+}
+
+body.sakai-theme .mobile-bottom-nav .mobile-bottom-nav-icon .pi {
+  color: #64748b !important;
+}
+
+body.sakai-theme .mobile-bottom-nav .mobile-bottom-nav-item.active .mobile-bottom-nav-icon .pi {
+  color: #2563eb !important;
 }
 
 body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:focus-visible {
@@ -1299,7 +1307,9 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
   }
 
   body.sakai-theme .table-mobile-cards td {
-    grid-template-columns: minmax(84px, 96px) minmax(0, 1fr);
+    grid-template-columns: minmax(88px, 104px) minmax(0, 1fr);
+    gap: 8px;
+    padding: 9px 11px;
     align-items: start;
     background: #ffffff !important;
     overflow-wrap: anywhere;
@@ -1337,14 +1347,14 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
 
   body.sakai-theme .table-mobile-cards td.th-actions > :is(.action-buttons, .vtur-table-actions, .action-buttons-quote, .action-buttons-center, .viagens-action-buttons) {
     width: 100% !important;
-    min-height: 4rem;
+    min-height: 3rem;
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
     flex-wrap: wrap !important;
     overflow-x: visible !important;
     gap: 0.5rem !important;
-    padding: 0.85rem 1rem !important;
+    padding: 0.6rem 0.75rem !important;
     margin: 0 !important;
     background: #ffffff !important;
   }

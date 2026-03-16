@@ -10,7 +10,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type Papel = "ADMIN" | "MASTER" | "GESTOR" | "VENDEDOR" | "OUTRO";
 
@@ -821,8 +820,7 @@ export default function ConciliacaoIsland() {
       <div className="conciliacao-page">
         <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
-        <AppToolbar
-          sticky
+        <AppCard
           tone="info"
           className="mb-3 list-toolbar-sticky"
           title="Conciliacao financeira"
@@ -919,7 +917,7 @@ export default function ConciliacaoIsland() {
               <strong>{divergenciasCount}</strong>
             </div>
           </div>
-        </AppToolbar>
+        </AppCard>
 
         {erro ? (
           <AlertMessage variant="error" className="mb-3">

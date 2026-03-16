@@ -15,7 +15,6 @@ import EmptyState from "../ui/EmptyState";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type SacRegistro = {
   id: string;
@@ -547,9 +546,8 @@ export default function ControleSacIsland() {
 
   return (
     <div className="sac-page">
-      <AppToolbar
+      <AppCard
         tone="config"
-        sticky
         className="list-toolbar-sticky"
         title="Controle de SAC"
         subtitle={companyNome ? `Filial: ${companyNome}` : "Gestao de atendimentos e ocorrencias."}
@@ -572,7 +570,7 @@ export default function ControleSacIsland() {
             />
           </div>
         )}
-      </AppToolbar>
+      </AppCard>
 
       {precisaFiltroMaster && (
         <AppCard tone="config" className="mb-3">
@@ -682,7 +680,7 @@ export default function ControleSacIsland() {
       )}
 
       {!precisaFiltroMaster && !showForm && (
-        <AppToolbar tone="info" sticky className="list-toolbar-sticky" title="Filtros">
+        <AppCard tone="info" sticky className="list-toolbar-sticky" title="Filtros">
           <div className="sac-toolbar-grid">
             <AppField
               wrapperClassName="form-group sac-toolbar-search"
@@ -747,7 +745,7 @@ export default function ControleSacIsland() {
               </div>
             </div>
           </div>
-        </AppToolbar>
+        </AppCard>
       )}
 
       {!precisaFiltroMaster && loading && (

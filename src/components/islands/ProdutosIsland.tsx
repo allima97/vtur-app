@@ -16,7 +16,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 function dedupeSugestoes(valores: string[]) {
   const vistos = new Set<string>();
@@ -745,8 +744,7 @@ export default function ProdutosIsland() {
     <AppPrimerProvider>
       <div className="destinos-page produtos-page">
         {!mostrarFormulario && (
-          <AppToolbar
-            sticky
+          <AppCard
             tone="config"
             className="mb-3 list-toolbar-sticky"
             title="Produtos"
@@ -772,7 +770,7 @@ export default function ProdutosIsland() {
                 placeholder="Busque por nome, tipo, destino, cidade, estado/provincia ou pais"
               />
             </div>
-          </AppToolbar>
+          </AppCard>
         )}
 
         {mostrarFormulario && formLayout === "selection" && (
@@ -1109,7 +1107,7 @@ export default function ProdutosIsland() {
             <DataTable
               shellClassName="mb-3"
               className="table-default table-header-blue table-mobile-cards min-w-[1080px]"
-              containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+              containerClassName="vtur-scroll-y-65"
               headers={
                 <tr>
                   <th>Tipo</th>

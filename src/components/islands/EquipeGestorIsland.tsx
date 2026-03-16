@@ -10,7 +10,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type UsuarioRow = {
   id: string;
@@ -721,10 +720,9 @@ export default function EquipeGestorIsland() {
   return (
     <AppPrimerProvider>
       <div className="mt-6 gestor-page vtur-legacy-module">
-        <AppToolbar
+        <AppCard
           className="mb-3 list-toolbar-sticky"
           tone="info"
-          sticky
           title="Equipe do gestor"
           subtitle="Gerencie os vendedores vinculados à sua empresa."
           actions={

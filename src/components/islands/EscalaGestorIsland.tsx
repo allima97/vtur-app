@@ -18,7 +18,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type Papel = "GESTOR" | "MASTER" | "OUTRO";
 
@@ -1127,20 +1126,20 @@ export default function EscalaGestorIsland() {
     <AppPrimerProvider>
     <div className="escala-page vtur-legacy-module">
       {papel === "MASTER" && (
-        <AppToolbar title="Escala da equipe" subtitle="Defina filtros do contexto Master antes de editar a escala mensal." tone="info" sticky>
+        <AppCard title="Escala da equipe" subtitle="Defina filtros do contexto Master antes de editar a escala mensal." tone="info" sticky>
           <div className="vtur-form-grid vtur-form-grid-3">
             <AppField as="select" label="Filial" value={masterScope.empresaSelecionada} onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)} options={[{ label: "Selecione", value: "all" }, ...masterScope.empresasAprovadas.map((empresa) => ({ label: empresa.nome_fantasia, value: empresa.id }))]} />
             <AppField as="select" label="Equipe" value={masterScope.gestorSelecionado} onChange={(e) => masterScope.setGestorSelecionado(e.target.value)} options={[{ label: "Selecione", value: "all" }, ...masterScope.gestoresDisponiveis.map((gestor) => ({ label: gestor.nome_completo, value: gestor.id }))]} />
             <AppField as="select" label="Vendedor" value={masterScope.vendedorSelecionado} onChange={(e) => masterScope.setVendedorSelecionado(e.target.value)} options={[{ label: "Todos", value: "all" }, ...masterScope.vendedoresDisponiveis.map((vendedor) => ({ label: vendedor.nome_completo || "Vendedor", value: vendedor.id }))]} />
           </div>
-        </AppToolbar>
+        </AppCard>
       )}
 
-      <AppToolbar title={`Escala${companyNome ? ` - ${companyNome}` : ""}`} subtitle={`Mês: ${formatMonthYearBR(periodo)}`} tone="config">
+      <AppCard title={`Escala${companyNome ? ` - ${companyNome}` : ""}`} subtitle={`Mês: ${formatMonthYearBR(periodo)}`} tone="config">
         <div className="vtur-form-grid vtur-form-grid-2">
           <AppField as="select" label="Mês" value={periodo} onChange={(e) => setPeriodo(e.target.value)} options={periodoOptions.map((value) => ({ label: formatMonthYearBR(value), value }))} />
         </div>
-      </AppToolbar>
+      </AppCard>
 
       {precisaFiltroMaster && (
         <AppCard tone="config">

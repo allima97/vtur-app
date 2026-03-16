@@ -442,6 +442,18 @@ body {
   z-index: 20;
 }
 
+.minhas-preferencias-page .minhas-preferencias-top-card .vtur-app-card-body {
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
+  padding-top: 16px;
+}
+
+.documentos-viagens-page .documentos-viagens-top-card .vtur-app-card-body,
+.circuitos-page .circuitos-top-card .vtur-app-card-body,
+.dashboard-geral-page .dashboard-top-card .vtur-app-card-body {
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
+  padding-top: 16px;
+}
+
 .vtur-relatorio-vendas-filters-mobile {
   display: none;
 }
@@ -478,7 +490,9 @@ body {
 
 /* HeaderPage: permite subtítulo com link (ex: "← Roteiros") */
 .page-subtitle-link {
-  text-decoration: underline;
+  text-decoration: none;
+  color: #2563eb;
+  font-weight: 600;
 }
 
 .page-content-wrap {
@@ -1115,6 +1129,47 @@ body {
   flex: 0 0 auto;
 }
 
+.parametros-avisos-top-card .vtur-app-card-header {
+  margin-bottom: 0;
+}
+
+.parametros-avisos-top-card .vtur-app-card-body {
+  display: none;
+  border-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.todo-top-card .vtur-app-card-header {
+  margin-bottom: 0;
+}
+
+.todo-top-card .vtur-app-card-body {
+  display: none;
+  border-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.agenda-top-card .vtur-app-card-header {
+  margin-bottom: 0;
+}
+
+.agenda-top-card .vtur-app-card-body {
+  display: none;
+  border-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.mural-recados-top-card .vtur-app-card-header {
+  margin-bottom: 0;
+}
+
+.mural-recados-top-card .vtur-app-card-body {
+  display: none;
+  border-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+
 .produtos-page .form-row {
   display: flex;
   flex-wrap: wrap;
@@ -1263,6 +1318,10 @@ body {
   justify-content: center;
   align-self: flex-start;
   flex-shrink: 0;
+}
+
+.btn-calculator-trigger.vtur-app-button {
+  border-radius: 12px !important;
 }
 
 .btn-calculator-trigger .pi {
@@ -1947,9 +2006,9 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
   .table-mobile-cards td {
     display: grid !important;
-    grid-template-columns: 120px 1fr;
-    gap: 10px;
-    padding: 10px 12px;
+    grid-template-columns: minmax(88px, 104px) 1fr;
+    gap: 8px;
+    padding: 9px 11px;
     border-bottom: 1px solid var(--table-card-divider);
     text-align: left !important;
     justify-items: start;
@@ -1968,6 +2027,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   .table-mobile-cards td::before {
     content: attr(data-label);
     font-weight: 700;
+    font-size: 0.78rem;
+    line-height: 1.2;
     color: #334155;
     text-align: left;
     justify-self: start;
@@ -1993,9 +2054,20 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     border-bottom: 0;
   }
 
-  .table-mobile-cards .form-input,
-  .table-mobile-cards .form-select {
-    width: 100%;
+  .table-mobile-cards :is(
+    .form-input,
+    .form-select,
+    .form-textarea,
+    input,
+    select,
+    textarea,
+    .p-inputtext,
+    .p-dropdown,
+    .p-calendar,
+    .p-inputnumber
+  ) {
+    width: 100% !important;
+    max-width: 100% !important;
     min-width: 0 !important;
   }
 
@@ -2214,7 +2286,45 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     min-width: 44px;
   }
 
+  .vtur-card-toolbar-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+    justify-items: stretch;
+  }
+
+  .vtur-card-toolbar-actions .vtur-app-button {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    text-align: center;
+    padding: 10px 12px;
+  }
+
+  .vtur-app-button.p-button-sm:not(.p-button-icon-only),
+  .p-button.p-component.p-button-sm:not(.p-button-icon-only) {
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 0.88rem;
+  }
+
+  .form-row.mobile-stack > *,
+  .vtur-form-grid > *,
+  .vtur-app-card .vtur-form-grid > * {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .form-row.mobile-stack :is(.form-input, .form-select, .form-textarea, .p-inputtext, .p-dropdown, .p-calendar, .p-inputnumber) {
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
   .mobile-stack-buttons,
+  .vtur-app-toolbar-actions,
+  .vtur-app-card-actions,
   .action-buttons,
   .modal-footer,
   .doc-editor-actions,
@@ -2234,6 +2344,19 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     align-items: stretch !important;
     justify-content: flex-start !important;
     width: 100%;
+  }
+
+  :is(.vtur-app-toolbar-actions, .vtur-app-card-actions, .vtur-actions-end) > :is(.btn, .p-button, .vtur-app-button):not(.btn-icon):not(.p-button-icon-only) {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    text-align: center;
+    padding: 10px 12px;
+  }
+
+  .page-content-wrap .table-container {
+    max-width: 100%;
+    overflow-x: auto;
   }
 
   .mobile-stack-buttons .btn:not(.btn-icon),
@@ -3901,6 +4024,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   gap: 6px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.personalizar-menu-icon-btn.p-button-icon-only {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 10px;
+  padding: 0;
+}
+
+.personalizar-menu-icon-btn.p-button-icon-only .p-button-icon {
+  font-size: 0.95rem;
 }
 
 .personalizar-menu-section-select {
@@ -6101,7 +6236,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 .chat-inline-btn:hover {
-  text-decoration: underline;
+  text-decoration: none;
+  color: #1d4ed8;
 }
 
 .chat-inline-btn--danger {
@@ -6658,6 +6794,57 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 /* Mobile tables: padronizar todas as table-mobile-cards no mesmo visual de vendas */
 @media (max-width: 640px) {
+  .minha-escala-page .minha-escala-toolbar-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .minha-escala-page .minha-escala-toolbar-actions .vtur-app-button {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+  }
+
+  .roteiro-edit-page .vtur-app-button:not(.btn-icon):not(.p-button-icon-only) {
+    min-height: 44px !important;
+    padding: 10px 14px !important;
+    font-size: 0.9rem !important;
+  }
+
+  .roteiro-edit-page .vtur-app-button.btn-icon,
+  .roteiro-edit-page .btn-icon {
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .roteiro-edit-page .mobile-stack-buttons .vtur-app-button {
+    width: 100% !important;
+  }
+
+  .todo-board .vtur-app-button:not(.btn-icon):not(.p-button-icon-only):not(.icon-action-btn) {
+    min-height: 40px !important;
+    padding: 8px 12px !important;
+    font-size: 0.88rem !important;
+  }
+
+  .todo-board .icon-action-btn,
+  .todo-board .todo-action-btn.btn-icon {
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+  }
+
   .table-container:has(.table-mobile-cards)::before,
   .table-container:has(.table-mobile-cards)::after {
     display: none !important;
@@ -6698,6 +6885,19 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     background: #ffffff !important;
   }
 
+  .table-mobile-cards:not(.table-mobile-plain) td:not(.th-actions) {
+    grid-template-columns: minmax(88px, 104px) 1fr !important;
+    gap: 8px !important;
+    padding: 8px 10px !important;
+    align-items: start !important;
+  }
+
+  .table-mobile-cards:not(.table-mobile-plain) td:not(.th-actions)::before {
+    font-size: 0.78rem;
+    line-height: 1.15;
+    margin-top: 1px;
+  }
+
   .table-mobile-cards:not(.table-mobile-plain) td:last-child {
     border-bottom: 0 !important;
   }
@@ -6721,14 +6921,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
   .table-mobile-cards td.th-actions > :is(.action-buttons, .vtur-table-actions, .action-buttons-quote, .action-buttons-center, .viagens-action-buttons) {
     width: 100% !important;
-    min-height: 4rem;
+    min-height: 3rem;
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
     flex-wrap: wrap !important;
     overflow-x: visible !important;
     gap: 0.5rem !important;
-    padding: 0.85rem 1rem !important;
+    padding: 0.5rem 0.75rem !important;
     margin: 0 !important;
     background: #ffffff !important;
   }
@@ -6742,5 +6942,32 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     justify-content: center !important;
     flex-wrap: wrap !important;
     overflow-x: visible !important;
+  }
+
+  .table-mobile-cards td.th-actions :is(.vtur-table-action, .vtur-app-button, .p-button).p-button-icon-only {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0 !important;
+    border-radius: 10px !important;
+    justify-content: center !important;
+  }
+
+  .page-content-wrap :is(.form-row.mobile-stack, .vtur-form-grid) > [style*="min-width"] {
+    min-width: 0 !important;
+    width: 100% !important;
+    flex: 1 1 100% !important;
+  }
+
+  .page-content-wrap :is(.form-row.mobile-stack, .vtur-form-grid) :is(.form-group, [class*="form-group"])[style*="min-width"] {
+    min-width: 0 !important;
+    width: 100% !important;
+    flex: 1 1 100% !important;
+  }
+
+  .page-content-wrap :is(.form-row.mobile-stack, .vtur-form-grid) :is(input, select, textarea, .p-inputtext, .p-dropdown, .p-calendar, .p-inputnumber)[style*="width"] {
+    width: 100% !important;
+    max-width: 100% !important;
   }
 }

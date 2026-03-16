@@ -4,7 +4,6 @@ import AlertMessage from "../ui/AlertMessage";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type MaintenanceStatus = {
   maintenance_enabled: boolean;
@@ -174,7 +173,7 @@ export default function MaintenanceAccessIsland() {
 
   return (
     <section className="maintenance-admin">
-      <AppToolbar
+      <AppCard
         tone="config"
         title="Painel de manutencao"
         subtitle="Somente administradores podem liberar o acesso ao sistema."

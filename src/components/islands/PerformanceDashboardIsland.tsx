@@ -15,7 +15,6 @@ import {
 } from "recharts";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type Tab = "live" | "historical" | "recommendations";
 
@@ -144,7 +143,7 @@ export default function PerformanceDashboardIsland() {
 
   return (
     <div className="space-y-6" key={refreshKey}>
-      <AppToolbar
+      <AppCard
         tone="config"
         title="Painel de performance"
         subtitle="Metricas ao vivo, historico e recomendacoes."

@@ -7,7 +7,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 import {
   calcularValorComissao,
 } from "../../lib/comissao";
@@ -709,7 +708,7 @@ export default function FechamentoComissaoIsland() {
     <AppPrimerProvider>
     <div className="min-h-screen bg-slate-50 p-2 md:p-6 comissionamento-page gestor-page vtur-legacy-module">
       {/* BARRA DE CONTEXTO */}
-      <AppToolbar title="Fechamento de comissão" subtitle="Consolide meta, base, comissão aplicada e vendas do período." tone="info" sticky>
+      <AppCard title="Fechamento de comissão" subtitle="Consolide meta, base, comissão aplicada e vendas do período." tone="info" sticky>
       <div className="mb-4 p-3 rounded-lg bg-emerald-950 border border-emerald-800 text-emerald-100 text-sm flex flex-wrap gap-3 items-center justify-between">
         <div>
           <strong>Módulo:</strong> Fechamento de Comissão
@@ -801,7 +800,7 @@ export default function FechamentoComissaoIsland() {
           </div>
         )}
       </div>
-      </AppToolbar>
+      </AppCard>
 
       {/* FILTROS */}
       <AppCard className="mb-3" tone="info" title="Filtros e cálculo">

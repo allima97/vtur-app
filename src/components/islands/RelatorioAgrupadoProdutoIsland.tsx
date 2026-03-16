@@ -20,7 +20,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type Produto = {
   id: string;
@@ -1387,12 +1386,11 @@ export default function RelatorioAgrupadoProdutoIsland() {
       <div className="relatorio-vendas-produto-page">
         <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
-        <AppToolbar
-          sticky
+        <AppCard
           tone="config"
           className="mb-3 list-toolbar-sticky"
-          title="Relatório agrupado por produto"
-          subtitle={`Período: ${periodoResumo}. ${activeTab === "recibos" ? "Visão por recibo." : "Resumo consolidado por tipo de produto."}`}
+          title="Vendas por Produto"
+          subtitle={`Gerencie indicadores por produto com visao de CRM. Periodo: ${periodoResumo}. ${activeTab === "recibos" ? "Visao por recibo." : "Resumo consolidado por tipo de produto."}`}
           actions={
             <div className="vtur-quote-top-actions">
               <AppButton type="button" variant="secondary" className="sm:hidden" onClick={() => setShowFilters(true)}>
@@ -1408,7 +1406,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
           }
         >
           <div className="hidden sm:block">{renderFiltersGrid()}</div>
-        </AppToolbar>
+        </AppCard>
 
         <AppCard className="mb-3" title="Modo de leitura" subtitle="Alterne entre a consolidação por tipo e a visão analítica por recibo.">
           <div className="vtur-quote-top-actions">

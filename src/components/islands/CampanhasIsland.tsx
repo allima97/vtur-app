@@ -13,7 +13,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type CampanhaStatus = "ativa" | "inativa" | "cancelada";
 
@@ -635,13 +634,12 @@ export default function CampanhasIsland() {
 
   return (
     <AppPrimerProvider>
-      <div>
-        <AppToolbar
-          className="mb-3"
-          sticky
+      <div className="page-content-wrap">
+        <AppCard
+          className="mb-3 list-toolbar-sticky"
           tone="config"
-          title="Campanhas promocionais"
-          subtitle={contextEmpresa}
+          title="Campanhas"
+          subtitle={`Gerencie campanhas com visao de CRM. ${contextEmpresa}`}
           actions={
             <div className="vtur-quote-top-actions">
               <AppButton type="button" variant="secondary" onClick={() => void carregar()} disabled={loading}>
@@ -711,7 +709,7 @@ export default function CampanhasIsland() {
               <AlertMessage variant="error">{masterScope.erro}</AlertMessage>
             </div>
           ) : null}
-        </AppToolbar>
+        </AppCard>
 
         {erro ? (
           <AlertMessage variant="error" className="mb-3">

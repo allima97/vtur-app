@@ -11,7 +11,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type ClienteOption = {
   id: string;
@@ -827,8 +826,7 @@ export default function QuoteManualIsland() {
   return (
     <AppPrimerProvider>
       <div className="page-content-wrap orcamentos-criar-page">
-        <AppToolbar
-          sticky
+        <AppCard
           tone="info"
           className="mb-3 list-toolbar-sticky"
           title="Criar orcamento manual"
@@ -868,7 +866,7 @@ export default function QuoteManualIsland() {
               <strong>R$ {formatCurrency(total)}</strong>
             </div>
           </div>
-        </AppToolbar>
+        </AppCard>
 
         {status && (
           <AlertMessage variant="info" className="mb-3">

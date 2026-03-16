@@ -987,6 +987,21 @@ export default function MuralRecadosIsland() {
   return (
     <AppPrimerProvider>
     <div className="mural-recados mural-whatsapp">
+      <AppCard
+        tone="info"
+        className="mb-3 mural-recados-top-card"
+        title="Mural de Recados"
+        subtitle="Gerencie recados e conversas com visao de CRM."
+        actions={
+          <AppButton
+            type="button"
+            variant={formOpen ? "secondary" : "primary"}
+            onClick={toggleFormOpen}
+          >
+            {formOpen ? "Cancelar" : "Novo recado"}
+          </AppButton>
+        }
+      />
       {erro && (
         <div style={{ marginBottom: 12 }}>
           <AlertMessage variant="error">{erro}</AlertMessage>
@@ -1265,7 +1280,7 @@ export default function MuralRecadosIsland() {
                   </div>
                 )}
 
-                <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end", marginTop: 12 }}>
+                <div className="mobile-stack-buttons vtur-actions-end" style={{ marginTop: 12 }}>
                   {supportsAttachments && (
                     <AppButton
                       type="button"
@@ -1549,7 +1564,7 @@ export default function MuralRecadosIsland() {
                     </div>
                   )}
 
-                  <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end", marginTop: 12 }}>
+                  <div className="mobile-stack-buttons vtur-actions-end" style={{ marginTop: 12 }}>
                     {supportsAttachments && (
                       <AppButton
                         type="button"

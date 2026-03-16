@@ -1,16 +1,10 @@
 ---
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
-import HeaderPage from "../../components/ui/HeaderPage.astro";
 import RelatorioAgrupadoClienteIsland from "../../components/islands/RelatorioAgrupadoClienteIsland.tsx";
 
 const activePage = "relatorios-vendas-cliente";
 ---
 
 <DashboardLayout title="Relatório de Vendas por Cliente" {activePage}>
-  <HeaderPage
-    title="Relatório de Vendas por Cliente"
-    subtitle="Consolidação comercial por cliente com filtros e exportação."
-    color="blue"
-  />
   <RelatorioAgrupadoClienteIsland client:only="react" />
 </DashboardLayout>

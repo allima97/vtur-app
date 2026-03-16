@@ -1,17 +1,11 @@
 ---
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
-import HeaderPage from "../../components/ui/HeaderPage.astro";
 import TipoPacotesIsland from "../../components/islands/TipoPacotesIsland.tsx";
 
 const activePage = "parametros-tipo-pacotes";
 ---
 
 <DashboardLayout title="Tipo de Pacotes" {activePage}>
-  <HeaderPage
-    title="Tipo de Pacotes"
-    subtitle="Cadastre tipos de pacote e regras de comissão associadas."
-    color="blue"
-  />
 
   <TipoPacotesIsland client:load />
 </DashboardLayout>

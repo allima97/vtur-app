@@ -1,17 +1,11 @@
 ---
 import "../../styles/global.css";
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
-import HeaderPage from "../../components/ui/HeaderPage.astro";
 import FormasPagamentoIsland from "../../components/islands/FormasPagamentoIsland";
 
 const activePage = "parametros-formas-pagamento";
 ---
 
 <DashboardLayout title="Formas de Pagamento" {activePage}>
-  <HeaderPage
-    title="Formas de Pagamento"
-    subtitle="Cadastre formas de pagamento, descontos e se comissiona ou nao."
-    color="blue"
-  />
   <FormasPagamentoIsland client:load />
 </DashboardLayout>

@@ -13,7 +13,6 @@ import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 const MOEDA_SUGESTOES = ["R$", "USD", "EUR"];
 
@@ -286,8 +285,9 @@ export default function ParametrosCambiosIsland() {
 
   return (
     <section className="cambios-page">
-      <AppToolbar
+      <AppCard
         tone="config"
+        className="mb-3"
         title="Cambios"
         subtitle="Cadastre o valor de cambio aplicado em cada dia."
       />
@@ -322,7 +322,7 @@ export default function ParametrosCambiosIsland() {
             </div>
           )}
 
-          <div className="mt-6" style={{ maxHeight: "65vh", overflowY: "auto" }}>
+          <div className="mt-6 vtur-scroll-y-65">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2">
               <strong>{tituloTabela}</strong>
               <AppButton

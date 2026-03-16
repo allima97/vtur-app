@@ -12,7 +12,6 @@ import { parentescoOptions } from "../../lib/parentescoOptions";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type ViagemAcompanhante = {
   id: string;
@@ -673,13 +672,13 @@ export default function DossieViagemIsland({ viagemId }: Props) {
   return (
     <AppPrimerProvider>
     <div className="page-content-wrap dossie-viagem-page">
-      <AppToolbar
+      <AppCard
         tone="info"
         className="mb-3 list-toolbar-sticky hidden sm:block"
         title={clienteNome ? `Dossiê da viagem • ${clienteNome}` : "Dossiê da viagem"}
         subtitle="Acompanhe recibos, acompanhantes, serviços, documentos e follow-up."
         actions={
-          <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+          <div className="mobile-stack-buttons vtur-actions-end">
             <AppButton
               type="button"
               variant="secondary"
@@ -723,7 +722,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
             ) : null}
           </div>
         ) : null}
-      </AppToolbar>
+      </AppCard>
 
       {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
 
@@ -978,7 +977,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                                 type="button"
                                 variant="ghost"
                                 icon="pi pi-pencil"
-                                className="p-button-rounded p-button-sm"
+                                className="p-button-rounded"
                                 title="Editar acompanhante"
                                 aria-label="Editar acompanhante"
                                 onClick={() => iniciarEdicaoAcompanhante(a)}
@@ -988,7 +987,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                                 type="button"
                                 variant="danger"
                                 icon="pi pi-trash"
-                                className="p-button-rounded p-button-sm"
+                                className="p-button-rounded"
                                 title="Excluir acompanhante"
                                 aria-label="Excluir acompanhante"
                                 onClick={() => removerAcompanhante(a.id)}
@@ -1659,7 +1658,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                                   <AppButton
                                     variant="danger"
                                     icon="pi pi-trash"
-                                    className="p-button-rounded p-button-sm"
+                                    className="p-button-rounded"
                                     type="button"
                                     onClick={() => removerDocumento(d.id)}
                                     disabled={removendoDocId === d.id}
@@ -1775,7 +1774,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
             </div>
           </div>
 
-          <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end", marginTop: 12 }}>
+          <div className="mobile-stack-buttons vtur-actions-end" style={{ marginTop: 12 }}>
             <AppButton
               type="button"
               variant="primary"

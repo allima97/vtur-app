@@ -1,17 +1,11 @@
 ---
 import Layout from "../../layouts/DashboardLayout.astro";
-import HeaderPage from "../../components/ui/HeaderPage.astro";
 import AdminPermissoesIsland from "../../components/islands/AdminPermissoesIsland.tsx";
 
 const pageTitle = "Painel de Permissões";
 ---
 
 <Layout title={pageTitle} module="Admin" activePage="admin-permissoes">
-  <HeaderPage
-    title={pageTitle}
-    subtitle="Gerencie níveis de acesso por módulo e usuário."
-    color="config"
-  />
 
   <AdminPermissoesIsland client:idle />
 </Layout>

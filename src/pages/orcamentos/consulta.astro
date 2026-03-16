@@ -1,24 +1,12 @@
 ---
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
-import HeaderPage from "../../components/ui/HeaderPage.astro";
 import QuoteListIsland from "../../components/islands/QuoteListIsland.tsx";
 
 const activePage = "orcamentos";
 ---
 
 <DashboardLayout title="Consulta de Orcamentos" {activePage}>
-  <HeaderPage
-    title="Consulta de Orcamentos"
-    subtitle="Listagem de orcamentos importados e confirmados."
-    color="blue"
-    stackActionsOnMobile={true}
-  >
-    <div class="mobile-stack-buttons orcamentos-consulta-header-actions orcamentos-action-bar">
-      <a class="btn btn-secondary" href="/orcamentos/importar">Importar orcamento</a>
-      <a class="btn btn-primary" href="/orcamentos/criar">Criar orcamento</a>
-      <a class="btn btn-light" href="/orcamentos/personalizados">Personalizados</a>
-    </div>
-  </HeaderPage>
-
-  <QuoteListIsland client:only="react" />
+  <div class="orcamentos-consulta-page">
+    <QuoteListIsland client:only="react" />
+  </div>
 </DashboardLayout>

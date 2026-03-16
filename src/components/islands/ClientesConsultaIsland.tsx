@@ -438,7 +438,7 @@ export default function ClientesConsultaIsland() {
             />
           ) : (
             <DataTable
-              containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+              containerClassName="vtur-scroll-y-65"
               headers={
                 <tr>
                   <th>Nome</th>

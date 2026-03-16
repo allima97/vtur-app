@@ -18,7 +18,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type Circuito = {
   id: string;
@@ -1168,10 +1167,9 @@ export default function CircuitosIsland() {
   return (
     <AppPrimerProvider>
       <div className="circuitos-page">
-        <AppToolbar
-          sticky
+        <AppCard
           tone="info"
-          className="mb-3 list-toolbar-sticky"
+          className="mb-3 list-toolbar-sticky circuitos-top-card"
           title={mostrarFormulario ? (editandoId ? "Editar circuito" : "Novo circuito") : "Consulta de circuitos"}
           subtitle={
             mostrarFormulario
@@ -1222,7 +1220,7 @@ export default function CircuitosIsland() {
               </div>
             </div>
           )}
-        </AppToolbar>
+        </AppCard>
 
         {erro ? (
           <AlertMessage variant="error" className="mb-3">
@@ -1681,7 +1679,7 @@ export default function CircuitosIsland() {
               }
               colSpan={5}
               className="table-header-blue table-mobile-cards"
-              containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+              containerClassName="vtur-scroll-y-65"
             >
               {circuitosExibidos.map((circuito) => (
                 <tr key={circuito.id}>

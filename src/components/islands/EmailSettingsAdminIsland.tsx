@@ -9,7 +9,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type EmailSettings = {
   id?: string;
@@ -233,8 +232,7 @@ const EmailSettingsAdminIsland: React.FC = () => {
   return (
     <AppPrimerProvider>
       <div className="mt-6 admin-page admin-email-page">
-        <AppToolbar
-          sticky
+        <AppCard
           tone="config"
           className="mb-3 list-toolbar-sticky"
           title="Configuracoes de envio de e-mail"

@@ -6,7 +6,6 @@ import AlertMessage from "../ui/AlertMessage";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type RotHotel = {
@@ -824,14 +823,13 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
   return (
     <AppPrimerProvider>
       <div className="roteiro-edit-page" style={{ padding: "0 0 60px" }}>
-        <AppToolbar
+        <AppCard
           className="mb-3"
-          sticky
           tone="info"
           title={isNew ? "Novo roteiro personalizado" : "Editar roteiro personalizado"}
           subtitle="Gerencie hotéis, passeios, transporte, itinerário, investimento e pagamento."
           actions={(
-            <div className="mobile-stack-buttons orcamentos-action-bar" style={{ justifyContent: "flex-end" }}>
+            <div className="mobile-stack-buttons orcamentos-action-bar vtur-actions-end">
               <AppButton
                 type="button"
                 onClick={() => (window.location.href = "/orcamentos/personalizados")}
@@ -938,7 +936,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                 onChange={(e) => setImportFile(e.target.files?.[0] || null)}
               />
             </div>
-            <div className="mobile-stack-buttons orcamentos-action-bar" style={{ justifyContent: "flex-end" }}>
+            <div className="mobile-stack-buttons orcamentos-action-bar vtur-actions-end">
               <AppButton
                 type="button"
                 onClick={handleImportRoteiroFile}

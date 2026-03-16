@@ -9,7 +9,6 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 
 type AvisoTemplate = {
@@ -230,7 +229,7 @@ const AvisosAdminIsland: React.FC = () => {
 
   return (
     <div className="mt-6 admin-page admin-avisos-page">
-      <AppToolbar
+      <AppCard
         tone="config"
         className="list-toolbar-sticky"
         title="Templates de avisos"

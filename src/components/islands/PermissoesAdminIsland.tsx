@@ -8,7 +8,6 @@ import DataTable from "../ui/DataTable";
 import EmptyState from "../ui/EmptyState";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 
 type Usuario = {
@@ -195,8 +194,9 @@ export default function PermissoesAdminIsland() {
 
   return (
     <div className="permissoes-admin-page admin-page">
-      <AppToolbar
+      <AppCard
         tone="config"
+        className="mb-3"
         title="Editor de Permissoes"
         subtitle="Controle total dos modulos por usuario."
       />

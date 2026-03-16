@@ -28,7 +28,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type Cliente = {
   id: string;
@@ -1907,12 +1906,11 @@ export default function RelatorioVendasIsland() {
       <div className="relatorio-vendas-page">
         <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
-        <AppToolbar
-          sticky
+        <AppCard
           tone="config"
           className="mb-3 list-toolbar-sticky"
           title="Relatório de vendas"
-          subtitle={`Período: ${periodoResumo}. ${filtrosLocaisAtivos ? "Filtros locais ativos." : "Sem filtros locais de cliente, cidade ou produto."}`}
+          subtitle={`Gerencie indicadores de vendas com visao de CRM. Periodo: ${periodoResumo}. ${filtrosLocaisAtivos ? "Filtros locais ativos." : "Sem filtros locais de cliente, cidade ou produto."}`}
           actions={
             <div className="vtur-quote-top-actions">
               <AppButton
@@ -1933,7 +1931,7 @@ export default function RelatorioVendasIsland() {
           }
         >
           <div className="vtur-relatorio-vendas-filters-inline">{renderFiltersGrid()}</div>
-        </AppToolbar>
+        </AppCard>
 
         {showFilters ? (
           <Dialog

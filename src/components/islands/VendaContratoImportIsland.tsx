@@ -23,7 +23,6 @@ import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type CidadeSugestao = {
   id: string;
@@ -1019,9 +1018,8 @@ export default function VendaContratoImportIsland() {
   return (
     <AppPrimerProvider>
       <div className="page-content-wrap">
-        <AppToolbar
+        <AppCard
           className="mb-3"
-          sticky
           tone="config"
           title="Importação de contratos"
           subtitle={`Fluxo de ${resumoImportacao} com revisão comercial antes da criação da venda.`}
@@ -1086,7 +1084,7 @@ export default function VendaContratoImportIsland() {
               <strong>{contratosSemCpf}</strong>
             </div>
           </div>
-        </AppToolbar>
+        </AppCard>
 
         {status ? (
           <AlertMessage variant="info" className="mb-3">

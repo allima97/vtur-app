@@ -8,7 +8,6 @@ import { formatDateTimeBR } from "../../lib/format";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type ParametrosSistema = {
   id?: string;
@@ -148,8 +147,9 @@ export default function ParametrosSistemaIsland() {
 
   return (
     <section className="parametros-sistema-page">
-      <AppToolbar
+      <AppCard
         tone="config"
+        className="mb-3"
         title="Parametros do Sistema"
         subtitle="Configuracoes gerais de metas, cancelamento, faturamento e exportacoes."
       />

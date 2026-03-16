@@ -1248,10 +1248,20 @@ export default function VendasConsultaIsland() {
     <AppPrimerProvider>
       <div className="vendas-consulta-page">
         <AppCard
-          className="mb-3"
-          tone="config"
-          title="Filtros do período"
-          subtitle="Refine a consulta por competência, data ou escopo comercial."
+          className="mb-3 list-toolbar-sticky"
+          tone="info"
+          title="Consulta de Vendas"
+          subtitle="Gerencie suas vendas com visão de CRM."
+          actions={
+            <div className="mobile-stack-buttons">
+              <AppButton as="a" href="/vendas/importar" type="button" variant="secondary">
+                Importar contratos
+              </AppButton>
+              <AppButton as="a" href="/vendas/cadastro" type="button" variant="primary">
+                Nova venda
+              </AppButton>
+            </div>
+          }
         >
           <div className="vtur-form-grid vtur-form-grid-4">
             <AppField
@@ -1439,7 +1449,7 @@ export default function VendasConsultaIsland() {
         <DataTable
           shellClassName="mb-3"
           className="table-default table-header-green table-mobile-cards min-w-[820px]"
-          containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+          containerClassName="vtur-scroll-y-65"
           headers={
             <tr>
               <th>Cliente</th>

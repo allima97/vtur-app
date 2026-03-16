@@ -7,7 +7,6 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { normalizeText } from "../../lib/normalizeText";
 
@@ -146,8 +145,9 @@ export default function ParametrosNaoComissionaveisIsland() {
 
   return (
     <div className="page-content-wrap">
-      <AppToolbar
+      <AppCard
         tone="config"
+        className="mb-3"
         title="Criterios de nao comissao"
         subtitle="Sobrescreve paga_comissao e remove valores de metas, comissoes e relatorios."
       />

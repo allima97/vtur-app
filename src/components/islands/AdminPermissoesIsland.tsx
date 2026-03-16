@@ -11,7 +11,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 import {
   agruparModulosPorSecao,
   MAPA_MODULOS,
@@ -386,11 +385,10 @@ export default function AdminPermissoesIsland() {
   return (
     <AppPrimerProvider>
       <div className="page-content-wrap admin-permissoes-page admin-page">
-        <AppToolbar
+        <AppCard
           title="Permissoes do sistema"
           subtitle="Defina niveis de acesso por modulo e usuario, com aplicacao em bloco por secao."
           tone="info"
-          sticky
         >
           <div className="vtur-form-grid vtur-form-grid-2">
             <AppField
@@ -400,7 +398,7 @@ export default function AdminPermissoesIsland() {
               placeholder="Nome ou e-mail..."
             />
           </div>
-        </AppToolbar>
+        </AppCard>
 
         {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
 

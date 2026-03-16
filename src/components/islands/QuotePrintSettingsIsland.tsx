@@ -6,7 +6,6 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { registrarLog } from "../../lib/logs";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type QuotePrintSettings = {
   id?: string;
@@ -276,8 +275,8 @@ export default function QuotePrintSettingsIsland() {
   }
 
   return (
-    <section className="quote-print-settings-page">
-      <AppToolbar
+    <section className="page-content-wrap quote-print-settings-page">
+      <AppCard
         tone="config"
         title="Parametros do Orcamento (PDF)"
         subtitle="Logo, contatos, rodape e imagem complementar para o template de impressao."

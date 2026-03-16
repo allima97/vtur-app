@@ -15,7 +15,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 import { Chart } from "primereact/chart";
 import {
   construirLinkWhatsAppComTexto,
@@ -1464,11 +1463,11 @@ function DashboardGestorIslandInner() {
   return (
     <AppPrimerProvider>
       <div className="page-content-wrap dashboard-geral-page gestor-page vtur-dashboard-shell">
-        <AppToolbar
+        <AppCard
+          className="list-toolbar-sticky"
           title={`Dashboard ${isMaster ? "do master" : "do gestor"}`}
           subtitle={`Período: ${formatDateBR(inicio)} até ${formatDateBR(fim)}.`}
           tone="info"
-          sticky
           actions={
             <AppButton type="button" variant="primary" onClick={() => setShowCustomize(true)}>
               Personalizar dashboard
@@ -1533,7 +1532,7 @@ function DashboardGestorIslandInner() {
               </>
             )}
           </div>
-        </AppToolbar>
+        </AppCard>
 
         {isMaster && masterScope.loading && (
           <AppCard tone="config">Carregando escopo master...</AppCard>

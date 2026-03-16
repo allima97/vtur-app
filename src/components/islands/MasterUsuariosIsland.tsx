@@ -10,7 +10,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type UserRow = {
   id: string;
@@ -481,10 +480,9 @@ export default function MasterUsuariosIsland() {
   return (
     <AppPrimerProvider>
       <div className="mt-6 admin-page admin-usuarios-page vtur-legacy-module">
-        <AppToolbar
+        <AppCard
           className="mb-3 list-toolbar-sticky"
           tone="info"
-          sticky
           title="Usuários do portfólio"
           subtitle="Cadastre, ative e organize equipes das empresas aprovadas."
           actions={
@@ -505,7 +503,7 @@ export default function MasterUsuariosIsland() {
               ]}
             />
           </div>
-        </AppToolbar>
+        </AppCard>
 
       {erro && (
         <div className="mb-3">

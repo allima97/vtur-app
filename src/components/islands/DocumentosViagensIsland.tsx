@@ -8,7 +8,6 @@ import TableActions from "../ui/TableActions";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
-import AppToolbar from "../ui/primer/AppToolbar";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { supabase } from "../../lib/supabase";
 import {
@@ -397,15 +396,25 @@ export default function DocumentosViagensIsland() {
   return (
     <div className="page-content-wrap documentos-viagens-page">
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
-      <AppToolbar
+      <AppCard
         tone="info"
-        className="list-toolbar-sticky"
+        className="mb-3 list-toolbar-sticky documentos-viagens-top-card"
         title="Documentos de viagens"
         subtitle="Upload, gestao de modelos e impressao de documentos."
-      />
-
+        actions={
+          !mostrarUpload ? (
+            <AppButton
+              type="button"
+              variant="primary"
+              onClick={abrirUpload}
+              disabled={!podeCriar}
+            >
+              Enviar documento
+            </AppButton>
+          ) : undefined
+        }
+      >
       {!mostrarUpload && (
-        <AppCard tone="info" className="mb-3">
           <div
             className="form-row mobile-stack"
             style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
@@ -419,19 +428,9 @@ export default function DocumentosViagensIsland() {
                 wrapperClassName="m-0"
               />
             </div>
-            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-              <AppButton
-                type="button"
-                variant="primary"
-                onClick={abrirUpload}
-                disabled={!podeCriar}
-              >
-                Enviar documento
-              </AppButton>
-            </div>
           </div>
-        </AppCard>
       )}
+      </AppCard>
 
       {mostrarUpload && (
         <AppCard tone="info" className="form-card mb-3" title="Enviar documento">
@@ -453,7 +452,7 @@ export default function DocumentosViagensIsland() {
                 onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
               />
             </div>
-            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+            <div className="mobile-stack-buttons vtur-actions-end">
               <AppButton
                 type="button"
                 variant="primary"
@@ -541,7 +540,7 @@ export default function DocumentosViagensIsland() {
         >
           <div className="flex items-center justify-between gap-3" style={{ flexWrap: "wrap" }}>
             <div />
-            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+            <div className="mobile-stack-buttons vtur-actions-end">
               <AppButton
                 type="button"
                 variant="secondary"
@@ -578,7 +577,7 @@ export default function DocumentosViagensIsland() {
                 disabled={!podeEditar}
               />
             </div>
-            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+            <div className="mobile-stack-buttons vtur-actions-end">
               <AppButton
                 type="button"
                 variant="secondary"

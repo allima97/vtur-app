@@ -10,7 +10,6 @@ import AlertMessage from "../ui/AlertMessage";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type Papel = "GESTOR" | "MASTER" | "OUTRO" | "VIEWER";
 
@@ -718,13 +717,18 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
     <AppPrimerProvider>
     <div className="ranking-vendas-page vtur-legacy-module">
       {!effectiveViewOnly && papel === "MASTER" && (
-        <AppToolbar title="Ranking de vendas" subtitle="Compare desempenho por mês, equipe e produto." tone="info" sticky>
+        <AppCard
+          title="Ranking de vendas"
+          subtitle="Compare desempenho por mês, equipe e produto."
+          tone="info"
+          className="mb-3 list-toolbar-sticky"
+        >
           <div className="vtur-form-grid vtur-form-grid-3">
             <AppField as="select" label="Filial" value={masterScope.empresaSelecionada} onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)} options={[{ label: "Todas", value: "all" }, ...masterScope.empresasAprovadas.map((empresa) => ({ label: empresa.nome_fantasia, value: empresa.id }))]} />
             <AppField as="select" label="Equipe" value={masterScope.gestorSelecionado} onChange={(e) => masterScope.setGestorSelecionado(e.target.value)} options={[{ label: "Todas", value: "all" }, ...masterScope.gestoresDisponiveis.map((gestor) => ({ label: formatNome(gestor.nome_completo) || "Gestor", value: gestor.id }))]} />
             <AppField as="select" label="Vendedor" value={masterScope.vendedorSelecionado} onChange={(e) => masterScope.setVendedorSelecionado(e.target.value)} options={[{ label: "Todos", value: "all" }, ...masterScope.vendedoresDisponiveis.map((vendedor) => ({ label: formatNome(vendedor.nome_completo) || "Vendedor", value: vendedor.id }))]} />
           </div>
-        </AppToolbar>
+        </AppCard>
       )}
 
       {!effectiveViewOnly && gestoresParaConfig.length > 0 && (

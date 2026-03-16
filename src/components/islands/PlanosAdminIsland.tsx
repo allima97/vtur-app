@@ -7,7 +7,6 @@ import DataTable from "../ui/DataTable";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 
 type PlanoRow = {
@@ -160,10 +159,10 @@ const PlanosAdminIsland: React.FC = () => {
   }
 
   return (
-    <div className="mt-6 admin-page admin-planos-page">
-      <AppToolbar
+    <div className="admin-page admin-planos-page">
+      <AppCard
         tone="config"
-        className="list-toolbar-sticky"
+        className="mb-3"
         title="Planos do sistema"
         subtitle="Cadastro e configuracao de planos."
         actions={

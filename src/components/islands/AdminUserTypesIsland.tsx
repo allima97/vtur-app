@@ -20,7 +20,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type NivelPermissao = "none" | "view" | "create" | "edit" | "delete" | "admin";
 
@@ -447,11 +446,11 @@ export default function AdminUserTypesIsland() {
   return (
     <AppPrimerProvider>
       <div className="page-content-wrap admin-page admin-user-types-page">
-        <AppToolbar
+        <AppCard
           title="Tipos de usuario"
           subtitle="Crie cargos e defina permissoes padrao que serao aplicadas a novos usuarios."
           tone="info"
-          sticky
+          className="mb-3 list-toolbar-sticky"
           actions={
             <AppButton type="button" variant="primary" onClick={abrirNovoTipo}>
               Novo tipo
@@ -466,7 +465,7 @@ export default function AdminUserTypesIsland() {
               onChange={(e) => setBusca(e.target.value)}
             />
           </div>
-        </AppToolbar>
+        </AppCard>
 
         {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
 

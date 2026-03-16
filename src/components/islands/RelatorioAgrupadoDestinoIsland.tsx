@@ -19,7 +19,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type StatusFiltro = "todos" | "aberto" | "confirmado" | "cancelado";
 type PeriodoPreset = "hoje" | "7" | "30" | "mes_atual" | "mes_anterior" | "limpar" | "";
@@ -813,12 +812,11 @@ export default function RelatorioAgrupadoDestinoIsland() {
       <div className="relatorio-vendas-destino-page">
         <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
-        <AppToolbar
-          sticky
+        <AppCard
           tone="config"
           className="mb-3 list-toolbar-sticky"
-          title="Relatório agrupado por destino"
-          subtitle={`Período: ${periodoResumo}. Consolidação por destino e cidade no recorte atual.`}
+          title="Vendas por Destino"
+          subtitle={`Gerencie indicadores por destino com visao de CRM. Periodo: ${periodoResumo}.`}
           actions={
             <div className="vtur-quote-top-actions">
               <AppButton type="button" variant="secondary" className="sm:hidden" onClick={() => setShowFilters(true)}>
@@ -834,7 +832,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
           }
         >
           <div className="hidden sm:block">{renderFiltersGrid()}</div>
-        </AppToolbar>
+        </AppCard>
 
         {showFilters ? (
           <Dialog

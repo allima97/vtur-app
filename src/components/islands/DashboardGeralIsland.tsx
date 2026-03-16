@@ -30,7 +30,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 // ----------------- TIPOS -----------------
 
@@ -2316,16 +2315,31 @@ function toLineChartConfig(
   return (
     <AppPrimerProvider>
       <div className="page-content-wrap dashboard-geral-page vtur-dashboard-shell">
-        <AppToolbar
+        <AppCard
+          className="dashboard-top-card"
           title="Dashboard comercial"
           subtitle="Acompanhe vendas, metas, orçamentos, consultorias, viagens e follow-up com personalização por widget."
           tone="info"
-          sticky
           actions={
             <div className="vtur-dashboard-toolbar-actions">
-              <div className="sm:hidden">
-                <AppButton type="button" variant="secondary" onClick={() => setShowFilters(true)}>
+              <div className="vtur-dashboard-mobile-quick-actions sm:hidden">
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  className="dashboard-mobile-filter-btn"
+                  onClick={() => setShowFilters(true)}
+                >
                   Filtros
+                </AppButton>
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  className="btn-calculator-trigger dashboard-mobile-calculator-btn"
+                  onClick={() => setShowCalculator(true)}
+                  aria-label="Calculadora"
+                  title="Calculadora"
+                >
+                  <i className="pi pi-calculator" aria-hidden="true" />
                 </AppButton>
               </div>
               <AppButton type="button" variant="primary" onClick={() => setShowCustomize(true)}>
@@ -2339,7 +2353,7 @@ function toLineChartConfig(
               <AppButton
                 type="button"
                 variant="secondary"
-                className="btn-calculator-trigger"
+                className="btn-calculator-trigger hidden sm:inline-flex"
                 onClick={() => setShowCalculator(true)}
                 aria-label="Calculadora"
                 title="Calculadora"
@@ -2400,7 +2414,7 @@ function toLineChartConfig(
               />
             </div>
           </div>
-        </AppToolbar>
+        </AppCard>
 
         {showFilters && (
           <Dialog

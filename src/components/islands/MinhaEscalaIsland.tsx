@@ -8,7 +8,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type EscalaDia = {
   id: string;
@@ -436,17 +435,17 @@ export default function MinhaEscalaIsland() {
   return (
     <AppPrimerProvider>
     <div className="page-content-wrap minha-escala-page vtur-legacy-module">
-      <AppToolbar
-        title={`Minha escala${userNome ? ` - ${userNome}` : ""}`}
-        subtitle={`Mês: ${formatPeriodoLabel(periodo)}`}
+      <AppCard
+        className="mb-3 list-toolbar-sticky"
+        title="Minha Escala"
+        subtitle={`Gerencie sua escala com visao de CRM. Mes: ${formatPeriodoLabel(periodo)}${userNome ? ` · ${userNome}` : ""}`}
         tone="info"
-        sticky
         actions={
-          <div className="vtur-card-toolbar-actions">
-            <AppButton type="button" variant={activeTab === "minha" ? "primary" : "default"} onClick={() => setActiveTab("minha")}>
+          <div className="vtur-card-toolbar-actions minha-escala-toolbar-actions">
+            <AppButton type="button" variant={activeTab === "minha" ? "primary" : "secondary"} onClick={() => setActiveTab("minha")}>
               Minha escala
             </AppButton>
-            <AppButton type="button" variant={activeTab === "equipe" ? "primary" : "default"} onClick={() => setActiveTab("equipe")}>
+            <AppButton type="button" variant={activeTab === "equipe" ? "primary" : "secondary"} onClick={() => setActiveTab("equipe")}>
               Escala equipe
             </AppButton>
           </div>
@@ -461,7 +460,7 @@ export default function MinhaEscalaIsland() {
             options={opcoesPeriodo.map((opcao) => ({ label: formatPeriodoLabel(opcao), value: opcao }))}
           />
         </div>
-      </AppToolbar>
+      </AppCard>
 
       {activeTab === "minha" && erro && (
         <AlertMessage variant="error"><strong>{erro}</strong></AlertMessage>

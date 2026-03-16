@@ -1,17 +1,11 @@
 ---
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
-import HeaderPage from "../../components/ui/HeaderPage.astro";
 import ControleSacIsland from "../../components/islands/ControleSacIsland.tsx";
 
 const activePage = "operacao_sac";
 ---
 
 <DashboardLayout title="Controle de SAC" {activePage}>
-  <HeaderPage
-    title="Controle de SAC"
-    subtitle="Acompanhe solicitações abertas no SAC e registre interações."
-    color="blue"
-  />
 
   <div class="page-content-wrap">
     <ControleSacIsland client:only="react" />

@@ -11,7 +11,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type Template = {
   id: string;
@@ -522,8 +521,7 @@ export default function CommissionTemplatesIsland() {
           </form>
         </AppCard>
 
-        <AppToolbar
-          sticky
+        <AppCard
           tone="config"
           className="mb-3 list-toolbar-sticky"
           title="Templates de comissao"
@@ -538,7 +536,7 @@ export default function CommissionTemplatesIsland() {
               caption="Use a busca para localizar rapidamente modelos fixos e escalonaveis."
             />
           </div>
-        </AppToolbar>
+        </AppCard>
 
         <AppCard
           tone="config"
@@ -547,7 +545,7 @@ export default function CommissionTemplatesIsland() {
         >
           <DataTable
             className="table-mobile-cards min-w-[820px]"
-            containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+            containerClassName="vtur-scroll-y-65"
             headers={
               <tr>
                 <th>Nome</th>

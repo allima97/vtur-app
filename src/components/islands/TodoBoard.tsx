@@ -6,7 +6,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 const PRIORITIES = [
   { value: "alta", label: "Alta", color: "#ef4444" },
@@ -920,8 +919,8 @@ export default function TodoBoard() {
       <div className={`todo-board${isMobile ? " todo-mobile" : ""} vtur-legacy-module`}>
       {/* Título e subtítulo (apenas desktop) */}
       {!isMobile && (
-        <AppToolbar
-          className="mb-4"
+        <AppCard
+          className="mb-4 todo-top-card"
           tone="config"
           title="Tarefas"
           subtitle="Crie e acompanhe suas tarefas de forma rápida e inteligente."
@@ -1070,7 +1069,7 @@ export default function TodoBoard() {
         style={{ marginBottom: 16 }}
         title="Categorias"
         actions={
-          <AppButton type="button" variant="default" onClick={() => setCreateCategoryOpen(true)}>
+          <AppButton type="button" variant="secondary" onClick={() => setCreateCategoryOpen(true)}>
             Nova categoria
           </AppButton>
         }
@@ -1095,7 +1094,7 @@ export default function TodoBoard() {
               {c.nome}
               <AppButton
                 type="button"
-                variant="default"
+                variant="secondary"
                 style={{ padding: "2px 6px", minHeight: 24, fontSize: 11, lineHeight: 1 }}
                 onClick={() => {
                   setEditingCategory(c);
@@ -1370,7 +1369,7 @@ export default function TodoBoard() {
                 </div>
                 {error && <div style={{ color: "#b91c1c" }}>{error}</div>}
               </div>
-              <div className="modal-footer mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+              <div className="modal-footer mobile-stack-buttons vtur-actions-end">
                 <AppButton type="submit" variant="primary">
                   Salvar
                 </AppButton>
@@ -1441,7 +1440,7 @@ export default function TodoBoard() {
                   )}
                 </div>
               </div>
-              <div className="modal-footer mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+              <div className="modal-footer mobile-stack-buttons vtur-actions-end">
                 <AppButton type="submit" variant="primary">
                   Salvar
                 </AppButton>

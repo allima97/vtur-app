@@ -719,7 +719,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "relatorios",
       href: "/relatorios/vendas-por-cliente",
       active: "relatorios-vendas-cliente",
-      icon: "pi pi-user",
+      icon: "pi pi-address-book",
       label: "Vendas por cliente",
       canShow: canMenuExact("RelatorioClientes") || canMenuExact("Relatorios"),
     });
@@ -784,8 +784,8 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "parametros",
       href: "/parametros/avisos",
       active: "parametros-avisos",
-      icon: "pi pi-megaphone",
-      label: "Avisos",
+      icon: "pi pi-comments",
+      label: "CRM",
       canShow: canMenuExact("Avisos") || canMenuExact("ParametrosAvisos") || canMenuExact("Parametros"),
     });
     entries.push({

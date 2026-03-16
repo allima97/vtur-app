@@ -16,7 +16,6 @@ import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type TipoPacote = {
   id: string;
@@ -338,8 +337,7 @@ export default function TipoPacotesIsland() {
           </AppCard>
         )}
 
-        <AppToolbar
-          sticky
+        <AppCard
           tone="config"
           className="mb-3 list-toolbar-sticky"
           title="Tipos de pacote"
@@ -360,7 +358,7 @@ export default function TipoPacotesIsland() {
               onChange={(e) => setBusca(e.target.value)}
             />
           </div>
-        </AppToolbar>
+        </AppCard>
 
         {erro && (
           <div className="mb-3">

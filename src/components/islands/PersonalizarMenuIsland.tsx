@@ -17,7 +17,6 @@ import EmptyState from "../ui/EmptyState";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type MenuItem = {
   key: string;
@@ -292,10 +291,9 @@ export default function PersonalizarMenuIsland() {
 
   return (
     <section className="personalizar-menu-page">
-      <AppToolbar
+      <AppCard
         tone="info"
         className="mb-3"
-        sticky
         title="Personalizar menu"
         subtitle="Escolha itens visiveis e ajuste a ordem automaticamente."
       />
@@ -355,29 +353,29 @@ export default function PersonalizarMenuIsland() {
                           variant="secondary"
                           onClick={() => onMove(group.section, item.key, "up")}
                           disabled={idx === 0}
+                          className="personalizar-menu-icon-btn"
                           aria-label="Mover para cima"
-                        >
-                          <i className="pi pi-arrow-up" aria-hidden="true" />
-                        </AppButton>
+                          icon="pi pi-arrow-up"
+                        />
                         <AppButton
                           type="button"
                           variant="secondary"
                           onClick={() => onMove(group.section, item.key, "down")}
                           disabled={idx === group.items.length - 1}
+                          className="personalizar-menu-icon-btn"
                           aria-label="Mover para baixo"
-                        >
-                          <i className="pi pi-arrow-down" aria-hidden="true" />
-                        </AppButton>
+                          icon="pi pi-arrow-down"
+                        />
                         <AppButton
                           type="button"
                           variant="secondary"
                           onClick={() => onToggleHidden(item)}
                           disabled={Boolean(item.locked)}
+                          className="personalizar-menu-icon-btn"
+                          aria-label={hidden ? "Mostrar item" : "Ocultar item"}
                           title={item.locked ? "Este item nao pode ser ocultado." : undefined}
-                        >
-                          <i className={hidden ? "pi pi-eye" : "pi pi-eye-slash"} aria-hidden="true" />
-                          {hidden ? "Mostrar" : "Ocultar"}
-                        </AppButton>
+                          icon={hidden ? "pi pi-eye" : "pi pi-eye-slash"}
+                        />
                       </div>
                     </div>
                   );

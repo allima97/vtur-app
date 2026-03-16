@@ -11,7 +11,6 @@ import AppCard from "../ui/primer/AppCard";
 import AppDialog from "../ui/primer/AppDialog";
 import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type Perfil = {
   nome_completo: string;
@@ -673,12 +672,11 @@ function formatCnpj(value: string) {
         onCancel={() => setModalSairOnboarding(false)}
       />
 
-      <AppToolbar
+      <AppCard
         title="Meu perfil"
         subtitle={onboarding ? "Finalize seu cadastro para liberar o acesso ao sistema." : `Revise seus dados, acesso e vínculo atual${cidadeEstado ? ` • ${cidadeEstado}` : ""}.`}
         tone="info"
         className="mb-3"
-        sticky
       />
       {onboarding && (
         <AppCard tone="config">
