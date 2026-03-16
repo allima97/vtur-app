@@ -1122,7 +1122,15 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
 
   body.sakai-theme .app-main {
     margin-left: 0 !important;
-    padding: calc(5.4rem + env(safe-area-inset-top)) 1rem calc(1.2rem + env(safe-area-inset-bottom));
+    /* Reserva espaço para o menu inferior fixo em qualquer tela mobile/tablet. */
+    padding:
+      calc(5.4rem + env(safe-area-inset-top))
+      1rem
+      calc(var(--vtur-mobile-bottom-clearance, calc(132px + env(safe-area-inset-bottom))) + 16px);
+  }
+
+  body.sakai-theme .page-content-wrap {
+    padding-bottom: calc(var(--vtur-mobile-bottom-clearance, calc(132px + env(safe-area-inset-bottom))) + 12px);
   }
 
   body.sakai-theme .sidebar-mobile-trigger {
