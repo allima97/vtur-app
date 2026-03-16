@@ -2,6 +2,8 @@ body.sakai-theme {
   --sgvtur-bg: #f4f1eb;
   --sgvtur-ink: #09112e;
   --sgvtur-muted: #52607a;
+  --vtur-desktop-shell-top: 5.6rem;
+  --vtur-desktop-content-top: 3.5rem;
   --sgvtur-section-blue-bg: #ebf8ff;
   --sgvtur-section-blue-border: #bfdbfe;
   --sgvtur-section-blue-title: #1d4ed8;
@@ -53,7 +55,7 @@ body.sakai-theme .app-topbar {
 
 body.sakai-theme .app-sidebar {
   position: fixed;
-  top: 5.6rem;
+  top: var(--vtur-desktop-shell-top);
   left: 1rem;
   z-index: 999;
   width: 286px;
@@ -69,7 +71,7 @@ body.sakai-theme .app-sidebar {
 
 body.sakai-theme .app-main {
   margin-left: calc(1rem + 286px + 1rem) !important;
-  padding: calc(4.6rem + 0.35rem) 1rem 1.25rem 0.75rem;
+  padding: var(--vtur-desktop-content-top) 1rem 1.25rem 0.75rem !important;
   min-height: 100vh;
   min-width: 0;
 }
