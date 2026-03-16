@@ -2,9 +2,10 @@ body.sakai-theme {
   --sgvtur-bg: #f4f1eb;
   --sgvtur-ink: #09112e;
   --sgvtur-muted: #52607a;
+  --vtur-topbar-height: 4.6rem;
   --vtur-desktop-shell-top: 5.6rem;
   --vtur-desktop-content-top: 3.5rem;
-  --vtur-mobile-content-top: calc(6.1rem + env(safe-area-inset-top));
+  --vtur-mobile-content-top: calc(var(--vtur-topbar-height) + 1.55rem + env(safe-area-inset-top));
   --sgvtur-section-blue-bg: #ebf8ff;
   --sgvtur-section-blue-border: #bfdbfe;
   --sgvtur-section-blue-title: #1d4ed8;
@@ -46,7 +47,7 @@ body.sakai-theme .app-topbar {
   left: 0;
   right: 0;
   z-index: 997;
-  height: 4.6rem;
+  height: var(--vtur-topbar-height);
   padding: 0 1.5rem;
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
@@ -1163,7 +1164,8 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
     padding:
       var(--vtur-mobile-content-top)
       1rem
-      calc(var(--vtur-mobile-bottom-clearance, calc(132px + env(safe-area-inset-bottom))) + 16px);
+      calc(var(--vtur-mobile-bottom-clearance, calc(132px + env(safe-area-inset-bottom))) + 16px)
+      1rem !important;
   }
 
   body.sakai-theme .list-toolbar-sticky {
