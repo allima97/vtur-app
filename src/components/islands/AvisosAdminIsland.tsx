@@ -250,7 +250,7 @@ const AvisosAdminIsland: React.FC = () => {
       ) : (
         <AppCard tone="config">
           <DataTable
-            className="table-mobile-cards min-w-[720px]"
+            className="table-header-blue table-mobile-cards min-w-[720px]"
             headers={
               <tr>
                 <th>Nome</th>

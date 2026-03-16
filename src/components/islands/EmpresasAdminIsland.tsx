@@ -379,7 +379,7 @@ const EmpresasAdminIsland: React.FC = () => {
             <EmptyState title="Nenhuma empresa cadastrada" />
           ) : (
             <DataTable
-              className="table-mobile-cards min-w-[960px]"
+              className="table-header-blue table-mobile-cards min-w-[960px]"
               headers={
                 <tr>
                   <th>Nome Fantasia</th>
@@ -540,7 +540,7 @@ const EmpresasAdminIsland: React.FC = () => {
               <EmptyState title="Nenhum vinculo cadastrado" />
             ) : (
               <DataTable
-                className="table-mobile-cards min-w-[980px]"
+                className="table-header-blue table-mobile-cards min-w-[980px]"
                 headers={
                   <tr>
                     <th>Empresa</th>

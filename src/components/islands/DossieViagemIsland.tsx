@@ -799,7 +799,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                     <div>-</div>
                   ) : (
                     <div className="table-container overflow-x-auto">
-                      <table className="table-default table-mobile-cards min-w-[720px]">
+                      <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
                         <thead>
                           <tr>
                             <th>Recibo</th>
@@ -930,7 +930,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
               {abaAtiva === "acompanhantes" && (
             <div style={{ display: "grid", gap: 12 }}>
               <div className="table-container overflow-x-auto">
-                <table className="table-default table-mobile-cards min-w-[620px]">
+                <table className="table-default table-header-blue table-mobile-cards min-w-[620px]">
                   <thead>
                     <tr>
                       <th>Nome</th>
@@ -1321,7 +1321,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
               {abaAtiva === "servicos" && (
                 <div style={{ display: "grid", gap: 12 }}>
                   <div className="table-container overflow-x-auto">
-                    <table className="table-default table-mobile-cards min-w-[720px]">
+                    <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
                       <thead>
                         <tr>
                           <th>Tipo</th>
@@ -1611,7 +1611,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
               {abaAtiva === "documentos" && (
                 <div style={{ display: "grid", gap: 12 }}>
                   <div className="table-container overflow-x-auto">
-                    <table className="table-default table-mobile-cards min-w-[640px]">
+                    <table className="table-default table-header-blue table-mobile-cards min-w-[640px]">
                       <thead>
                         <tr>
                           <th>Título</th>

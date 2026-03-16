@@ -686,9 +686,9 @@ export default function EquipeGestorIsland() {
   if (loadingPerm) return <LoadingUsuarioContext />;
   if (!podeVer) {
     return (
-      <div style={{ padding: 20 }}>
-        <h3>Você não possui acesso aos parâmetros.</h3>
-      </div>
+      <AppPrimerProvider>
+        <AppCard tone="config">Você não possui acesso aos parâmetros.</AppCard>
+      </AppPrimerProvider>
     );
   }
 
@@ -803,7 +803,7 @@ export default function EquipeGestorIsland() {
             subtitle="Usuários convidados que ainda não finalizaram o perfil."
           >
             <div className="table-container overflow-x-auto" style={{ marginTop: 12 }}>
-              <table className="table-default table-mobile-cards min-w-[780px]">
+              <table className="table-default table-header-blue table-mobile-cards min-w-[780px]">
                 <thead>
                   <tr>
                     <th>E-mail</th>
@@ -854,7 +854,7 @@ export default function EquipeGestorIsland() {
           </AppCard>
 
           <div className="table-container overflow-x-auto">
-            <table className="table-default table-mobile-cards min-w-[720px]">
+            <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
               <thead>
                 <tr>
                   <th>Nome</th>
@@ -950,7 +950,7 @@ export default function EquipeGestorIsland() {
               Gestores
             </h5>
             <div className="table-container overflow-x-auto" style={{ marginTop: 12 }}>
-              <table className="table-default table-mobile-cards escala-horario-table min-w-[820px]">
+              <table className="table-default table-header-blue table-mobile-cards escala-horario-table min-w-[820px]">
                 <thead>
                   <tr>
                     <th>Gestor</th>
@@ -1168,7 +1168,7 @@ export default function EquipeGestorIsland() {
               Vendedores
             </h5>
             <div className="table-container overflow-x-auto" style={{ marginTop: 12 }}>
-              <table className="table-default table-mobile-cards escala-horario-table min-w-[820px]">
+              <table className="table-default table-header-blue table-mobile-cards escala-horario-table min-w-[820px]">
                 <thead>
                   <tr>
                     <th>Vendedor</th>

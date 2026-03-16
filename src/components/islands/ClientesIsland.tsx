@@ -1940,7 +1940,7 @@ export default function ClientesIsland() {
           loadingMessage="Carregando acompanhantes..."
           empty={false}
           colSpan={!modoVisualizacao && (podeEditar || podeExcluir) ? 6 : 5}
-          className="table-mobile-cards"
+          className="table-header-blue table-mobile-cards"
         >
           {acompanhantes.map((a) => (
             <tr key={a.id}>
@@ -2436,7 +2436,7 @@ export default function ClientesIsland() {
               loadingMessage="Carregando clientes..."
               empty={false}
               colSpan={exibeColunaAcoes ? 5 : 4}
-              className="clientes-table table-mobile-cards min-w-[820px]"
+              className="clientes-table table-header-blue table-mobile-cards min-w-[820px]"
             >
               {clientesExibidos.map((c) => (
                 <tr key={c.id}>
@@ -2715,7 +2715,7 @@ export default function ClientesIsland() {
                   empty={historicoVendas.length === 0}
                   emptyMessage="Nenhuma venda encontrada."
                   colSpan={7}
-                  className="table-mobile-cards min-w-[820px]"
+                  className="table-header-blue table-mobile-cards min-w-[820px]"
                 >
                   {historicoVendas.map((v) => (
                     <tr key={v.id}>
@@ -2758,7 +2758,7 @@ export default function ClientesIsland() {
                   empty={historicoOrcamentos.length === 0}
                   emptyMessage="Nenhum orcamento encontrado."
                   colSpan={7}
-                  className="table-mobile-cards min-w-[760px]"
+                  className="table-header-blue table-mobile-cards min-w-[760px]"
                 >
                   {historicoOrcamentos.map((o) => (
                     <tr key={o.id}>
@@ -2835,7 +2835,7 @@ export default function ClientesIsland() {
                 empty={detalheRecibos.length === 0}
                 emptyMessage="Nenhum recibo encontrado."
                 colSpan={6}
-                className="table-mobile-cards"
+                className="table-header-blue table-mobile-cards"
               >
                 {detalheRecibos.map((r, idx) => {
                   const formatarData = (value: string | null | undefined) => (value ? formatDateBR(value) : "-");

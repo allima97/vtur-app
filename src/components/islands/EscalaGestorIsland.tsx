@@ -1450,7 +1450,7 @@ export default function EscalaGestorIsland() {
           )}
           {feriadosCustom.length > 0 && (
             <div className="table-container">
-              <table className="table-default table-mobile-cards">
+              <table className="table-default table-header-blue table-mobile-cards">
                 <thead>
                   <tr>
                     <th>Data</th>

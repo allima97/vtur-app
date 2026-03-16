@@ -274,7 +274,7 @@ export default function PermissoesAdminIsland() {
         <div className="hidden sm:block">
           <AppCard tone="config" title="Usuarios">
             <DataTable
-              className="table-mobile-cards min-w-[900px]"
+              className="table-header-blue table-mobile-cards min-w-[900px]"
               headers={
                 <tr>
                   <th className="min-w-[180px]">Usuario</th>

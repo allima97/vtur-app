@@ -366,7 +366,7 @@ const FinanceiroAdminIsland: React.FC = () => {
             <EmptyState title="Nenhuma cobranca encontrada" />
           ) : (
             <DataTable
-              className="table-mobile-cards min-w-[860px]"
+              className="table-header-blue table-mobile-cards min-w-[860px]"
               headers={
                 <tr>
                   <th>Empresa</th>

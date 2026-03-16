@@ -562,7 +562,7 @@ const UsuariosAdminIsland: React.FC = () => {
             <EmptyState title="Nenhum usuario encontrado" />
           ) : (
             <DataTable
-              className="table-mobile-cards min-w-[980px]"
+              className="table-header-blue table-mobile-cards min-w-[980px]"
               headers={
                 <tr>
                   <th>Nome</th>

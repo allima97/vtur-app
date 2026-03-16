@@ -338,7 +338,7 @@ export default function ParametrosCambiosIsland() {
               <EmptyState title="Nenhum cambio cadastrado ainda" />
             ) : (
               <DataTable
-                className="table-mobile-cards min-w-[600px]"
+                className="table-header-blue table-mobile-cards min-w-[600px]"
                 headers={
                   <tr>
                     <th>Data</th>

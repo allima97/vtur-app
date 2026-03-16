@@ -754,7 +754,7 @@ export default function FornecedoresIsland() {
               subtitle="Acompanhe parceiros comerciais, contatos e condicoes operacionais com leitura rapida."
             >
               <DataTable
-                className="fornecedores-table table-mobile-cards"
+                className="fornecedores-table table-header-blue table-mobile-cards"
                 containerClassName="vtur-scroll-y-65"
                 headers={
                   <tr>

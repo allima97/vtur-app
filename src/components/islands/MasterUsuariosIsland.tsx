@@ -471,9 +471,9 @@ export default function MasterUsuariosIsland() {
   if (loadingPerm) return <LoadingUsuarioContext />;
   if (!podeVer || !isMaster) {
     return (
-      <div style={{ padding: 20 }}>
-        <h3>Apenas usuários MASTER podem acessar este módulo.</h3>
-      </div>
+      <AppPrimerProvider>
+        <AppCard tone="config">Apenas usuários MASTER podem acessar este módulo.</AppCard>
+      </AppPrimerProvider>
     );
   }
 

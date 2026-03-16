@@ -1359,7 +1359,7 @@ export default function CircuitosIsland() {
                   />
                 }
                 colSpan={5}
-                className="table-mobile-cards"
+              className="table-header-blue table-mobile-cards"
               >
                 {datas.map((item) => (
                   <tr key={item.tempId}>

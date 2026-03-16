@@ -12,6 +12,18 @@
   color: #f97316;
 }
 
+/* Padronizacao global (exceto To-Do e Agenda): tabelas sem header explicito
+   passam a herdar o mesmo visual-base azul do CRM. */
+.table-mobile-cards:not([class*="table-header-"]) {
+  border-top: 1px solid var(--color-blue-border);
+}
+
+.table-mobile-cards:not([class*="table-header-"]) thead th {
+  background: var(--color-blue-bg);
+  color: var(--color-blue-title);
+  border-bottom: 1px solid var(--color-blue-border);
+}
+
 /* Documentos Viagens: preview/print isolado */
 .doc-template-pre {
   white-space: pre-wrap;
@@ -7049,6 +7061,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     padding: 0 !important;
     border-radius: 10px !important;
     justify-content: center !important;
+  }
+
+  .table-mobile-cards td.th-actions :is(.btn-icon, .icon-action-btn) {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0 !important;
+    border-radius: 10px !important;
+    justify-content: center !important;
+    display: inline-flex !important;
+    align-items: center !important;
   }
 
   .page-content-wrap :is(.form-row.mobile-stack, .vtur-form-grid) > [style*="min-width"] {

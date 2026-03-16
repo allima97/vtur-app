@@ -198,7 +198,7 @@ export default function ParametrosNaoComissionaveisIsland() {
           <EmptyState title="Nenhum criterio cadastrado" />
         ) : (
           <DataTable
-            className="table-mobile-cards"
+            className="table-header-blue table-mobile-cards"
             headers={
               <tr>
                 <th>Termo</th>

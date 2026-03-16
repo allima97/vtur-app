@@ -452,7 +452,7 @@ export default function ClientesConsultaIsland() {
               loadingMessage="Carregando clientes..."
               empty={false}
               colSpan={5}
-              className="table-default table-header-blue clientes-table table-mobile-cards"
+              className="table-default table-header-blue clientes-table table-header-blue table-mobile-cards"
             >
               {clientesExibidos.map((c) => {
                 const whatsappLink = construirLinkWhatsApp(c.whatsapp || c.telefone || "");
@@ -566,7 +566,7 @@ export default function ClientesConsultaIsland() {
                     empty={historicoVendas.length === 0}
                     emptyMessage="Nenhuma venda encontrada."
                     colSpan={5}
-                    className="table-mobile-cards"
+                    className="table-header-blue table-mobile-cards"
                   >
                     {historicoVendas.map((v) => (
                       <tr key={v.id}>
@@ -611,7 +611,7 @@ export default function ClientesConsultaIsland() {
                     empty={historicoOrcamentos.length === 0}
                     emptyMessage="Nenhum orcamento encontrado."
                     colSpan={4}
-                    className="table-mobile-cards"
+                    className="table-header-blue table-mobile-cards"
                   >
                     {historicoOrcamentos.map((o) => (
                       <tr key={o.id}>

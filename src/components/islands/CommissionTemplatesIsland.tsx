@@ -544,7 +544,7 @@ export default function CommissionTemplatesIsland() {
           subtitle="Reutilize configuracoes comerciais padronizadas para metas, faixas e politicas de comissionamento."
         >
           <DataTable
-            className="table-mobile-cards min-w-[820px]"
+            className="table-header-blue table-mobile-cards min-w-[820px]"
             containerClassName="vtur-scroll-y-65"
             headers={
               <tr>

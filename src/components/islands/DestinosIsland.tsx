@@ -489,7 +489,7 @@ export default function DestinosIsland() {
           subtitle="Visualize o portifolio geográfico com cidade, pais, faixa comercial e status operacional."
         >
           <DataTable
-            className="table-mobile-cards min-w-[960px]"
+            className="table-header-blue table-mobile-cards min-w-[960px]"
             containerClassName="vtur-scroll-y-65"
             headers={
               <tr>

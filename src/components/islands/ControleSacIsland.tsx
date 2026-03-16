@@ -872,7 +872,7 @@ export default function ControleSacIsland() {
                 {historicoSac.recibo || "Sem recibo"}
               </div>
               <DataTable
-                className="table-mobile-cards"
+                className="table-header-blue table-mobile-cards"
                 headers={
                   <tr>
                     <th>Data</th>

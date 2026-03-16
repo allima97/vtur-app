@@ -737,7 +737,7 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
             <strong>Gestores no ranking</strong>
           </div>
           <div className="table-container">
-            <table className="table-default table-mobile-cards">
+            <table className="table-default table-header-blue table-mobile-cards">
               <thead>
                 <tr>
                   <th>Gestor</th>
@@ -822,7 +822,7 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
               )}
 
               <div className="table-container">
-                <table className="ranking-table ranking-table-main table-mobile-cards">
+                <table className="ranking-table ranking-table-main table-header-blue table-mobile-cards">
                   <thead>
                     <tr>
                       <th>#</th>
@@ -899,7 +899,7 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
                   )}
                 </div>
                 <div className="table-container">
-                  <table className="ranking-table ranking-table-side table-mobile-cards">
+                  <table className="ranking-table ranking-table-side table-header-blue table-mobile-cards">
                     <thead>
                       <tr>
                         <th>#</th>

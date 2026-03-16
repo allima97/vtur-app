@@ -217,7 +217,7 @@ export default function LogsIsland() {
       <AppCard tone="config" title={`Registros (${logsFiltrados.length})`}>
         <DataTable
           containerClassName="vtur-scroll-y-65"
-          className="table-mobile-cards min-w-[820px]"
+          className="table-header-blue table-mobile-cards min-w-[820px]"
           headers={
             <tr>
               <th className="min-w-[150px]">Data</th>

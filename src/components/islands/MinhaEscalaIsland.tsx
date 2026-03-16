@@ -587,7 +587,7 @@ export default function MinhaEscalaIsland() {
         <AppCard>
           <div className="escala-list-title">Detalhes do mes</div>
           <div className="table-container">
-            <table className="table-default table-mobile-cards">
+            <table className="table-default table-header-blue table-mobile-cards">
               <thead>
                 <tr>
                   <th>Data</th>

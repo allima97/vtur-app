@@ -806,7 +806,7 @@ export default function QuoteImportIsland() {
             </div>
 
             <div className="table-container overflow-x-auto" style={{ marginTop: 16 }}>
-              <table className="table-default table-compact table-mobile-cards quote-items-table">
+              <table className="table-default table-compact table-header-blue table-mobile-cards quote-items-table">
                 <thead>
                   <tr>
                     <th className="order-cell">Ordem</th>

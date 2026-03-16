@@ -454,7 +454,7 @@ export default function CommissionRulesIsland() {
                   }
                 >
                   <DataTable
-                    className="table-mobile-cards min-w-[800px]"
+                    className="table-header-blue table-mobile-cards min-w-[800px]"
                     headers={
                       <tr>
                         <th>Faixa</th>
@@ -566,7 +566,7 @@ export default function CommissionRulesIsland() {
             subtitle="Consulte, revise e mantenha as regras gerais e escalonaveis ativas para a operacao."
           >
             <DataTable
-              className="table-mobile-cards min-w-[900px]"
+              className="table-header-blue table-mobile-cards min-w-[900px]"
               containerClassName="vtur-scroll-y-65"
               headers={
                 <tr>

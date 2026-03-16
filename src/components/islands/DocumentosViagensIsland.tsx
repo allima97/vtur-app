@@ -475,7 +475,7 @@ export default function DocumentosViagensIsland() {
           </div>
 
           <DataTable
-            className="table-mobile-cards"
+            className="table-header-blue table-mobile-cards"
             headers={
               <tr>
                 <th>Nome</th>
@@ -605,7 +605,7 @@ export default function DocumentosViagensIsland() {
           <div className="form-group">
             <label className="form-label">Campos</label>
             <DataTable
-              className="table-mobile-cards"
+              className="table-header-blue table-mobile-cards"
               headers={
                 <tr>
                   <th>Campo</th>
