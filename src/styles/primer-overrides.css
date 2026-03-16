@@ -1828,6 +1828,8 @@ a.vtur-app-button:visited {
 .vtur-commission-kpi-card {
   display: grid;
   gap: 8px;
+  justify-items: center;
+  align-content: center;
   padding: 18px;
   border-radius: 18px;
   border: 1px solid rgba(148, 163, 184, 0.2);
@@ -1842,6 +1844,7 @@ a.vtur-app-button:visited {
   line-height: 1.4;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  text-align: center;
   color: var(--vtur-primer-muted);
 }
 
@@ -1849,6 +1852,7 @@ a.vtur-app-button:visited {
   font-size: 1.2rem;
   font-weight: 700;
   line-height: 1.15;
+  text-align: center;
   color: var(--vtur-primer-ink);
 }
 

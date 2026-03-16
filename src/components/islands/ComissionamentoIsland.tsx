@@ -1108,8 +1108,8 @@ export default function ComissionamentoIsland() {
 
       <AppField
         label="Data Início"
-        type={periodoEditavel ? "date" : "text"}
-        value={periodoEditavel ? periodo.inicio : formatPeriodoLabel(periodo.inicio)}
+        type="date"
+        value={periodo.inicio}
         readOnly={!periodoEditavel}
         onChange={(e) => {
           if (!periodoEditavel) return;
@@ -1119,8 +1119,8 @@ export default function ComissionamentoIsland() {
 
       <AppField
         label="Data Final"
-        type={periodoEditavel ? "date" : "text"}
-        value={periodoEditavel ? periodo.fim : formatPeriodoLabel(periodo.fim)}
+        type="date"
+        value={periodo.fim}
         readOnly={!periodoEditavel}
         onChange={(e) => {
           if (!periodoEditavel) return;
