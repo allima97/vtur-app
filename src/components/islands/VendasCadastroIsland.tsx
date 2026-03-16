@@ -1775,23 +1775,35 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
             className="mb-3"
           >
             <div className="vtur-form-grid vtur-form-grid-2">
-              <AppField
-                as="select"
-                label="Aplicar desconto comercial?"
-                value={formVenda.desconto_comercial_aplicado ? "sim" : "nao"}
-                onChange={(e) =>
-                  setFormVenda((prev) => ({
-                    ...prev,
-                    desconto_comercial_aplicado: e.target.value === "sim",
-                    desconto_comercial_valor:
-                      e.target.value === "sim" ? prev.desconto_comercial_valor : "",
-                  }))
-                }
-                options={[
-                  { value: "nao", label: "Nao" },
-                  { value: "sim", label: "Sim" },
-                ]}
-              />
+              <div className="vtur-sales-discount-mobile-row">
+                <AppField
+                  as="select"
+                  label="Aplicar desconto comercial?"
+                  value={formVenda.desconto_comercial_aplicado ? "sim" : "nao"}
+                  onChange={(e) =>
+                    setFormVenda((prev) => ({
+                      ...prev,
+                      desconto_comercial_aplicado: e.target.value === "sim",
+                      desconto_comercial_valor:
+                        e.target.value === "sim" ? prev.desconto_comercial_valor : "",
+                    }))
+                  }
+                  options={[
+                    { value: "nao", label: "Nao" },
+                    { value: "sim", label: "Sim" },
+                  ]}
+                />
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  className="btn-calculator-trigger vtur-sales-discount-mobile-calculator"
+                  onClick={() => setShowCalculator(true)}
+                  aria-label="Calculadora"
+                  title="Calculadora"
+                >
+                  <i className="pi pi-calculator" aria-hidden="true" />
+                </AppButton>
+              </div>
               {formVenda.desconto_comercial_aplicado && (
                 <AppField
                   label="Valor do desconto"
@@ -1826,7 +1838,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
               <AppButton
                 type="button"
                 variant="secondary"
-                className="btn-calculator-trigger"
+                className="btn-calculator-trigger vtur-sales-recibos-calculator"
                 onClick={() => setShowCalculator(true)}
                 aria-label="Calculadora"
                 title="Calculadora"

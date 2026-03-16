@@ -814,6 +814,14 @@ body {
   overflow-y: auto;
 }
 
+.vtur-sales-discount-mobile-calculator {
+  display: none !important;
+}
+
+.vtur-sales-discount-mobile-row {
+  min-width: 0;
+}
+
 @media (max-width: 640px) {
   .help-fab {
     display: none;
@@ -832,6 +840,31 @@ body {
 @media (max-width: 1024px) {
   .help-fab,
   .sidebar-mobile-trigger {
+    display: none !important;
+  }
+
+  .vtur-sales-discount-mobile-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px;
+    gap: 12px;
+    align-items: end;
+  }
+
+  .vtur-sales-discount-mobile-calculator {
+    display: inline-flex !important;
+    align-self: start;
+    margin-top: 30px;
+  }
+
+  .vtur-sales-discount-mobile-row .vtur-app-field {
+    min-width: 0;
+  }
+
+  .vtur-sales-discount-mobile-calculator {
+    justify-self: end;
+  }
+
+  .vtur-sales-recibos-calculator {
     display: none !important;
   }
 
@@ -2754,6 +2787,7 @@ input[type="radio"] {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 2px;
     text-decoration: none;
     color: #e2e8f0;
@@ -2797,9 +2831,33 @@ input[type="radio"] {
   }
 
   .mobile-bottom-nav-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.35rem;
+    height: 1.35rem;
     font-size: 1.1rem;
     line-height: 1;
     position: relative;
+  }
+
+  .mobile-bottom-nav > .p-button.mobile-bottom-nav-item {
+    min-height: auto;
+    padding: 6px 2px;
+    gap: 2px;
+    border-radius: 10px;
+    box-shadow: none;
+  }
+
+  .mobile-bottom-nav > .p-button.mobile-bottom-nav-item .p-button-label {
+    width: 100%;
+    text-align: center;
+    font-weight: 400;
+    line-height: 1.2;
+  }
+
+  .mobile-bottom-nav > .p-button.mobile-bottom-nav-item .p-button-icon {
+    margin: 0;
   }
 
   .mobile-badge {

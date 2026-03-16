@@ -4,6 +4,7 @@ body.sakai-theme {
   --sgvtur-muted: #52607a;
   --vtur-desktop-shell-top: 5.6rem;
   --vtur-desktop-content-top: 3.5rem;
+  --vtur-mobile-content-top: calc(6.1rem + env(safe-area-inset-top));
   --sgvtur-section-blue-bg: #ebf8ff;
   --sgvtur-section-blue-border: #bfdbfe;
   --sgvtur-section-blue-title: #1d4ed8;
@@ -1160,9 +1161,13 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
     margin-left: 0 !important;
     /* Reserva espaço para o menu inferior fixo em qualquer tela mobile/tablet. */
     padding:
-      calc(5.4rem + env(safe-area-inset-top))
+      var(--vtur-mobile-content-top)
       1rem
       calc(var(--vtur-mobile-bottom-clearance, calc(132px + env(safe-area-inset-bottom))) + 16px);
+  }
+
+  body.sakai-theme .list-toolbar-sticky {
+    top: var(--vtur-mobile-content-top);
   }
 
   body.sakai-theme .page-content-wrap {

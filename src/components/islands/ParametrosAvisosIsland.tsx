@@ -338,10 +338,10 @@ export default function ParametrosAvisosIsland() {
   );
 
   const filteredThemesByCategoria = useMemo(() => {
-    const categoria = normalizarCategoria(form.categoria);
+    const categoria = normalizarCategoria(selectedThemeForForm?.categoria || form.categoria);
     if (!categoria) return themes;
     return themes.filter((theme) => normalizarCategoria(theme.categoria) === categoria);
-  }, [themes, form.categoria]);
+  }, [themes, form.categoria, selectedThemeForForm]);
 
   const themesTabela = useMemo(() => {
     if (!filtroThemeTabelaId) return themes;
@@ -675,7 +675,7 @@ export default function ParametrosAvisosIsland() {
         .eq("id", userId)
         .maybeSingle();
 
-      const categoria = form.categoria.trim() || selectedThemeForForm?.categoria || null;
+      const categoria = selectedThemeForForm?.categoria?.trim() || form.categoria.trim() || null;
       const titulo = form.titulo.trim() || form.nome.trim();
       const serializedStyles = serializeCardStyleMap(styleForm);
       const signatureTextConfig = {
@@ -730,7 +730,7 @@ export default function ParametrosAvisosIsland() {
       id: tpl.id,
       nome: tpl.nome || "",
       titulo: tpl.titulo || "",
-      categoria: tpl.categoria || "",
+      categoria: theme?.categoria || tpl.categoria || "",
       corpo: tpl.corpo || "",
       footerLead: extractSignatureTextConfig(tpl.signature_style).footerLead,
       assinatura: tpl.assinatura || "",
@@ -775,11 +775,13 @@ export default function ParametrosAvisosIsland() {
         .eq("id", userId)
         .maybeSingle();
 
+      const theme = themes.find((item) => item.id === (tpl.theme_id || "")) || null;
+
       const payload = {
         user_id: userId,
         company_id: userData?.company_id || null,
         nome: `${tpl.nome} (cópia)`,
-        categoria: tpl.categoria || null,
+        categoria: theme?.categoria || tpl.categoria || null,
         assunto: tpl.titulo || tpl.nome,
         titulo: tpl.titulo || tpl.nome,
         corpo: tpl.corpo || "",
