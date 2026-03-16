@@ -266,8 +266,21 @@ a.vtur-app-button:visited {
 }
 
 .vtur-app-button-secondary {
+  background: #ffffff;
   border-color: rgba(99, 102, 241, 0.3);
   color: #4338ca;
+}
+
+.vtur-app-button-secondary.p-button-outlined {
+  background: #ffffff;
+  border-color: rgba(99, 102, 241, 0.3);
+  color: #4338ca;
+}
+
+.vtur-app-button-secondary:hover:not(:disabled):not(.p-disabled) {
+  background: #f5f3ff;
+  border-color: rgba(99, 102, 241, 0.5);
+  color: #3730a3;
 }
 
 .vtur-app-button-danger {
