@@ -773,7 +773,7 @@ function formatCnpj(value: string) {
                 </small>
               )}
             </div>
-            <div className="form-group">
+            <div className="form-group perfil-main-cpf-field">
               <AppField
                 label="CPF"
                 className={camposObrigatorios.includes("cpf") ? "perfil-input-pendente" : undefined}
@@ -791,7 +791,7 @@ function formatCnpj(value: string) {
                 disabled={!camposExtrasOk}
               />
             </div>
-            <div className="form-group">
+            <div className="form-group perfil-main-birth-field">
               <AppField
                 label="Data Nascimento"
                 type="date"
@@ -910,7 +910,7 @@ function formatCnpj(value: string) {
                 </small>
               )}
             </div>
-            <div className="form-group">
+            <div className="form-group perfil-contact-state-field">
               <AppField
                 label="Estado"
                 className={camposObrigatorios.includes("estado") ? "perfil-input-pendente" : undefined}

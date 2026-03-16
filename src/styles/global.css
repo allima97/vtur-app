@@ -4049,9 +4049,28 @@ input[type="radio"] {
   gap: 12px;
 }
 
+.perfil-grid > .form-group {
+  min-width: 0;
+}
+
+.perfil-grid .vtur-app-field,
+.perfil-grid .vtur-app-field-control,
+.perfil-grid .vtur-app-field :is(input, select, textarea, .p-inputtext, .p-inputtextarea) {
+  width: 100%;
+  min-width: 0;
+}
+
 .perfil-grid-main {
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1.1fr);
+  grid-template-columns: minmax(0, 2.1fr) minmax(180px, 1.1fr) minmax(0, 1.05fr) minmax(150px, 0.78fr);
   margin-top: 16px;
+}
+
+.perfil-main-cpf-field {
+  min-width: 0;
+}
+
+.perfil-main-birth-field {
+  min-width: 0;
 }
 
 .perfil-grid-address {
@@ -4060,8 +4079,13 @@ input[type="radio"] {
 }
 
 .perfil-grid-contact {
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 0.6fr);
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 1.1fr) minmax(0, 1fr) max-content;
   margin-top: 12px;
+}
+
+.perfil-contact-state-field {
+  justify-self: start;
+  width: 84px;
 }
 
 .perfil-text-wrap {
@@ -4320,6 +4344,10 @@ input[type="radio"] {
 
   .perfil-grid {
     grid-template-columns: 1fr !important;
+  }
+
+  .perfil-contact-state-field {
+    width: 100%;
   }
 
   .perfil-secondary-cards {

@@ -69,7 +69,7 @@ body.sakai-theme .app-sidebar {
 
 body.sakai-theme .app-main {
   margin-left: calc(1rem + 286px + 1rem) !important;
-  padding: calc(4.6rem + 1rem) 1rem 1.25rem 0.75rem;
+  padding: calc(4.6rem + 0.35rem) 1rem 1.25rem 0.75rem;
   min-height: 100vh;
   min-width: 0;
 }
