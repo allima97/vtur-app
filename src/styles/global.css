@@ -829,6 +829,45 @@ body {
   }
 }
 
+@media (max-width: 1024px) {
+  .help-fab,
+  .sidebar-mobile-trigger {
+    display: none !important;
+  }
+
+  .vtur-sales-mobile-wide-field {
+    width: 100% !important;
+    min-width: 0 !important;
+    grid-column: 1 / -1;
+  }
+
+  .vtur-sales-mobile-wide-field .vtur-app-field,
+  .vtur-sales-mobile-wide-field .vtur-app-field-control,
+  .vtur-sales-mobile-wide-field :is(input, select, .p-inputtext) {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .followup-actions-row {
+    grid-template-columns: 1fr;
+  }
+
+  .followup-actions-row .form-group,
+  .followup-status-group,
+  .followup-action-group {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .followup-status-group .vtur-app-field,
+  .followup-status-group .vtur-app-field-control,
+  .followup-status-group :is(select, .p-inputtext),
+  .followup-action-group .vtur-app-button {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
 /* Header */
 .page-header {
   display: flex;

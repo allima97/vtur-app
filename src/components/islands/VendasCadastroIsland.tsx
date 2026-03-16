@@ -1692,7 +1692,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
 
               <AppField
                 label="Lançada em"
-                wrapperClassName="form-group min-w-0"
+                wrapperClassName="form-group min-w-0 vtur-sales-mobile-wide-field"
                 className="vtur-date-native"
                 type="date"
                 value={formVenda.data_lancamento}
@@ -1714,7 +1714,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                     </span>
                   </>
                 }
-                wrapperClassName="form-group min-w-0"
+                wrapperClassName="form-group min-w-0 vtur-sales-mobile-wide-field"
                 className="vtur-date-native"
                 type="date"
                 value={formVenda.data_venda}
@@ -1725,7 +1725,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
 
               <AppField
                 label="Data de embarque"
-                wrapperClassName="form-group min-w-0"
+                wrapperClassName="form-group min-w-0 vtur-sales-mobile-wide-field"
                 className="vtur-date-native"
                 type="date"
                 value={formVenda.data_embarque}
@@ -1749,7 +1749,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
 
               <AppField
                 label="Data final"
-                wrapperClassName="form-group min-w-0"
+                wrapperClassName="form-group min-w-0 vtur-sales-mobile-wide-field"
                 className="vtur-date-native"
                 type="date"
                 value={formVenda.data_final}
