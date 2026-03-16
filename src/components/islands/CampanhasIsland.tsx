@@ -761,7 +761,7 @@ export default function CampanhasIsland() {
               actions={
                 <AppButton
                   type="button"
-                  variant="ghost"
+                  variant="secondary"
                   onClick={() => setArchivedOpen((value) => !value)}
                   disabled={arquivadas.length === 0}
                 >
