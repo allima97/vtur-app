@@ -212,9 +212,11 @@ export default function PaisesIsland() {
 
   if (!podeVer) {
     return (
-      <div className="paises-page">
-        Você não possui acesso ao módulo de Cadastros.
-      </div>
+      <AppPrimerProvider>
+        <div className="paises-page">
+          <AppCard tone="config">Você não possui acesso ao módulo de Cadastros.</AppCard>
+        </div>
+      </AppPrimerProvider>
     );
   }
 

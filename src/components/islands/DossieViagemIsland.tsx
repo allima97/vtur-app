@@ -373,9 +373,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
   if (!podeVer) {
     return (
       <AppPrimerProvider>
-        <AppCard tone="config">
-          <strong>Você não possui acesso ao módulo de Operação/Viagens.</strong>
-        </AppCard>
+        <AppCard tone="config">Você não possui acesso ao módulo de Operação/Viagens.</AppCard>
       </AppPrimerProvider>
     );
   }

@@ -709,9 +709,13 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
     : "Ranking por produto";
 
   if (loadingPerm) return <LoadingUsuarioContext />;
-  if (!podeVer) return <div>Você não possui acesso a este relatório.</div>;
-
-  if (!podeVer) return <div>Você não possui acesso a este relatório.</div>;
+  if (!podeVer) {
+    return (
+      <AppPrimerProvider>
+        <AppCard tone="config">Você não possui acesso a este relatório.</AppCard>
+      </AppPrimerProvider>
+    );
+  }
 
   return (
     <AppPrimerProvider>
