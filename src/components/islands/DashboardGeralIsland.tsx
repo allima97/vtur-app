@@ -525,6 +525,12 @@ function toLineChartConfig(
   }, []);
 
   useEffect(() => {
+    if (isMobile) {
+      setShowCalculator(false);
+    }
+  }, [isMobile]);
+
+  useEffect(() => {
     const id = setInterval(() => setAgora(Date.now()), 30000);
     return () => clearInterval(id);
   }, []);
@@ -2346,15 +2352,17 @@ function toLineChartConfig(
                   Ranking de vendas
                 </AppButton>
               )}
-              <AppButton
-                type="button"
-                variant="secondary"
-                className="btn-calculator-trigger hidden sm:inline-flex"
-                onClick={() => setShowCalculator(true)}
-                aria-label="Calculadora"
-                title="Calculadora"
-                icon="pi pi-calculator"
-              />
+              {!isMobile && (
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  className="btn-calculator-trigger"
+                  onClick={() => setShowCalculator(true)}
+                  aria-label="Calculadora"
+                  title="Calculadora"
+                  icon="pi pi-calculator"
+                />
+              )}
             </div>
           }
         >
@@ -2605,7 +2613,7 @@ function toLineChartConfig(
           </Dialog>
         )}
 
-        <CalculatorModal open={showCalculator} onClose={() => setShowCalculator(false)} />
+        {!isMobile && <CalculatorModal open={showCalculator} onClose={() => setShowCalculator(false)} />}
 
         {orcamentoSelecionado && (
           <Dialog
