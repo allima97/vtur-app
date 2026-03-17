@@ -2725,11 +2725,7 @@ input[type="radio"] {
   .btn-calculator-trigger.vtur-app-button,
   .mobile-stack-buttons .btn-calculator-trigger.vtur-app-button,
   .mobile-actionbar .btn-calculator-trigger.vtur-app-button {
-    width: 44px !important;
-    min-width: 44px !important;
-    padding: 0 !important;
-    justify-content: center !important;
-    text-align: center !important;
+    display: none !important;
   }
 
   .mobile-actionbar {
