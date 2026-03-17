@@ -352,7 +352,7 @@ const EmpresasAdminIsland: React.FC = () => {
   }
 
   return (
-    <div className="mt-6 admin-page admin-empresas-page">
+    <div className="mt-6 admin-page admin-empresas-page page-content-wrap">
       <AppCard
         tone="info"
         className="mb-3 list-toolbar-sticky"

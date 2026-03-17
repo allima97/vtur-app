@@ -810,7 +810,7 @@ export default function RelatorioAgrupadoClienteIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="relatorio-vendas-cliente-page">
+      <div className="relatorio-vendas-cliente-page page-content-wrap">
         <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
         <AppCard

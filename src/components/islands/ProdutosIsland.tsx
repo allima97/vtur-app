@@ -742,7 +742,7 @@ export default function ProdutosIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="destinos-page produtos-page">
+      <div className="destinos-page produtos-page page-content-wrap">
         {!mostrarFormulario && (
           <AppCard
             tone="config"

@@ -249,7 +249,7 @@ export default function TipoPacotesIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="produtos-page tipo-pacotes-page">
+      <div className="produtos-page tipo-pacotes-page page-content-wrap">
         {mostrarFormulario && (
           <AppCard
             className="form-card mb-3"

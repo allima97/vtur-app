@@ -204,7 +204,7 @@ export default function PaisesIsland() {
 
   if (loadingPerm) {
     return (
-      <div className="paises-page">
+      <div className="paises-page page-content-wrap">
         <LoadingUsuarioContext />
       </div>
     );

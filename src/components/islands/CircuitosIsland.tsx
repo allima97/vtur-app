@@ -1166,7 +1166,7 @@ export default function CircuitosIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="circuitos-page">
+      <div className="circuitos-page page-content-wrap">
         <AppCard
           tone="info"
           className="mb-3 list-toolbar-sticky circuitos-top-card"

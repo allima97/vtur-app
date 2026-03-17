@@ -571,7 +571,7 @@ export default function CidadesIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="cidades-page">
+      <div className="cidades-page page-content-wrap">
       {!mostrarFormulario && (
         <AppCard
           tone="config"

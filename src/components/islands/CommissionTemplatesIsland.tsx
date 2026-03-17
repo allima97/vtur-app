@@ -287,7 +287,7 @@ export default function CommissionTemplatesIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="commission-templates-page">
+      <div className="commission-templates-page page-content-wrap">
         <AppCard
           className="mb-3"
           tone="info"

@@ -568,7 +568,7 @@ export default function TipoProdutosIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="produtos-page">
+      <div className="produtos-page page-content-wrap">
         {mostrarFormulario && (
           <AppCard
             className="form-card mb-3"

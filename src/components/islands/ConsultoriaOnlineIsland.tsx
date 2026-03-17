@@ -340,7 +340,7 @@ export default function ConsultoriaOnlineIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="consultoria-page">
+      <div className="consultoria-page page-content-wrap">
         <AppCard
           tone="config"
           className="mb-3 list-toolbar-sticky"

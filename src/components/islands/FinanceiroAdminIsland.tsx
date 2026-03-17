@@ -348,7 +348,7 @@ const FinanceiroAdminIsland: React.FC = () => {
   }
 
   return (
-    <div className="mt-6 admin-page admin-financeiro-page">
+    <div className="mt-6 admin-page admin-financeiro-page page-content-wrap">
       <AppCard
         tone="config"
         className="list-toolbar-sticky"

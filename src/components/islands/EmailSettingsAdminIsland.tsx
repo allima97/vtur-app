@@ -230,7 +230,7 @@ const EmailSettingsAdminIsland: React.FC = () => {
 
   return (
     <AppPrimerProvider>
-      <div className="mt-6 admin-page admin-email-page">
+      <div className="mt-6 admin-page admin-email-page page-content-wrap">
         <AppCard
           tone="config"
           className="mb-3 list-toolbar-sticky"

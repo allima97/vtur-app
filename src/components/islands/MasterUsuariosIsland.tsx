@@ -479,7 +479,7 @@ export default function MasterUsuariosIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="mt-6 admin-page admin-usuarios-page vtur-legacy-module">
+      <div className="mt-6 admin-page admin-usuarios-page vtur-legacy-module page-content-wrap">
         <AppCard
           className="mb-3 list-toolbar-sticky"
           tone="info"

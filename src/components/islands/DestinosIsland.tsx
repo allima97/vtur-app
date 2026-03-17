@@ -326,7 +326,7 @@ export default function DestinosIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="destinos-page">
+      <div className="destinos-page page-content-wrap">
         <AppCard
           className="mb-3"
           tone="info"

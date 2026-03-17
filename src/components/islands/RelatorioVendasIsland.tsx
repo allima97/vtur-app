@@ -1892,7 +1892,7 @@ export default function RelatorioVendasIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="relatorio-vendas-page">
+      <div className="relatorio-vendas-page page-content-wrap">
         <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
         <AppCard

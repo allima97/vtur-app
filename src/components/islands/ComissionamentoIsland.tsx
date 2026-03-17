@@ -1132,7 +1132,7 @@ export default function ComissionamentoIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="comissionamento-page">
+      <div className="comissionamento-page page-content-wrap">
         <AppCard
           tone="info"
           className="mb-3 list-toolbar-sticky"

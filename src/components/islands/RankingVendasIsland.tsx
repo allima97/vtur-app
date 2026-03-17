@@ -718,7 +718,7 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
 
   return (
     <AppPrimerProvider>
-    <div className="ranking-vendas-page vtur-legacy-module">
+    <div className="ranking-vendas-page vtur-legacy-module page-content-wrap">
       {!effectiveViewOnly && papel === "MASTER" && (
         <AppCard
           title="Ranking de vendas"

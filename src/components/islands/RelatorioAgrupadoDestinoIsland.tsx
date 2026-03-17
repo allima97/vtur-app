@@ -809,7 +809,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="relatorio-vendas-destino-page">
+      <div className="relatorio-vendas-destino-page page-content-wrap">
         <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
         <AppCard

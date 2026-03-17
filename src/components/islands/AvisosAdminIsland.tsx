@@ -228,7 +228,7 @@ const AvisosAdminIsland: React.FC = () => {
   }
 
   return (
-    <div className="mt-6 admin-page admin-avisos-page">
+    <div className="mt-6 admin-page admin-avisos-page page-content-wrap">
       <AppCard
         tone="config"
         className="list-toolbar-sticky"

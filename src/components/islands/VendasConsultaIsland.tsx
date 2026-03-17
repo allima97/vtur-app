@@ -1246,7 +1246,7 @@ export default function VendasConsultaIsland() {
   // ================================
   return (
     <AppPrimerProvider>
-      <div className="vendas-consulta-page">
+      <div className="page-content-wrap vendas-consulta-page">
         <AppCard
           className="mb-3 list-toolbar-sticky"
           tone="info"

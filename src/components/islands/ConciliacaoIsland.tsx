@@ -817,7 +817,7 @@ export default function ConciliacaoIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="conciliacao-page">
+      <div className="conciliacao-page page-content-wrap">
         <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
         <AppCard

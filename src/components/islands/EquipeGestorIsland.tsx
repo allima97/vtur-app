@@ -719,7 +719,7 @@ export default function EquipeGestorIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="mt-6 gestor-page vtur-legacy-module">
+      <div className="mt-6 gestor-page vtur-legacy-module page-content-wrap">
         <AppCard
           className="mb-3 list-toolbar-sticky"
           tone="info"

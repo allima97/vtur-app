@@ -545,7 +545,7 @@ export default function ControleSacIsland() {
   const precisaFiltroMaster = isMaster && !companyId;
 
   return (
-    <div className="sac-page">
+    <div className="sac-page page-content-wrap">
       <AppCard
         tone="config"
         className="list-toolbar-sticky"
