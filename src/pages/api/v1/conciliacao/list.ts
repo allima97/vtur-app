@@ -35,11 +35,14 @@ export const GET: APIRoute = async ({ request }) => {
     if (!companyId) return new Response(JSON.stringify([]), { status: 200 });
 
     const somentePendentes = url.searchParams.get("pending") === "1";
+    const month = String(url.searchParams.get("month") || "").trim();
+    const day = String(url.searchParams.get("day") || "").trim();
+    const rankingStatus = String(url.searchParams.get("ranking_status") || "all").trim();
 
     let query = client
       .from("conciliacao_recibos")
       .select(
-        "id, company_id, documento, movimento_data, status, descricao, valor_lancamentos, valor_taxas, valor_descontos, valor_abatimentos, valor_calculada_loja, valor_visao_master, valor_opfax, valor_saldo, origem, conciliado, match_total, match_taxas, sistema_valor_total, sistema_valor_taxas, diff_total, diff_taxas, venda_id, venda_recibo_id, last_checked_at, conciliado_em, created_at, updated_at"
+        "id, company_id, documento, movimento_data, status, descricao, valor_lancamentos, valor_taxas, valor_descontos, valor_abatimentos, valor_calculada_loja, valor_visao_master, valor_opfax, valor_saldo, origem, conciliado, match_total, match_taxas, sistema_valor_total, sistema_valor_taxas, diff_total, diff_taxas, venda_id, venda_recibo_id, ranking_vendedor_id, ranking_produto_id, ranking_assigned_at, ranking_vendedor:users!ranking_vendedor_id(id, nome_completo), ranking_produto:tipo_produtos!ranking_produto_id(id, nome), last_checked_at, conciliado_em, created_at, updated_at"
       )
       .eq("company_id", companyId)
       .order("movimento_data", { ascending: false })
@@ -47,11 +50,38 @@ export const GET: APIRoute = async ({ request }) => {
       .limit(500);
 
     if (somentePendentes) query = query.eq("conciliado", false);
+    if (/^\d{4}-\d{2}$/.test(month)) {
+      const [year, monthNum] = month.split("-").map(Number);
+      const inicio = `${month}-01`;
+      const fim = new Date(year, monthNum, 0).toISOString().slice(0, 10);
+      query = query.gte("movimento_data", inicio).lte("movimento_data", fim);
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+      query = query.eq("movimento_data", day);
+    }
 
     const { data, error } = await query;
     if (error) throw error;
 
-    return new Response(JSON.stringify(data || []), {
+    let rows = Array.isArray(data) ? data : [];
+    if (rankingStatus === "pending") {
+      rows = rows.filter((row: any) => {
+        const status = String(row?.status || "").toUpperCase();
+        const vendaId = String(row?.venda_id || "").trim();
+        const rankingVendedorId = String(row?.ranking_vendedor_id || "").trim();
+        return (status === "BAIXA" || status === "OPFAX") && !vendaId && !rankingVendedorId;
+      });
+    } else if (rankingStatus === "assigned") {
+      rows = rows.filter((row: any) => {
+        const vendaId = String(row?.venda_id || "").trim();
+        const rankingVendedorId = String(row?.ranking_vendedor_id || "").trim();
+        return !vendaId && Boolean(rankingVendedorId);
+      });
+    } else if (rankingStatus === "system") {
+      rows = rows.filter((row: any) => Boolean(String(row?.venda_id || "").trim()));
+    }
+
+    return new Response(JSON.stringify(rows), {
       status: 200,
       headers: {
         "Content-Type": "application/json",

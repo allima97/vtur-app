@@ -45,6 +45,7 @@ export const POST: APIRoute = async ({ request }) => {
       limit,
       actor: "user",
       actorUserId: user.id,
+      client,
     });
 
     return new Response(JSON.stringify({ ok: true, ...result }), {

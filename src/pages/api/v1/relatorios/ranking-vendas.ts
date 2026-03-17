@@ -86,6 +86,151 @@ async function requireModuloView(client: any, userId: string, modulos: string[],
 
 // cache local removido, usar apenas kvCache
 
+type RankingVendaRecibo = {
+  valor_total: number | null;
+  valor_taxas: number | null;
+  valor_du?: number | null;
+  data_venda?: string | null;
+  produto_id: string | null;
+  tipo_produtos?: { id: string; nome: string | null } | null;
+};
+
+type RankingVendaRow = {
+  id: string;
+  data_venda: string;
+  vendedor_id: string | null;
+  vendas_recibos: RankingVendaRecibo[];
+};
+
+async function fetchConciliacaoRankingVendas(params: {
+  dataClient: any;
+  companyId: string | null;
+  inicio: string;
+  fim: string;
+  vendedorIds: string[];
+}): Promise<RankingVendaRow[] | null> {
+  const { dataClient, companyId, inicio, fim, vendedorIds } = params;
+  if (!companyId) return null;
+
+  const concRows: any[] = [];
+  const pageSize = 1000;
+  for (let offset = 0; offset < 10000; offset += pageSize) {
+    const { data, error } = await dataClient
+      .from("conciliacao_recibos")
+      .select(
+        "id, movimento_data, valor_lancamentos, valor_taxas, venda_id, venda_recibo_id, ranking_vendedor_id, ranking_produto_id"
+      )
+      .eq("company_id", companyId)
+      .in("status", ["BAIXA", "OPFAX"] as any)
+      .gte("movimento_data", inicio)
+      .lte("movimento_data", fim)
+      .order("movimento_data", { ascending: false })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw error;
+    const chunk = Array.isArray(data) ? data : [];
+    concRows.push(...chunk);
+    if (chunk.length < pageSize) break;
+  }
+
+  if (concRows.length === 0) return null;
+
+  const vendaIds = Array.from(
+    new Set(concRows.map((row) => String(row?.venda_id || "").trim()).filter(Boolean))
+  );
+  const reciboIds = Array.from(
+    new Set(concRows.map((row) => String(row?.venda_recibo_id || "").trim()).filter(Boolean))
+  );
+
+  const vendasMap = new Map<string, { vendedor_id: string | null }>();
+  if (vendaIds.length > 0) {
+    const { data: vendasData, error: vendasErr } = await dataClient
+      .from("vendas")
+      .select("id, vendedor_id")
+      .in("id", vendaIds);
+    if (vendasErr) throw vendasErr;
+    (vendasData || []).forEach((row: any) => {
+      vendasMap.set(String(row?.id || "").trim(), {
+        vendedor_id: row?.vendedor_id ? String(row.vendedor_id) : null,
+      });
+    });
+  }
+
+  const recibosMap = new Map<string, { produto_id: string | null }>();
+  if (reciboIds.length > 0) {
+    const { data: recibosData, error: recibosErr } = await dataClient
+      .from("vendas_recibos")
+      .select("id, produto_id")
+      .in("id", reciboIds);
+    if (recibosErr) throw recibosErr;
+    (recibosData || []).forEach((row: any) => {
+      recibosMap.set(String(row?.id || "").trim(), {
+        produto_id: row?.produto_id ? String(row.produto_id) : null,
+      });
+    });
+  }
+
+  const produtoIds = Array.from(
+    new Set(
+      concRows
+        .map((row) => {
+          const reciboId = String(row?.venda_recibo_id || "").trim();
+          const linkedProdutoId = reciboId ? recibosMap.get(reciboId)?.produto_id || null : null;
+          return linkedProdutoId || (row?.ranking_produto_id ? String(row.ranking_produto_id) : null);
+        })
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+
+  const produtosMap = new Map<string, { id: string; nome: string | null }>();
+  if (produtoIds.length > 0) {
+    const { data: produtosData, error: produtosErr } = await dataClient
+      .from("tipo_produtos")
+      .select("id, nome")
+      .in("id", produtoIds);
+    if (produtosErr) throw produtosErr;
+    (produtosData || []).forEach((row: any) => {
+      produtosMap.set(String(row?.id || "").trim(), {
+        id: String(row?.id || "").trim(),
+        nome: row?.nome ? String(row.nome) : null,
+      });
+    });
+  }
+
+  const allowedVendedores = new Set(vendedorIds);
+  const rankingRows: RankingVendaRow[] = concRows
+    .map((row: any) => {
+      const vendaId = String(row?.venda_id || "").trim();
+      const vendaReciboId = String(row?.venda_recibo_id || "").trim();
+      const linkedVendedorId = vendaId ? vendasMap.get(vendaId)?.vendedor_id || null : null;
+      const rankingVendedorId = row?.ranking_vendedor_id ? String(row.ranking_vendedor_id) : null;
+      const vendedorId = linkedVendedorId || rankingVendedorId;
+      if (!vendedorId || !allowedVendedores.has(vendedorId)) return null;
+
+      const linkedProdutoId = vendaReciboId ? recibosMap.get(vendaReciboId)?.produto_id || null : null;
+      const produtoId = linkedProdutoId || (row?.ranking_produto_id ? String(row.ranking_produto_id) : null);
+      const produto = produtoId ? produtosMap.get(produtoId) || null : null;
+
+      return {
+        id: `conc:${String(row?.id || "")}`,
+        data_venda: String(row?.movimento_data || "").trim() || inicio,
+        vendedor_id: vendedorId,
+        vendas_recibos: [
+          {
+            valor_total: row?.valor_lancamentos ?? null,
+            valor_taxas: row?.valor_taxas ?? null,
+            valor_du: null,
+            data_venda: String(row?.movimento_data || "").trim() || inicio,
+            produto_id: produtoId,
+            tipo_produtos: produto,
+          },
+        ],
+      };
+    })
+    .filter((row): row is RankingVendaRow => Boolean(row));
+
+  return rankingRows;
+}
+
 export async function GET({ request }: { request: Request }) {
   try {
     const client = buildAuthClient(request);
@@ -249,34 +394,47 @@ export async function GET({ request }: { request: Request }) {
       }
     }
 
-    let vendasQuery = dataClient
-      .from("vendas")
-      .select(
-        `
-        id,
-        data_venda,
-        vendedor_id,
-        vendas_recibos!inner (
-          valor_total,
-          valor_taxas,
-          valor_du,
+    let vendasData: any[] = [];
+    const concVendas = await fetchConciliacaoRankingVendas({
+      dataClient,
+      companyId,
+      inicio,
+      fim,
+      vendedorIds: vendorIdsParam,
+    });
+
+    if (concVendas && concVendas.length > 0) {
+      vendasData = concVendas;
+    } else {
+      let vendasQuery = dataClient
+        .from("vendas")
+        .select(
+          `
+          id,
           data_venda,
-          produto_id,
-          tipo_produtos:tipo_produtos!produto_id (id, nome)
+          vendedor_id,
+          vendas_recibos!inner (
+            valor_total,
+            valor_taxas,
+            valor_du,
+            data_venda,
+            produto_id,
+            tipo_produtos:tipo_produtos!produto_id (id, nome)
+          )
+        `
         )
-      `
-      )
-      .eq("cancelada", false)
-      .in("vendedor_id", vendorIdsParam);
-    if (companyId) vendasQuery = vendasQuery.eq("company_id", companyId);
+        .eq("cancelada", false)
+        .in("vendedor_id", vendorIdsParam);
+      if (companyId) vendasQuery = vendasQuery.eq("company_id", companyId);
 
-    // Competência por recibo
-    vendasQuery = vendasQuery
-      .gte("vendas_recibos.data_venda", inicio)
-      .lte("vendas_recibos.data_venda", fim);
+      vendasQuery = vendasQuery
+        .gte("vendas_recibos.data_venda", inicio)
+        .lte("vendas_recibos.data_venda", fim);
 
-    const { data: vendasData, error: vendasErr } = await vendasQuery;
-    if (vendasErr) throw vendasErr;
+      const { data, error: vendasErr } = await vendasQuery;
+      if (vendasErr) throw vendasErr;
+      vendasData = data || [];
+    }
 
     let metasQuery = dataClient
       .from("metas_vendedor")

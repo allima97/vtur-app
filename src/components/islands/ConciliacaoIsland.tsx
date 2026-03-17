@@ -50,11 +50,61 @@ type ConciliacaoItem = {
   diff_taxas: number | null;
   venda_id: string | null;
   venda_recibo_id: string | null;
+  ranking_vendedor_id: string | null;
+  ranking_produto_id: string | null;
+  ranking_assigned_at: string | null;
+  ranking_vendedor?: { id: string; nome_completo: string | null } | null;
+  ranking_produto?: { id: string; nome: string | null } | null;
   last_checked_at: string | null;
   conciliado_em: string | null;
   created_at: string;
   updated_at: string;
 };
+
+type RankingAssigneeOption = {
+  id: string;
+  nome_completo: string;
+  tipo?: string | null;
+};
+
+type RankingProdutoOption = {
+  id: string;
+  nome: string;
+};
+
+type ConciliacaoResumoMes = {
+  month: string;
+  total: number;
+  conciliadosSistema: number;
+  pendentesRanking: number;
+  atribuidosRanking: number;
+};
+
+type ConciliacaoResumoDia = {
+  date: string;
+  total: number;
+  conciliadosSistema: number;
+  pendentesRanking: number;
+  atribuidosRanking: number;
+};
+
+type ConciliacaoResumo = {
+  month: string;
+  totals?: {
+    importados?: number;
+    conciliadosSistema?: number;
+    pendentesRanking?: number;
+    encontradosSistema?: number;
+    atribuidosRanking?: number;
+  };
+  byMonth?: ConciliacaoResumoMes[];
+  byDay?: ConciliacaoResumoDia[];
+};
+
+function currentMonthValue() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
 
 type ConciliacaoChange = {
   id: string;
@@ -109,9 +159,23 @@ type LinhaInput = {
 };
 
 function parsePtBrNumber(value: any): number | null {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
   const raw = String(value ?? "").trim();
   if (!raw) return null;
-  const cleaned = raw.replace(/\./g, "").replace(/,/g, ".");
+
+  const hasComma = raw.includes(",");
+  const hasDot = raw.includes(".");
+
+  let cleaned = raw;
+  if (hasComma) {
+    cleaned = raw.replace(/\./g, "").replace(/,/g, ".");
+  } else if (hasDot) {
+    cleaned = raw.replace(/\s+/g, "");
+  }
+
   const num = Number(cleaned);
   return Number.isFinite(num) ? num : null;
 }
@@ -295,11 +359,20 @@ export default function ConciliacaoIsland() {
   const [parsedMovimentoData, setParsedMovimentoData] = useState<string | null>(null);
 
   const [somentePendentes, setSomentePendentes] = useState(true);
+  const [rankingStatusFilter, setRankingStatusFilter] = useState<"all" | "pending" | "assigned" | "system">("pending");
+  const [monthFilter, setMonthFilter] = useState<string>(currentMonthValue());
+  const [dayFilter, setDayFilter] = useState<string>("");
   const [loadingLista, setLoadingLista] = useState(false);
   const [itens, setItens] = useState<ConciliacaoItem[]>([]);
+  const [loadingResumo, setLoadingResumo] = useState(false);
+  const [resumo, setResumo] = useState<ConciliacaoResumo | null>(null);
 
   const [importando, setImportando] = useState(false);
   const [conciliando, setConciliando] = useState(false);
+  const [loadingOptions, setLoadingOptions] = useState(false);
+  const [savingAssignmentId, setSavingAssignmentId] = useState<string | null>(null);
+  const [rankingAssignees, setRankingAssignees] = useState<RankingAssigneeOption[]>([]);
+  const [rankingProdutosMeta, setRankingProdutosMeta] = useState<RankingProdutoOption[]>([]);
 
   const [showChanges, setShowChanges] = useState(false);
   const [somenteAlteracoesPendentes, setSomenteAlteracoesPendentes] = useState(true);
@@ -392,6 +465,9 @@ export default function ConciliacaoIsland() {
       const qs = new URLSearchParams();
       qs.set("company_id", resolvedCompanyId);
       if (somentePendentes) qs.set("pending", "1");
+      if (monthFilter) qs.set("month", monthFilter);
+      if (dayFilter) qs.set("day", dayFilter);
+      if (rankingStatusFilter !== "all") qs.set("ranking_status", rankingStatusFilter);
 
       const resp = await fetch(`/api/v1/conciliacao/list?${qs.toString()}`, {
         method: "GET",
@@ -412,7 +488,145 @@ export default function ConciliacaoIsland() {
     if (!resolvedCompanyId) return;
     carregarLista();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolvedCompanyId, somentePendentes]);
+  }, [resolvedCompanyId, somentePendentes, monthFilter, dayFilter, rankingStatusFilter]);
+
+  async function carregarResumo() {
+    if (!resolvedCompanyId) {
+      setResumo(null);
+      return;
+    }
+
+    try {
+      setLoadingResumo(true);
+      const qs = new URLSearchParams({ company_id: resolvedCompanyId, month: monthFilter || currentMonthValue() });
+      const resp = await fetch(`/api/v1/conciliacao/summary?${qs.toString()}`, {
+        method: "GET",
+        credentials: "same-origin",
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+      const json = (await resp.json()) as ConciliacaoResumo;
+      setResumo(json || null);
+    } catch (e: any) {
+      console.error(e);
+      setResumo(null);
+    } finally {
+      setLoadingResumo(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!resolvedCompanyId) return;
+    carregarResumo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolvedCompanyId, monthFilter]);
+
+  useEffect(() => {
+    if (!resolvedCompanyId) {
+      setRankingAssignees([]);
+      setRankingProdutosMeta([]);
+      return;
+    }
+
+    let mounted = true;
+    (async () => {
+      try {
+        setLoadingOptions(true);
+        const qs = new URLSearchParams({ company_id: resolvedCompanyId });
+        const resp = await fetch(`/api/v1/conciliacao/options?${qs.toString()}`, {
+          method: "GET",
+          credentials: "same-origin",
+        });
+        if (!resp.ok) throw new Error(await resp.text());
+        const json = (await resp.json()) as {
+          vendedores?: RankingAssigneeOption[];
+          produtosMeta?: RankingProdutoOption[];
+        };
+        if (!mounted) return;
+        setRankingAssignees(Array.isArray(json?.vendedores) ? json.vendedores : []);
+        setRankingProdutosMeta(Array.isArray(json?.produtosMeta) ? json.produtosMeta : []);
+      } catch (e: any) {
+        console.error(e);
+        if (mounted) {
+          setRankingAssignees([]);
+          setRankingProdutosMeta([]);
+        }
+      } finally {
+        if (mounted) setLoadingOptions(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [resolvedCompanyId]);
+
+  async function salvarAtribuicaoRanking(
+    row: ConciliacaoItem,
+    changes: { rankingVendedorId?: string | null; rankingProdutoId?: string | null }
+  ) {
+    if (!resolvedCompanyId) {
+      showToast("Selecione uma empresa.", "error");
+      return;
+    }
+
+    const rankingVendedorId =
+      changes.rankingVendedorId !== undefined ? changes.rankingVendedorId : row.ranking_vendedor_id;
+    const rankingProdutoId =
+      changes.rankingProdutoId !== undefined ? changes.rankingProdutoId : row.ranking_produto_id;
+
+    try {
+      setSavingAssignmentId(row.id);
+      const resp = await fetch("/api/v1/conciliacao/assign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          companyId: resolvedCompanyId,
+          conciliacaoId: row.id,
+          rankingVendedorId,
+          rankingProdutoId,
+        }),
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+
+      setItens((prev) =>
+        prev.map((item) => {
+          if (item.id !== row.id) return item;
+          return {
+            ...item,
+            ranking_vendedor_id: rankingVendedorId || null,
+            ranking_produto_id: rankingProdutoId || null,
+            ranking_assigned_at: new Date().toISOString(),
+            ranking_vendedor:
+              rankingVendedorId
+                ? rankingAssignees.find((opt) => opt.id === rankingVendedorId)
+                  ? {
+                      id: rankingVendedorId,
+                      nome_completo:
+                        rankingAssignees.find((opt) => opt.id === rankingVendedorId)?.nome_completo || null,
+                    }
+                  : item.ranking_vendedor || null
+                : null,
+            ranking_produto:
+              rankingProdutoId
+                ? rankingProdutosMeta.find((opt) => opt.id === rankingProdutoId)
+                  ? {
+                      id: rankingProdutoId,
+                      nome: rankingProdutosMeta.find((opt) => opt.id === rankingProdutoId)?.nome || null,
+                    }
+                  : item.ranking_produto || null
+                : null,
+          };
+        })
+      );
+      showToast("Atribuição atualizada para o ranking.", "success");
+    } catch (e: any) {
+      console.error(e);
+      showToast(e?.message || "Erro ao salvar atribuição do ranking.", "error");
+    } finally {
+      setSavingAssignmentId(null);
+    }
+  }
 
   async function onPickFile(file: File | null) {
     setArquivo(file);
@@ -790,6 +1004,10 @@ export default function ConciliacaoIsland() {
       ),
     [changeGroups, selectedGroupKeys]
   );
+  const produtoMetaUnico = rankingProdutosMeta.length === 1 ? rankingProdutosMeta[0] : null;
+  const resumoMeses = resumo?.byMonth || [];
+  const resumoDias = resumo?.byDay || [];
+  const resumoTotais = resumo?.totals || {};
 
   if (loadingPerm) return <LoadingUsuarioContext />;
   if (!podeVer) {
@@ -865,6 +1083,46 @@ export default function ConciliacaoIsland() {
 
             <AppField
               as="select"
+              label="Mês"
+              value={monthFilter}
+              onChange={(e) => {
+                setMonthFilter(e.target.value);
+                setDayFilter("");
+              }}
+              disabled={loadingLista || loadingResumo}
+              options={resumoMeses.length > 0
+                ? resumoMeses.map((item) => ({ label: item.month, value: item.month }))
+                : [{ label: monthFilter, value: monthFilter }]}
+            />
+
+            <AppField
+              as="select"
+              label="Dia"
+              value={dayFilter || "all"}
+              onChange={(e) => setDayFilter(e.target.value === "all" ? "" : e.target.value)}
+              disabled={loadingLista || loadingResumo}
+              options={[
+                { label: "Todos do mês", value: "all" },
+                ...resumoDias.map((item) => ({ label: item.date, value: item.date })),
+              ]}
+            />
+
+            <AppField
+              as="select"
+              label="Pendência ranking"
+              value={rankingStatusFilter}
+              onChange={(e) => setRankingStatusFilter(e.target.value as any)}
+              disabled={loadingLista}
+              options={[
+                { label: "Pendentes de atribuição", value: "pending" },
+                { label: "Atribuídos manualmente", value: "assigned" },
+                { label: "Vindos do sistema", value: "system" },
+                { label: "Todos", value: "all" },
+              ]}
+            />
+
+            <AppField
+              as="select"
               label="Registros"
               value={somentePendentes ? "pendentes" : "todas"}
               onChange={(e) => setSomentePendentes(e.target.value === "pendentes")}
@@ -901,21 +1159,108 @@ export default function ConciliacaoIsland() {
 
           <div className="vtur-quote-summary-grid" style={{ marginTop: 16 }}>
             <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Importados</span>
+              <strong>{loadingResumo ? "..." : resumoTotais.importados || 0}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Pendentes ranking</span>
+              <strong>{loadingResumo ? "..." : resumoTotais.pendentesRanking || 0}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Conciliados sist.</span>
+              <strong>{loadingResumo ? "..." : resumoTotais.conciliadosSistema || 0}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Atribuídos ranking</span>
+              <strong>{loadingResumo ? "..." : resumoTotais.atribuidosRanking || 0}</strong>
+            </div>
+          </div>
+        </AppCard>
+
+        <AppCard
+          className="mb-3"
+          title="Resumo operacional"
+          subtitle="Acompanhe pendências por mês e por dia sem carregar a listagem completa de recibos."
+        >
+          <div className="vtur-quote-summary-grid">
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Mês filtrado</span>
+              <strong>{monthFilter || "-"}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
               <span className="vtur-quote-summary-label">Em tela</span>
               <strong>{itens.length}</strong>
             </div>
             <div className="vtur-quote-summary-item">
-              <span className="vtur-quote-summary-label">Pendentes</span>
+              <span className="vtur-quote-summary-label">Pendentes em tela</span>
               <strong>{pendentesCount}</strong>
             </div>
             <div className="vtur-quote-summary-item">
-              <span className="vtur-quote-summary-label">Conciliados</span>
-              <strong>{conciliadosCount}</strong>
-            </div>
-            <div className="vtur-quote-summary-item">
-              <span className="vtur-quote-summary-label">Divergencias</span>
+              <span className="vtur-quote-summary-label">Divergências em tela</span>
               <strong>{divergenciasCount}</strong>
             </div>
+          </div>
+
+          <div className="mt-3 table-container">
+            <table className="table-default table-header-blue table-mobile-cards min-w-[760px]">
+              <thead>
+                <tr>
+                  <th>Mês</th>
+                  <th>Total</th>
+                  <th>Conciliados sist.</th>
+                  <th>Pendentes ranking</th>
+                  <th>Atribuídos ranking</th>
+                </tr>
+              </thead>
+              <tbody>
+                {resumoMeses.length === 0 ? (
+                  <tr>
+                    <td colSpan={5}>Sem resumo mensal disponível.</td>
+                  </tr>
+                ) : (
+                  resumoMeses.map((item) => (
+                    <tr key={item.month}>
+                      <td data-label="Mês">{item.month}</td>
+                      <td data-label="Total">{item.total}</td>
+                      <td data-label="Conciliados sist.">{item.conciliadosSistema}</td>
+                      <td data-label="Pendentes ranking">{item.pendentesRanking}</td>
+                      <td data-label="Atribuídos ranking">{item.atribuidosRanking}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-3 table-container">
+            <table className="table-default table-header-green table-mobile-cards min-w-[760px]">
+              <thead>
+                <tr>
+                  <th>Dia</th>
+                  <th>Total</th>
+                  <th>Conciliados sist.</th>
+                  <th>Pendentes ranking</th>
+                  <th>Atribuídos ranking</th>
+                </tr>
+              </thead>
+              <tbody>
+                {resumoDias.length === 0 ? (
+                  <tr>
+                    <td colSpan={5}>Sem resumo diário para o mês selecionado.</td>
+                  </tr>
+                ) : (
+                  resumoDias.map((item) => (
+                    <tr key={item.date}>
+                      <td data-label="Dia">{item.date}</td>
+                      <td data-label="Total">{item.total}</td>
+                      <td data-label="Conciliados sist.">{item.conciliadosSistema}</td>
+                      <td data-label="Pendentes ranking">{item.pendentesRanking}</td>
+                      <td data-label="Atribuídos ranking">{item.atribuidosRanking}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </AppCard>
 
@@ -1021,6 +1366,9 @@ export default function ConciliacaoIsland() {
                 <th>Data</th>
                 <th>Documento</th>
                 <th>Status</th>
+                <th>Recibo encontrado</th>
+                <th>Vendedor ranking</th>
+                <th>Meta dif.</th>
                 <th>Total (arq)</th>
                 <th>Taxas (arq)</th>
                 <th>Total (sist)</th>
@@ -1042,14 +1390,79 @@ export default function ConciliacaoIsland() {
                 }
               />
             }
-            colSpan={10}
-            className="table-header-green table-mobile-cards min-w-[1200px]"
+            colSpan={13}
+            className="table-header-green table-mobile-cards min-w-[1680px]"
           >
             {itens.map((row) => (
               <tr key={row.id}>
                 <td data-label="Data">{row.movimento_data || "-"}</td>
                 <td data-label="Documento">{row.documento}</td>
                 <td data-label="Status">{row.status}</td>
+                <td data-label="Recibo encontrado">{row.venda_recibo_id ? "Sim" : "Nao"}</td>
+                <td data-label="Vendedor ranking">
+                  {row.venda_id ? (
+                    <span>Venda do sistema</span>
+                  ) : (
+                    <select
+                      className="form-select"
+                      value={row.ranking_vendedor_id || ""}
+                      disabled={loadingOptions || savingAssignmentId === row.id}
+                      onChange={(e) =>
+                        salvarAtribuicaoRanking(row, {
+                          rankingVendedorId: e.target.value || null,
+                          rankingProdutoId: row.ranking_produto_id || null,
+                        })
+                      }
+                    >
+                      <option value="">Selecione...</option>
+                      {rankingAssignees.map((opt) => (
+                        <option key={opt.id} value={opt.id}>
+                          {opt.nome_completo}
+                          {opt.tipo ? ` (${opt.tipo})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </td>
+                <td data-label="Meta dif.">
+                  {row.venda_recibo_id ? (
+                    <span>Sistema</span>
+                  ) : rankingProdutosMeta.length === 0 ? (
+                    <span>-</span>
+                  ) : produtoMetaUnico ? (
+                    <select
+                      className="form-select"
+                      value={row.ranking_produto_id === produtoMetaUnico.id ? produtoMetaUnico.id : ""}
+                      disabled={loadingOptions || savingAssignmentId === row.id}
+                      onChange={(e) =>
+                        salvarAtribuicaoRanking(row, {
+                          rankingProdutoId: e.target.value || null,
+                        })
+                      }
+                    >
+                      <option value="">Nao</option>
+                      <option value={produtoMetaUnico.id}>Sim ({produtoMetaUnico.nome})</option>
+                    </select>
+                  ) : (
+                    <select
+                      className="form-select"
+                      value={row.ranking_produto_id || ""}
+                      disabled={loadingOptions || savingAssignmentId === row.id}
+                      onChange={(e) =>
+                        salvarAtribuicaoRanking(row, {
+                          rankingProdutoId: e.target.value || null,
+                        })
+                      }
+                    >
+                      <option value="">Nao</option>
+                      {rankingProdutosMeta.map((opt) => (
+                        <option key={opt.id} value={opt.id}>
+                          {opt.nome}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </td>
                 <td data-label="Total (arq)">{formatMoney(row.valor_lancamentos)}</td>
                 <td data-label="Taxas (arq)">{formatMoney(row.valor_taxas)}</td>
                 <td data-label="Total (sist)">{formatMoney(row.sistema_valor_total)}</td>

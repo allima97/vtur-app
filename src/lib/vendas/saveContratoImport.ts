@@ -28,6 +28,11 @@ function normalizeMoneyKey(value?: number | null) {
   return Number(value).toFixed(2);
 }
 
+function sanitizeOptionalContact(value?: string | null) {
+  const trimmed = String(value || "").trim();
+  return trimmed || null;
+}
+
 function buildPagamentoKey(pagamento: PagamentoDraft) {
   const forma = normalizeText(pagamento.forma || "").toUpperCase();
   const valorRef =
@@ -251,7 +256,7 @@ async function getCompanyId(userId: string) {
 
 async function findClienteByCpf(cpf: string) {
   const cpfDigits = normalizeCpf(cpf);
-  const selectCols = "id, cpf, nome, nascimento, endereco, numero, cidade, estado, cep, rg";
+  const selectCols = "id, cpf, nome, nascimento, endereco, numero, cidade, estado, cep, rg, telefone, whatsapp, email";
 
   // CPF e normalizado no banco (apenas digitos).
   const { data } = await supabaseBrowser
@@ -533,6 +538,9 @@ export async function saveContratoImport(params: {
   destinoProdutoId?: string | null;
   destinoProdutoNome?: string | null;
   dataVenda: string;
+  clienteTelefone?: string | null;
+  clienteWhatsapp?: string | null;
+  clienteEmail?: string | null;
 }) {
   const {
     contratos,
@@ -544,6 +552,9 @@ export async function saveContratoImport(params: {
     destinoProdutoId: destinoProdutoIdParam,
     destinoProdutoNome: destinoProdutoNomeParam,
     dataVenda,
+    clienteTelefone: clienteTelefoneParam,
+    clienteWhatsapp: clienteWhatsappParam,
+    clienteEmail: clienteEmailParam,
   } = params;
   if (!contratos.length) throw new Error("Nenhum contrato para salvar.");
   if (!dataVenda) throw new Error("Data da venda é obrigatória.");
@@ -580,6 +591,9 @@ export async function saveContratoImport(params: {
   const passageiroContratante = passageiros.find((p) => normalizeCpf(p.cpf) === cpfContrato);
   const contratanteEhPassageiro = passageiros.length === 0 ? true : Boolean(passageiroContratante);
   const nascimentoContratante = passageiroContratante?.nascimento || contratante.nascimento || null;
+  const clienteTelefone = sanitizeOptionalContact(clienteTelefoneParam);
+  const clienteWhatsapp = sanitizeOptionalContact(clienteWhatsappParam);
+  const clienteEmail = sanitizeOptionalContact(clienteEmailParam)?.toLowerCase();
 
   let cliente = await findClienteByCpf(cpfContrato);
   if (!cliente) {
@@ -606,18 +620,22 @@ export async function saveContratoImport(params: {
     }
 
     if (!cliente) throw new Error("Não foi possível resolver o cliente do contratante.");
-  } else {
-    const payload: any = {};
-    if (!cliente.nascimento && nascimentoContratante) payload.nascimento = nascimentoContratante;
-    if (!cliente.endereco && contratante.endereco) payload.endereco = titleCaseWithExceptions(contratante.endereco);
-    if (!cliente.numero && contratante.numero) payload.numero = contratante.numero;
-    if (!cliente.cidade && contratante.cidade) payload.cidade = titleCaseWithExceptions(contratante.cidade);
-    if (!cliente.estado && contratante.uf) payload.estado = contratante.uf;
-    if (!cliente.cep && contratante.cep) payload.cep = contratante.cep;
-    if (!cliente.rg && contratante.rg) payload.rg = contratante.rg;
-    if (Object.keys(payload).length > 0) {
-      await supabaseBrowser.from("clientes").update(payload).eq("id", cliente.id);
-    }
+  }
+
+  const payloadCliente: any = {};
+  if (!cliente.nascimento && nascimentoContratante) payloadCliente.nascimento = nascimentoContratante;
+  if (!cliente.endereco && contratante.endereco) payloadCliente.endereco = titleCaseWithExceptions(contratante.endereco);
+  if (!cliente.numero && contratante.numero) payloadCliente.numero = contratante.numero;
+  if (!cliente.cidade && contratante.cidade) payloadCliente.cidade = titleCaseWithExceptions(contratante.cidade);
+  if (!cliente.estado && contratante.uf) payloadCliente.estado = contratante.uf;
+  if (!cliente.cep && contratante.cep) payloadCliente.cep = contratante.cep;
+  if (!cliente.rg && contratante.rg) payloadCliente.rg = contratante.rg;
+  if (!cliente.telefone && clienteTelefone) payloadCliente.telefone = clienteTelefone;
+  if (!cliente.whatsapp && clienteWhatsapp) payloadCliente.whatsapp = clienteWhatsapp;
+  if (!cliente.email && clienteEmail) payloadCliente.email = clienteEmail;
+  if (Object.keys(payloadCliente).length > 0) {
+    await supabaseBrowser.from("clientes").update(payloadCliente).eq("id", cliente.id);
+    cliente = { ...cliente, ...payloadCliente };
   }
 
   const recibosRelacionados = await ensureReciboReservaUnicos({

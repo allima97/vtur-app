@@ -407,6 +407,10 @@ export default function VendaContratoImportIsland() {
   const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 4000 });
   const [duplicadoModal, setDuplicadoModal] = useState<{ mensagem: string } | null>(null);
   const [tipoPacoteModal, setTipoPacoteModal] = useState<{ mensagem: string } | null>(null);
+  const [contatoModalOpen, setContatoModalOpen] = useState(false);
+  const [contatoTelefone, setContatoTelefone] = useState("");
+  const [contatoWhatsapp, setContatoWhatsapp] = useState("");
+  const [contatoEmail, setContatoEmail] = useState("");
   const isReguaTipoPacote = (valor?: string | null) =>
     normalizeText(valor || "", { trim: true, collapseWhitespace: true }).includes("regua abaixo de 10");
 
@@ -863,6 +867,14 @@ export default function VendaContratoImportIsland() {
       });
       return;
     }
+    setContatoModalOpen(true);
+  }
+
+  async function persistSaveContrato(contatos?: {
+    telefone?: string | null;
+    whatsapp?: string | null;
+    email?: string | null;
+  }) {
     setSaving(true);
     setError(null);
     try {
@@ -884,6 +896,9 @@ export default function VendaContratoImportIsland() {
         destinoProdutoId: destinoId || null,
         destinoProdutoNome: destinoTexto || null,
         dataVenda,
+        clienteTelefone: contatos?.telefone || null,
+        clienteWhatsapp: contatos?.whatsapp || null,
+        clienteEmail: contatos?.email || null,
       });
       showToast("Venda criada com sucesso.", "success");
       if (typeof window !== "undefined") {
@@ -904,6 +919,19 @@ export default function VendaContratoImportIsland() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleConfirmarContatoSalvar(informarDepois = false) {
+    setContatoModalOpen(false);
+    await persistSaveContrato(
+      informarDepois
+        ? { telefone: null, whatsapp: null, email: null }
+        : {
+            telefone: contatoTelefone.trim() || null,
+            whatsapp: contatoWhatsapp.trim() || null,
+            email: contatoEmail.trim() || null,
+          }
+    );
   }
 
   function handleCancelarImportacao() {
@@ -1862,6 +1890,59 @@ export default function VendaContratoImportIsland() {
           onClose={() => setTipoPacoteModal(null)}
           message={tipoPacoteModal?.mensagem || ""}
         />
+
+        {contatoModalOpen ? (
+          <Dialog
+            title="Contato do cliente"
+            width="large"
+            onClose={() => {
+              if (!saving) setContatoModalOpen(false);
+            }}
+            footerButtons={[
+              {
+                content: "Informar depois",
+                buttonType: "default",
+                onClick: () => handleConfirmarContatoSalvar(true),
+                disabled: saving,
+              },
+              {
+                content: saving ? "Salvando..." : "Salvar venda",
+                buttonType: "primary",
+                onClick: () => handleConfirmarContatoSalvar(false),
+                disabled: saving,
+                loading: saving,
+              },
+            ]}
+          >
+            <div className="vtur-modal-body-stack">
+              <p style={{ margin: 0 }}>
+                Você pode complementar os dados do contratante agora ou seguir com a importação e informar depois.
+              </p>
+              <AppField
+                label="Telefone"
+                value={contatoTelefone}
+                onChange={(event: any) => setContatoTelefone(event.target.value)}
+                placeholder="Opcional"
+                disabled={saving}
+              />
+              <AppField
+                label="WhatsApp"
+                value={contatoWhatsapp}
+                onChange={(event: any) => setContatoWhatsapp(event.target.value)}
+                placeholder="Opcional"
+                disabled={saving}
+              />
+              <AppField
+                label="E-mail"
+                type="email"
+                value={contatoEmail}
+                onChange={(event: any) => setContatoEmail(event.target.value)}
+                placeholder="Opcional"
+                disabled={saving}
+              />
+            </div>
+          </Dialog>
+        ) : null}
       </div>
     </AppPrimerProvider>
   );

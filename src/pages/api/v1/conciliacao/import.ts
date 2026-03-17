@@ -48,7 +48,10 @@ export const POST: APIRoute = async ({ request }) => {
 
     const normalizeStatus = (value: any) => {
       const raw = String(value || "").trim().toUpperCase();
-      if (raw === "BAIXA" || raw === "OPFAX" || raw === "ESTORNO") return raw;
+      if (!raw) return "OUTRO";
+      if (raw.includes("ESTORNO")) return "ESTORNO";
+      if (raw.includes("OPFAX")) return "OPFAX";
+      if (raw.includes("BAIXA")) return "BAIXA";
       return "OUTRO";
     };
 
@@ -91,6 +94,7 @@ export const POST: APIRoute = async ({ request }) => {
       limit: 200,
       actor: "user",
       actorUserId: user.id,
+      client,
     });
 
     return new Response(
