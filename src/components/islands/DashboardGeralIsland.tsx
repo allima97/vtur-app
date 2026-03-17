@@ -535,7 +535,7 @@ function toLineChartConfig(
     return () => clearInterval(id);
   }, []);
 
-  const chartPrefsEffective = useMemo(() => {
+  const chartPrefsEffective = useMemo<Record<WidgetId, ChartType>>(() => {
     if (!isMobile) return chartPrefs;
     return {
       ...chartPrefs,
@@ -606,7 +606,25 @@ function toLineChartConfig(
 
   const widgetAtivo = (id: WidgetId) => widgetVisible[id] !== false;
   const toggleMobileWidget = (id: WidgetId) => {
-    setMobileWidgetOpen((prev) => ({ ...prev, [id]: !prev[id] }));
+    if (!mobileAccordionWidgetIds.includes(id)) {
+      setMobileWidgetOpen((prev) => ({ ...prev, [id]: !prev[id] }));
+      return;
+    }
+
+    setMobileWidgetOpen((prev) => {
+      const shouldOpen = !prev[id];
+      const next = { ...prev };
+
+      mobileAccordionWidgetIds.forEach((widgetId) => {
+        next[widgetId] = false;
+      });
+
+      if (shouldOpen) {
+        next[id] = true;
+      }
+
+      return next;
+    });
   };
 
   function salvarKpiLocal(order: KpiId[], visible: Record<KpiId, boolean>, charts?: Record<WidgetId, ChartType>) {
@@ -1457,6 +1475,13 @@ function toLineChartConfig(
   };
 
   const tableScrollMaxHeight = 180;
+  const mobileAccordionWidgetIds: WidgetId[] = [
+    "aniversariantes_clientes",
+    "orcamentos",
+    "viagens",
+    "follow_up",
+  ];
+
   const tableWidgetIds: WidgetId[] = [
     "aniversariantes_clientes",
     "orcamentos",
@@ -1467,7 +1492,7 @@ function toLineChartConfig(
 
   const getTableWidgetLabel = (id: WidgetId) => {
     if (id === "aniversariantes_clientes") {
-      return `Aniversariantes (clientes e acompanhantes) (${clientesAniversariantes.length})`;
+      return `Aniversariantes (${clientesAniversariantes.length})`;
     }
     if (id === "orcamentos") return `Orçamentos recentes (${orcamentosRecentes.length})`;
     if (id === "consultorias") return `Lembretes de consultoria (${lembretesDashboard.length})`;
@@ -1894,7 +1919,7 @@ function toLineChartConfig(
           <AppCard
             className={hideTitle ? undefined : "dashboard-widget-table-card"}
             title={hideTitle ? undefined : `Aniversariantes - ${monthLabel} (${items.length})`}
-            subtitle={hideTitle ? undefined : "Clientes e acompanhantes com aniversário neste mês."}
+            subtitle={undefined}
             tone="info"
           >
             <DataTable
@@ -2396,7 +2421,7 @@ function toLineChartConfig(
                 type="date"
                 value={inicio}
                 onFocus={selectAllInputOnFocus}
-                onChange={(e) => {
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                   const nextInicio = e.target.value;
                   setPresetPeriodo("personalizado");
                   setInicio(nextInicio);
@@ -2409,7 +2434,7 @@ function toLineChartConfig(
                 value={fim}
                 min={inicio || undefined}
                 onFocus={selectAllInputOnFocus}
-                onChange={(e) => {
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                   setPresetPeriodo("personalizado");
                   const nextFim = e.target.value;
                   setFim(boundDateEndISO(inicio, nextFim));
@@ -2438,7 +2463,7 @@ function toLineChartConfig(
                     as="select"
                     label="Preset"
                     value={presetPeriodo}
-                    onChange={(e) => aplicarPreset(e.target.value as PresetPeriodo)}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => aplicarPreset(e.target.value as PresetPeriodo)}
                     options={[
                       { value: "mes_atual", label: "Mês atual" },
                       { value: "ultimos_30", label: "Últimos 30 dias" },
@@ -2452,7 +2477,7 @@ function toLineChartConfig(
                         type="date"
                         value={inicio}
                         onFocus={selectAllInputOnFocus}
-                        onChange={(e) => {
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           const nextInicio = e.target.value;
                           setPresetPeriodo("personalizado");
                           setInicio(nextInicio);
@@ -2465,7 +2490,7 @@ function toLineChartConfig(
                         value={fim}
                         min={inicio || undefined}
                         onFocus={selectAllInputOnFocus}
-                        onChange={(e) => {
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           setPresetPeriodo("personalizado");
                           const nextFim = e.target.value;
                           setFim(boundDateEndISO(inicio, nextFim));
@@ -2515,7 +2540,7 @@ function toLineChartConfig(
                       </div>
                     )}
                   </div>
-                  <div className="hidden sm:block">{node}</div>
+                  <div className="mobile-collapsible" data-open="false">{node}</div>
                 </React.Fragment>
               );
             })}
