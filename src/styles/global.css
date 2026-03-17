@@ -454,9 +454,17 @@ body {
 }
 
 .list-toolbar-sticky {
-  position: sticky;
-  top: calc(12px + env(safe-area-inset-top));
-  z-index: 20;
+  position: static;
+  top: auto;
+  z-index: auto;
+}
+
+@media (min-width: 1025px) {
+  .list-toolbar-sticky {
+    position: sticky;
+    top: calc(12px + env(safe-area-inset-top));
+    z-index: 20;
+  }
 }
 
 .minhas-preferencias-page .minhas-preferencias-top-card .vtur-app-card-body {

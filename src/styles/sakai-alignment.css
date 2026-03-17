@@ -1179,7 +1179,9 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
   }
 
   body.sakai-theme .list-toolbar-sticky {
-    top: var(--vtur-mobile-content-top);
+    position: static;
+    top: auto;
+    z-index: auto;
   }
 
   body.sakai-theme .page-content-wrap {
@@ -1200,11 +1202,11 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
   }
 
   body.sakai-theme .mobile-bottom-nav-item {
-    color: #93c5fd;
+    color: #e2e8f0;
   }
 
   body.sakai-theme .mobile-bottom-nav-item.active {
-    color: #2563eb;
+    color: #e2e8f0;
     background: rgba(56, 189, 248, 0.12);
   }
 }

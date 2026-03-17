@@ -261,11 +261,11 @@ export default function SubdivisoesIsland() {
       </div>
     );
   }
-  if (!podeVer) return <div className="paises-page">Voce nao possui acesso ao modulo de Cadastros.</div>;
+  if (!podeVer) return <div className="paises-page page-content-wrap">Voce nao possui acesso ao modulo de Cadastros.</div>;
 
   return (
     <AppPrimerProvider>
-      <div className="paises-page">
+      <div className="paises-page page-content-wrap">
       {!mostrarFormulario && (
         <AppCard
           tone="config"
