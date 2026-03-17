@@ -5152,14 +5152,18 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 
 /* Agenda (mobile): card do mês + FAB */
 .agenda-month-card {
-  padding: 12px 14px;
+  padding: 2px 2px 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
 }
 
 .agenda-month-title {
   font-size: 1.15rem;
   font-weight: 900;
   color: #0f172a;
-  text-align: center;
+  text-align: left;
   line-height: 1.1;
 }
 
@@ -5201,6 +5205,10 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 
 /* Agenda (mobile): feriados/eventos longos não podem "sumir" na célula do dia */
 @media (max-width: 768px) {
+  .agenda-page {
+    gap: 8px !important;
+  }
+
   .sac-page .form-input[type="date"],
   .sac-page .form-input[type="time"],
   .agenda-page .form-input[type="date"],
@@ -5211,6 +5219,10 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   .sac-page .form-row.mobile-stack,
   .agenda-page .form-row.mobile-stack {
     grid-template-columns: 1fr !important;
+  }
+
+  .agenda-calendar-shell .agenda-calendar-mobile {
+    margin-top: 4px;
   }
 
   .agenda-calendar-mobile .fc .fc-toolbar.fc-header-toolbar {

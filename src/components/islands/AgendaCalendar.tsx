@@ -605,9 +605,9 @@ export default function AgendaCalendar() {
   return (
     <div className="agenda-page" style={{ display: "grid", gap: 16 }}>
       {viewportReady && isMobile && (
-        <AppCard tone="info" className="agenda-month-card">
+        <div className="agenda-month-card" aria-label={`Mês atual: ${currentMonthTitle}`}>
           <div className="agenda-month-title">{currentMonthTitle}</div>
-        </AppCard>
+        </div>
       )}
 
       <div className="agenda-calendar-shell">
