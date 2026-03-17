@@ -7,7 +7,7 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import CalculatorModal from "../ui/CalculatorModal";
 import AlertMessage from "../ui/AlertMessage";
 import { formatCurrencyBRL, formatNumberBR } from "../../lib/format";
-import { calcularDescontoAplicado, calcularPctFixoProduto, regraProdutoTemFixo } from "../../lib/comissaoUtils";
+import { calcularPctFixoProduto, regraProdutoTemFixo } from "../../lib/comissaoUtils";
 import { carregarTermosNaoComissionaveis, calcularNaoComissionavelPorVenda } from "../../lib/pagamentoUtils";
 import { normalizeText } from "../../lib/normalizeText";
 import { fetchGestorEquipeIdsComGestor } from "../../lib/gestorEquipe";
@@ -722,6 +722,7 @@ export default function ComissionamentoIsland() {
 
     let baseMeta = 0;
     let totalBruto = 0;
+    let totalBrutoComissao = 0;
     let totalTaxas = 0;
     let comissaoGeral = 0;
     let comissaoDif = 0;
@@ -757,41 +758,33 @@ export default function ComissionamentoIsland() {
     // 1) Agrega totais por produto e base de meta
     vendas.forEach((v) => {
       const recibosVenda = v.vendas_recibos || [];
-      const totalBrutoVenda = recibosVenda.reduce(
-        (sum, r) => sum + Math.max(0, Number(r.valor_total || 0)),
-        0
-      );
-      const naoComissionado =
-        pagamentosNaoComissionaveis.get(v.id) ?? Number(v.valor_nao_comissionado || 0);
-      const descontoAplicado = calcularDescontoAplicado(
-        totalBrutoVenda,
-        v.valor_total_bruto,
-        v.valor_total_pago
-      );
-      const baseComissionavel = Math.max(0, totalBrutoVenda - descontoAplicado - naoComissionado);
-      const fatorComissionavel =
-        totalBrutoVenda > 0 ? Math.max(0, baseComissionavel / totalBrutoVenda) : 1;
-
       recibosVenda.forEach((r) => {
         const prodId = r.tipo_produtos?.id || r.produto_id || "";
         const prod = produtos[prodId];
         if (!prod) return;
         // Regra (conforme cadastro):
         // - `valor_total` já inclui taxas + RAV.
-        // - RAV (valor_rav) não entra em meta nem comissão.
+        // - O atingimento de meta considera o valor total vendido.
+        // - RAV (valor_rav) não entra na base de comissão.
         // - Taxas não comissionam, exceto DU (valor_du), que é parte comissionável das taxas.
+        const brutoTotal = Math.max(0, Number(r.valor_total || 0));
         const brutoSemRav = Math.max(0, Number(r.valor_total || 0) - Number(r.valor_rav || 0));
         const taxasEfetivas = Math.max(0, Number(r.valor_taxas || 0) - Number(r.valor_du || 0));
         const liquido = Math.max(0, brutoSemRav - taxasEfetivas);
 
-        // Para meta: se parâmetro ativo, usa bruto; senão, usa líquido.
-        const valParaMeta = parametros.usar_taxas_na_meta ? brutoSemRav : liquido;
+        // Para meta: prioriza foco_valor; no modo bruto considera o valor total vendido.
+        const valParaMeta =
+          parametros.foco_valor === "liquido"
+            ? liquido
+            : parametros.usar_taxas_na_meta
+              ? brutoTotal
+              : liquido;
         // Para comissão (valor): sempre usa o líquido.
         const baseCom = liquido;
         const tipoPacoteKey = normalizeText(r.tipo_pacote || "", { trim: true, collapseWhitespace: true });
         const bucketKey = `${prodId}::${tipoPacoteKey || "default"}`;
 
-        brutoPorProduto[prodId] = (brutoPorProduto[prodId] || 0) + brutoSemRav;
+        brutoPorProduto[prodId] = (brutoPorProduto[prodId] || 0) + brutoTotal;
         liquidoPorProduto[prodId] = (liquidoPorProduto[prodId] || 0) + liquido;
         baseMetaPorProduto[prodId] = (baseMetaPorProduto[prodId] || 0) + valParaMeta;
         baseComPorProduto[prodId] = (baseComPorProduto[prodId] || 0) + baseCom;
@@ -807,12 +800,13 @@ export default function ComissionamentoIsland() {
         bucketTotals[bucketKey] = bucket;
 
         if (prod.soma_na_meta) baseMeta += valParaMeta;
-        totalBruto += brutoSemRav;
+        totalBruto += brutoTotal;
+        totalBrutoComissao += brutoSemRav;
         totalTaxas += taxasEfetivas;
       });
     });
 
-    const totalLiquido = totalBruto - totalTaxas;
+    const totalLiquido = totalBrutoComissao - totalTaxas;
     const pctMetaGeral =
       metaGeral?.meta_geral && metaGeral.meta_geral > 0 ? (baseMeta / metaGeral.meta_geral) * 100 : 0;
 
@@ -1220,7 +1214,7 @@ export default function ComissionamentoIsland() {
                   <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(metaGeral?.meta_geral || 0)}</strong>
                 </div>
                 <div className="vtur-commission-kpi-card vtur-commission-kpi-warning">
-                  <span className="vtur-commission-kpi-label">{`Base bruta comissão (${resumo.pctMetaGeral.toFixed(2).replace(".", ",")}%)`}</span>
+                  <span className="vtur-commission-kpi-label">{`Vendas para meta (${resumo.pctMetaGeral.toFixed(2).replace(".", ",")}%)`}</span>
                   <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(resumo.totalBruto)}</strong>
                 </div>
                 <div className="vtur-commission-kpi-card vtur-commission-kpi-info">
