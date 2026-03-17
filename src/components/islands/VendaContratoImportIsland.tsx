@@ -875,6 +875,10 @@ export default function VendaContratoImportIsland() {
     whatsapp?: string | null;
     email?: string | null;
   }) {
+    const destinoTexto = destinoId
+      ? destinoSelecionado?.nome || buscaDestino.trim()
+      : buscaDestino.trim();
+
     setSaving(true);
     setError(null);
     try {
