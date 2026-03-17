@@ -1252,7 +1252,7 @@ function DashboardGestorIslandInner() {
         <AppCard
           className={hideTitle ? undefined : "dashboard-widget-table-card"}
           title={hideTitle ? undefined : `Aniversariantes - ${monthLabel} (${items.length})`}
-          subtitle={hideTitle ? undefined : "Clientes e acompanhantes do escopo atual."}
+          subtitle={undefined}
           tone="info"
         >
           <DataTable
@@ -1598,7 +1598,7 @@ function DashboardGestorIslandInner() {
                 </AppButton>
                 {aberto && <div style={{ marginTop: 12 }}>{renderWidget(id, { hideTitle: true })}</div>}
               </div>
-              <div className="hidden sm:block">{node}</div>
+              <div className="mobile-collapsible" data-open="false">{node}</div>
             </React.Fragment>
           );
         })}
