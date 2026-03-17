@@ -38,7 +38,10 @@ export default function PaginationControls({
   return (
     <div className={rootClass}>
       <div className="pagination-controls__summary">
-        Mostrando {start}-{end} de {totalItems}
+        <span className="pagination-controls__summary-label">Resultados</span>
+        <strong className="pagination-controls__summary-value">
+          Mostrando {start}-{end} de {totalItems}
+        </strong>
       </div>
 
       <div className="pagination-controls__actions">
@@ -63,6 +66,8 @@ export default function PaginationControls({
           <AppButton
             type="button"
             variant="secondary"
+            className="pagination-controls__nav-button"
+            icon="pi pi-arrow-left"
             onClick={() => onPageChange(clamp(safePage - 1, 1, totalPages))}
             disabled={safePage <= 1}
           >
@@ -74,6 +79,9 @@ export default function PaginationControls({
           <AppButton
             type="button"
             variant="secondary"
+            className="pagination-controls__nav-button"
+            icon="pi pi-arrow-right"
+            iconPos="right"
             onClick={() => onPageChange(clamp(safePage + 1, 1, totalPages))}
             disabled={safePage >= totalPages}
           >

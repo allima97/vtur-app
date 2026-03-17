@@ -287,7 +287,7 @@ export default function QuotePrintSettingsIsland() {
       {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
       {sucesso && <AlertMessage variant="success">{sucesso}</AlertMessage>}
 
-      <div className="form-row">
+      <div className="form-row mobile-stack">
         <div className="form-group">
           <FileUploadField
             label="Logo"
@@ -322,7 +322,7 @@ export default function QuotePrintSettingsIsland() {
         </div>
       </div>
 
-      <div className="form-row">
+      <div className="form-row mobile-stack">
         <div className="form-group">
           <AppField
             label="Endereco (linha 1)"
@@ -349,7 +349,7 @@ export default function QuotePrintSettingsIsland() {
         </div>
       </div>
 
-      <div className="form-row">
+      <div className="form-row mobile-stack">
         <div className="form-group">
           <AppField
             label="Codigo do pais"

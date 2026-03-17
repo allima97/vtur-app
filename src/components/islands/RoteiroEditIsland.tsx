@@ -5,6 +5,7 @@ import { extractPlainTextFromFile } from "../../lib/documentosViagens/extractPla
 import AlertMessage from "../ui/AlertMessage";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -69,15 +70,71 @@ type Cliente = { id: string; nome: string; whatsapp?: string; email?: string };
 type DiaBanco = { id: string; percurso?: string; cidade: string; descricao: string; data?: string };
 
 type AbaId = "hoteis" | "passeios" | "transporte" | "itinerario" | "investimento" | "pagamento" | "inclusoes" | "informacoes";
-const ABAS: { id: AbaId; label: string }[] = [
-  { id: "itinerario", label: "Itinerário Personalizado" },
-  { id: "hoteis", label: "Hotéis Sugeridos" },
-  { id: "passeios", label: "Passeios Principais" },
-  { id: "transporte", label: "Transporte Incluído" },
-  { id: "investimento", label: "Investimento" },
-  { id: "pagamento", label: "Formas de Pagamento" },
-  { id: "inclusoes", label: "Incluído / Não Incluído" },
-  { id: "informacoes", label: "Informações Importantes" },
+type AbaMeta = {
+  id: AbaId;
+  label: string;
+  shortLabel: string;
+  hint: string;
+  icon: string;
+};
+
+const ABAS: AbaMeta[] = [
+  {
+    id: "itinerario",
+    label: "Itinerário Personalizado",
+    shortLabel: "Itinerário",
+    hint: "Dias, percurso e descrição detalhada.",
+    icon: "pi pi-map",
+  },
+  {
+    id: "hoteis",
+    label: "Hotéis Sugeridos",
+    shortLabel: "Hotéis",
+    hint: "Hospedagem, datas, categoria e regime.",
+    icon: "pi pi-building",
+  },
+  {
+    id: "passeios",
+    label: "Passeios Principais",
+    shortLabel: "Passeios",
+    hint: "Passeios, datas, tipo e ingressos.",
+    icon: "pi pi-camera",
+  },
+  {
+    id: "transporte",
+    label: "Transporte Incluído",
+    shortLabel: "Transporte",
+    hint: "Trechos, fornecedores e observações.",
+    icon: "pi pi-car",
+  },
+  {
+    id: "investimento",
+    label: "Investimento",
+    shortLabel: "Investimento",
+    hint: "Valores por pessoa, pax e apartamento.",
+    icon: "pi pi-wallet",
+  },
+  {
+    id: "pagamento",
+    label: "Formas de Pagamento",
+    shortLabel: "Pagamento",
+    hint: "Serviços, taxas e forma de cobrança.",
+    icon: "pi pi-credit-card",
+  },
+  {
+    id: "inclusoes",
+    label: "Incluído / Não Incluído",
+    shortLabel: "Inclusões",
+    hint: "Itens incluídos e excluídos da viagem.",
+    icon: "pi pi-check-square",
+  },
+  {
+    id: "informacoes",
+    label: "Informações Importantes",
+    shortLabel: "Informações",
+    hint: "Regras e observações finais do roteiro.",
+    icon: "pi pi-info-circle",
+  },
 ];
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -365,47 +422,39 @@ function RowActions({
         <AppButton
           type="button"
           onClick={onUp}
-          variant="secondary"
-          className="btn-icon"
-          style={actionBtnSt}
+          variant="ghost"
+          className="btn-icon vtur-table-action roteiro-action-btn"
+          icon="pi pi-arrow-up"
           title="Subir"
           aria-label="Subir"
-        >
-          <i className="pi pi-chevron-up" aria-hidden="true" />
-        </AppButton>
+        />
         <AppButton
           type="button"
           onClick={onDown}
-          variant="secondary"
-          className="btn-icon"
-          style={actionBtnSt}
+          variant="ghost"
+          className="btn-icon vtur-table-action roteiro-action-btn"
+          icon="pi pi-arrow-down"
           title="Descer"
           aria-label="Descer"
-        >
-          <i className="pi pi-chevron-down" aria-hidden="true" />
-        </AppButton>
+        />
         <AppButton
           type="button"
           onClick={onAdd}
-          variant="secondary"
-          className="btn-icon"
-          style={actionBtnSt}
+          variant="ghost"
+          className="btn-icon vtur-table-action roteiro-action-btn"
+          icon="pi pi-plus"
           title="Adicionar abaixo"
           aria-label="Adicionar abaixo"
-        >
-          <i className="pi pi-plus" aria-hidden="true" />
-        </AppButton>
+        />
         <AppButton
           type="button"
           onClick={onDelete}
           variant="danger"
-          className="btn-icon danger"
-          style={{ ...actionBtnSt, borderColor: "#fca5a5" }}
+          className="btn-icon danger vtur-table-action roteiro-action-btn"
+          icon="pi pi-trash"
           title="Excluir"
           aria-label="Excluir"
-        >
-          <i className="pi pi-trash" aria-hidden="true" />
-        </AppButton>
+        />
       </div>
     </td>
   );
@@ -601,6 +650,14 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
   function handleQuickOpenSection() {
     const firstEmpty = ABAS.find((aba) => tabCounts[aba.id] === 0);
     setAbaAtiva(firstEmpty?.id || "itinerario");
+  }
+
+  function goToAdjacentSection(offset: number) {
+    const currentIndex = ABAS.findIndex((aba) => aba.id === abaAtiva);
+    if (currentIndex === -1) return;
+    const nextIndex = currentIndex + offset;
+    if (nextIndex < 0 || nextIndex >= ABAS.length) return;
+    setAbaAtiva(ABAS[nextIndex].id);
   }
 
   // ─── Section list helpers ─────────────────────────────────────────────────
@@ -862,7 +919,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <AppPrimerProvider>
-      <div className="roteiro-edit-page" style={{ padding: "0 0 60px" }}>
+      <div className="page-content-wrap roteiro-edit-page orcamentos-consulta-page">
         <AppCard
           className="mb-3"
           tone="info"
@@ -1000,31 +1057,100 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
           </div>
         </AppCard>
 
-        {/* ─── Tab Strip ───────────────────────────────────────────────── */}
-        <div className="roteiro-tabs-shell" role="tablist" aria-label="Seções do roteiro">
-          {ABAS.map((aba) => (
-            <AppButton
-              key={aba.id}
+        {/* ─── Navegação das Seções ────────────────────────────────────── */}
+        <section className="roteiro-section-nav" aria-label="Seções do roteiro">
+          <div className="roteiro-section-nav-mobile">
+            <div className="roteiro-section-nav-mobile-head">
+              <div className="roteiro-section-nav-copy">
+                <span className="roteiro-section-nav-kicker">Etapa atual</span>
+                <strong>{ABAS.find((aba) => aba.id === abaAtiva)?.label || "Itinerário Personalizado"}</strong>
+                <span>{ABAS.find((aba) => aba.id === abaAtiva)?.hint || "Selecione a área que deseja editar."}</span>
+              </div>
+              <span className="roteiro-section-nav-mobile-count">{tabCounts[abaAtiva]}</span>
+            </div>
+            <div className="roteiro-section-nav-mobile-controls">
+              <AppField
+                as="select"
+                label="Seção do roteiro"
+                value={abaAtiva}
+                onChange={(e) => setAbaAtiva(e.target.value as AbaId)}
+                wrapperClassName="m-0 roteiro-section-select-field"
+                options={ABAS.map((aba) => ({
+                  value: aba.id,
+                  label: `${aba.shortLabel} (${tabCounts[aba.id]})`,
+                }))}
+              />
+              <AppButton
+                type="button"
+                variant="secondary"
+                className="roteiro-section-quick-btn"
+                icon="pi pi-sparkles"
+                onClick={handleQuickOpenSection}
+              >
+                Ir para pendências
+              </AppButton>
+            </div>
+            <div className="roteiro-section-nav-mobile-pager">
+              <AppButton
+                type="button"
+                variant="ghost"
+                icon="pi pi-arrow-left"
+                onClick={() => goToAdjacentSection(-1)}
+                disabled={ABAS[0]?.id === abaAtiva}
+              >
+                Anterior
+              </AppButton>
+              <AppButton
+                type="button"
+                variant="ghost"
+                onClick={() => goToAdjacentSection(1)}
+                disabled={ABAS[ABAS.length - 1]?.id === abaAtiva}
+                icon="pi pi-arrow-right"
+                iconPos="right"
+              >
+                Próxima
+              </AppButton>
+            </div>
+          </div>
+
+          <div className="roteiro-tab-grid" role="tablist" aria-label="Seções do roteiro">
+            {ABAS.map((aba) => (
+              <button
+                key={aba.id}
+                type="button"
+                onClick={() => setAbaAtiva(aba.id)}
+                className={`roteiro-tab-card ${abaAtiva === aba.id ? "is-active" : ""}`}
+                aria-pressed={abaAtiva === aba.id}
+              >
+                <span className="roteiro-tab-card-icon" aria-hidden="true">
+                  <i className={aba.icon} />
+                </span>
+                <span className="roteiro-tab-card-copy">
+                  <span className="roteiro-tab-card-title-row">
+                    <span className="roteiro-tab-card-title">{aba.shortLabel}</span>
+                    <span className="roteiro-tab-card-count">{tabCounts[aba.id]}</span>
+                  </span>
+                  <span className="roteiro-tab-card-hint">{aba.hint}</span>
+                </span>
+              </button>
+            ))}
+            <button
               type="button"
-              variant="ghost"
-              onClick={() => setAbaAtiva(aba.id)}
-              className={`roteiro-tab-pill ${abaAtiva === aba.id ? "is-active" : ""}`}
-              aria-pressed={abaAtiva === aba.id}
+              className="roteiro-tab-card roteiro-tab-card-quick"
+              onClick={handleQuickOpenSection}
             >
-              <span className="roteiro-tab-pill-label">{aba.label}</span>
-              <span className="roteiro-tab-pill-count">{tabCounts[aba.id]}</span>
-            </AppButton>
-          ))}
-          <AppButton
-            type="button"
-            variant="secondary"
-            className="roteiro-tab-plus"
-            icon="pi pi-plus"
-            aria-label="Ir para próxima seção pendente"
-            title="Ir para próxima seção pendente"
-            onClick={handleQuickOpenSection}
-          />
-        </div>
+              <span className="roteiro-tab-card-icon" aria-hidden="true">
+                <i className="pi pi-sparkles" />
+              </span>
+              <span className="roteiro-tab-card-copy">
+                <span className="roteiro-tab-card-title-row">
+                  <span className="roteiro-tab-card-title">Ir para pendências</span>
+                </span>
+                <span className="roteiro-tab-card-hint">Leva você para a primeira seção ainda vazia.</span>
+              </span>
+            </button>
+          </div>
+        </section>
 
         {/* ─── Aba: Hotéis Sugeridos ───────────────────────────────────── */}
         {abaAtiva === "hoteis" && (
@@ -1369,10 +1495,11 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
               </AppButton>
             </div>
             {dias.map((d, i) => (
-              <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "flex-start", flexWrap: "wrap", padding: "8px", background: "#f8fafc", borderRadius: 6, border: "1px solid #e5e7eb" }}>
-                <div>
+              <div key={i} className="roteiro-dia-card">
+                <div className="roteiro-dia-field roteiro-dia-field-date">
                   <label style={{ ...labelSt, marginBottom: 2 }}>Data</label>
                   <input
+                    className="roteiro-dia-input"
                     style={{ ...inputSt, width: 130 }}
                     type="date"
                     value={d.data}
@@ -1380,16 +1507,17 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                     onChange={(e) => diaOps.update(i, { data: e.target.value })}
                   />
                 </div>
-                <div>
+                <div className="roteiro-dia-field roteiro-dia-field-percurso">
                   <label style={{ ...labelSt, marginBottom: 2 }}>Percurso</label>
                   <input
+                    className="roteiro-dia-input"
                     style={{ ...inputSt, width: 180 }}
                     value={d.percurso}
                     onChange={(e) => diaOps.update(i, { percurso: e.target.value })}
                     placeholder="Ex: Roma - Veneza"
                   />
                 </div>
-                <div>
+                <div className="roteiro-dia-field roteiro-dia-field-city">
                   <label style={{ ...labelSt, marginBottom: 2 }}>Cidade/Pernoite</label>
                   <AutocompleteInput
                     style={{ ...inputSt, width: 130 }}
@@ -1400,28 +1528,21 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                     placeholder="Cidade"
                   />
                 </div>
-                <div style={{ flex: 1, minWidth: 200 }}>
+                <div className="roteiro-dia-field roteiro-dia-field-desc">
                   <label style={{ ...labelSt, marginBottom: 2 }}>Descrição do dia</label>
                   <textarea
+                    className="roteiro-dia-input roteiro-dia-textarea"
                     style={{ ...inputSt, minHeight: 60, resize: "vertical" }}
                     value={d.descricao}
                     onChange={(e) => diaOps.update(i, { descricao: e.target.value })}
                     placeholder="Descrição detalhada do dia..."
                   />
                 </div>
-                <div style={{ display: "flex", gap: 4, flexShrink: 0, paddingTop: 20 }}>
-                  <AppButton type="button" variant="secondary" className="btn-icon" onClick={() => diaOps.moveUp(i)} style={actionBtnSt} title="Subir" aria-label="Subir">
-                    <i className="pi pi-chevron-up" aria-hidden="true" />
-                  </AppButton>
-                  <AppButton type="button" variant="secondary" className="btn-icon" onClick={() => diaOps.moveDown(i)} style={actionBtnSt} title="Descer" aria-label="Descer">
-                    <i className="pi pi-chevron-down" aria-hidden="true" />
-                  </AppButton>
-                  <AppButton type="button" variant="secondary" className="btn-icon" onClick={() => diaOps.add(i)} style={actionBtnSt} title="Adicionar" aria-label="Adicionar">
-                    <i className="pi pi-plus" aria-hidden="true" />
-                  </AppButton>
-                  <AppButton type="button" variant="danger" className="btn-icon danger" onClick={() => diaOps.remove(i)} style={actionBtnSt} title="Excluir">
-                    <i className="pi pi-trash" aria-hidden="true" />
-                  </AppButton>
+                <div className="roteiro-dia-actions vtur-table-actions">
+                  <AppButton type="button" variant="ghost" className="btn-icon vtur-table-action roteiro-action-btn" icon="pi pi-arrow-up" onClick={() => diaOps.moveUp(i)} title="Subir" aria-label="Subir" />
+                  <AppButton type="button" variant="ghost" className="btn-icon vtur-table-action roteiro-action-btn" icon="pi pi-arrow-down" onClick={() => diaOps.moveDown(i)} title="Descer" aria-label="Descer" />
+                  <AppButton type="button" variant="ghost" className="btn-icon vtur-table-action roteiro-action-btn" icon="pi pi-plus" onClick={() => diaOps.add(i)} title="Adicionar" aria-label="Adicionar" />
+                  <AppButton type="button" variant="danger" className="btn-icon danger vtur-table-action roteiro-action-btn" icon="pi pi-trash" onClick={() => diaOps.remove(i)} title="Excluir" aria-label="Excluir" />
                 </div>
               </div>
             ))}

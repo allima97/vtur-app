@@ -1693,7 +1693,6 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
               <AppField
                 label="Lançada em"
                 wrapperClassName="form-group min-w-0 vtur-sales-mobile-wide-field"
-                className="vtur-date-native"
                 type="date"
                 value={formVenda.data_lancamento}
                 onFocus={selectAllInputOnFocus}
@@ -1715,7 +1714,6 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                   </>
                 }
                 wrapperClassName="form-group min-w-0 vtur-sales-mobile-wide-field"
-                className="vtur-date-native"
                 type="date"
                 value={formVenda.data_venda}
                 onFocus={selectAllInputOnFocus}
@@ -1726,7 +1724,6 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
               <AppField
                 label="Data de embarque"
                 wrapperClassName="form-group min-w-0 vtur-sales-mobile-wide-field"
-                className="vtur-date-native"
                 type="date"
                 value={formVenda.data_embarque}
                 onFocus={selectAllInputOnFocus}
@@ -1750,7 +1747,6 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
               <AppField
                 label="Data final"
                 wrapperClassName="form-group min-w-0 vtur-sales-mobile-wide-field"
-                className="vtur-date-native"
                 type="date"
                 value={formVenda.data_final}
                 min={formVenda.data_embarque || undefined}
@@ -1793,16 +1789,6 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                     { value: "sim", label: "Sim" },
                   ]}
                 />
-                <AppButton
-                  type="button"
-                  variant="secondary"
-                  className="btn-calculator-trigger vtur-sales-discount-mobile-calculator"
-                  onClick={() => setShowCalculator(true)}
-                  aria-label="Calculadora"
-                  title="Calculadora"
-                >
-                  <i className="pi pi-calculator" aria-hidden="true" />
-                </AppButton>
               </div>
               {formVenda.desconto_comercial_aplicado && (
                 <AppField
@@ -1842,9 +1828,8 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 onClick={() => setShowCalculator(true)}
                 aria-label="Calculadora"
                 title="Calculadora"
-              >
-                <i className="pi pi-calculator" aria-hidden="true" />
-              </AppButton>
+                icon="pi pi-calculator"
+              />
             }
           />
 
@@ -1875,14 +1860,13 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                   <div className="vtur-card-toolbar-actions">
                     <AppButton
                       type="button"
-                      variant="secondary"
-                      className="icon-action-btn"
+                      variant="ghost"
+                      className="icon-action-btn no-border"
                       onClick={() => toggleRecibo(i)}
                       aria-label={reciboAberto ? "Recolher recibo" : "Expandir recibo"}
                       title={reciboAberto ? "Recolher recibo" : "Expandir recibo"}
-                    >
-                      <i className={reciboAberto ? "pi pi-chevron-up" : "pi pi-chevron-down"} aria-hidden="true" />
-                    </AppButton>
+                      icon={reciboAberto ? "pi pi-chevron-up" : "pi pi-chevron-down"}
+                    />
                     <AppButton
                       type="button"
                       variant="danger"
@@ -2153,14 +2137,13 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                   <div className="vtur-card-toolbar-actions">
                     <AppButton
                       type="button"
-                      variant="secondary"
-                      className="icon-action-btn"
+                      variant="ghost"
+                      className="icon-action-btn no-border"
                       onClick={() => togglePagamento(idx)}
                       aria-label={pagamentoAberto ? "Recolher pagamento" : "Expandir pagamento"}
                       title={pagamentoAberto ? "Recolher pagamento" : "Expandir pagamento"}
-                    >
-                      <i className={pagamentoAberto ? "pi pi-chevron-up" : "pi pi-chevron-down"} aria-hidden="true" />
-                    </AppButton>
+                      icon={pagamentoAberto ? "pi pi-chevron-up" : "pi pi-chevron-down"}
+                    />
                     <AppButton
                       type="button"
                       variant="danger"

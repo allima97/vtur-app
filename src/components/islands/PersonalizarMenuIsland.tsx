@@ -290,7 +290,7 @@ export default function PersonalizarMenuIsland() {
   }
 
   return (
-    <section className="personalizar-menu-page">
+    <section className="page-content-wrap personalizar-menu-page">
       <AppCard
         tone="info"
         className="mb-3"
@@ -351,28 +351,28 @@ export default function PersonalizarMenuIsland() {
                         <div className="personalizar-menu-item-icon-actions">
                           <AppButton
                             type="button"
-                            variant="secondary"
+                            variant="ghost"
                             onClick={() => onMove(group.section, item.key, "up")}
                             disabled={idx === 0}
-                            className="personalizar-menu-icon-btn"
+                            className="personalizar-menu-icon-btn vtur-table-action"
                             aria-label="Mover para cima"
                             icon="pi pi-arrow-up"
                           />
                           <AppButton
                             type="button"
-                            variant="secondary"
+                            variant="ghost"
                             onClick={() => onMove(group.section, item.key, "down")}
                             disabled={idx === group.items.length - 1}
-                            className="personalizar-menu-icon-btn"
+                            className="personalizar-menu-icon-btn vtur-table-action"
                             aria-label="Mover para baixo"
                             icon="pi pi-arrow-down"
                           />
                           <AppButton
                             type="button"
-                            variant="secondary"
+                            variant="ghost"
                             onClick={() => onToggleHidden(item)}
                             disabled={Boolean(item.locked)}
-                            className="personalizar-menu-icon-btn"
+                            className="personalizar-menu-icon-btn vtur-table-action"
                             aria-label={hidden ? "Mostrar item" : "Ocultar item"}
                             title={item.locked ? "Este item nao pode ser ocultado." : undefined}
                             icon={hidden ? "pi pi-eye" : "pi pi-eye-slash"}

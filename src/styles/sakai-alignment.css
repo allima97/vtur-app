@@ -5,7 +5,7 @@ body.sakai-theme {
   --vtur-topbar-height: 4.6rem;
   --vtur-desktop-shell-top: 5.6rem;
   --vtur-desktop-content-top: 3.5rem;
-  --vtur-mobile-content-top: calc(var(--vtur-topbar-height) + 1.55rem + env(safe-area-inset-top));
+  --vtur-mobile-content-top: calc(var(--vtur-topbar-height) + 0.8rem + env(safe-area-inset-top));
   --sgvtur-section-blue-bg: #ebf8ff;
   --sgvtur-section-blue-border: #bfdbfe;
   --sgvtur-section-blue-title: #1d4ed8;

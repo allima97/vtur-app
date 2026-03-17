@@ -71,6 +71,9 @@ export default function AppCard({
   children,
   ...props
 }: AppCardProps) {
+  const hasBody = React.Children.toArray(children).some(
+    (child) => child !== null && child !== undefined && typeof child !== "boolean"
+  );
   const tableDetection = detectTableContent(children);
   const tableLayoutClass = tableDetection.hasTable
     ? tableDetection.hasDataTable
@@ -104,7 +107,7 @@ export default function AppCard({
           {actions && <div className="vtur-app-card-actions">{actions}</div>}
         </div>
       )}
-      <div className="vtur-app-card-body">{children}</div>
+      {hasBody ? <div className="vtur-app-card-body">{children}</div> : null}
     </section>
   );
 }

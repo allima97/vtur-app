@@ -2342,9 +2342,8 @@ function toLineChartConfig(
                   onClick={() => setShowCalculator(true)}
                   aria-label="Calculadora"
                   title="Calculadora"
-                >
-                  <i className="pi pi-calculator" aria-hidden="true" />
-                </AppButton>
+                  icon="pi pi-calculator"
+                />
               </div>
               <AppButton type="button" variant="primary" onClick={() => setShowCustomize(true)}>
                 Personalizar dashboard
@@ -2361,9 +2360,8 @@ function toLineChartConfig(
                 onClick={() => setShowCalculator(true)}
                 aria-label="Calculadora"
                 title="Calculadora"
-              >
-                <i className="pi pi-calculator" aria-hidden="true" />
-              </AppButton>
+                icon="pi pi-calculator"
+              />
             </div>
           }
         >

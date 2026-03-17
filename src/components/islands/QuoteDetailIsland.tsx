@@ -628,9 +628,8 @@ export default function QuoteDetailIsland(props: {
                 onClick={() => setShowCalculator(true)}
                 aria-label="Calculadora"
                 title="Calculadora"
-              >
-                <i className="pi pi-calculator" aria-hidden="true" />
-              </AppButton>
+                icon="pi pi-calculator"
+              />
             </div>
           }
         >
