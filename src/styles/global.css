@@ -459,14 +459,6 @@ body {
   z-index: auto;
 }
 
-@media (min-width: 1025px) {
-  .list-toolbar-sticky {
-    position: sticky;
-    top: calc(12px + env(safe-area-inset-top));
-    z-index: 20;
-  }
-}
-
 .minhas-preferencias-page .minhas-preferencias-top-card .vtur-app-card-body {
   border-top: 1px solid rgba(148, 163, 184, 0.22);
   padding-top: 16px;

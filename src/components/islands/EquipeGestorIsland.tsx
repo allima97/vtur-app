@@ -719,7 +719,7 @@ export default function EquipeGestorIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="mt-6 gestor-page vtur-legacy-module page-content-wrap">
+      <div className="gestor-page vtur-legacy-module page-content-wrap">
         <AppCard
           className="mb-3 list-toolbar-sticky"
           tone="info"
@@ -746,7 +746,7 @@ export default function EquipeGestorIsland() {
       )}
       {equipeCompartilhadaBase && (
         <div className="mb-3 mt-3">
-          <AlertMessage variant="info">
+          <AlertMessage variant="info" className="vtur-alert-inline">
             Sua equipe está compartilhada com{" "}
             <strong>{equipeCompartilhadaBase.nome || "outro gestor"}</strong>. Para evitar
             duplicidade, a edição da equipe fica concentrada no gestor base / Master.
@@ -1091,9 +1091,10 @@ export default function EquipeGestorIsland() {
                             </select>
                           </td>
                           <td className="th-actions" data-label="Ações">
-                            <div className="action-buttons">
+                            <div className="action-buttons vtur-table-actions">
                               <AppButton
                                 variant="primary"
+                                className="vtur-table-action"
                                 onClick={() => salvarHorarioUsuario(u.id)}
                                 disabled={!podeEditarHorarios || salvando}
                                 title={salvando ? "Salvando horário" : "Salvar horário"}
@@ -1305,9 +1306,10 @@ export default function EquipeGestorIsland() {
                             </select>
                           </td>
                           <td className="th-actions" data-label="Ações">
-                            <div className="action-buttons">
+                            <div className="action-buttons vtur-table-actions">
                               <AppButton
                                 variant="primary"
+                                className="vtur-table-action"
                                 onClick={() => salvarHorarioUsuario(u.id)}
                                 disabled={!podeEditarHorarios || salvando}
                                 title={salvando ? "Salvando horário" : "Salvar horário"}

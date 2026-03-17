@@ -366,11 +366,12 @@ export default function ParametrosCambiosIsland() {
                     </td>
                     {podeExcluir && (
                       <td className="th-actions" data-label="Ações">
-                        <div className="action-buttons">
+                        <div className="action-buttons vtur-table-actions">
                           {podeEscrever && (
                             <AppButton
                               type="button"
                               variant="ghost"
+                              className="vtur-table-action"
                               title="Editar cambio"
                               aria-label="Editar câmbio"
                               onClick={() => handleEdit(cambio)}
@@ -381,6 +382,7 @@ export default function ParametrosCambiosIsland() {
                           <AppButton
                             type="button"
                             variant="danger"
+                            className="vtur-table-action"
                             title="Excluir cambio"
                             aria-label="Excluir câmbio"
                             onClick={() => solicitarExclusao(cambio)}

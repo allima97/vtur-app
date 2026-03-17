@@ -2061,7 +2061,7 @@ export default function RelatorioVendasIsland() {
         </AppCard>
 
         {usaPaginacaoServidor ? (
-          <AlertMessage variant="warning" className="mb-3">
+          <AlertMessage variant="warning" className="mb-3 vtur-alert-inline">
             Totais e tabela refletem a pagina atual. Use filtros de texto para carregar todos os recibos.
           </AlertMessage>
         ) : null}

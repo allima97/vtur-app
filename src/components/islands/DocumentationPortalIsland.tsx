@@ -367,7 +367,7 @@ export default function DocumentationPortalIsland() {
         <AppCard
           tone="info"
           title="Sumario"
-          className="h-auto lg:h-[calc(100vh-200px)] overflow-y-auto lg:sticky lg:top-[110px]"
+          className="h-auto lg:h-[calc(100vh-200px)] overflow-y-auto"
         >
           <AppField
             as="input"

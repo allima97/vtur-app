@@ -932,16 +932,107 @@ body.sakai-theme .ranking-table thead th,
 body.sakai-theme .ranking-table .rank-pos,
 body.sakai-theme .ranking-table .total-row td {
   text-transform: none;
-  color: #374151;
-  background: #f8fafc;
-  border-color: #e5e7eb;
+  color: #ffeb3b !important;
+  background: #0b2d6b !important;
+  border-color: #ffffff !important;
+}
+
+body.sakai-theme .ranking-board {
+  border: 2px solid #0b2d6b !important;
+  background: #ffffff !important;
+}
+
+body.sakai-theme .ranking-board-title {
+  background: #0b2d6b !important;
+  color: #ffeb3b !important;
+  border-bottom: 2px solid #ffffff !important;
+}
+
+body.sakai-theme .ranking-select {
+  background: #0b2d6b !important;
+  color: #ffeb3b !important;
+  border-color: #ffeb3b !important;
+}
+
+body.sakai-theme .ranking-summary .summary-label {
+  background: #facc15 !important;
+  color: #0b2d6b !important;
+  border-right: 2px solid #ffffff !important;
+  border-bottom: 2px solid #ffffff !important;
+}
+
+body.sakai-theme .ranking-summary .summary-value {
+  background: #0b2d6b !important;
+  color: #ffffff !important;
+  border-right: 2px solid #ffffff !important;
+  border-bottom: 2px solid #ffffff !important;
+}
+
+body.sakai-theme .ranking-table {
+  border-collapse: collapse !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+body.sakai-theme .ranking-table thead th {
+  color: #ffeb3b !important;
+  background: #0b2d6b !important;
+  border: 1px solid #ffffff !important;
+  text-transform: uppercase !important;
+  font-size: 0.75rem !important;
+  font-weight: 800 !important;
+  padding: 6px 6px !important;
+}
+
+body.sakai-theme .ranking-table tbody td {
+  color: #0f172a !important;
+  border: 1px solid #ffffff !important;
+  border-bottom-color: #ffffff !important;
+  font-weight: 700 !important;
+  padding: 6px 6px !important;
 }
 
 body.sakai-theme .ranking-table tbody tr,
 body.sakai-theme .ranking-table tbody tr.ranking-row-hit,
 body.sakai-theme .ranking-table tbody tr.ranking-row-miss,
 body.sakai-theme .ranking-table tbody tr.ranking-row-gestor {
-  background: #ffffff;
+  background: #fef08a !important;
+}
+
+body.sakai-theme .ranking-table tbody tr.ranking-row-hit {
+  background: #8fd14f !important;
+}
+
+body.sakai-theme .ranking-table tbody tr.ranking-row-miss {
+  background: #fef08a !important;
+}
+
+body.sakai-theme .ranking-table tbody tr.ranking-row-gestor {
+  background: #fdba74 !important;
+}
+
+body.sakai-theme .ranking-table .total-row td {
+  color: #0b2d6b !important;
+  background: #fde047 !important;
+}
+
+body.sakai-theme .ranking-table tbody tr:hover,
+body.sakai-theme .ranking-table tbody tr.ranking-row-miss:hover {
+  background: #fef08a !important;
+}
+
+body.sakai-theme .ranking-table tbody tr.ranking-row-hit:hover {
+  background: #8fd14f !important;
+}
+
+body.sakai-theme .ranking-table tbody tr.ranking-row-gestor:hover {
+  background: #fdba74 !important;
+}
+
+body.sakai-theme .ranking-vendas-page .ranking-table.table-mobile-cards {
+  --table-card-border: #ffffff !important;
+  --table-card-divider: #ffffff !important;
 }
 
 body.sakai-theme .th-actions .action-buttons {

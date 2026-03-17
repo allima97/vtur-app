@@ -214,11 +214,12 @@ export default function ParametrosNaoComissionaveisIsland() {
                 <td data-label="Termo">{t.termo}</td>
                 <td data-label="Ativo">{t.ativo ? "Sim" : "Nao"}</td>
                 <td className="th-actions" data-label="Ações">
-                  <div className="action-buttons">
+                  <div className="action-buttons vtur-table-actions">
                     {podeEditar && (
                       <AppButton
                         type="button"
                         variant="ghost"
+                        className="vtur-table-action"
                         title="Editar"
                         aria-label="Editar"
                         onClick={() => {
@@ -236,6 +237,7 @@ export default function ParametrosNaoComissionaveisIsland() {
                       <AppButton
                         type="button"
                         variant="danger"
+                        className="vtur-table-action"
                         disabled={excluindoId === t.id}
                         title={excluindoId === t.id ? "Excluindo" : "Excluir"}
                         aria-label={excluindoId === t.id ? "Excluindo" : "Excluir"}

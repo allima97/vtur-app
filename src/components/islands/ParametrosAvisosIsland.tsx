@@ -1089,12 +1089,12 @@ export default function ParametrosAvisosIsland() {
                       </td>
                       <td data-label="Status">{theme.ativo ? "Ativo" : "Inativo"}</td>
                       <td className="th-actions" data-label="Ações">
-                        <div className="action-buttons">
+                        <div className="action-buttons vtur-table-actions">
                           <AppButton
                             type="button"
                             variant="ghost"
                             icon="pi pi-pencil"
-                            className="p-button-rounded"
+                            className="vtur-table-action"
                             onClick={() => editarTheme(theme)}
                             title="Editar arte"
                             aria-label="Editar arte"
@@ -1103,7 +1103,7 @@ export default function ParametrosAvisosIsland() {
                             type="button"
                             variant="ghost"
                             icon="pi pi-eye"
-                            className="p-button-rounded"
+                            className="vtur-table-action"
                             onClick={() => window.open(resolvedThemeAsset.asset_url || theme.asset_url, "_blank", "noopener,noreferrer")}
                             title="Visualizar arte"
                             aria-label="Visualizar arte"
@@ -1112,7 +1112,7 @@ export default function ParametrosAvisosIsland() {
                             type="button"
                             variant="danger"
                             icon="pi pi-trash"
-                            className="p-button-rounded"
+                            className="vtur-table-action"
                             onClick={() => void removerTheme(theme.id)}
                             title="Excluir arte"
                             aria-label="Excluir arte"

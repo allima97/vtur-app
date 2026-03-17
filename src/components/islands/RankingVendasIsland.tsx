@@ -248,7 +248,33 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
         setCompanyNome(usuarioDb?.companies?.nome_fantasia || null);
 
         if (nextPapel === "GESTOR") {
-          const equipe = await fetchGestorEquipeVendedorIds(auth.user.id);
+          const empresaId = usuarioDb?.company_id || null;
+          const [gestoresGrupo, equipe] = await Promise.all([
+            empresaId
+              ? (async () => {
+                  const { data, error } = await supabase
+                    .from("users")
+                    .select("id, nome_completo, participa_ranking, user_types(name)")
+                    .eq("company_id", empresaId);
+                  if (error) throw error;
+
+                  const gestoresEmpresa = (data || [])
+                    .filter((row: any) => {
+                      const tipoNome = String(row?.user_types?.name || "").toUpperCase();
+                      return tipoNome.includes("GESTOR");
+                    })
+                    .map((row: any) => ({
+                      id: String(row?.id || "").trim(),
+                      nome: formatNome(row?.nome_completo) || "Gestor",
+                      participa: Boolean(row?.participa_ranking),
+                    }))
+                    .filter((row) => Boolean(row.id));
+
+                  return gestoresEmpresa;
+                })()
+              : Promise.resolve([]),
+            fetchGestorEquipeVendedorIds(auth.user.id),
+          ]);
           setEquipeIds(equipe);
 
           const { data: nomes, error: nomesErr } = await supabase
@@ -263,12 +289,21 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
           });
           setEquipeNomes(map);
 
-          const gestorId = auth.user.id;
-          const gestorNome = formatNome(usuarioDb?.nome_completo) || "Gestor";
-          setGestoresNomes({ [gestorId]: gestorNome });
-          setGestorRankingFlags({
-            [gestorId]: Boolean((usuarioDb as Usuario | null)?.participa_ranking),
+          const gestoresEmpresa = gestoresGrupo.length > 0
+            ? gestoresGrupo
+            : [{
+                id: auth.user.id,
+                nome: formatNome(usuarioDb?.nome_completo) || "Gestor",
+                participa: Boolean((usuarioDb as Usuario | null)?.participa_ranking),
+              }];
+          const gestoresMap: Record<string, string> = {};
+          const flagsMap: Record<string, boolean> = {};
+          gestoresEmpresa.forEach((gestor) => {
+            gestoresMap[gestor.id] = gestor.nome;
+            flagsMap[gestor.id] = gestor.participa;
           });
+          setGestoresNomes(gestoresMap);
+          setGestorRankingFlags(flagsMap);
         }
 
         if (nextPapel === "VIEWER") {
@@ -387,7 +422,9 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
 
   const gestoresSelecionados = useMemo(() => {
     if (papel === "GESTOR") {
-      return userId && gestorRankingFlags[userId] ? [userId] : [];
+      return Object.entries(gestorRankingFlags)
+        .filter(([, flag]) => flag)
+        .map(([id]) => id);
     }
     if (papel === "MASTER") {
       if (masterScope.vendedorSelecionado !== "all") return [];
@@ -431,16 +468,13 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
         nome: formatNome(g.nome_completo) || "Gestor",
       }));
     }
-    if (papel === "GESTOR" && userId) {
-      return [
-        {
-          id: userId,
-          nome: gestoresNomes[userId] || "Gestor",
-        },
-      ];
+    if (papel === "GESTOR") {
+      return Object.entries(gestoresNomes)
+        .map(([id, nome]) => ({ id, nome: nome || "Gestor" }))
+        .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
     }
     return [];
-  }, [papel, userId, gestoresNomes, masterScope.gestoresDisponiveis]);
+  }, [papel, gestoresNomes, masterScope.gestoresDisponiveis]);
 
   useEffect(() => {
     if (!inicio || !fim) return;
@@ -735,10 +769,12 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
       )}
 
       {!effectiveViewOnly && gestoresParaConfig.length > 0 && (
-        <AppCard className="card-config mb-3">
-          <div className="mb-2">
-            <strong>Gestores no ranking</strong>
-          </div>
+        <AppCard
+          title="Gestores no ranking"
+          subtitle="Defina quais gestores corporativos aparecem no ranking compartilhado da empresa."
+          tone="config"
+          className="card-config mb-3"
+        >
           <div className="table-container">
             <table className="table-default table-header-blue table-mobile-cards">
               <thead>
@@ -784,7 +820,7 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
       {!loadingDados && equipeFiltroIds.length > 0 && (
         <>
           {effectiveViewOnly && (
-            <AppCard className="card-config mb-3">
+            <AppCard tone="config" className="card-config mb-3">
               <div className="form-group" style={{ marginBottom: 8 }}>
                 <label className="form-label">Mes</label>
                 <select
@@ -825,7 +861,7 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
               )}
 
               <div className="table-container">
-                <table className="ranking-table ranking-table-main table-header-blue table-mobile-cards">
+                <table className="ranking-table ranking-table-main table-mobile-cards">
                   <thead>
                     <tr>
                       <th>#</th>
@@ -902,7 +938,7 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
                   )}
                 </div>
                 <div className="table-container">
-                  <table className="ranking-table ranking-table-side table-header-blue table-mobile-cards">
+                  <table className="ranking-table ranking-table-side table-mobile-cards">
                     <thead>
                       <tr>
                         <th>#</th>
