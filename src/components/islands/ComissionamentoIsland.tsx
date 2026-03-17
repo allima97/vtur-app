@@ -1212,7 +1212,7 @@ export default function ComissionamentoIsland() {
             <AppCard
               className="mb-3"
               title="Como está seu progresso"
-              subtitle="Evolução de meta, faturamento bruto, taxas, líquido e volume comercial."
+              subtitle="Evolução da meta e da base usada no comissionamento do período selecionado."
             >
               <div className="vtur-commission-kpi-grid">
                 <div className="vtur-commission-kpi-card vtur-commission-kpi-positive">
@@ -1220,7 +1220,7 @@ export default function ComissionamentoIsland() {
                   <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(metaGeral?.meta_geral || 0)}</strong>
                 </div>
                 <div className="vtur-commission-kpi-card vtur-commission-kpi-warning">
-                  <span className="vtur-commission-kpi-label">{`Total bruto (${resumo.pctMetaGeral.toFixed(2).replace(".", ",")}%)`}</span>
+                  <span className="vtur-commission-kpi-label">{`Base bruta comissão (${resumo.pctMetaGeral.toFixed(2).replace(".", ",")}%)`}</span>
                   <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(resumo.totalBruto)}</strong>
                 </div>
                 <div className="vtur-commission-kpi-card vtur-commission-kpi-info">
@@ -1228,7 +1228,7 @@ export default function ComissionamentoIsland() {
                   <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(resumo.totalTaxas)}</strong>
                 </div>
                 <div className="vtur-commission-kpi-card vtur-commission-kpi-accent">
-                  <span className="vtur-commission-kpi-label">Total líquido</span>
+                  <span className="vtur-commission-kpi-label">Base líquida comissão</span>
                   <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(resumo.totalLiquido)}</strong>
                 </div>
                 <div className="vtur-commission-kpi-card vtur-commission-kpi-neutral">

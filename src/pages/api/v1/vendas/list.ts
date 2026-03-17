@@ -1,6 +1,7 @@
 import { createServerClient } from "../../../../lib/supabaseServer";
 import { kvCache } from "../../../../lib/kvCache";
 import { MODULO_ALIASES } from "../../../../config/modulos";
+import { computeVendasAggFromRows, fetchVendasAggregateRows } from "./_aggregates";
 
 import { getSupabaseEnv } from "../../users";
 const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv();
@@ -295,6 +296,8 @@ export async function GET({ request }: { request: Request }) {
       }
     }
 
+    const recibosRelation = inicio && fim ? "recibos:vendas_recibos!inner" : "recibos:vendas_recibos";
+
     const baseSelect = `
       id,
       vendedor_id,
@@ -314,7 +317,7 @@ export async function GET({ request }: { request: Request }) {
         nome,
         cidade_id
       ),
-      recibos:vendas_recibos (
+      ${recibosRelation} (
         id,
         venda_id,
         produto_id,
@@ -342,7 +345,7 @@ export async function GET({ request }: { request: Request }) {
       query = query.eq("id", openId);
     } else {
       if (inicio && fim) {
-        query = query.gte("data_venda", inicio).lte("data_venda", fim);
+        query = query.gte("recibos.data_venda", inicio).lte("recibos.data_venda", fim);
       }
       if (companyId) {
         query = query.eq("company_id", companyId);
@@ -364,35 +367,20 @@ export async function GET({ request }: { request: Request }) {
     let kpis: { totalVendas: number; totalTaxas: number; totalLiquido: number; totalSeguro: number } | null = null;
     if (includeKpis && !openId) {
       const hasDates = Boolean(inicio && fim);
-      const { data: rpcData, error: rpcErr } = await client.rpc("rpc_vendas_kpis", {
-        p_company_id: companyId || null,
-        p_vendedor_ids: vendedorIds.length > 0 ? vendedorIds : null,
-        p_inicio: hasDates ? inicio : null,
-        p_fim: hasDates ? fim : null,
+      const aggRows = await fetchVendasAggregateRows(client, {
+        companyId: companyId || null,
+        vendedorIds: vendedorIds.length > 0 ? vendedorIds : null,
       });
-
-      if (!rpcErr) {
-        const row = Array.isArray(rpcData) ? rpcData[0] : rpcData;
-        const totalVendas = Number((row as any)?.total_vendas || 0);
-        const totalTaxas = Number((row as any)?.total_taxas || 0);
-        const totalSeguro = Number((row as any)?.total_seguro || 0);
-        kpis = {
-          totalVendas,
-          totalTaxas,
-          totalLiquido: totalVendas - totalTaxas,
-          totalSeguro,
-        };
-      } else {
-        const errCode = String((rpcErr as any)?.code || "");
-        const errMsg = String((rpcErr as any)?.message || "").toLowerCase();
-        const rpcNaoExiste =
-          errCode === "42883" ||
-          (errMsg.includes("rpc_vendas_kpis") && (errMsg.includes("does not exist") || errMsg.includes("could not find")));
-        if (!rpcNaoExiste) {
-          throw rpcErr;
-        }
-        kpis = null;
-      }
+      const agg = computeVendasAggFromRows(aggRows, {
+        inicio: hasDates ? inicio : null,
+        fim: hasDates ? fim : null,
+      });
+      kpis = {
+        totalVendas: agg.totalVendas,
+        totalTaxas: agg.totalTaxas,
+        totalLiquido: agg.totalLiquido,
+        totalSeguro: agg.totalSeguro,
+      };
     }
 
     const payload = {

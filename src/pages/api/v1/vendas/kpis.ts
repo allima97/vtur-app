@@ -1,5 +1,6 @@
 import { createServerClient } from "../../../../lib/supabaseServer";
 import { kvCache } from "../../../../lib/kvCache";
+import { computeVendasAggFromRows, fetchVendasAggregateRows } from "./_aggregates";
 
 import { getSupabaseEnv } from "../../users";
 const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv();
@@ -70,10 +71,6 @@ function writeCache(key: string, payload: unknown) {
     if (firstKey) cache.delete(firstKey);
   }
   cache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, payload });
-}
-
-function clamp01(value: number) {
-  return Math.max(0, Math.min(1, value));
 }
 
 function isSeguroRecibo(recibo: any) {
@@ -233,111 +230,20 @@ export async function GET({ request }: { request: Request }) {
       }
     }
 
-    const rpcPayload = await (async () => {
-      const { data: rpcData, error: rpcErr } = await client.rpc("rpc_vendas_kpis", {
-        p_company_id: companyId || null,
-        p_vendedor_ids: vendedorIds.length > 0 ? vendedorIds : null,
-        p_inicio: hasDates ? inicio : null,
-        p_fim: hasDates ? fim : null,
-      });
-
-      if (!rpcErr) {
-        const row = Array.isArray(rpcData) ? rpcData[0] : rpcData;
-        const totalVendas = Number((row as any)?.total_vendas || 0);
-        const totalTaxas = Number((row as any)?.total_taxas || 0);
-        const totalSeguro = Number((row as any)?.total_seguro || 0);
-        return {
-          totalVendas,
-          totalTaxas,
-          totalLiquido: totalVendas - totalTaxas,
-          totalSeguro,
-        };
-      }
-
-      const errCode = String((rpcErr as any)?.code || "");
-      const errMsg = String((rpcErr as any)?.message || "").toLowerCase();
-      const podeFallback =
-        errCode === "42883" ||
-        (errMsg.includes("rpc_vendas_kpis") && (errMsg.includes("does not exist") || errMsg.includes("could not find")));
-
-      if (!podeFallback) {
-        throw rpcErr;
-      }
-
-      // Fallback (enquanto a migration do RPC não estiver aplicada)
-      let query = client
-        .from("vendas")
-        .select(
-          `
-          id,
-          vendedor_id,
-          company_id,
-          data_venda,
-          cancelada,
-          valor_total_bruto,
-          valor_total,
-          valor_taxas,
-          recibos:vendas_recibos${hasDates ? "!inner" : ""} (
-            venda_id,
-            data_venda,
-            valor_total,
-            valor_taxas,
-            valor_du,
-            tipo_produtos (id, nome, tipo)
-          )
-        `
-        );
-
-      query = query.eq("cancelada", false);
-
-      if (hasDates) {
-        // Competência por recibo: filtra pelo mês do recibo.
-        query = query.gte("recibos.data_venda", inicio).lte("recibos.data_venda", fim);
-      }
-      if (companyId) {
-        query = query.eq("company_id", companyId);
-      }
-      if (vendedorIds.length > 0) {
-        query = query.in("vendedor_id", vendedorIds);
-      }
-
-      const { data: vendasData, error: vendasError } = await query;
-      if (vendasError) throw vendasError;
-
-      let totalVendas = 0;
-      let totalTaxas = 0;
-      let totalSeguro = 0;
-
-      (vendasData || []).forEach((venda: any) => {
-        const vendaId = String(venda?.id || "").trim();
-        if (!vendaId) return;
-
-        const recibos = Array.isArray(venda?.recibos) ? venda.recibos : [];
-        if (recibos.length === 0) {
-          totalVendas += Number(venda?.valor_total_bruto ?? venda?.valor_total ?? 0);
-          totalTaxas += Number(venda?.valor_taxas || 0);
-          return;
-        }
-
-        recibos.forEach((r: any) => {
-          const bruto = Number(r?.valor_total || 0);
-          const taxasBrutas = Number(r?.valor_taxas || 0);
-          const du = Number(r?.valor_du || 0);
-          totalVendas += bruto;
-          totalTaxas += Math.max(0, taxasBrutas - du);
-          if (isSeguroRecibo(r)) {
-            totalSeguro += bruto;
-          }
-        });
-      });
-
-      return {
-        totalVendas,
-        totalTaxas,
-        totalLiquido: totalVendas - totalTaxas,
-        totalSeguro,
-      };
-    })();
+    const rows = await fetchVendasAggregateRows(client, {
+      companyId: companyId || null,
+      vendedorIds: vendedorIds.length > 0 ? vendedorIds : null,
+    });
+    const agg = computeVendasAggFromRows(rows, {
+      inicio: hasDates ? inicio : null,
+      fim: hasDates ? fim : null,
+    });
+    const rpcPayload = {
+      totalVendas: agg.totalVendas,
+      totalTaxas: agg.totalTaxas,
+      totalLiquido: agg.totalLiquido,
+      totalSeguro: agg.totalSeguro,
+    };
 
     if (!noCache) {
       writeCache(cacheKey, rpcPayload);

@@ -2030,7 +2030,7 @@ export default function RelatorioVendasIsland() {
         <AppCard
           className="mb-3"
           title="Resumo do relatório"
-          subtitle="Volume de recibos, faturamento, taxas, líquido, ticket médio e comissão do recorte atual."
+          subtitle="Volume de recibos e base financeira do recorte atual, usando a mesma lógica de comissão do relatório."
         >
           <div className="vtur-quote-summary-grid">
             <div className="vtur-quote-summary-item">
@@ -2038,7 +2038,7 @@ export default function RelatorioVendasIsland() {
               <strong>{totalRecibos}</strong>
             </div>
             <div className="vtur-quote-summary-item">
-              <span className="vtur-quote-summary-label">Faturamento</span>
+              <span className="vtur-quote-summary-label">Base bruta</span>
               <strong>{formatCurrency(somaValores)}</strong>
             </div>
             <div className="vtur-quote-summary-item">
@@ -2046,7 +2046,7 @@ export default function RelatorioVendasIsland() {
               <strong>{formatCurrency(somaTaxas)}</strong>
             </div>
             <div className="vtur-quote-summary-item">
-              <span className="vtur-quote-summary-label">Líquido</span>
+              <span className="vtur-quote-summary-label">Base líquida</span>
               <strong>{formatCurrency(somaLiquido)}</strong>
             </div>
             <div className="vtur-quote-summary-item">
