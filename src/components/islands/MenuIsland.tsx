@@ -484,7 +484,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "informativos",
       href: "/operacao/recados",
       active: "operacao_recados",
-      icon: "pi pi-file",
+      icon: "pi pi-comments",
       label: (
         <span className="sidebar-link-label">
           Mural de Recados
@@ -784,7 +784,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "parametros",
       href: "/parametros/avisos",
       active: "parametros-avisos",
-      icon: "pi pi-comments",
+      icon: "pi pi-share-alt",
       label: "CRM",
       canShow: canMenuExact("Avisos") || canMenuExact("ParametrosAvisos") || canMenuExact("Parametros"),
     });

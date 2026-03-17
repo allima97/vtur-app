@@ -2,7 +2,6 @@ import React, { useMemo, useRef, useState, useCallback, useEffect } from "react"
 import { formatNumberBR } from "../../lib/format";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import FlightDetailsModal, { FlightDetails } from "../ui/FlightDetailsModal";
-import CalculatorModal from "../ui/CalculatorModal";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import AlertMessage from "../ui/AlertMessage";
 import TableActions from "../ui/TableActions";
@@ -163,7 +162,6 @@ export default function QuoteDetailIsland(props: {
   const [exportDiscount, setExportDiscount] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [flightModal, setFlightModal] = useState<{ details: FlightDetails; title?: string } | null>(null);
-  const [showCalculator, setShowCalculator] = useState(false);
   const subtotalAtual = useMemo(
     () => items.reduce((sum, item) => sum + Number(item.total_amount || 0), 0),
     [items]
@@ -621,15 +619,6 @@ export default function QuoteDetailIsland(props: {
               >
                 PDF somente total
               </AppButton>
-              <AppButton
-                type="button"
-                variant="secondary"
-                className="btn-calculator-trigger"
-                onClick={() => setShowCalculator(true)}
-                aria-label="Calculadora"
-                title="Calculadora"
-                icon="pi pi-calculator"
-              />
             </div>
           }
         >
@@ -1167,7 +1156,7 @@ export default function QuoteDetailIsland(props: {
           </div>
         </AppCard>
 
-        <div className="vtur-form-actions">
+        <div className="vtur-form-actions quote-detail-form-actions">
           {isEditing ? (
             <>
               <AppButton
@@ -1219,10 +1208,6 @@ export default function QuoteDetailIsland(props: {
           confirmVariant="danger"
           onCancel={() => setItemParaExcluir(null)}
           onConfirm={confirmarRemocaoItem}
-        />
-        <CalculatorModal
-          open={showCalculator}
-          onClose={() => setShowCalculator(false)}
         />
       </div>
     </AppPrimerProvider>

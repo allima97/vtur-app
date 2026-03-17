@@ -445,7 +445,9 @@ function toLineChartConfig(
   const podeVerDashboard = can("Dashboard");
   const podeVerOperacao = can("Operacao");
   const podeVerConsultoria = can("Consultoria Online") || can("Consultoria");
-  const showRankingView = userCtx?.papel === "VENDEDOR";
+  const showRankingView = Boolean(
+    userCtx && userCtx.papel !== "GESTOR" && userCtx.papel !== "ADMIN" && userCtx.papel !== "ADMINISTRADOR"
+  );
   const assinaturaUsuario = useMemo(() => {
     const nome = String(userCtx?.nome || "").trim();
     return nome || "André Lima";
@@ -2335,15 +2337,6 @@ function toLineChartConfig(
                 >
                   Filtros
                 </AppButton>
-                <AppButton
-                  type="button"
-                  variant="secondary"
-                  className="btn-calculator-trigger dashboard-mobile-calculator-btn"
-                  onClick={() => setShowCalculator(true)}
-                  aria-label="Calculadora"
-                  title="Calculadora"
-                  icon="pi pi-calculator"
-                />
               </div>
               <AppButton type="button" variant="primary" onClick={() => setShowCustomize(true)}>
                 Personalizar dashboard

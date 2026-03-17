@@ -102,6 +102,7 @@ export const ROTAS_MODULOS: Record<string, string> = {
   "/relatorios/vendas-por-destino": "RelatorioDestinos",
   "/relatorios/vendas-por-produto": "RelatorioProdutos",
   "/relatorios/vendas-por-cliente": "RelatorioClientes",
+  "/relatorios/ranking-vendas/view": "Dashboard",
   "/relatorios/ranking-vendas": "Ranking de vendas",
   "/parametros": "Parametros",
   "/parametros/tipo-pacotes": "TipoPacotes",

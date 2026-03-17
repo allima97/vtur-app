@@ -123,22 +123,24 @@ export async function GET({ request }: { request: Request }) {
     const tipoName = String((perfil as any)?.user_types?.name || "");
     const papel = resolvePapel(tipoName);
     const viewMode = viewParam || papel === "VENDEDOR";
+    const companyViewMode =
+      viewMode && papel !== "ADMIN" && papel !== "MASTER" && papel !== "GESTOR";
 
 
     if (papel !== "ADMIN") {
-      const modulos = viewMode && papel === "VENDEDOR"
+      const modulos = companyViewMode
         ? ["dashboard", "relatorios", "relatorios_ranking_vendas"]
         : ["relatorios", "relatorios_ranking_vendas"];
       const denied = await requireModuloView(client, user.id, modulos, "Sem acesso a Relatorios.");
       if (denied) return denied;
     }
 
-    if (papel !== "GESTOR" && papel !== "MASTER" && !(viewMode && papel === "VENDEDOR")) {
+    if (papel !== "GESTOR" && papel !== "MASTER" && !companyViewMode) {
       return new Response("Sem acesso ao ranking.", { status: 403 });
     }
 
     let companyId = companyIdParam;
-    if (viewMode && papel === "VENDEDOR") {
+    if (companyViewMode) {
       // Service role check removido: use apenas permissões do usuário logado
       let resolvedCompanyId = "";
       try {
@@ -229,7 +231,7 @@ export async function GET({ request }: { request: Request }) {
       // cache local removido: usar apenas kvCache
     }
 
-    const dataClient = viewMode && papel === "VENDEDOR" ? supabaseServer : client;
+    const dataClient = companyViewMode ? supabaseServer : client;
 
     let paramsPayload = { usar_taxas_na_meta: true, foco_valor: "bruto" };
     if (companyId) {

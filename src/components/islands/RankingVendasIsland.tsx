@@ -238,11 +238,10 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
 
         const tipo = String((usuarioDb as Usuario | null)?.user_types?.name || "").toUpperCase();
         const isGestorTipo = tipo.includes("GESTOR");
-        const isVendedor = tipo.includes("VENDEDOR");
         let nextPapel: Papel = "OUTRO";
         if (tipo.includes("MASTER")) nextPapel = "MASTER";
         else if (isGestorTipo) nextPapel = "GESTOR";
-        else if (effectiveViewOnly && isVendedor) nextPapel = "VIEWER";
+        else if (effectiveViewOnly) nextPapel = "VIEWER";
         else if (podeVer) nextPapel = "GESTOR";
         setPapel(nextPapel);
         setCompanyId(usuarioDb?.company_id || null);
@@ -312,7 +311,7 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
     }
 
     loadUser();
-  }, [loadingPerm]);
+  }, [effectiveViewOnly, loadingPerm, podeVer]);
 
   useEffect(() => {
     if (papel !== "MASTER") return;
