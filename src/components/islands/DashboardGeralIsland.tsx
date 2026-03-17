@@ -205,7 +205,7 @@ const ALL_WIDGETS: { id: WidgetId; titulo: string }[] = [
   { id: "vendas_destino", titulo: "Vendas por destino" },
   { id: "vendas_produto", titulo: "Vendas por produto" },
   { id: "timeline", titulo: "Evolução das vendas" },
-  { id: "aniversariantes_clientes", titulo: "Aniversariantes (clientes e acompanhantes)" },
+  { id: "aniversariantes_clientes", titulo: "Aniversariantes" },
   { id: "orcamentos", titulo: "Orçamentos recentes" },
   { id: "consultorias", titulo: "Lembretes de consultoria" },
   { id: "viagens", titulo: "Próximas viagens" },

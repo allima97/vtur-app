@@ -286,7 +286,7 @@ const GESTOR_WIDGETS: { id: GestorWidgetId; titulo: string }[] = [
   { id: "ranking", titulo: "Ranking da equipe" },
   { id: "vendas_consultor", titulo: "Vendas por consultor" },
   { id: "evolucao", titulo: "Evolução de vendas" },
-  { id: "aniversariantes_clientes", titulo: "Aniversariantes (clientes e acompanhantes)" },
+  { id: "aniversariantes_clientes", titulo: "Aniversariantes" },
   { id: "orcamentos", titulo: "Orçamentos recentes" },
   { id: "viagens", titulo: "Próximas viagens" },
   { id: "follow_up", titulo: "Follow-up" },
