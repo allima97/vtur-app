@@ -527,7 +527,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "informativos",
       href: "/perfil/escala",
       active: "perfil-escala",
-      icon: "pi pi-calendar",
+      icon: "pi pi-clock",
       label: "Minha Escala",
       canShow: menuIsVendedor,
     });
@@ -538,7 +538,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "operacao",
       href: "/vendas/consulta",
       active: "vendas",
-      icon: "pi pi-file",
+      icon: "pi pi-money-bill",
       label: "Vendas",
       canShow: canMenuExact("Vendas"),
     });
