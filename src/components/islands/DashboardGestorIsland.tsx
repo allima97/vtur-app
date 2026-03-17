@@ -291,6 +291,14 @@ const GESTOR_WIDGETS: { id: GestorWidgetId; titulo: string }[] = [
   { id: "viagens", titulo: "Próximas viagens" },
   { id: "follow_up", titulo: "Follow-up" },
 ];
+
+const MOBILE_ACCORDION_WIDGETS: GestorWidgetId[] = [
+  "aniversariantes_clientes",
+  "orcamentos",
+  "viagens",
+  "follow_up",
+];
+
 const GESTOR_KPIS: { id: GestorKpiId; titulo: string }[] = [
   { id: "kpi_vendas", titulo: "Vendas da equipe" },
   { id: "kpi_qtd_vendas", titulo: "Qtd. Vendas" },
@@ -497,8 +505,27 @@ function DashboardGestorIslandInner() {
 
   const widgetAtivo = (id: GestorWidgetId) => widgetVisible[id] !== false;
   const kpiAtivo = (id: GestorKpiId) => kpiVisible[id] !== false;
-  const toggleMobileWidget = (id: GestorWidgetId) =>
-    setMobileWidgetOpen((prev) => ({ ...prev, [id]: !prev[id] }));
+  const toggleMobileWidget = (id: GestorWidgetId) => {
+    if (!MOBILE_ACCORDION_WIDGETS.includes(id)) {
+      setMobileWidgetOpen((prev) => ({ ...prev, [id]: !prev[id] }));
+      return;
+    }
+
+    setMobileWidgetOpen((prev) => {
+      const shouldOpen = !prev[id];
+      const next = { ...prev };
+
+      MOBILE_ACCORDION_WIDGETS.forEach((widgetId) => {
+        next[widgetId] = false;
+      });
+
+      if (shouldOpen) {
+        next[id] = true;
+      }
+
+      return next;
+    });
+  };
 
   const toggleWidget = (id: GestorWidgetId) => {
     const nextVisible = { ...widgetVisible, [id]: !widgetVisible[id] };
@@ -1483,14 +1510,14 @@ function DashboardGestorIslandInner() {
               label="Data Início"
               type="date"
               value={inicio}
-              onChange={(e) => setInicio(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInicio(e.target.value)}
             />
             <AppField
               label="Data Final"
               type="date"
               min={inicio || undefined}
               value={fim}
-              onChange={(e) => setFim(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFim(e.target.value)}
             />
             {isMaster && (
               <>
@@ -1498,7 +1525,7 @@ function DashboardGestorIslandInner() {
                   as="select"
                   label="Filial"
                   value={masterScope.empresaSelecionada}
-                  onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => masterScope.setEmpresaSelecionada(e.target.value)}
                   options={[
                     { value: "all", label: "Todas" },
                     ...masterScope.empresasAprovadas.map((empresa) => ({
@@ -1511,7 +1538,7 @@ function DashboardGestorIslandInner() {
                   as="select"
                   label="Equipe"
                   value={masterScope.gestorSelecionado}
-                  onChange={(e) => masterScope.setGestorSelecionado(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => masterScope.setGestorSelecionado(e.target.value)}
                   options={[
                     { value: "all", label: "Todas" },
                     ...masterScope.gestoresDisponiveis.map((gestor) => ({
@@ -1524,7 +1551,7 @@ function DashboardGestorIslandInner() {
                   as="select"
                   label="Vendedor"
                   value={masterScope.vendedorSelecionado}
-                  onChange={(e) => masterScope.setVendedorSelecionado(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => masterScope.setVendedorSelecionado(e.target.value)}
                   options={[
                     { value: "all", label: "Todos" },
                     ...masterScope.vendedoresDisponiveis.map((vendedor) => ({
@@ -1543,8 +1570,7 @@ function DashboardGestorIslandInner() {
         )}
 
         {widgetOrder.map((id) => {
-          const isMobileCollapsible =
-            id === "aniversariantes_clientes" || id === "orcamentos" || id === "viagens" || id === "follow_up";
+          const isMobileCollapsible = MOBILE_ACCORDION_WIDGETS.includes(id);
           const node = renderWidget(id);
           if (!node) return null;
 
