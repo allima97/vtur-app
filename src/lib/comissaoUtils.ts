@@ -27,7 +27,48 @@ export type ParametrosComissao = {
   usar_taxas_na_meta: boolean;
   foco_valor?: "bruto" | "liquido";
   foco_faturamento?: "bruto" | "liquido";
+  conciliacao_sobrepoe_vendas?: boolean;
+  conciliacao_regra_ativa?: boolean;
+  conciliacao_meta_nao_atingida?: number | null;
+  conciliacao_meta_atingida?: number | null;
+  conciliacao_super_meta?: number | null;
 };
+
+export function hasConciliacaoCommissionRule(params?: ParametrosComissao | null) {
+  if (!params?.conciliacao_regra_ativa) return false;
+  return (
+    params.conciliacao_meta_nao_atingida != null ||
+    params.conciliacao_meta_atingida != null ||
+    params.conciliacao_super_meta != null
+  );
+}
+
+export function calcularPctConciliacao(
+  params: ParametrosComissao | null | undefined,
+  pctMeta: number
+) {
+  if (!hasConciliacaoCommissionRule(params)) return 0;
+
+  const pctNao =
+    params?.conciliacao_meta_nao_atingida ??
+    params?.conciliacao_meta_atingida ??
+    params?.conciliacao_super_meta ??
+    0;
+  const pctAt =
+    params?.conciliacao_meta_atingida ??
+    params?.conciliacao_meta_nao_atingida ??
+    params?.conciliacao_super_meta ??
+    0;
+  const pctSup =
+    params?.conciliacao_super_meta ??
+    params?.conciliacao_meta_atingida ??
+    params?.conciliacao_meta_nao_atingida ??
+    0;
+
+  if (pctMeta < 100) return pctNao;
+  if (pctMeta >= 120) return pctSup;
+  return pctAt;
+}
 
 export function calcularPctEscalonavel(regra: Regra, pctMeta: number) {
   const faixa = pctMeta >= 0 ? (pctMeta < 100 ? "PRE" : "POS") : "PRE";

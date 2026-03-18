@@ -92,6 +92,10 @@ type RankingVendaRecibo = {
   valor_du?: number | null;
   data_venda?: string | null;
   produto_id: string | null;
+  valor_meta_override?: number | null;
+  valor_liquido_override?: number | null;
+  valor_comissao_loja?: number | null;
+  percentual_comissao_loja?: number | null;
   tipo_produtos?: { id: string; nome: string | null } | null;
 };
 
@@ -112,14 +116,12 @@ async function fetchConciliacaoRankingVendas(params: {
   const { dataClient, companyId, inicio, fim, vendedorIds } = params;
   if (!companyId) return null;
 
-  const concRows: any[] = [];
   const pageSize = 1000;
+  const relevantDocs = new Set<string>();
   for (let offset = 0; offset < 10000; offset += pageSize) {
     const { data, error } = await dataClient
       .from("conciliacao_recibos")
-      .select(
-        "id, movimento_data, valor_lancamentos, valor_taxas, venda_id, venda_recibo_id, ranking_vendedor_id, ranking_produto_id"
-      )
+      .select("documento")
       .eq("company_id", companyId)
       .in("status", ["BAIXA", "OPFAX"] as any)
       .gte("movimento_data", inicio)
@@ -128,8 +130,35 @@ async function fetchConciliacaoRankingVendas(params: {
       .range(offset, offset + pageSize - 1);
     if (error) throw error;
     const chunk = Array.isArray(data) ? data : [];
-    concRows.push(...chunk);
+    chunk.forEach((row: any) => {
+      const documento = String(row?.documento || "").trim();
+      if (documento) relevantDocs.add(documento);
+    });
     if (chunk.length < pageSize) break;
+  }
+
+  if (relevantDocs.size === 0) return null;
+
+  const concRows: any[] = [];
+  const documentos = Array.from(relevantDocs);
+  for (let i = 0; i < documentos.length; i += 200) {
+    const batch = documentos.slice(i, i + 200);
+    for (let offset = 0; offset < 10000; offset += pageSize) {
+      const { data, error } = await dataClient
+        .from("conciliacao_recibos")
+        .select(
+          "id, documento, descricao, movimento_data, status, conciliado, valor_lancamentos, valor_taxas, valor_descontos, valor_abatimentos, valor_venda_real, valor_comissao_loja, percentual_comissao_loja, is_seguro_viagem, venda_id, venda_recibo_id, ranking_vendedor_id, ranking_produto_id"
+        )
+        .eq("company_id", companyId)
+        .in("status", ["BAIXA", "OPFAX"] as any)
+        .in("documento", batch)
+        .order("movimento_data", { ascending: true })
+        .range(offset, offset + pageSize - 1);
+      if (error) throw error;
+      const chunk = Array.isArray(data) ? data : [];
+      concRows.push(...chunk);
+      if (chunk.length < pageSize) break;
+    }
   }
 
   if (concRows.length === 0) return null;
@@ -181,6 +210,18 @@ async function fetchConciliacaoRankingVendas(params: {
     )
   );
 
+  let seguroFallbackId: string | null = null;
+  const { data: seguroRows, error: seguroErr } = await dataClient
+    .from("tipo_produtos")
+    .select("id, nome")
+    .ilike("nome", "%seguro%")
+    .limit(10);
+  if (seguroErr) throw seguroErr;
+  seguroFallbackId = Array.isArray(seguroRows) && seguroRows.length > 0 ? String(seguroRows[0]?.id || "").trim() || null : null;
+  if (seguroFallbackId) {
+    produtoIds.push(seguroFallbackId);
+  }
+
   const produtosMap = new Map<string, { id: string; nome: string | null }>();
   if (produtoIds.length > 0) {
     const { data: produtosData, error: produtosErr } = await dataClient
@@ -197,30 +238,80 @@ async function fetchConciliacaoRankingVendas(params: {
   }
 
   const allowedVendedores = new Set(vendedorIds);
-  const rankingRows: RankingVendaRow[] = concRows
-    .map((row: any) => {
-      const vendaId = String(row?.venda_id || "").trim();
-      const vendaReciboId = String(row?.venda_recibo_id || "").trim();
-      const linkedVendedorId = vendaId ? vendasMap.get(vendaId)?.vendedor_id || null : null;
-      const rankingVendedorId = row?.ranking_vendedor_id ? String(row.ranking_vendedor_id) : null;
-      const vendedorId = linkedVendedorId || rankingVendedorId;
+  const concRowsByDocumento = new Map<string, any[]>();
+  concRows.forEach((row: any) => {
+    const documento = String(row?.documento || "").trim();
+    if (!documento) return;
+    const bucket = concRowsByDocumento.get(documento) || [];
+    bucket.push(row);
+    concRowsByDocumento.set(documento, bucket);
+  });
+
+  const rankingRows: RankingVendaRow[] = Array.from(concRowsByDocumento.entries())
+    .map(([documento, rows]) => {
+      const sortedRows = [...rows].sort((a, b) =>
+        String(a?.movimento_data || "").localeCompare(String(b?.movimento_data || ""))
+      );
+      const baixaRows = sortedRows.filter((row) => String(row?.status || "").toUpperCase() === "BAIXA");
+      const confirmed = baixaRows.length > 0;
+      const valuedBaixa = baixaRows.find((row) => Number(row?.valor_venda_real || row?.valor_lancamentos || 0) > 0);
+      const valuedOpfax = sortedRows.find(
+        (row) =>
+          String(row?.status || "").toUpperCase() === "OPFAX" &&
+          Number(row?.valor_venda_real || row?.valor_lancamentos || 0) > 0
+      );
+      const sourceRow =
+        valuedBaixa ||
+        (confirmed ? valuedOpfax : null) ||
+        (confirmed ? baixaRows[0] : null) ||
+        null;
+
+      if (!sourceRow) return null;
+      if (!confirmed && String(sourceRow?.status || "").toUpperCase() === "OPFAX") return null;
+
+      const effectiveDate = String(sourceRow?.movimento_data || "").trim();
+      if (!effectiveDate || effectiveDate < inicio || effectiveDate > fim) return null;
+
+      const linkedVendaId = sortedRows
+        .map((row) => String(row?.venda_id || "").trim())
+        .find(Boolean);
+      const linkedReciboId = sortedRows
+        .map((row) => String(row?.venda_recibo_id || "").trim())
+        .find(Boolean);
+      const linkedVendedorId = linkedVendaId ? vendasMap.get(linkedVendaId)?.vendedor_id || null : null;
+      const rankingVendedorId = sortedRows
+        .map((row) => (row?.ranking_vendedor_id ? String(row.ranking_vendedor_id) : null))
+        .find(Boolean);
+      const vendedorId = linkedVendedorId || rankingVendedorId || null;
       if (!vendedorId || !allowedVendedores.has(vendedorId)) return null;
 
-      const linkedProdutoId = vendaReciboId ? recibosMap.get(vendaReciboId)?.produto_id || null : null;
-      const produtoId = linkedProdutoId || (row?.ranking_produto_id ? String(row.ranking_produto_id) : null);
+      const linkedProdutoId = linkedReciboId ? recibosMap.get(linkedReciboId)?.produto_id || null : null;
+      const manualProdutoId = sortedRows
+        .map((row) => (row?.ranking_produto_id ? String(row.ranking_produto_id) : null))
+        .find(Boolean);
+      const isSeguro = sortedRows.some((row) => Boolean(row?.is_seguro_viagem));
+      const produtoId = linkedProdutoId || manualProdutoId || (isSeguro ? seguroFallbackId : null);
       const produto = produtoId ? produtosMap.get(produtoId) || null : null;
 
+      const valorMeta = Number(sourceRow?.valor_venda_real || 0);
+      const taxas = Number(sourceRow?.valor_taxas || 0);
+      const bruto = valorMeta > 0 ? valorMeta + taxas : Number(sourceRow?.valor_lancamentos || 0);
+
       return {
-        id: `conc:${String(row?.id || "")}`,
-        data_venda: String(row?.movimento_data || "").trim() || inicio,
+        id: `conc:${documento}`,
+        data_venda: effectiveDate,
         vendedor_id: vendedorId,
         vendas_recibos: [
           {
-            valor_total: row?.valor_lancamentos ?? null,
-            valor_taxas: row?.valor_taxas ?? null,
+            valor_total: bruto || null,
+            valor_taxas: taxas || null,
             valor_du: null,
-            data_venda: String(row?.movimento_data || "").trim() || inicio,
+            data_venda: effectiveDate,
             produto_id: produtoId,
+            valor_meta_override: valorMeta || null,
+            valor_liquido_override: valorMeta || null,
+            valor_comissao_loja: sourceRow?.valor_comissao_loja ?? null,
+            percentual_comissao_loja: sourceRow?.percentual_comissao_loja ?? null,
             tipo_produtos: produto,
           },
         ],
@@ -333,7 +424,7 @@ export async function GET({ request }: { request: Request }) {
 
     if (vendorIdsParam.length === 0) {
       const emptyPayload = {
-        params: { usar_taxas_na_meta: true, foco_valor: "bruto" },
+        params: { usar_taxas_na_meta: true, foco_valor: "bruto", conciliacao_sobrepoe_vendas: false },
         vendas: [],
         metas: [],
         metasProduto: [],
@@ -378,11 +469,15 @@ export async function GET({ request }: { request: Request }) {
 
     const dataClient = companyViewMode ? supabaseServer : client;
 
-    let paramsPayload = { usar_taxas_na_meta: true, foco_valor: "bruto" };
+    let paramsPayload = {
+      usar_taxas_na_meta: true,
+      foco_valor: "bruto",
+      conciliacao_sobrepoe_vendas: false,
+    };
     if (companyId) {
       const { data: paramsData, error: paramsErr } = await dataClient
         .from("parametros_comissao")
-        .select("usar_taxas_na_meta, foco_valor")
+        .select("usar_taxas_na_meta, foco_valor, conciliacao_sobrepoe_vendas")
         .eq("company_id", companyId)
         .maybeSingle();
       if (paramsErr) throw paramsErr;
@@ -390,6 +485,7 @@ export async function GET({ request }: { request: Request }) {
         paramsPayload = {
           usar_taxas_na_meta: Boolean(paramsData.usar_taxas_na_meta),
           foco_valor: paramsData.foco_valor === "liquido" ? "liquido" : "bruto",
+          conciliacao_sobrepoe_vendas: Boolean((paramsData as any).conciliacao_sobrepoe_vendas),
         };
       }
     }

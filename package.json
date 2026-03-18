@@ -13,7 +13,7 @@
     "check:table-standardization": "node scripts/check-table-standardization.mjs",
     "audit:prime-sakai": "node scripts/audit-prime-sakai.mjs",
     "audit:prime-sakai:full": "node scripts/audit-prime-sakai.mjs --report",
-    "build": "astro build && node scripts/post-build-assetsignore.mjs",
+    "build": "node scripts/build-with-env.mjs && node scripts/post-build-assetsignore.mjs",
     "deploy:production": "npx wrangler deploy --env production",
     "preview": "astro preview",
     "clean:delivery": "node scripts/clean-delivery.mjs",

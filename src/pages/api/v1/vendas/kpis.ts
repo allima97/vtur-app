@@ -1,6 +1,6 @@
 import { createServerClient } from "../../../../lib/supabaseServer";
 import { kvCache } from "../../../../lib/kvCache";
-import { computeVendasAggFromRows, fetchVendasAggregateRows } from "./_aggregates";
+import { fetchAndComputeVendasAgg } from "./_aggregates";
 
 import { getSupabaseEnv } from "../../users";
 const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv();
@@ -230,11 +230,9 @@ export async function GET({ request }: { request: Request }) {
       }
     }
 
-    const rows = await fetchVendasAggregateRows(client, {
+    const agg = await fetchAndComputeVendasAgg(client, {
       companyId: companyId || null,
       vendedorIds: vendedorIds.length > 0 ? vendedorIds : null,
-    });
-    const agg = computeVendasAggFromRows(rows, {
       inicio: hasDates ? inicio : null,
       fim: hasDates ? fim : null,
     });

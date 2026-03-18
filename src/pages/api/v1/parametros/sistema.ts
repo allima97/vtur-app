@@ -17,6 +17,12 @@ type ParametrosPayload = {
   modo_corporativo: boolean;
   politica_cancelamento: "cancelar_venda" | "estornar_recibos";
   foco_faturamento: "bruto" | "liquido";
+  conciliacao_sobrepoe_vendas: boolean;
+  conciliacao_regra_ativa: boolean;
+  conciliacao_meta_nao_atingida: number | null;
+  conciliacao_meta_atingida: number | null;
+  conciliacao_super_meta: number | null;
+  mfa_obrigatorio: boolean;
   exportacao_pdf: boolean;
   exportacao_excel: boolean;
 };
@@ -29,6 +35,12 @@ const DEFAULT_PARAMS: ParametrosPayload = {
   modo_corporativo: false,
   politica_cancelamento: "cancelar_venda",
   foco_faturamento: "bruto",
+  conciliacao_sobrepoe_vendas: false,
+  conciliacao_regra_ativa: false,
+  conciliacao_meta_nao_atingida: null,
+  conciliacao_meta_atingida: null,
+  conciliacao_super_meta: null,
+  mfa_obrigatorio: false,
   exportacao_pdf: false,
   exportacao_excel: false,
 };
@@ -74,7 +86,7 @@ export async function GET({ request }: { request: Request }) {
     const { data, error } = await client
       .from("parametros_comissao")
       .select(
-        "id, company_id, owner_user_id, usar_taxas_na_meta, foco_valor, modo_corporativo, politica_cancelamento, foco_faturamento, exportacao_pdf, exportacao_excel, updated_at, created_at, owner_user:owner_user_id (nome_completo)"
+        "id, company_id, owner_user_id, usar_taxas_na_meta, foco_valor, modo_corporativo, politica_cancelamento, foco_faturamento, conciliacao_sobrepoe_vendas, conciliacao_regra_ativa, conciliacao_meta_nao_atingida, conciliacao_meta_atingida, conciliacao_super_meta, mfa_obrigatorio, exportacao_pdf, exportacao_excel, updated_at, created_at, owner_user:owner_user_id (nome_completo)"
       )
       .eq("company_id", companyId)
       .maybeSingle();
@@ -107,6 +119,19 @@ export async function GET({ request }: { request: Request }) {
               ? "estornar_recibos"
               : "cancelar_venda",
           foco_faturamento: data.foco_faturamento === "liquido" ? "liquido" : "bruto",
+          conciliacao_sobrepoe_vendas: !!data.conciliacao_sobrepoe_vendas,
+          conciliacao_regra_ativa: !!data.conciliacao_regra_ativa,
+          conciliacao_meta_nao_atingida:
+            data.conciliacao_meta_nao_atingida != null
+              ? Number(data.conciliacao_meta_nao_atingida)
+              : null,
+          conciliacao_meta_atingida:
+            data.conciliacao_meta_atingida != null
+              ? Number(data.conciliacao_meta_atingida)
+              : null,
+          conciliacao_super_meta:
+            data.conciliacao_super_meta != null ? Number(data.conciliacao_super_meta) : null,
+          mfa_obrigatorio: !!data.mfa_obrigatorio,
           exportacao_pdf: !!data.exportacao_pdf,
           exportacao_excel: !!data.exportacao_excel,
         },
@@ -165,6 +190,17 @@ export async function POST({ request }: { request: Request }) {
       politica_cancelamento:
         body.politica_cancelamento === "estornar_recibos" ? "estornar_recibos" : "cancelar_venda",
       foco_faturamento: body.foco_faturamento === "liquido" ? "liquido" : "bruto",
+      conciliacao_sobrepoe_vendas: Boolean(body.conciliacao_sobrepoe_vendas),
+      conciliacao_regra_ativa: Boolean(body.conciliacao_regra_ativa),
+      conciliacao_meta_nao_atingida:
+        body.conciliacao_meta_nao_atingida != null
+          ? Number(body.conciliacao_meta_nao_atingida)
+          : null,
+      conciliacao_meta_atingida:
+        body.conciliacao_meta_atingida != null ? Number(body.conciliacao_meta_atingida) : null,
+      conciliacao_super_meta:
+        body.conciliacao_super_meta != null ? Number(body.conciliacao_super_meta) : null,
+      mfa_obrigatorio: Boolean(body.mfa_obrigatorio),
       exportacao_pdf: Boolean(body.exportacao_pdf),
       exportacao_excel: Boolean(body.exportacao_excel),
     };

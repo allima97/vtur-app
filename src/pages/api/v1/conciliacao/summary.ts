@@ -16,9 +16,24 @@ function endOfMonth(value: string) {
   return d.toISOString().slice(0, 10);
 }
 
+function buildDateSeries(inicio: string, fim: string) {
+  const out: string[] = [];
+  const current = new Date(`${inicio}T12:00:00`);
+  const limit = new Date(`${fim}T12:00:00`);
+  while (current <= limit) {
+    out.push(current.toISOString().slice(0, 10));
+    current.setDate(current.getDate() + 1);
+  }
+  return out;
+}
+
 function isOperacionalStatus(status?: string | null) {
   const raw = String(status || "").toUpperCase();
   return raw === "BAIXA" || raw === "OPFAX";
+}
+
+function isPendingConciliacao(row: any) {
+  return isOperacionalStatus(row?.status) && !Boolean(row?.conciliado);
 }
 
 function isRankingPending(row: any) {
@@ -65,6 +80,7 @@ export const GET: APIRoute = async ({ request }) => {
     const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     const selectedMonth = /^\d{4}-\d{2}$/.test(month) ? month : defaultMonth;
     const historyStart = new Date(now.getFullYear(), now.getMonth() - 11, 1).toISOString().slice(0, 10);
+    const today = now.toISOString().slice(0, 10);
 
     const { data, error } = await client
       .from("conciliacao_recibos")
@@ -79,6 +95,8 @@ export const GET: APIRoute = async ({ request }) => {
     const totals = {
       importados: rows.length,
       conciliadosSistema: rows.filter((row: any) => Boolean(row?.conciliado)).length,
+      pendentesConciliacao: rows.filter((row: any) => isPendingConciliacao(row)).length,
+      pendentesImportacao: 0,
       pendentesRanking: rows.filter((row: any) => isRankingPending(row)).length,
       encontradosSistema: rows.filter((row: any) => Boolean(String(row?.venda_id || "").trim())).length,
       atribuidosRanking: rows.filter(
@@ -97,11 +115,14 @@ export const GET: APIRoute = async ({ request }) => {
         month: monthKey,
         total: 0,
         conciliadosSistema: 0,
+        pendentesConciliacao: 0,
+        pendentesImportacao: 0,
         pendentesRanking: 0,
         atribuidosRanking: 0,
       };
       monthBucket.total += 1;
       if (row?.conciliado) monthBucket.conciliadosSistema += 1;
+      if (isPendingConciliacao(row)) monthBucket.pendentesConciliacao += 1;
       if (isRankingPending(row)) monthBucket.pendentesRanking += 1;
       if (!String(row?.venda_id || "").trim() && String(row?.ranking_vendedor_id || "").trim()) {
         monthBucket.atribuidosRanking += 1;
@@ -113,17 +134,57 @@ export const GET: APIRoute = async ({ request }) => {
           date,
           total: 0,
           conciliadosSistema: 0,
+          pendentesConciliacao: 0,
+          pendentesImportacao: 0,
           pendentesRanking: 0,
           atribuidosRanking: 0,
+          status: "OK",
         };
         dayBucket.total += 1;
         if (row?.conciliado) dayBucket.conciliadosSistema += 1;
+        if (isPendingConciliacao(row)) dayBucket.pendentesConciliacao += 1;
         if (isRankingPending(row)) dayBucket.pendentesRanking += 1;
         if (!String(row?.venda_id || "").trim() && String(row?.ranking_vendedor_id || "").trim()) {
           dayBucket.atribuidosRanking += 1;
         }
         byDayMap.set(date, dayBucket);
       }
+    });
+
+    const selectedMonthStart = startOfMonth(selectedMonth);
+    const selectedMonthEnd = selectedMonth === today.slice(0, 7) ? today : endOfMonth(selectedMonth);
+
+    buildDateSeries(selectedMonthStart, selectedMonthEnd).forEach((date) => {
+      const existing = byDayMap.get(date);
+      if (!existing) {
+        byDayMap.set(date, {
+          date,
+          total: 0,
+          conciliadosSistema: 0,
+          pendentesConciliacao: 0,
+          pendentesImportacao: 1,
+          pendentesRanking: 0,
+          atribuidosRanking: 0,
+          status: "IMPORTACAO_PENDENTE",
+        });
+        totals.pendentesImportacao += 1;
+        const monthBucket = byMonthMap.get(selectedMonth) || {
+          month: selectedMonth,
+          total: 0,
+          conciliadosSistema: 0,
+          pendentesConciliacao: 0,
+          pendentesImportacao: 0,
+          pendentesRanking: 0,
+          atribuidosRanking: 0,
+        };
+        monthBucket.pendentesImportacao += 1;
+        byMonthMap.set(selectedMonth, monthBucket);
+        return;
+      }
+
+      existing.pendentesImportacao = 0;
+      existing.status = existing.pendentesConciliacao > 0 ? "CONCILIACAO_PENDENTE" : "OK";
+      byDayMap.set(date, existing);
     });
 
     const byMonth = Array.from(byMonthMap.values()).sort((a, b) => b.month.localeCompare(a.month));

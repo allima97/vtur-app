@@ -8,14 +8,6 @@ export async function logoutUsuario() {
     const { data } = await supabase.auth.getUser();
     const usuarioId = data?.user?.id || null;
 
-    // capturar IP
-    let ip = "";
-    try {
-      const resp = await fetch("https://api.ipify.org?format=json");
-      const j = await resp.json();
-      ip = j.ip || "";
-    } catch {}
-
     const userAgent =
       typeof navigator !== "undefined" ? navigator.userAgent : "";
 
@@ -25,7 +17,6 @@ export async function logoutUsuario() {
       acao: "logout",
       modulo: "login",
       detalhes: {
-        ip,
         userAgent,
       },
     });

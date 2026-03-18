@@ -7,10 +7,20 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import CalculatorModal from "../ui/CalculatorModal";
 import AlertMessage from "../ui/AlertMessage";
 import { formatCurrencyBRL, formatNumberBR } from "../../lib/format";
-import { calcularPctFixoProduto, regraProdutoTemFixo } from "../../lib/comissaoUtils";
+import {
+  calcularPctConciliacao,
+  calcularPctFixoProduto,
+  hasConciliacaoCommissionRule,
+  regraProdutoTemFixo,
+} from "../../lib/comissaoUtils";
 import { carregarTermosNaoComissionaveis, calcularNaoComissionavelPorVenda } from "../../lib/pagamentoUtils";
 import { normalizeText } from "../../lib/normalizeText";
 import { fetchGestorEquipeIdsComGestor } from "../../lib/gestorEquipe";
+import {
+  buildConciliacaoSyntheticVendas,
+  fetchEffectiveConciliacaoReceipts,
+  hasConciliacaoOverride,
+} from "../../lib/conciliacao/source";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
@@ -20,6 +30,11 @@ type Parametros = {
   usar_taxas_na_meta: boolean;
   foco_valor: "bruto" | "liquido";
   foco_faturamento: "bruto" | "liquido";
+  conciliacao_sobrepoe_vendas: boolean;
+  conciliacao_regra_ativa: boolean;
+  conciliacao_meta_nao_atingida: number | null;
+  conciliacao_meta_atingida: number | null;
+  conciliacao_super_meta: number | null;
 };
 
 type UserCtx = {
@@ -74,12 +89,16 @@ type Produto = {
 };
 
 type Recibo = {
+  id?: string | null;
   valor_total: number | null;
   valor_taxas: number | null;
   valor_du?: number | null;
   valor_rav?: number | null;
   produto_id: string | null;
   tipo_pacote?: string | null;
+  valor_bruto_override?: number | null;
+  valor_meta_override?: number | null;
+  valor_liquido_override?: number | null;
   tipo_produtos?: Produto | null;
   regra_produto?: RegraProduto | null;
 };
@@ -188,6 +207,43 @@ function formatPeriodoLabel(value: string) {
 function isSeguroProduto(produto?: Produto | null) {
   const nome = (produto?.nome || "").toLowerCase();
   return nome.includes("seguro");
+}
+
+function getReciboBrutoTotal(recibo: Recibo) {
+  if (hasConciliacaoOverride(recibo)) {
+    return Math.max(0, Number(recibo.valor_bruto_override ?? recibo.valor_total ?? 0));
+  }
+  return Math.max(0, Number(recibo.valor_total || 0));
+}
+
+function getReciboTaxasEfetivas(recibo: Recibo) {
+  if (hasConciliacaoOverride(recibo)) {
+    return Math.max(0, Number(recibo.valor_taxas ?? 0));
+  }
+  const taxasBrutas = Math.max(0, Number(recibo.valor_taxas ?? 0));
+  const du = Math.max(0, Number(recibo.valor_du ?? 0));
+  return Math.max(0, taxasBrutas - du);
+}
+
+function getReciboLiquido(recibo: Recibo) {
+  if (recibo.valor_liquido_override != null) {
+    return Math.max(0, Number(recibo.valor_liquido_override || 0));
+  }
+  const brutoSemRav = Math.max(0, Number(recibo.valor_total || 0) - Number(recibo.valor_rav || 0));
+  return Math.max(0, brutoSemRav - getReciboTaxasEfetivas(recibo));
+}
+
+function getReciboMeta(recibo: Recibo, parametros: Parametros) {
+  if (recibo.valor_meta_override != null) {
+    return Math.max(0, Number(recibo.valor_meta_override || 0));
+  }
+  const liquido = getReciboLiquido(recibo);
+  const brutoTotal = getReciboBrutoTotal(recibo);
+  return parametros.foco_valor === "liquido"
+    ? liquido
+    : parametros.usar_taxas_na_meta
+    ? brutoTotal
+    : liquido;
 }
 
 function formatPct(value: number) {
@@ -405,7 +461,8 @@ export default function ComissionamentoIsland() {
           : null
         : userCtx.companyId;
 
-      const paramsCols = "usar_taxas_na_meta, foco_valor, foco_faturamento";
+      const paramsCols =
+        "usar_taxas_na_meta, foco_valor, foco_faturamento, conciliacao_sobrepoe_vendas, conciliacao_regra_ativa, conciliacao_meta_nao_atingida, conciliacao_meta_atingida, conciliacao_super_meta";
       let paramsData: any = null;
       if (companyIdFiltro) {
         const { data } = await supabase
@@ -505,6 +562,7 @@ export default function ComissionamentoIsland() {
 	          valor_total_bruto,
 	          valor_total_pago,
             vendas_recibos!inner (
+              id,
               data_venda,
 	            valor_total,
 	            valor_taxas,
@@ -538,6 +596,7 @@ export default function ComissionamentoIsland() {
 	          valor_total_bruto,
 	          valor_total_pago,
             vendas_recibos!inner (
+              id,
               data_venda,
 	            valor_total,
 	            valor_taxas,
@@ -651,8 +710,31 @@ export default function ComissionamentoIsland() {
               foco_valor: paramsData.foco_valor === "liquido" ? "liquido" : "bruto",
               foco_faturamento:
                 paramsData.foco_faturamento === "liquido" ? "liquido" : "bruto",
+              conciliacao_sobrepoe_vendas: Boolean(paramsData.conciliacao_sobrepoe_vendas),
+              conciliacao_regra_ativa: Boolean(paramsData.conciliacao_regra_ativa),
+              conciliacao_meta_nao_atingida:
+                paramsData.conciliacao_meta_nao_atingida != null
+                  ? Number(paramsData.conciliacao_meta_nao_atingida)
+                  : null,
+              conciliacao_meta_atingida:
+                paramsData.conciliacao_meta_atingida != null
+                  ? Number(paramsData.conciliacao_meta_atingida)
+                  : null,
+              conciliacao_super_meta:
+                paramsData.conciliacao_super_meta != null
+                  ? Number(paramsData.conciliacao_super_meta)
+                  : null,
             } as Parametros)
-          : { usar_taxas_na_meta: true, foco_valor: "bruto", foco_faturamento: "bruto" }
+          : {
+              usar_taxas_na_meta: true,
+              foco_valor: "bruto",
+              foco_faturamento: "bruto",
+              conciliacao_sobrepoe_vendas: false,
+              conciliacao_regra_ativa: false,
+              conciliacao_meta_nao_atingida: null,
+              conciliacao_meta_atingida: null,
+              conciliacao_super_meta: null,
+            }
       );
       setMetasProduto((metasProdData || []) as MetaProduto[]);
       setRegras(regrasMap);
@@ -664,7 +746,33 @@ export default function ComissionamentoIsland() {
         vendasList.map((v) => v.id)
       );
       setPagamentosNaoComissionaveis(pagamentosMap);
-      setVendas(vendasList);
+      let vendasFinal = vendasList;
+      if (Boolean(paramsData?.conciliacao_sobrepoe_vendas) && companyIdFiltro) {
+        const concReceipts = await fetchEffectiveConciliacaoReceipts({
+          client: supabase,
+          companyId: companyIdFiltro,
+          inicio: periodoAtual.inicio,
+          fim: periodoAtual.fim,
+          vendedorIds: vendedorFiltro,
+        });
+        if (concReceipts.length > 0) {
+          const syntheticSales = buildConciliacaoSyntheticVendas(concReceipts);
+          const overriddenReceiptIds = new Set(
+            syntheticSales.map((sale) => sale.linked_recibo_id).filter(Boolean)
+          );
+          const baseSales = vendasList.flatMap((sale) => {
+            const recibos = (sale.vendas_recibos || []).filter(
+              (recibo) => !overriddenReceiptIds.has(String(recibo.id || "").trim())
+            );
+            if (recibos.length === 0) return [];
+            return [{ ...sale, vendas_recibos: recibos }];
+          });
+          vendasFinal = [...baseSales, ...(syntheticSales as unknown as Venda[])].sort((a, b) =>
+            String(b.data_venda || "").localeCompare(String(a.data_venda || ""))
+          );
+        }
+      }
+      setVendas(vendasFinal);
     } catch (e: any) {
       console.error(e);
       setErro("Erro ao carregar dados de comissionamento.");
@@ -718,12 +826,21 @@ export default function ComissionamentoIsland() {
     const brutoPorProduto: Record<string, number> = {};
     const liquidoPorProduto: Record<string, number> = {};
     const baseComPorProduto: Record<string, number> = {};
-    const bucketTotals: Record<string, { prodId: string; tipoPacoteKey: string; baseCom: number; valorLiquido: number }> = {};
+    const bucketTotals: Record<
+      string,
+      {
+        prodId: string;
+        tipoPacoteKey: string;
+        baseCom: number;
+        valorLiquido: number;
+        isConciliacao: boolean;
+      }
+    > = {};
 
     let baseMeta = 0;
     let totalBruto = 0;
-    let totalBrutoComissao = 0;
     let totalTaxas = 0;
+    let totalLiquido = 0;
     let comissaoGeral = 0;
     let comissaoDif = 0;
     const pctComissaoGeralSet = new Set<number>();
@@ -762,27 +879,15 @@ export default function ComissionamentoIsland() {
         const prodId = r.tipo_produtos?.id || r.produto_id || "";
         const prod = produtos[prodId];
         if (!prod) return;
-        // Regra (conforme cadastro):
-        // - `valor_total` já inclui taxas + RAV.
-        // - O atingimento de meta considera o valor total vendido.
-        // - RAV (valor_rav) não entra na base de comissão.
-        // - Taxas não comissionam, exceto DU (valor_du), que é parte comissionável das taxas.
-        const brutoTotal = Math.max(0, Number(r.valor_total || 0));
-        const brutoSemRav = Math.max(0, Number(r.valor_total || 0) - Number(r.valor_rav || 0));
-        const taxasEfetivas = Math.max(0, Number(r.valor_taxas || 0) - Number(r.valor_du || 0));
-        const liquido = Math.max(0, brutoSemRav - taxasEfetivas);
-
-        // Para meta: prioriza foco_valor; no modo bruto considera o valor total vendido.
-        const valParaMeta =
-          parametros.foco_valor === "liquido"
-            ? liquido
-            : parametros.usar_taxas_na_meta
-              ? brutoTotal
-              : liquido;
+        const brutoTotal = getReciboBrutoTotal(r);
+        const taxasEfetivas = getReciboTaxasEfetivas(r);
+        const liquido = getReciboLiquido(r);
+        const valParaMeta = getReciboMeta(r, parametros);
         // Para comissão (valor): sempre usa o líquido.
         const baseCom = liquido;
         const tipoPacoteKey = normalizeText(r.tipo_pacote || "", { trim: true, collapseWhitespace: true });
-        const bucketKey = `${prodId}::${tipoPacoteKey || "default"}`;
+        const isConciliacao = hasConciliacaoOverride(r);
+        const bucketKey = `${prodId}::${tipoPacoteKey || "default"}::${isConciliacao ? "conciliacao" : "base"}`;
 
         brutoPorProduto[prodId] = (brutoPorProduto[prodId] || 0) + brutoTotal;
         liquidoPorProduto[prodId] = (liquidoPorProduto[prodId] || 0) + liquido;
@@ -794,6 +899,7 @@ export default function ComissionamentoIsland() {
           tipoPacoteKey,
           baseCom: 0,
           valorLiquido: 0,
+          isConciliacao,
         };
         bucket.baseCom += baseCom;
         bucket.valorLiquido += liquido;
@@ -801,12 +907,10 @@ export default function ComissionamentoIsland() {
 
         if (prod.soma_na_meta) baseMeta += valParaMeta;
         totalBruto += brutoTotal;
-        totalBrutoComissao += brutoSemRav;
         totalTaxas += taxasEfetivas;
+        totalLiquido += liquido;
       });
     });
-
-    const totalLiquido = totalBrutoComissao - totalTaxas;
     const pctMetaGeral =
       metaGeral?.meta_geral && metaGeral.meta_geral > 0 ? (baseMeta / metaGeral.meta_geral) * 100 : 0;
 
@@ -831,6 +935,27 @@ export default function ComissionamentoIsland() {
       const regProdPacote = getRegraPacote(prodId, bucket.tipoPacoteKey);
       const regProdBase = regraProdutoMap[prodId];
       let regProd = regProdPacote || regProdBase;
+
+      if (bucket.isConciliacao && hasConciliacaoCommissionRule(parametros)) {
+        const pctCom = calcularPctConciliacao(parametros, pctMetaGeral);
+        const val = baseComBucket * (pctCom / 100);
+        if (pctCom > 0) {
+          if (isPassagemFacial) {
+            pctPassagemFacialSet.add(pctCom);
+          } else {
+            pctComissaoGeralSet.add(pctCom);
+          }
+        }
+        if (isPassagemFacial) {
+          comissaoPassagemFacial += val;
+        } else {
+          comissaoGeral += val;
+        }
+        if (isSeguro) {
+          comissaoSeguroViagem += val;
+        }
+        return;
+      }
 
       if (prod.regra_comissionamento === "diferenciado") {
         totalValorMetaDiferenciada += valorLiquidoProduto;

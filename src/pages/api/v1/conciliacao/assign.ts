@@ -83,9 +83,10 @@ export const POST: APIRoute = async ({ request }) => {
         return new Response("Vendedor nao pertence a empresa selecionada.", { status: 400 });
       }
       const tipoNome = String((vendedor as any)?.user_types?.name || "").toUpperCase();
-      const vendedorValido = tipoNome.includes("VENDEDOR") || tipoNome.includes("GESTOR");
+      const vendedorValido =
+        tipoNome.includes("VENDEDOR") || tipoNome.includes("GESTOR") || tipoNome.includes("MASTER");
       if (!vendedorValido) {
-        return new Response("Atribua apenas vendedores ou gestores ao ranking.", { status: 400 });
+        return new Response("Atribua apenas vendedores, gestores ou master ao ranking.", { status: 400 });
       }
     }
 

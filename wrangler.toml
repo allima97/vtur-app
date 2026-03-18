@@ -37,8 +37,8 @@ routes = [
 ]
 
 [env.production.triggers]
-# Cloudflare cron usa UTC. 23:59 (Brasil, UTC-3) ~= 02:59 UTC
-crons = ["59 2 * * *"]
+# Cloudflare cron usa UTC. 00:00 em Sao Paulo (UTC-3) = 03:00 UTC.
+crons = ["0 3 * * *"]
 
 [env.production.vars]
 ENVIRONMENT = "production"
@@ -59,7 +59,7 @@ preview_id = "60fa423718914712bec4f489d41c3dd6"
 name = "vtur-staging"
 
 [env.staging.triggers]
-crons = ["59 2 * * *"]
+crons = ["0 3 * * *"]
 
 [env.staging.vars]
 ENVIRONMENT = "staging"

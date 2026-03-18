@@ -7,6 +7,7 @@ import {
 } from "../vendas/_utils";
 import type { ConciliacaoLinhaInput } from "./_types";
 import { reconcilePendentes } from "./_reconcile";
+import { buildConciliacaoMetrics, normalizeConciliacaoStatus } from "../../../../lib/conciliacao/business";
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -46,35 +47,49 @@ export const POST: APIRoute = async ({ request }) => {
 
     const linhas = Array.isArray(body?.linhas) ? body.linhas : [];
 
-    const normalizeStatus = (value: any) => {
-      const raw = String(value || "").trim().toUpperCase();
-      if (!raw) return "OUTRO";
-      if (raw.includes("ESTORNO")) return "ESTORNO";
-      if (raw.includes("OPFAX")) return "OPFAX";
-      if (raw.includes("BAIXA")) return "BAIXA";
-      return "OUTRO";
-    };
-
     const payload = linhas
-      .map((l) => ({
-        company_id: companyId,
-        documento: String(l?.documento || "").trim(),
-        movimento_data: l?.movimento_data || movimentoData,
-        status: normalizeStatus(l?.status),
-        descricao: l?.descricao ?? null,
-        valor_lancamentos: l?.valor_lancamentos ?? null,
-        valor_taxas: l?.valor_taxas ?? null,
-        valor_descontos: l?.valor_descontos ?? null,
-        valor_abatimentos: l?.valor_abatimentos ?? null,
-        valor_calculada_loja: l?.valor_calculada_loja ?? null,
-        valor_visao_master: l?.valor_visao_master ?? null,
-        valor_opfax: l?.valor_opfax ?? null,
-        valor_saldo: l?.valor_saldo ?? null,
-        origem: l?.origem ?? origem,
-        raw: l?.raw ?? null,
-        imported_by: user.id,
-      }))
-      .filter((row) => row.documento);
+      .map((l) => {
+        const documento = String(l?.documento || "").trim();
+        const descricao = l?.descricao ?? null;
+        const metrics = buildConciliacaoMetrics({
+          descricao,
+          valorLancamentos: l?.valor_lancamentos ?? null,
+          valorTaxas: l?.valor_taxas ?? null,
+          valorDescontos: l?.valor_descontos ?? null,
+          valorAbatimentos: l?.valor_abatimentos ?? null,
+          valorSaldo: l?.valor_saldo ?? null,
+          valorOpfax: l?.valor_opfax ?? null,
+        });
+
+        return {
+          company_id: companyId,
+          documento,
+          movimento_data: l?.movimento_data || movimentoData,
+          status: normalizeConciliacaoStatus(l?.status || descricao || null),
+          descricao,
+          descricao_chave: l?.descricao_chave || metrics.descricaoChave,
+          valor_lancamentos: l?.valor_lancamentos ?? null,
+          valor_taxas: l?.valor_taxas ?? null,
+          valor_descontos: l?.valor_descontos ?? null,
+          valor_abatimentos: l?.valor_abatimentos ?? null,
+          valor_calculada_loja: l?.valor_calculada_loja ?? null,
+          valor_visao_master: l?.valor_visao_master ?? null,
+          valor_opfax: l?.valor_opfax ?? null,
+          valor_saldo: l?.valor_saldo ?? null,
+          valor_venda_real: l?.valor_venda_real ?? metrics.valorVendaReal,
+          valor_comissao_loja: l?.valor_comissao_loja ?? metrics.valorComissaoLoja,
+          percentual_comissao_loja:
+            l?.percentual_comissao_loja ?? metrics.percentualComissaoLoja,
+          faixa_comissao: l?.faixa_comissao ?? metrics.faixaComissao,
+          is_seguro_viagem: Boolean(l?.is_seguro_viagem ?? metrics.isSeguroViagem),
+          ranking_vendedor_id: l?.ranking_vendedor_id ?? null,
+          ranking_produto_id: l?.ranking_produto_id ?? null,
+          origem: l?.origem ?? origem,
+          raw: l?.raw ?? null,
+          imported_by: user.id,
+        };
+      })
+      .filter((row) => row.documento && row.movimento_data);
 
     if (payload.length === 0) {
       return new Response(JSON.stringify({ imported: 0 }), {
@@ -85,7 +100,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     const { error: upErr } = await client
       .from("conciliacao_recibos")
-      .upsert(payload as any, { onConflict: "company_id,documento" });
+      .upsert(payload as any, { onConflict: "company_id,movimento_data,documento,descricao_chave" });
     if (upErr) throw upErr;
 
     // Tentativa imediata: conciliar pendentes (inclui as recém importadas)

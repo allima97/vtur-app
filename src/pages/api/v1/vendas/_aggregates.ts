@@ -1,3 +1,7 @@
+import {
+  fetchEffectiveConciliacaoReceipts,
+} from "../../../../lib/conciliacao/source";
+
 type ProdutoRecibo = {
   id?: string | null;
   nome?: string | null;
@@ -11,6 +15,8 @@ type ReciboVenda = {
   valor_total?: number | null;
   valor_taxas?: number | null;
   valor_du?: number | null;
+  valor_bruto_override?: number | null;
+  valor_liquido_override?: number | null;
   produto_id?: string | null;
   produtos?: ProdutoRecibo | null;
 };
@@ -72,6 +78,29 @@ function isSeguroProduto(produto?: ProdutoRecibo | null) {
   return tipo.includes("seguro") || nome.includes("seguro");
 }
 
+function hasConciliacaoOverride(recibo?: ReciboVenda | null) {
+  return (
+    recibo?.valor_bruto_override != null ||
+    recibo?.valor_liquido_override != null
+  );
+}
+
+function getReciboBruto(recibo?: ReciboVenda | null) {
+  if (!recibo) return 0;
+  if (hasConciliacaoOverride(recibo)) {
+    return toNumber(recibo.valor_bruto_override ?? recibo.valor_total);
+  }
+  return toNumber(recibo.valor_total);
+}
+
+function getReciboTaxas(recibo?: ReciboVenda | null) {
+  if (!recibo) return 0;
+  if (hasConciliacaoOverride(recibo)) {
+    return toNumber(recibo.valor_taxas);
+  }
+  return Math.max(0, toNumber(recibo.valor_taxas) - toNumber(recibo.valor_du));
+}
+
 export async function fetchVendasAggregateRows(
   client: any,
   options: {
@@ -118,6 +147,119 @@ export async function fetchVendasAggregateRows(
   return (data || []) as VendaAggregateRow[];
 }
 
+async function fetchConciliacaoOverrideFlag(client: any, companyId?: string | null) {
+  if (!companyId) return false;
+  const { data } = await client
+    .from("parametros_comissao")
+    .select("conciliacao_sobrepoe_vendas")
+    .eq("company_id", companyId)
+    .maybeSingle();
+  return Boolean(data?.conciliacao_sobrepoe_vendas);
+}
+
+export async function fetchVendasAggregateRowsResolved(
+  client: any,
+  options: {
+    companyId?: string | null;
+    vendedorIds?: string[] | null;
+    inicio?: string | null;
+    fim?: string | null;
+  }
+): Promise<VendaAggregateRow[]> {
+  const { companyId, vendedorIds, inicio, fim } = options;
+  const rows = await fetchVendasAggregateRows(client, { companyId, vendedorIds });
+  const usarConciliacao = await fetchConciliacaoOverrideFlag(client, companyId);
+
+  if (!usarConciliacao || !companyId || !inicio || !fim) {
+    return rows;
+  }
+
+  const concReceipts = await fetchEffectiveConciliacaoReceipts({
+    client,
+    companyId,
+    inicio,
+    fim,
+    vendedorIds: vendedorIds || null,
+  });
+
+  if (concReceipts.length === 0) {
+    return rows;
+  }
+
+  const baseRowsById = new Map<string, VendaAggregateRow>();
+  rows.forEach((row) => {
+    const id = String(row?.id || "").trim();
+    if (!id) return;
+    baseRowsById.set(id, row);
+  });
+
+  const overriddenReceiptIds = new Set(
+    concReceipts.map((item) => String(item.linked_recibo_id || "").trim()).filter(Boolean)
+  );
+
+  const baseRows = rows.flatMap((row) => {
+    const recibosOriginais = Array.isArray(row?.vendas_recibos) ? row.vendas_recibos : [];
+    if (recibosOriginais.length === 0) return [row];
+    const recibos = recibosOriginais.filter(
+      (recibo) => !overriddenReceiptIds.has(String(recibo?.id || "").trim())
+    );
+    if (recibos.length === 0) return [];
+    return [{ ...row, vendas_recibos: recibos }];
+  });
+
+  const syntheticRows: VendaAggregateRow[] = concReceipts.map((item) => {
+    const linkedSale = item.linked_venda_id ? baseRowsById.get(String(item.linked_venda_id).trim()) : null;
+    return {
+      id: item.id,
+      vendedor_id: item.vendedor_id,
+      destino_id: linkedSale?.destino_id ?? null,
+      data_venda: item.data_venda,
+      valor_total: item.valor_bruto,
+      valor_total_bruto: item.valor_bruto,
+      valor_taxas: item.valor_taxas,
+      destinos: linkedSale?.destinos ?? null,
+      vendas_recibos: [
+        {
+          id: item.linked_recibo_id || `${item.id}:recibo`,
+          data_venda: item.data_venda,
+          valor_total: item.valor_bruto,
+          valor_taxas: item.valor_taxas,
+          valor_du: 0,
+          valor_bruto_override: item.valor_bruto,
+          valor_liquido_override: item.valor_liquido_override,
+          produto_id: item.produto_id,
+          produtos: item.produto
+            ? {
+                id: item.produto.id,
+                nome: item.produto.nome,
+                tipo: item.is_seguro_viagem ? "Seguro" : null,
+                exibe_kpi_comissao: true,
+              }
+            : null,
+        },
+      ],
+    };
+  });
+
+  return [...baseRows, ...syntheticRows];
+}
+
+export async function fetchAndComputeVendasAgg(
+  client: any,
+  options: {
+    companyId?: string | null;
+    vendedorIds?: string[] | null;
+    inicio?: string | null;
+    fim?: string | null;
+  }
+): Promise<VendasAgg> {
+  const rows = await fetchVendasAggregateRowsResolved(client, options);
+  return computeVendasAggFromRows(rows, {
+    inicio: options.inicio ?? null,
+    fim: options.fim ?? null,
+  });
+}
+
 export function computeVendasAggFromRows(
   rows: VendaAggregateRow[],
   options: {
@@ -140,10 +282,13 @@ export function computeVendasAggFromRows(
   rows.forEach((venda) => {
     const vendaDate = toDateKey(venda?.data_venda);
     const recibosAll = Array.isArray(venda?.vendas_recibos) ? venda.vendas_recibos : [];
+    const saleHasOverride = recibosAll.some((recibo) => hasConciliacaoOverride(recibo));
     const valorTotalRef = toNumber(venda?.valor_total_bruto ?? venda?.valor_total);
     const totalBrutoAll = recibosAll.reduce((sum, recibo) => sum + toNumber(recibo?.valor_total), 0);
     const fator =
-      totalBrutoAll > 0 && valorTotalRef > 0 ? clamp01(valorTotalRef / totalBrutoAll) : 1;
+      !saleHasOverride && totalBrutoAll > 0 && valorTotalRef > 0
+        ? clamp01(valorTotalRef / totalBrutoAll)
+        : 1;
     const destinoNome = String(venda?.destinos?.nome || "Sem destino");
     const vendedorId = String(venda?.vendedor_id || "unknown");
 
@@ -185,8 +330,8 @@ export function computeVendasAggFromRows(
 
     recibosPeriodo.forEach((recibo) => {
       const reciboDate = toDateKey(recibo?.data_venda) || vendaDate;
-      const bruto = toNumber(recibo?.valor_total) * fator;
-      const taxasEfetivas = Math.max(0, toNumber(recibo?.valor_taxas) - toNumber(recibo?.valor_du)) * fator;
+      const bruto = getReciboBruto(recibo) * fator;
+      const taxasEfetivas = getReciboTaxas(recibo) * fator;
       const produto = recibo?.produtos || null;
 
       totalVendas += bruto;

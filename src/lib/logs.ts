@@ -1,18 +1,5 @@
 import { supabase } from "./supabase";
 
-let cachedIpPromise: Promise<string> | null = null;
-
-async function resolveClientIp() {
-  if (typeof window === "undefined" || typeof fetch === "undefined") return "";
-  if (!cachedIpPromise) {
-    cachedIpPromise = fetch("https://api.ipify.org?format=json")
-      .then((resp) => resp.json())
-      .then((j) => String(j?.ip || "").trim())
-      .catch(() => "");
-  }
-  return cachedIpPromise;
-}
-
 export async function registrarLog({
   user_id,
   acao,
@@ -33,17 +20,32 @@ export async function registrarLog({
       } catch (_) {}
     }
 
-    const ip = await resolveClientIp();
-
     const userAgent =
       typeof navigator !== "undefined" ? navigator.userAgent : "";
+
+    if (typeof window !== "undefined" && typeof fetch !== "undefined") {
+      try {
+        const resp = await fetch("/api/v1/logs/client-event", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            user_id: resolvedUserId,
+            acao,
+            modulo,
+            detalhes,
+          }),
+        });
+        if (resp.ok) return;
+      } catch (_) {}
+    }
 
     await supabase.from("logs").insert({
       user_id: resolvedUserId,
       acao,
       modulo,
       detalhes,
-      ip,
+      ip: null,
       user_agent: userAgent
     });
   } catch (error) {

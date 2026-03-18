@@ -21,6 +21,10 @@ type VendaRecibo = {
   valor_total: number | null;
   valor_taxas: number | null;
   produto_id: string | null;
+  valor_meta_override?: number | null;
+  valor_liquido_override?: number | null;
+  valor_comissao_loja?: number | null;
+  percentual_comissao_loja?: number | null;
   tipo_produtos?: { id: string; nome: string | null } | null;
 };
 
@@ -626,8 +630,12 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
       (v.vendas_recibos || []).forEach((r) => {
         const bruto = Number(r.valor_total || 0);
         const taxas = Number(r.valor_taxas || 0);
-        const liquido = bruto - taxas;
-        const baseMeta = calcularBaseMeta(bruto, liquido, params);
+        const liquido =
+          r.valor_liquido_override != null ? Number(r.valor_liquido_override || 0) : bruto - taxas;
+        const baseMeta =
+          r.valor_meta_override != null
+            ? Number(r.valor_meta_override || 0)
+            : calcularBaseMeta(bruto, liquido, params);
         if (!totalsByVendor[vid]) {
           totalsByVendor[vid] = { bruto: 0, liquido: 0, baseMeta: 0 };
         }

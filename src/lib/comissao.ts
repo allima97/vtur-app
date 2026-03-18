@@ -21,6 +21,11 @@ export type CommissionTemplate = {
 export type ParametrosComissao = {
   usar_taxas_na_meta: boolean;
   foco_valor?: "bruto" | "liquido";
+  conciliacao_sobrepoe_vendas?: boolean;
+  conciliacao_regra_ativa?: boolean;
+  conciliacao_meta_nao_atingida?: number | null;
+  conciliacao_meta_atingida?: number | null;
+  conciliacao_super_meta?: number | null;
 };
 
 export type ResumoPeriodo = {

@@ -7,6 +7,7 @@ import {
   isSystemAdminRole,
   normalizeUserType,
 } from "./lib/adminAccess";
+import { hasVerifiedTotpFactor, normalizeMfaRedirectPath } from "./lib/authMfa";
 
 const supabaseUrl = readEnv("SUPABASE_URL") || readEnv("PUBLIC_SUPABASE_URL");
 const supabaseAnonKey = readEnv("PUBLIC_SUPABASE_ANON_KEY") || readEnv("SUPABASE_ANON_KEY");
@@ -125,6 +126,16 @@ function isInvalidSupabaseCookieError(error: unknown): boolean {
   return patterns.some((pattern) => message.includes(pattern));
 }
 
+function buildLoginRedirectUrl(url: URL) {
+  const nextPath = `${url.pathname}${url.search || ""}`;
+  return `/auth/login?next=${encodeURIComponent(nextPath)}`;
+}
+
+function buildMfaSetupRedirectUrl(url: URL) {
+  const nextPath = `${url.pathname}${url.search || ""}`;
+  return `/perfil?setup_2fa=1&next=${encodeURIComponent(nextPath)}`;
+}
+
 export const onRequest = defineMiddleware(async (context, next) => {
   const { url } = context;
   const pathname = url.pathname;
@@ -218,7 +229,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       return makeMutable(new Response(null, {
         status: 302,
         headers: [
-          ["location", "/auth/login"],
+          ["location", buildLoginRedirectUrl(url)],
           ...headers.map((value) => ["set-cookie", value]),
         ],
       }));
@@ -242,14 +253,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return makeMutable(new Response(null, {
       status: 302,
       headers: [
-        ["location", "/auth/login"],
+        ["location", buildLoginRedirectUrl(url)],
         ...headers.map((value) => ["set-cookie", value]),
       ],
     }));
   }
 
   if (!user) {
-    return makeMutable(Response.redirect(new URL("/auth/login", url), 302));
+    return makeMutable(Response.redirect(new URL(buildLoginRedirectUrl(url), url), 302));
   }
   context.locals.userId = user.id;
   context.locals.userEmail = user.email ?? "";
@@ -294,6 +305,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     "/api/welcome-email",
     "/api/users",
   ];
+  const isMfaRoute = pathname.startsWith("/auth/mfa");
 
   if (shouldRefreshMenuCache) {
     const [accRowsRes, userTypeRes] = await Promise.all([
@@ -391,6 +403,58 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (precisaOnboarding) {
       return makeMutable(Response.redirect(new URL("/perfil/onboarding", url), 302));
     }
+  }
+
+  try {
+    const { data: companyRow, error: companyErr } = await supabase
+      .from("users")
+      .select("company_id")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (companyErr) {
+      throw companyErr;
+    }
+
+    const companyId = String((companyRow as any)?.company_id || "").trim() || null;
+    let mfaObrigatorio = false;
+    if (companyId) {
+      const { data: paramData, error: paramErr } = await supabase
+        .from("parametros_comissao")
+        .select("mfa_obrigatorio")
+        .eq("company_id", companyId)
+        .maybeSingle();
+      if (paramErr) {
+        throw paramErr;
+      }
+      mfaObrigatorio = Boolean((paramData as any)?.mfa_obrigatorio);
+    }
+
+    const [{ data: aalData, error: aalError }, { data: factorsData, error: factorsError }] =
+      await Promise.all([
+        supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+        supabase.auth.mfa.listFactors(),
+      ]);
+    if (!aalError && !factorsError) {
+      const hasFactor = hasVerifiedTotpFactor(factorsData || null);
+      if (mfaObrigatorio && !hasFactor && !pathname.startsWith("/perfil")) {
+        return makeMutable(
+          Response.redirect(new URL(buildMfaSetupRedirectUrl(url), url), 302)
+        );
+      }
+
+      const precisaMfa =
+        hasFactor &&
+        aalData?.nextLevel === "aal2" &&
+        aalData?.currentLevel !== "aal2";
+      if (precisaMfa && !isMfaRoute) {
+        const nextPath = normalizeMfaRedirectPath(`${pathname}${url.search || ""}`, "/dashboard");
+        return makeMutable(
+          Response.redirect(new URL(`/auth/mfa?next=${encodeURIComponent(nextPath)}`, url), 302)
+        );
+      }
+    }
+  } catch (mfaError) {
+    console.error("[middleware] falha ao verificar MFA", mfaError);
   }
 
   // ============================

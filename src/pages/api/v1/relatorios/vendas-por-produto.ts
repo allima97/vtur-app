@@ -2,6 +2,11 @@ import { createServerClient } from "../../../../lib/supabaseServer";
 import { kvCache } from "../../../../lib/kvCache";
 import { MODULO_ALIASES } from "../../../../config/modulos";
 import { normalizeText } from "../../../../lib/normalizeText";
+import {
+  applyConciliacaoOverridesToSales,
+  fetchConciliacaoOverrideFlag,
+  getReciboValorBruto,
+} from "../../../../lib/relatorios/conciliacaoGrouped";
 
 import { getSupabaseEnv } from "../../users";
 const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv();
@@ -175,6 +180,39 @@ function writeCache(key: string, payload: unknown) {
   cache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, payload });
 }
 
+function sortGroupedRows(rows: any[], ordem: string, ordemDesc: boolean) {
+  const direction = ordemDesc ? -1 : 1;
+  return [...rows].sort((a, b) => {
+    const aValue =
+      ordem === "quantidade"
+        ? Number(a?.quantidade || 0)
+        : ordem === "ticket"
+        ? Number(a?.ticket_medio || 0)
+        : Number(a?.total || 0);
+    const bValue =
+      ordem === "quantidade"
+        ? Number(b?.quantidade || 0)
+        : ordem === "ticket"
+        ? Number(b?.ticket_medio || 0)
+        : Number(b?.total || 0);
+    if (aValue !== bValue) return (aValue - bValue) * direction;
+    return String(a?.produto_nome || "").localeCompare(String(b?.produto_nome || ""));
+  });
+}
+
+function paginateGroupedRows(rows: any[], page: number, pageSize: number) {
+  const totalCount = rows.length;
+  const totalTotal = rows.reduce((acc, row) => acc + Number(row?.total || 0), 0);
+  const totalQuantidade = rows.reduce((acc, row) => acc + Number(row?.quantidade || 0), 0);
+  const start = (page - 1) * pageSize;
+  return rows.slice(start, start + pageSize).map((row) => ({
+    ...row,
+    total_count: totalCount,
+    total_total: totalTotal,
+    total_quantidade: totalQuantidade,
+  }));
+}
+
 export async function GET({ request }: { request: Request }) {
   try {
     const client = buildAuthClient(request);
@@ -188,6 +226,7 @@ export async function GET({ request }: { request: Request }) {
     const status = String(url.searchParams.get("status") || "").trim();
     const busca = String(url.searchParams.get("busca") || "").trim();
     const cidadeId = String(url.searchParams.get("cidade_id") || "").trim();
+    const requestedCompanyId = String(url.searchParams.get("company_id") || "").trim();
     const vendedorIdsRaw = String(url.searchParams.get("vendedor_ids") || "").trim();
     const ordem = String(url.searchParams.get("ordem") || "total").trim();
     const ordemDescRaw = String(url.searchParams.get("ordem_desc") || "").trim();
@@ -210,7 +249,7 @@ export async function GET({ request }: { request: Request }) {
 
     const { data: perfil, error: perfilErr } = await client
       .from("users")
-      .select("id, uso_individual, user_types(name)")
+      .select("id, uso_individual, company_id, user_types(name)")
       .eq("id", user.id)
       .maybeSingle();
     if (perfilErr) throw perfilErr;
@@ -218,6 +257,14 @@ export async function GET({ request }: { request: Request }) {
     const tipoName = String((perfil as any)?.user_types?.name || "");
     const usoIndividual = Boolean((perfil as any)?.uso_individual);
     const papel = resolvePapel(tipoName, usoIndividual);
+    const companyId =
+      papel === "MASTER" || papel === "ADMIN"
+        ? requestedCompanyId === "all"
+          ? null
+          : isUuid(requestedCompanyId)
+            ? requestedCompanyId
+            : ((perfil as any)?.company_id || null)
+        : ((perfil as any)?.company_id || null);
 
     if (papel !== "ADMIN") {
       const denied = await requireModuloView(
@@ -269,6 +316,7 @@ export async function GET({ request }: { request: Request }) {
       ordem || "total",
       ordemDesc ? "1" : "0",
       vendorParam ? vendorParam.join(";") : "-",
+      companyId || "-",
       String(page),
       String(pageSize),
     ].join("|");
@@ -299,46 +347,152 @@ export async function GET({ request }: { request: Request }) {
       }
     }
 
-    const { data, error } = await client.rpc("relatorio_vendas_por_produto", {
-      p_data_inicio: inicio || null,
-      p_data_fim: fim || null,
-      p_status: statusParam,
-      p_busca: buscaParam,
-      p_tipo_produto_id: null,
-      p_cidade_id: cidadeParam,
-      p_vendedor_ids: vendorParam,
-      p_ordem: ordem || "total",
-      p_ordem_desc: ordemDesc,
-      p_page: page,
-      p_page_size: pageSize,
-    });
-    if (error) throw error;
+    const usarConciliacao = await fetchConciliacaoOverrideFlag(client, companyId);
 
-    let rows = data || [];
-    if (buscaParam && rows.length === 0) {
-      const { data: searchFallbackData, error: searchFallbackError } = await client.rpc(
-        "relatorio_vendas_por_produto",
-        {
-          p_data_inicio: inicio || null,
-          p_data_fim: fim || null,
-          p_status: statusParam,
-          p_busca: null,
-          p_tipo_produto_id: null,
-          p_cidade_id: cidadeParam,
-          p_vendedor_ids: vendorParam,
-          p_ordem: ordem || "total",
-          p_ordem_desc: ordemDesc,
-          p_page: 1,
-          p_page_size: SEARCH_FALLBACK_PAGE_SIZE,
+    let rows: any[] = [];
+    if (usarConciliacao && inicio && fim) {
+      let query = client
+        .from("vendas")
+        .select(
+          `
+            id,
+            vendedor_id,
+            produto_id,
+            destino_id,
+            destino_cidade_id,
+            data_venda,
+            valor_total,
+            status,
+            destinos:produtos!destino_id (nome, cidade_id),
+            tipo_produto:tipo_produtos!produto_id (id, nome, tipo),
+            vendas_recibos (
+              id,
+              produto_id,
+              data_venda,
+              valor_total,
+              valor_taxas,
+              valor_du,
+              produtos:tipo_produtos!produto_id (id, nome, tipo)
+            )
+          `
+        )
+        .gte("data_venda", inicio)
+        .lte("data_venda", fim);
+      if (companyId) query = query.eq("company_id", companyId);
+      if (statusParam) query = query.eq("status", statusParam);
+      if (vendorParam) query = query.in("vendedor_id", vendorParam);
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const sales = await applyConciliacaoOverridesToSales(client, (data || []) as any[], {
+        companyId,
+        inicio,
+        fim,
+        vendedorIds: vendorParam,
+      });
+
+      const termo = normalizeBusca(buscaParam);
+      const grouped = new Map<string, { produto_id: string | null; produto_nome: string; quantidade: number; total: number }>();
+      sales.forEach((sale: any) => {
+        const cidadeAtual = sale?.destino_cidade_id || sale?.destinos?.cidade_id || null;
+        const destinoNome = String(sale?.destinos?.nome || "");
+        const recibos = Array.isArray(sale?.vendas_recibos) ? sale.vendas_recibos : [];
+        if (recibos.length > 0) {
+          recibos.forEach((recibo: any) => {
+            const produtoId = recibo?.produto_id || null;
+            if (cidadeParam && cidadeAtual !== cidadeParam) return;
+            const produtoNome =
+              String(recibo?.produtos?.nome || sale?.tipo_produto?.nome || sale?.tipo_produto?.tipo || "(sem produto)");
+            if (
+              termo &&
+              !normalizeBusca(produtoNome).includes(termo) &&
+              !normalizeBusca(destinoNome).includes(termo)
+            ) {
+              return;
+            }
+            const key = String(produtoId || `nome:${produtoNome.toLowerCase()}`);
+            const current = grouped.get(key) || {
+              produto_id: produtoId,
+              produto_nome: produtoNome,
+              quantidade: 0,
+              total: 0,
+            };
+            current.quantidade += 1;
+            current.total += getReciboValorBruto(recibo);
+            grouped.set(key, current);
+          });
+          return;
         }
-      );
-      if (!searchFallbackError) {
-        const termo = normalizeBusca(buscaParam);
-        const filteredRows = (searchFallbackData || []).filter((row: any) => {
-          const produtoNome = normalizeBusca(row?.produto_nome);
-          return produtoNome.includes(termo);
-        });
-        rows = paginateAccentInsensitiveRows(filteredRows, page, pageSize);
+
+        if (cidadeParam && cidadeAtual !== cidadeParam) return;
+        const produtoId = sale?.produto_id || null;
+        const produtoNome = String(sale?.tipo_produto?.nome || sale?.tipo_produto?.tipo || "(sem produto)");
+        if (
+          termo &&
+          !normalizeBusca(produtoNome).includes(termo) &&
+          !normalizeBusca(destinoNome).includes(termo)
+        ) {
+          return;
+        }
+        const key = String(produtoId || `nome:${produtoNome.toLowerCase()}`);
+        const current = grouped.get(key) || {
+          produto_id: produtoId,
+          produto_nome: produtoNome,
+          quantidade: 0,
+          total: 0,
+        };
+        current.quantidade += 1;
+        current.total += Number(sale?.valor_total || 0);
+        grouped.set(key, current);
+      });
+
+      const normalized = Array.from(grouped.values()).map((row) => ({
+        ...row,
+        ticket_medio: row.quantidade > 0 ? row.total / row.quantidade : 0,
+      }));
+      rows = paginateGroupedRows(sortGroupedRows(normalized, ordem || "total", ordemDesc), page, pageSize);
+    } else {
+      const { data, error } = await client.rpc("relatorio_vendas_por_produto", {
+        p_data_inicio: inicio || null,
+        p_data_fim: fim || null,
+        p_status: statusParam,
+        p_busca: buscaParam,
+        p_tipo_produto_id: null,
+        p_cidade_id: cidadeParam,
+        p_vendedor_ids: vendorParam,
+        p_ordem: ordem || "total",
+        p_ordem_desc: ordemDesc,
+        p_page: page,
+        p_page_size: pageSize,
+      });
+      if (error) throw error;
+
+      rows = data || [];
+      if (buscaParam && rows.length === 0) {
+        const { data: searchFallbackData, error: searchFallbackError } = await client.rpc(
+          "relatorio_vendas_por_produto",
+          {
+            p_data_inicio: inicio || null,
+            p_data_fim: fim || null,
+            p_status: statusParam,
+            p_busca: null,
+            p_tipo_produto_id: null,
+            p_cidade_id: cidadeParam,
+            p_vendedor_ids: vendorParam,
+            p_ordem: ordem || "total",
+            p_ordem_desc: ordemDesc,
+            p_page: 1,
+            p_page_size: SEARCH_FALLBACK_PAGE_SIZE,
+          }
+        );
+        if (!searchFallbackError) {
+          const termo = normalizeBusca(buscaParam);
+          const filteredRows = (searchFallbackData || []).filter((row: any) => {
+            const produtoNome = normalizeBusca(row?.produto_nome);
+            return produtoNome.includes(termo);
+          });
+          rows = paginateAccentInsensitiveRows(filteredRows, page, pageSize);
+        }
       }
     }
 

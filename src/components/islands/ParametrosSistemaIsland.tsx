@@ -19,6 +19,12 @@ type ParametrosSistema = {
   modo_corporativo: boolean;
   politica_cancelamento: "cancelar_venda" | "estornar_recibos";
   foco_faturamento: "bruto" | "liquido";
+  conciliacao_sobrepoe_vendas: boolean;
+  conciliacao_regra_ativa: boolean;
+  conciliacao_meta_nao_atingida: number | null;
+  conciliacao_meta_atingida: number | null;
+  conciliacao_super_meta: number | null;
+  mfa_obrigatorio: boolean;
   exportacao_pdf: boolean;
   exportacao_excel: boolean;
 };
@@ -32,6 +38,12 @@ const DEFAULT_PARAMS: ParametrosSistema = {
   modo_corporativo: false,
   politica_cancelamento: "cancelar_venda",
   foco_faturamento: "bruto",
+  conciliacao_sobrepoe_vendas: false,
+  conciliacao_regra_ativa: false,
+  conciliacao_meta_nao_atingida: null,
+  conciliacao_meta_atingida: null,
+  conciliacao_super_meta: null,
+  mfa_obrigatorio: false,
   exportacao_pdf: false,
   exportacao_excel: false,
 };
@@ -103,6 +115,12 @@ export default function ParametrosSistemaIsland() {
         modo_corporativo: params.modo_corporativo,
         politica_cancelamento: params.politica_cancelamento,
         foco_faturamento: params.foco_faturamento,
+        conciliacao_sobrepoe_vendas: params.conciliacao_sobrepoe_vendas,
+        conciliacao_regra_ativa: params.conciliacao_regra_ativa,
+        conciliacao_meta_nao_atingida: params.conciliacao_meta_nao_atingida,
+        conciliacao_meta_atingida: params.conciliacao_meta_atingida,
+        conciliacao_super_meta: params.conciliacao_super_meta,
+        mfa_obrigatorio: params.mfa_obrigatorio,
         exportacao_pdf: params.exportacao_pdf,
         exportacao_excel: params.exportacao_excel,
       };
@@ -275,6 +293,37 @@ export default function ParametrosSistemaIsland() {
         </div>
 
         <div className="form-group">
+          <label className="form-label">Conciliação</label>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <input
+                type="checkbox"
+                checked={params.conciliacao_sobrepoe_vendas}
+                onChange={(e) =>
+                  setParams((p) => ({ ...p, conciliacao_sobrepoe_vendas: e.target.checked }))
+                }
+                disabled={bloqueado}
+              />
+              Priorizar conciliação como fonte principal do ranking e comissionamento
+            </label>
+            <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <input
+                type="checkbox"
+                checked={params.conciliacao_regra_ativa}
+                onChange={(e) =>
+                  setParams((p) => ({ ...p, conciliacao_regra_ativa: e.target.checked }))
+                }
+                disabled={bloqueado}
+              />
+              Aplicar regra própria para comissão das vendas conciliadas
+            </label>
+          </div>
+          <small style={{ color: "#64748b" }}>
+            Quando ativo, a movimentação conciliada passa a prevalecer sobre a venda lançada manualmente.
+          </small>
+        </div>
+
+        <div className="form-group">
           <label className="form-label">Exportações</label>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -304,7 +353,86 @@ export default function ParametrosSistemaIsland() {
             Mantém coerência com os módulos de relatórios e orçamentos.
           </small>
         </div>
+
+        <div className="form-group">
+          <label className="form-label">Seguranca</label>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <input
+                type="checkbox"
+                checked={params.mfa_obrigatorio}
+                onChange={(e) =>
+                  setParams((p) => ({ ...p, mfa_obrigatorio: e.target.checked }))
+                }
+                disabled={bloqueado}
+              />
+              Exigir verificacao em duas etapas (2FA) para usuarios desta empresa
+            </label>
+          </div>
+          <small style={{ color: "#64748b" }}>
+            Quando ativo, o usuario sem 2FA cadastrado sera direcionado ao perfil para configurar o autenticador antes de acessar os modulos.
+          </small>
+        </div>
       </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <AppField
+            type="number"
+            label="% Conciliação meta não batida"
+            value={params.conciliacao_meta_nao_atingida ?? ""}
+            min={0}
+            step="0.01"
+            onChange={(e) =>
+              setParams((p) => ({
+                ...p,
+                conciliacao_meta_nao_atingida:
+                  e.target.value === "" ? null : Number(e.target.value),
+              }))
+            }
+            disabled={bloqueado || !params.conciliacao_regra_ativa}
+          />
+        </div>
+
+        <div className="form-group">
+          <AppField
+            type="number"
+            label="% Conciliação meta batida"
+            value={params.conciliacao_meta_atingida ?? ""}
+            min={0}
+            step="0.01"
+            onChange={(e) =>
+              setParams((p) => ({
+                ...p,
+                conciliacao_meta_atingida:
+                  e.target.value === "" ? null : Number(e.target.value),
+              }))
+            }
+            disabled={bloqueado || !params.conciliacao_regra_ativa}
+          />
+        </div>
+
+        <div className="form-group">
+          <AppField
+            type="number"
+            label="% Conciliação super meta"
+            value={params.conciliacao_super_meta ?? ""}
+            min={0}
+            step="0.01"
+            onChange={(e) =>
+              setParams((p) => ({
+                ...p,
+                conciliacao_super_meta:
+                  e.target.value === "" ? null : Number(e.target.value),
+              }))
+            }
+            disabled={bloqueado || !params.conciliacao_regra_ativa}
+          />
+        </div>
+      </div>
+      <p style={{ marginTop: -4, color: "#64748b", fontSize: "0.85rem" }}>
+        Quando habilitada, essa regra entra antes do template geral e das regras por produto para recibos conciliados.
+      </p>
 
       <div className="mobile-stack-buttons" style={{ display: "flex", gap: 10, marginTop: 16 }}>
         <AppButton

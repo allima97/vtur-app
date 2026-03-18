@@ -102,6 +102,44 @@ type ReciboMatchRow = {
   data_venda: string | null;
 };
 
+type ReconcileResult = {
+  checked: number;
+  reconciled: number;
+  updatedTaxes: number;
+  stillPending: number;
+};
+
+async function persistExecutionLog(params: {
+  client: any;
+  companyId: string;
+  actor: "cron" | "user";
+  actorUserId?: string | null;
+  status?: "ok" | "error";
+  errorMessage?: string | null;
+  result: ReconcileResult;
+}) {
+  const { client, companyId, actor, actorUserId = null, status = "ok", errorMessage = null, result } = params;
+  try {
+    await client.from("conciliacao_execucoes").insert({
+      company_id: companyId,
+      actor,
+      actor_user_id: actorUserId,
+      checked: result.checked,
+      reconciled: result.reconciled,
+      updated_taxes: result.updatedTaxes,
+      still_pending: result.stillPending,
+      status,
+      error_message: errorMessage,
+    } as any);
+  } catch (error) {
+    console.error("CONCILIACAO_EXECUCAO_LOG_ERROR", {
+      message: (error as any)?.message ?? String(error),
+      company_id: companyId,
+      actor,
+    });
+  }
+}
+
 async function fetchReciboCandidates(params: {
   client: any;
   numero: string;
@@ -255,28 +293,18 @@ async function findReciboByNumero(params: {
   };
 }
 
-export async function reconcilePendentes(params: {
+async function reconcilePendentesCompany(params: {
   limit?: number;
-  companyId?: string | null;
+  companyId: string;
   actor?: "cron" | "user";
   actorUserId?: string | null;
-  client?: any;
-}): Promise<{
-  checked: number;
-  reconciled: number;
-  updatedTaxes: number;
-  stillPending: number;
-}> {
+  client: any;
+}): Promise<ReconcileResult> {
   const limit = Math.max(1, Math.min(500, Number(params.limit || 200)));
-  const companyId = params.companyId ? String(params.companyId) : null;
+  const companyId = String(params.companyId);
   const actor = params.actor || "cron";
   const actorUserId = params.actorUserId ? String(params.actorUserId) : null;
-  const dbClient = hasServiceRoleKey ? supabaseServer : params.client || null;
-
-  if (!dbClient) {
-    // Sem service role e sem cliente autenticado, não há como operar com segurança.
-    return { checked: 0, reconciled: 0, updatedTaxes: 0, stillPending: 0 };
-  }
+  const dbClient = params.client;
 
   let query = dbClient
     .from("conciliacao_recibos")
@@ -285,10 +313,9 @@ export async function reconcilePendentes(params: {
     )
     .eq("conciliado", false)
     .in("status", ["BAIXA", "OPFAX"] as any)
+    .eq("company_id", companyId)
     .order("movimento_data", { ascending: false })
     .limit(limit);
-
-  if (companyId) query = query.eq("company_id", companyId);
 
   const { data: pendentes, error } = await query;
   if (error) throw error;
@@ -415,4 +442,109 @@ export async function reconcilePendentes(params: {
 
   const stillPending = Math.max(0, (pendentes || []).length - reconciled);
   return { checked, reconciled, updatedTaxes, stillPending };
+}
+
+export async function reconcilePendentes(params: {
+  limit?: number;
+  companyId?: string | null;
+  actor?: "cron" | "user";
+  actorUserId?: string | null;
+  client?: any;
+}): Promise<ReconcileResult> {
+  const limit = Math.max(1, Math.min(500, Number(params.limit || 200)));
+  const companyId = params.companyId ? String(params.companyId) : null;
+  const actor = params.actor || "cron";
+  const actorUserId = params.actorUserId ? String(params.actorUserId) : null;
+  const dbClient = hasServiceRoleKey ? supabaseServer : params.client || null;
+
+  if (!dbClient) {
+    return { checked: 0, reconciled: 0, updatedTaxes: 0, stillPending: 0 };
+  }
+
+  if (companyId) {
+    try {
+      const result = await reconcilePendentesCompany({
+        companyId,
+        limit,
+        actor,
+        actorUserId,
+        client: dbClient,
+      });
+      if (result.checked > 0) {
+        await persistExecutionLog({
+          client: dbClient,
+          companyId,
+          actor,
+          actorUserId,
+          status: "ok",
+          result,
+        });
+      }
+      return result;
+    } catch (error) {
+      await persistExecutionLog({
+        client: dbClient,
+        companyId,
+        actor,
+        actorUserId,
+        status: "error",
+        errorMessage: (error as any)?.message ?? String(error),
+        result: { checked: 0, reconciled: 0, updatedTaxes: 0, stillPending: 0 },
+      });
+      throw error;
+    }
+  }
+
+  const { data: companies, error: companiesErr } = await dbClient
+    .from("companies")
+    .select("id")
+    .order("id", { ascending: true })
+    .limit(5000);
+  if (companiesErr) throw companiesErr;
+
+  const totals: ReconcileResult = { checked: 0, reconciled: 0, updatedTaxes: 0, stillPending: 0 };
+
+  for (const row of companies || []) {
+    const nextCompanyId = String((row as any)?.id || "").trim();
+    if (!nextCompanyId) continue;
+    try {
+      const result = await reconcilePendentesCompany({
+        companyId: nextCompanyId,
+        limit,
+        actor,
+        actorUserId,
+        client: dbClient,
+      });
+      if (result.checked > 0) {
+        await persistExecutionLog({
+          client: dbClient,
+          companyId: nextCompanyId,
+          actor,
+          actorUserId,
+          status: "ok",
+          result,
+        });
+      }
+      totals.checked += result.checked;
+      totals.reconciled += result.reconciled;
+      totals.updatedTaxes += result.updatedTaxes;
+      totals.stillPending += result.stillPending;
+    } catch (error) {
+      await persistExecutionLog({
+        client: dbClient,
+        companyId: nextCompanyId,
+        actor,
+        actorUserId,
+        status: "error",
+        errorMessage: (error as any)?.message ?? String(error),
+        result: { checked: 0, reconciled: 0, updatedTaxes: 0, stillPending: 0 },
+      });
+      console.error("CONCILIACAO_COMPANY_RECONCILE_ERROR", {
+        message: (error as any)?.message ?? String(error),
+        company_id: nextCompanyId,
+      });
+    }
+  }
+
+  return totals;
 }

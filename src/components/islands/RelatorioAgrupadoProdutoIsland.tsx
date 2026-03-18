@@ -105,6 +105,7 @@ async function fetchRelatorioProdutos(params: {
   status?: string;
   busca?: string;
   cidadeId?: string;
+  companyId?: string;
   vendedorIds?: string[] | null;
   ordem: string;
   ordemDesc: boolean;
@@ -118,6 +119,7 @@ async function fetchRelatorioProdutos(params: {
   if (params.status && params.status !== "todos") qs.set("status", params.status);
   if (params.busca) qs.set("busca", params.busca);
   if (params.cidadeId) qs.set("cidade_id", params.cidadeId);
+  if (params.companyId) qs.set("company_id", params.companyId);
   if (params.vendedorIds && params.vendedorIds.length > 0) {
     qs.set("vendedor_ids", params.vendedorIds.join(","));
   }
@@ -147,6 +149,7 @@ async function fetchRelatorioProdutosRecibos(params: {
   dataInicio?: string;
   dataFim?: string;
   status?: string;
+  companyId?: string;
   vendedorIds?: string[] | null;
   noCache?: boolean;
 }) {
@@ -154,6 +157,7 @@ async function fetchRelatorioProdutosRecibos(params: {
   if (params.dataInicio) qs.set("inicio", params.dataInicio);
   if (params.dataFim) qs.set("fim", params.dataFim);
   if (params.status && params.status !== "todos") qs.set("status", params.status);
+  if (params.companyId) qs.set("company_id", params.companyId);
   if (params.vendedorIds && params.vendedorIds.length > 0) {
     qs.set("vendedor_ids", params.vendedorIds.join(","));
   }
@@ -446,7 +450,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
 
         const { data: usuarioDb } = await supabase
           .from("users")
-          .select("id, user_types(name)")
+          .select("id, company_id, user_types(name)")
           .eq("id", userId)
           .maybeSingle();
 
@@ -670,12 +674,15 @@ export default function RelatorioAgrupadoProdutoIsland() {
       }
 
       const paginaAtual = Math.max(1, pageOverride ?? page);
+      const companyIdFiltro =
+        userCtx.papel === "MASTER" ? masterScope.empresaSelecionada : undefined;
       const rows = (await fetchRelatorioProdutos({
         dataInicio: dataInicio || "",
         dataFim: dataFim || "",
         status: statusFiltro,
         busca: buscaProduto,
         cidadeId: cidadeFiltro || "",
+        companyId: companyIdFiltro,
         vendedorIds: vendedorIdsFiltro && vendedorIdsFiltro.length > 0 ? vendedorIdsFiltro : null,
         ordem: ordenacao,
         ordemDesc,
@@ -731,12 +738,15 @@ export default function RelatorioAgrupadoProdutoIsland() {
     }
 
     while (true) {
+      const companyIdFiltro =
+        userCtx.papel === "MASTER" ? masterScope.empresaSelecionada : undefined;
       const rows = (await fetchRelatorioProdutos({
         dataInicio: dataInicio || "",
         dataFim: dataFim || "",
         status: statusFiltro,
         busca: buscaProduto,
         cidadeId: cidadeFiltro || "",
+        companyId: companyIdFiltro,
         vendedorIds: vendedorIdsFiltro && vendedorIdsFiltro.length > 0 ? vendedorIdsFiltro : null,
         ordem: ordenacao,
         ordemDesc,
@@ -783,6 +793,8 @@ export default function RelatorioAgrupadoProdutoIsland() {
         dataInicio: dataInicio || "",
         dataFim: dataFim || "",
         status: statusFiltro,
+        companyId:
+          userCtx.papel === "MASTER" ? masterScope.empresaSelecionada : undefined,
         vendedorIds: vendedorIdsFiltro && vendedorIdsFiltro.length > 0 ? vendedorIdsFiltro : null,
         noCache: opts?.noCache,
       })) as any[];

@@ -17,16 +17,6 @@ function parseIds(raw?: string | null) {
     .slice(0, 300);
 }
 
-function normalizeCpf(value?: string | null) {
-  return String(value || "").replace(/\D/g, "");
-}
-
-function formatCpf(value?: string | null) {
-  const digits = normalizeCpf(value);
-  if (digits.length !== 11) return "";
-  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
-}
-
 export async function GET({ request }: { request: Request }) {
   try {
     const client = buildAuthClient(request);
@@ -56,65 +46,24 @@ export async function GET({ request }: { request: Request }) {
 
     const companyId = resolveCompanyId(scope, requestedCompanyId);
 
-    let vendaQuery = client.from("vendas").select("id, cliente_id, vendedor_id, company_id").eq("id", vendaId).maybeSingle();
+    let vendaQuery = client
+      .from("vendas")
+      .select("id, cliente_id, vendedor_id, company_id")
+      .eq("id", vendaId)
+      .maybeSingle();
     vendaQuery = applyScopeToQuery(vendaQuery, scope, companyId);
     const { data: venda, error: vendaErr } = await vendaQuery;
     if (vendaErr) throw vendaErr;
     if (!venda) return new Response("Venda nao encontrada.", { status: 404 });
-
-    let vendaCpf = "";
-    const vendaClienteId = String((venda as any)?.cliente_id || "").trim();
-    if (isUuid(vendaClienteId)) {
-      const { data: clienteData, error: clienteErr } = await client
-        .from("clientes")
-        .select("cpf")
-        .eq("id", vendaClienteId)
-        .maybeSingle();
-      if (clienteErr) {
-        console.warn("[vendas/merge-candidates] Falha ao consultar CPF do cliente base", clienteErr);
-      } else {
-        vendaCpf = normalizeCpf((clienteData as any)?.cpf || "");
-      }
-    }
-
-    let clienteIds = [vendaClienteId].filter((id) => isUuid(id));
-    if (vendaCpf) {
-      const cpfAlternativos = Array.from(new Set([vendaCpf, formatCpf(vendaCpf)].filter(Boolean)));
-      let clientesCpfQuery = client.from("clientes").select("id").limit(300);
-      if (cpfAlternativos.length > 1) {
-        clientesCpfQuery = clientesCpfQuery.in("cpf", cpfAlternativos);
-      } else {
-        clientesCpfQuery = clientesCpfQuery.eq("cpf", cpfAlternativos[0]);
-      }
-
-      const { data: clientesMesmoCpf, error: clientesErr } = await clientesCpfQuery;
-      if (clientesErr) {
-        console.warn("[vendas/merge-candidates] Falha ao consultar clientes por CPF; usando fallback por cliente_id", clientesErr);
-      } else {
-        const idsMesmoCpf = (clientesMesmoCpf || [])
-          .map((row: any) => String(row?.id || "").trim())
-          .filter((id: string) => isUuid(id));
-        if (idsMesmoCpf.length > 0) {
-          clienteIds = Array.from(new Set(idsMesmoCpf));
-        }
-      }
-    }
 
     let query = client
       .from("vendas")
       .select(
         "id, vendedor_id, cliente_id, destino_id, destino_cidade_id, company_id, data_lancamento, data_venda, data_embarque, data_final, valor_total, clientes(nome), destinos:produtos!destino_id (nome, cidade_id), destino_cidade:cidades!destino_cidade_id (id, nome), vendedor:users!vendedor_id (nome_completo)"
       )
+      .eq("cliente_id", venda.cliente_id)
       .neq("id", venda.id)
       .order("data_venda", { ascending: false });
-
-    if (clienteIds.length > 1) {
-      query = query.in("cliente_id", clienteIds);
-    } else if (clienteIds.length === 1) {
-      query = query.eq("cliente_id", clienteIds[0]);
-    } else {
-      query = query.eq("cliente_id", venda.cliente_id);
-    }
 
     query = applyScopeToQuery(query, scope, companyId);
 

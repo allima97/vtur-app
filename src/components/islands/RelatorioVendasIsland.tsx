@@ -10,9 +10,11 @@ import {
   ParametrosComissao,
   Regra,
   RegraProduto,
+  calcularPctConciliacao,
   calcularPctFixoProduto,
   calcularPctPorRegra,
   calcularDescontoAplicado,
+  hasConciliacaoCommissionRule,
   regraProdutoTemFixo,
 } from "../../lib/comissaoUtils";
 import { carregarTermosNaoComissionaveis, calcularNaoComissionavelPorVenda } from "../../lib/pagamentoUtils";
@@ -96,13 +98,20 @@ type Venda = {
   valor_nao_comissionado?: number | null;
   status: string | null;
   vendas_recibos?: {
+    id?: string | null;
     numero_recibo: string | null;
+    data_venda?: string | null;
     valor_total: number | null;
     valor_taxas: number | null;
     valor_du?: number | null;
     valor_rav?: number | null;
     produto_id: string | null;
     tipo_pacote?: string | null;
+    valor_bruto_override?: number | null;
+    valor_meta_override?: number | null;
+    valor_liquido_override?: number | null;
+    valor_comissao_loja?: number | null;
+    percentual_comissao_loja?: number | null;
     produto_resolvido_id?: string | null;
     tipo_produtos?: { id: string; nome: string | null; tipo: string | null } | null;
     produto_resolvido?: { id: string; nome: string | null; tipo: string | null } | null;
@@ -135,19 +144,57 @@ type ReciboEnriquecido = {
   valor_taxas: number | null;
   valor_du?: number | null;
   valor_rav?: number | null;
+  valor_bruto_override?: number | null;
+  valor_meta_override?: number | null;
+  valor_liquido_override?: number | null;
+  valor_comissao_loja?: number | null;
+  percentual_comissao_loja?: number | null;
   tipo_pacote?: string | null;
   status: string | null;
 };
 
-function getBrutoRecibo(r: { valor_total?: number | null }) {
+function hasConciliacaoOverride(r: {
+  valor_bruto_override?: number | null;
+  valor_meta_override?: number | null;
+  valor_liquido_override?: number | null;
+}) {
+  return (
+    r.valor_bruto_override != null ||
+    r.valor_meta_override != null ||
+    r.valor_liquido_override != null
+  );
+}
+
+function getBrutoRecibo(r: { valor_total?: number | null; valor_bruto_override?: number | null }) {
+  if (hasConciliacaoOverride(r)) {
+    return Math.max(0, Number(r.valor_bruto_override ?? r.valor_total ?? 0));
+  }
   return Math.max(0, Number(r.valor_total ?? 0));
 }
 
-function getBrutoSemRav(r: { valor_total?: number | null; valor_rav?: number | null }) {
+function getBrutoSemRav(r: {
+  valor_total?: number | null;
+  valor_rav?: number | null;
+  valor_bruto_override?: number | null;
+  valor_meta_override?: number | null;
+  valor_liquido_override?: number | null;
+}) {
+  if (hasConciliacaoOverride(r)) {
+    return getBrutoRecibo(r);
+  }
   return Math.max(0, getBrutoRecibo(r) - Math.max(0, Number(r.valor_rav ?? 0)));
 }
 
-function getTaxasEfetivas(r: { valor_taxas?: number | null; valor_du?: number | null }) {
+function getTaxasEfetivas(r: {
+  valor_taxas?: number | null;
+  valor_du?: number | null;
+  valor_bruto_override?: number | null;
+  valor_meta_override?: number | null;
+  valor_liquido_override?: number | null;
+}) {
+  if (hasConciliacaoOverride(r)) {
+    return Math.max(0, Number(r.valor_taxas ?? 0));
+  }
   const taxasBrutas = Math.max(0, Number(r.valor_taxas ?? 0));
   const du = Math.max(0, Number(r.valor_du ?? 0));
   return Math.max(0, taxasBrutas - du);
@@ -158,8 +205,37 @@ function getLiquidoComissionavel(r: {
   valor_rav?: number | null;
   valor_taxas?: number | null;
   valor_du?: number | null;
+  valor_bruto_override?: number | null;
+  valor_meta_override?: number | null;
+  valor_liquido_override?: number | null;
 }) {
+  if (r.valor_liquido_override != null) {
+    return Math.max(0, Number(r.valor_liquido_override || 0));
+  }
   return Math.max(0, getBrutoSemRav(r) - getTaxasEfetivas(r));
+}
+
+function getMetaRecibo(
+  r: {
+    valor_total?: number | null;
+    valor_rav?: number | null;
+    valor_taxas?: number | null;
+    valor_du?: number | null;
+    valor_bruto_override?: number | null;
+    valor_meta_override?: number | null;
+    valor_liquido_override?: number | null;
+  },
+  params: ParametrosComissao
+) {
+  if (r.valor_meta_override != null) {
+    return Math.max(0, Number(r.valor_meta_override || 0));
+  }
+  const liquido = getLiquidoComissionavel(r);
+  return params.foco_valor === "liquido"
+    ? liquido
+    : params.usar_taxas_na_meta
+    ? getBrutoSemRav(r)
+    : liquido;
 }
 
 type StatusFiltro = "todos" | "aberto" | "confirmado" | "cancelado";
@@ -467,12 +543,17 @@ export default function RelatorioVendasIsland() {
           usar_taxas_na_meta: true,
           foco_valor: "bruto",
           foco_faturamento: "bruto",
+          conciliacao_sobrepoe_vendas: false,
+          conciliacao_regra_ativa: false,
+          conciliacao_meta_nao_atingida: null,
+          conciliacao_meta_atingida: null,
+          conciliacao_super_meta: null,
         };
         if (companyId) {
           const { data: params } = await supabase
             .from("parametros_comissao")
             .select(
-              "exportacao_pdf, exportacao_excel, usar_taxas_na_meta, foco_valor, foco_faturamento"
+              "exportacao_pdf, exportacao_excel, usar_taxas_na_meta, foco_valor, foco_faturamento, conciliacao_sobrepoe_vendas, conciliacao_regra_ativa, conciliacao_meta_nao_atingida, conciliacao_meta_atingida, conciliacao_super_meta"
             )
             .eq("company_id", companyId)
             .maybeSingle();
@@ -486,6 +567,20 @@ export default function RelatorioVendasIsland() {
               foco_valor: params.foco_valor === "liquido" ? "liquido" : "bruto",
               foco_faturamento:
                 params.foco_faturamento === "liquido" ? "liquido" : "bruto",
+              conciliacao_sobrepoe_vendas: Boolean(params.conciliacao_sobrepoe_vendas),
+              conciliacao_regra_ativa: Boolean(params.conciliacao_regra_ativa),
+              conciliacao_meta_nao_atingida:
+                params.conciliacao_meta_nao_atingida != null
+                  ? Number(params.conciliacao_meta_nao_atingida)
+                  : null,
+              conciliacao_meta_atingida:
+                params.conciliacao_meta_atingida != null
+                  ? Number(params.conciliacao_meta_atingida)
+                  : null,
+              conciliacao_super_meta:
+                params.conciliacao_super_meta != null
+                  ? Number(params.conciliacao_super_meta)
+                  : null,
             });
           } else {
             setExportFlags({ pdf: true, excel: true });
@@ -793,13 +888,15 @@ export default function RelatorioVendasIsland() {
         const clienteCpf = c?.cpf || "";
         const produtoDestino = v.destino_produto;
         const recibos = v.vendas_recibos || [];
-        const totalBrutoVenda = recibos.reduce((sum, r) => sum + getBrutoRecibo(r), 0);
+        const recibosBase = recibos.filter((recibo) => !hasConciliacaoOverride(recibo));
+        const totalBrutoVendaBase = recibosBase.reduce((sum, r) => sum + getBrutoRecibo(r), 0);
         const naoComissionado = pagamentosMap?.get(v.id) ?? Number(v.valor_nao_comissionado || 0);
         const descontoComercial = Math.max(0, Number(v.desconto_comercial_valor || 0));
         // No relatório de vendas, não reduzimos pelo "pago" (valor_total_pago), pois isso representa pagamentos.
         // O ajuste aqui considera apenas descontos comerciais explícitos e formas de pagamento não comissionáveis.
-        const baseComissionavel = Math.max(0, totalBrutoVenda - descontoComercial - naoComissionado);
-        const fatorComissionavel = totalBrutoVenda > 0 ? Math.max(0, Math.min(1, baseComissionavel / totalBrutoVenda)) : 1;
+        const baseComissionavel = Math.max(0, totalBrutoVendaBase - descontoComercial - naoComissionado);
+        const fatorComissionavel =
+          totalBrutoVendaBase > 0 ? Math.max(0, Math.min(1, baseComissionavel / totalBrutoVendaBase)) : 1;
 
         return recibos.map((recibo, index) => {
         const produtoResolvido = recibo.produto_resolvido;
@@ -873,16 +970,23 @@ export default function RelatorioVendasIsland() {
 	          produto_id: produtoId,
 	          cidade_nome: cidadeNome,
 	          cidade_id: cidadeId,
-	          data_venda: v.data_venda,
+	          data_venda: recibo.data_venda || v.data_venda,
 	          data_embarque: v.data_embarque,
 	          numero_recibo: recibo.numero_recibo,
             valor_total: getBrutoRecibo(recibo),
             // Mantido por compatibilidade interna (não usar para exibição de Total).
             // Representa o fator aplicado quando existe desconto comercial / não-comissionável.
-            valor_comissionavel: getBrutoRecibo(recibo) * fatorComissionavel,
+            valor_comissionavel: hasConciliacaoOverride(recibo)
+              ? getBrutoRecibo(recibo)
+              : getBrutoRecibo(recibo) * fatorComissionavel,
 	          valor_taxas: recibo.valor_taxas ?? null,
             valor_du: recibo.valor_du ?? null,
             valor_rav: recibo.valor_rav ?? null,
+            valor_bruto_override: recibo.valor_bruto_override ?? null,
+            valor_meta_override: recibo.valor_meta_override ?? null,
+            valor_liquido_override: recibo.valor_liquido_override ?? null,
+            valor_comissao_loja: recibo.valor_comissao_loja ?? null,
+            percentual_comissao_loja: recibo.percentual_comissao_loja ?? null,
 	          tipo_pacote: recibo.tipo_pacote || null,
 	          status: v.status,
 	        };
@@ -1050,7 +1154,7 @@ export default function RelatorioVendasIsland() {
       if (!produto) return;
       const brutoSemRav = getBrutoSemRav(recibo);
       const liquido = getLiquidoComissionavel(recibo);
-      const valParaMeta = params.usar_taxas_na_meta ? brutoSemRav : liquido;
+      const valParaMeta = getMetaRecibo(recibo, params);
       baseMetaPorProduto[prodId] = (baseMetaPorProduto[prodId] || 0) + valParaMeta;
       if (produto.soma_na_meta) {
         baseMetaTotal += valParaMeta;
@@ -1188,6 +1292,10 @@ export default function RelatorioVendasIsland() {
         usar_taxas_na_meta: true,
         foco_valor: "bruto",
         foco_faturamento: "bruto",
+        conciliacao_regra_ativa: false,
+        conciliacao_meta_nao_atingida: null,
+        conciliacao_meta_atingida: null,
+        conciliacao_super_meta: null,
       };
       const prodId = recibo.produto_tipo_id || recibo.produto_id || "";
       if (!prodId) return 0;
@@ -1195,7 +1303,10 @@ export default function RelatorioVendasIsland() {
       const liquido = getLiquidoComissionavel(recibo);
       const baseCom = params.foco_faturamento === "liquido" ? liquido : brutoSemRav;
       if (baseCom <= 0) return 0;
-      const pct = calcularPctParaProduto(prodId, isSeguroRecibo(recibo), recibo.tipo_pacote || null);
+      const pct =
+        hasConciliacaoOverride(recibo) && hasConciliacaoCommissionRule(params)
+          ? calcularPctConciliacao(params, aggregates.pctMetaGeral)
+          : calcularPctParaProduto(prodId, isSeguroRecibo(recibo), recibo.tipo_pacote || null);
       return baseCom * (pct / 100);
     },
     [parametrosComissao, commissionAggregates, calcularPctParaProduto]

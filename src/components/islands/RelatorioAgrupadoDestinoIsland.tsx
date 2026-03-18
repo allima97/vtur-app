@@ -66,6 +66,7 @@ async function fetchRelatorioDestinos(params: {
   dataFim?: string;
   status?: string;
   busca?: string;
+  companyId?: string;
   vendedorIds?: string[] | null;
   ordem: string;
   ordemDesc: boolean;
@@ -78,6 +79,7 @@ async function fetchRelatorioDestinos(params: {
   if (params.dataFim) qs.set("fim", params.dataFim);
   if (params.status && params.status !== "todos") qs.set("status", params.status);
   if (params.busca) qs.set("busca", params.busca);
+  if (params.companyId) qs.set("company_id", params.companyId);
   if (params.vendedorIds && params.vendedorIds.length > 0) {
     qs.set("vendedor_ids", params.vendedorIds.join(","));
   }
@@ -375,11 +377,14 @@ export default function RelatorioAgrupadoDestinoIsland() {
       }
 
       const paginaAtual = Math.max(1, pageOverride ?? page);
+      const companyIdFiltro =
+        userCtx.papel === "MASTER" ? masterScope.empresaSelecionada : undefined;
       const rows = (await fetchRelatorioDestinos({
         dataInicio: dataInicio || "",
         dataFim: dataFim || "",
         status: statusFiltro,
         busca: buscaDestino,
+        companyId: companyIdFiltro,
         vendedorIds: vendedorIdsFiltro && vendedorIdsFiltro.length > 0 ? vendedorIdsFiltro : null,
         ordem: ordenacao,
         ordemDesc,
@@ -436,11 +441,14 @@ export default function RelatorioAgrupadoDestinoIsland() {
     }
 
     while (true) {
+      const companyIdFiltro =
+        userCtx.papel === "MASTER" ? masterScope.empresaSelecionada : undefined;
       const rows = (await fetchRelatorioDestinos({
         dataInicio: dataInicio || "",
         dataFim: dataFim || "",
         status: statusFiltro,
         busca: buscaDestino,
+        companyId: companyIdFiltro,
         vendedorIds: vendedorIdsFiltro && vendedorIdsFiltro.length > 0 ? vendedorIdsFiltro : null,
         ordem: ordenacao,
         ordemDesc,

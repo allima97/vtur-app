@@ -1724,11 +1724,8 @@ export default function VendasConsultaIsland() {
       ================================= */}
         {modalVenda && (
         <div className="modal-backdrop modal-venda">
-          <div
-            className="modal-panel vtur-modal-panel-shell vtur-venda-modal-panel"
-            style={{ maxWidth: "min(1100px, 95vw)" }}
-          >
-            <div className="modal-header vtur-modal-header">
+          <div className="modal-panel" style={{ maxWidth: "min(1100px, 95vw)" }}>
+            <div className="modal-header">
               <div>
                 <div
                   className="modal-title"
@@ -1737,12 +1734,12 @@ export default function VendasConsultaIsland() {
                   Detalhes da venda
                 </div>
               </div>
-              <AppButton type="button" variant="secondary" onClick={() => setModalVenda(null)}>
-                Fechar
-              </AppButton>
+              <button className="btn-ghost" onClick={() => setModalVenda(null)}>
+                ✕
+              </button>
             </div>
 
-            <div className="modal-body vtur-modal-body-stack vtur-venda-modal-body">
+            <div className="modal-body vtur-venda-modal-body" style={{ overflowX: "auto" }}>
               <AppCard
                 className="mb-3 vtur-modal-section-card"
                 tone="info"

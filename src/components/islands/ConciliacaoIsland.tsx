@@ -10,6 +10,11 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import {
+  buildConciliacaoMetrics,
+  inferConciliacaoStatus,
+  normalizeConciliacaoDescricaoKey,
+} from "../../lib/conciliacao/business";
 
 type Papel = "ADMIN" | "MASTER" | "GESTOR" | "VENDEDOR" | "OUTRO";
 
@@ -40,6 +45,11 @@ type ConciliacaoItem = {
   valor_visao_master: number | null;
   valor_opfax: number | null;
   valor_saldo: number | null;
+  valor_venda_real: number | null;
+  valor_comissao_loja: number | null;
+  percentual_comissao_loja: number | null;
+  faixa_comissao: string | null;
+  is_seguro_viagem: boolean;
   origem: string | null;
   conciliado: boolean;
   match_total: boolean | null;
@@ -76,6 +86,8 @@ type ConciliacaoResumoMes = {
   month: string;
   total: number;
   conciliadosSistema: number;
+  pendentesConciliacao: number;
+  pendentesImportacao?: number;
   pendentesRanking: number;
   atribuidosRanking: number;
 };
@@ -84,8 +96,11 @@ type ConciliacaoResumoDia = {
   date: string;
   total: number;
   conciliadosSistema: number;
+  pendentesConciliacao: number;
+  pendentesImportacao?: number;
   pendentesRanking: number;
   atribuidosRanking: number;
+  status?: string;
 };
 
 type ConciliacaoResumo = {
@@ -93,12 +108,29 @@ type ConciliacaoResumo = {
   totals?: {
     importados?: number;
     conciliadosSistema?: number;
+    pendentesConciliacao?: number;
+    pendentesImportacao?: number;
     pendentesRanking?: number;
     encontradosSistema?: number;
     atribuidosRanking?: number;
   };
   byMonth?: ConciliacaoResumoMes[];
   byDay?: ConciliacaoResumoDia[];
+};
+
+type ConciliacaoExecucao = {
+  id: string;
+  company_id: string;
+  actor: string;
+  actor_user_id: string | null;
+  checked: number;
+  reconciled: number;
+  updated_taxes: number;
+  still_pending: number;
+  status: string;
+  error_message: string | null;
+  created_at: string;
+  actor_user?: { nome_completo?: string | null; email?: string | null } | null;
 };
 
 function currentMonthValue() {
@@ -146,6 +178,7 @@ type LinhaInput = {
   movimento_data?: string | null;
   status?: "BAIXA" | "OPFAX" | "ESTORNO" | "OUTRO";
   descricao?: string | null;
+  descricao_chave?: string | null;
   valor_lancamentos?: number | null;
   valor_taxas?: number | null;
   valor_descontos?: number | null;
@@ -154,6 +187,13 @@ type LinhaInput = {
   valor_visao_master?: number | null;
   valor_opfax?: number | null;
   valor_saldo?: number | null;
+  valor_venda_real?: number | null;
+  valor_comissao_loja?: number | null;
+  percentual_comissao_loja?: number | null;
+  faixa_comissao?: string | null;
+  is_seguro_viagem?: boolean | null;
+  ranking_vendedor_id?: string | null;
+  ranking_produto_id?: string | null;
   origem?: string | null;
   raw?: any;
 };
@@ -189,12 +229,27 @@ function parseMovimentoDateFromTxt(text: string): string | null {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function inferStatus(descricao: string): "BAIXA" | "OPFAX" | "ESTORNO" | "OUTRO" {
-  const t = String(descricao || "").toUpperCase();
-  if (t.includes("ESTORNO")) return "ESTORNO";
-  if (t.includes("OPFAX")) return "OPFAX";
-  if (t.includes("BAIXA") && t.includes("RECIBO")) return "BAIXA";
-  return "OUTRO";
+function enrichLinha(base: LinhaInput): LinhaInput {
+  const metrics = buildConciliacaoMetrics({
+    descricao: base.descricao,
+    valorLancamentos: base.valor_lancamentos,
+    valorTaxas: base.valor_taxas,
+    valorDescontos: base.valor_descontos,
+    valorAbatimentos: base.valor_abatimentos,
+    valorSaldo: base.valor_saldo,
+    valorOpfax: base.valor_opfax,
+  });
+
+  return {
+    ...base,
+    status: metrics.status,
+    descricao_chave: metrics.descricaoChave,
+    valor_venda_real: metrics.valorVendaReal,
+    valor_comissao_loja: metrics.valorComissaoLoja,
+    percentual_comissao_loja: metrics.percentualComissaoLoja,
+    faixa_comissao: metrics.faixaComissao,
+    is_seguro_viagem: metrics.isSeguroViagem,
+  };
 }
 
 function parseConciliacaoTxt(text: string, origem: string): { movimentoData: string | null; linhas: LinhaInput[] } {
@@ -227,13 +282,13 @@ function parseConciliacaoTxt(text: string, origem: string): { movimentoData: str
     const valor_abatimentos = parsePtBrNumber(parts[5]);
     const valor_calculada_loja = parsePtBrNumber(parts[6]);
     const valor_visao_master = parsePtBrNumber(parts[8]);
-    const valor_opfax = parsePtBrNumber(parts[10]);
-    const valor_saldo = parsePtBrNumber(parts[11]);
+    const valor_opfax = parsePtBrNumber(parts[11]);
+    const valor_saldo = parsePtBrNumber(parts[12]);
 
-    linhas.push({
+    linhas.push(enrichLinha({
       documento,
       movimento_data: movimentoData,
-      status: inferStatus(descricao),
+      status: inferConciliacaoStatus(descricao),
       descricao,
       valor_lancamentos,
       valor_taxas,
@@ -245,7 +300,7 @@ function parseConciliacaoTxt(text: string, origem: string): { movimentoData: str
       valor_saldo,
       origem,
       raw: { parts },
-    });
+    }));
   }
 
   return { movimentoData, linhas };
@@ -262,6 +317,12 @@ async function parseConciliacaoXls(file: File, origem: string): Promise<{ movime
 
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" }) as any[][];
   if (!rows || rows.length === 0) return { movimentoData: null, linhas: [] };
+
+  const movimentoDateCell = rows
+    .flat()
+    .map((cell) => String(cell || "").trim())
+    .find((cell) => /Movimenta[cç][aã]o\s+do\s+Dia:/i.test(cell));
+  const movimentoData = movimentoDateCell ? parseMovimentoDateFromTxt(movimentoDateCell) : null;
 
   const headerIdx = rows.findIndex((r) => r.some((cell) => String(cell || "").toUpperCase().includes("DOCUMENTO")));
   if (headerIdx < 0) {
@@ -303,9 +364,10 @@ async function parseConciliacaoXls(file: File, origem: string): Promise<{ movime
 
     const pick = (idx: number) => (idx >= 0 ? parsePtBrNumber(r[idx]) : null);
 
-    linhas.push({
+    linhas.push(enrichLinha({
       documento: doc,
-      status: inferStatus(descricao),
+      movimento_data: movimentoData,
+      status: inferConciliacaoStatus(descricao),
       descricao: descricao || null,
       valor_lancamentos: pick(cLanc),
       valor_taxas: pick(cTaxas),
@@ -317,10 +379,10 @@ async function parseConciliacaoXls(file: File, origem: string): Promise<{ movime
       valor_saldo: pick(cSaldo),
       origem,
       raw: { row: r },
-    });
+    }));
   }
 
-  return { movimentoData: null, linhas };
+  return { movimentoData, linhas };
 }
 
 function formatMoney(value: number | null | undefined) {
@@ -357,6 +419,7 @@ export default function ConciliacaoIsland() {
 
   const [parsedLinhas, setParsedLinhas] = useState<LinhaInput[]>([]);
   const [parsedMovimentoData, setParsedMovimentoData] = useState<string | null>(null);
+  const [importRankingVendedorId, setImportRankingVendedorId] = useState<string>("");
 
   const [somentePendentes, setSomentePendentes] = useState(true);
   const [rankingStatusFilter, setRankingStatusFilter] = useState<"all" | "pending" | "assigned" | "system">("pending");
@@ -366,6 +429,8 @@ export default function ConciliacaoIsland() {
   const [itens, setItens] = useState<ConciliacaoItem[]>([]);
   const [loadingResumo, setLoadingResumo] = useState(false);
   const [resumo, setResumo] = useState<ConciliacaoResumo | null>(null);
+  const [loadingExecucoes, setLoadingExecucoes] = useState(false);
+  const [execucoes, setExecucoes] = useState<ConciliacaoExecucao[]>([]);
 
   const [importando, setImportando] = useState(false);
   const [conciliando, setConciliando] = useState(false);
@@ -514,6 +579,30 @@ export default function ConciliacaoIsland() {
     }
   }
 
+  async function carregarExecucoes() {
+    if (!resolvedCompanyId) {
+      setExecucoes([]);
+      return;
+    }
+
+    try {
+      setLoadingExecucoes(true);
+      const qs = new URLSearchParams({ company_id: resolvedCompanyId, limit: "12" });
+      const resp = await fetch(`/api/v1/conciliacao/executions?${qs.toString()}`, {
+        method: "GET",
+        credentials: "same-origin",
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+      const json = (await resp.json()) as ConciliacaoExecucao[];
+      setExecucoes(Array.isArray(json) ? json : []);
+    } catch (e: any) {
+      console.error(e);
+      setExecucoes([]);
+    } finally {
+      setLoadingExecucoes(false);
+    }
+  }
+
   useEffect(() => {
     if (!resolvedCompanyId) return;
     carregarResumo();
@@ -521,9 +610,16 @@ export default function ConciliacaoIsland() {
   }, [resolvedCompanyId, monthFilter]);
 
   useEffect(() => {
+    if (!resolvedCompanyId) return;
+    carregarExecucoes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolvedCompanyId]);
+
+  useEffect(() => {
     if (!resolvedCompanyId) {
       setRankingAssignees([]);
       setRankingProdutosMeta([]);
+      setImportRankingVendedorId("");
       return;
     }
 
@@ -559,6 +655,22 @@ export default function ConciliacaoIsland() {
       mounted = false;
     };
   }, [resolvedCompanyId]);
+
+  useEffect(() => {
+    if (!importRankingVendedorId) return;
+    if (rankingAssignees.some((opt) => opt.id === importRankingVendedorId)) return;
+    setImportRankingVendedorId("");
+  }, [importRankingVendedorId, rankingAssignees]);
+
+  useEffect(() => {
+    setParsedLinhas((prev) => {
+      if (prev.length === 0) return prev;
+      return prev.map((linha) => ({
+        ...linha,
+        ranking_vendedor_id: importRankingVendedorId || null,
+      }));
+    });
+  }, [importRankingVendedorId]);
 
   async function salvarAtribuicaoRanking(
     row: ConciliacaoItem,
@@ -643,11 +755,21 @@ export default function ConciliacaoIsland() {
         const text = await file.text();
         const parsed = parseConciliacaoTxt(text, origem);
         setParsedMovimentoData(parsed.movimentoData);
-        setParsedLinhas(parsed.linhas);
+        setParsedLinhas(
+          parsed.linhas.map((linha) => ({
+            ...linha,
+            ranking_vendedor_id: importRankingVendedorId || null,
+          }))
+        );
       } else if (ext === "xls" || ext === "xlsx") {
         const parsed = await parseConciliacaoXls(file, origem);
         setParsedMovimentoData(parsed.movimentoData);
-        setParsedLinhas(parsed.linhas);
+        setParsedLinhas(
+          parsed.linhas.map((linha) => ({
+            ...linha,
+            ranking_vendedor_id: importRankingVendedorId || null,
+          }))
+        );
       } else {
         throw new Error("Formato não suportado. Use TXT ou XLS/XLSX.");
       }
@@ -676,6 +798,10 @@ export default function ConciliacaoIsland() {
       showToast("Nenhuma linha reconhecida no arquivo.", "error");
       return;
     }
+    if (!importRankingVendedorId) {
+      showToast("Selecione o vendedor/gestor/master responsável pelo lote.", "error");
+      return;
+    }
 
     try {
       setImportando(true);
@@ -702,6 +828,8 @@ export default function ConciliacaoIsland() {
       );
 
       await carregarLista();
+      await carregarResumo();
+      await carregarExecucoes();
     } catch (e: any) {
       console.error(e);
       showToast(e?.message || "Erro ao importar.", "error");
@@ -730,6 +858,8 @@ export default function ConciliacaoIsland() {
         "success"
       );
       await carregarLista();
+      await carregarResumo();
+      await carregarExecucoes();
     } catch (e: any) {
       console.error(e);
       showToast(e?.message || "Erro ao conciliar pendentes.", "error");
@@ -1007,7 +1137,11 @@ export default function ConciliacaoIsland() {
   const produtoMetaUnico = rankingProdutosMeta.length === 1 ? rankingProdutosMeta[0] : null;
   const resumoMeses = resumo?.byMonth || [];
   const resumoDias = resumo?.byDay || [];
+  const resumoDiasPendentes = resumoDias.filter(
+    (item) => (item.pendentesConciliacao || 0) > 0 || (item.pendentesImportacao || 0) > 0
+  );
   const resumoTotais = resumo?.totals || {};
+  const ultimaExecucao = execucoes[0] || null;
 
   if (loadingPerm) return <LoadingUsuarioContext />;
   if (!podeVer) {
@@ -1163,6 +1297,14 @@ export default function ConciliacaoIsland() {
               <strong>{loadingResumo ? "..." : resumoTotais.importados || 0}</strong>
             </div>
             <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Pendentes conciliação</span>
+              <strong>{loadingResumo ? "..." : resumoTotais.pendentesConciliacao || 0}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Pendentes importação</span>
+              <strong>{loadingResumo ? "..." : resumoTotais.pendentesImportacao || 0}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
               <span className="vtur-quote-summary-label">Pendentes ranking</span>
               <strong>{loadingResumo ? "..." : resumoTotais.pendentesRanking || 0}</strong>
             </div>
@@ -1208,6 +1350,8 @@ export default function ConciliacaoIsland() {
                   <th>Mês</th>
                   <th>Total</th>
                   <th>Conciliados sist.</th>
+                  <th>Pendentes conciliação</th>
+                  <th>Pendentes importação</th>
                   <th>Pendentes ranking</th>
                   <th>Atribuídos ranking</th>
                 </tr>
@@ -1215,7 +1359,7 @@ export default function ConciliacaoIsland() {
               <tbody>
                 {resumoMeses.length === 0 ? (
                   <tr>
-                    <td colSpan={5}>Sem resumo mensal disponível.</td>
+                    <td colSpan={7}>Sem resumo mensal disponível.</td>
                   </tr>
                 ) : (
                   resumoMeses.map((item) => (
@@ -1223,6 +1367,8 @@ export default function ConciliacaoIsland() {
                       <td data-label="Mês">{item.month}</td>
                       <td data-label="Total">{item.total}</td>
                       <td data-label="Conciliados sist.">{item.conciliadosSistema}</td>
+                      <td data-label="Pendentes conciliação">{item.pendentesConciliacao}</td>
+                      <td data-label="Pendentes importação">{item.pendentesImportacao || 0}</td>
                       <td data-label="Pendentes ranking">{item.pendentesRanking}</td>
                       <td data-label="Atribuídos ranking">{item.atribuidosRanking}</td>
                     </tr>
@@ -1239,6 +1385,8 @@ export default function ConciliacaoIsland() {
                   <th>Dia</th>
                   <th>Total</th>
                   <th>Conciliados sist.</th>
+                  <th>Pendentes conciliação</th>
+                  <th>Pendentes importação</th>
                   <th>Pendentes ranking</th>
                   <th>Atribuídos ranking</th>
                 </tr>
@@ -1246,7 +1394,7 @@ export default function ConciliacaoIsland() {
               <tbody>
                 {resumoDias.length === 0 ? (
                   <tr>
-                    <td colSpan={5}>Sem resumo diário para o mês selecionado.</td>
+                    <td colSpan={7}>Sem resumo diário para o mês selecionado.</td>
                   </tr>
                 ) : (
                   resumoDias.map((item) => (
@@ -1254,8 +1402,123 @@ export default function ConciliacaoIsland() {
                       <td data-label="Dia">{item.date}</td>
                       <td data-label="Total">{item.total}</td>
                       <td data-label="Conciliados sist.">{item.conciliadosSistema}</td>
+                      <td data-label="Pendentes conciliação">{item.pendentesConciliacao}</td>
+                      <td data-label="Pendentes importação">{item.pendentesImportacao || 0}</td>
                       <td data-label="Pendentes ranking">{item.pendentesRanking}</td>
                       <td data-label="Atribuídos ranking">{item.atribuidosRanking}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-3 table-container">
+            <table className="table-default table-header-blue table-mobile-cards min-w-[640px]">
+              <thead>
+                <tr>
+                  <th>Data pendente</th>
+                  <th>Tipo</th>
+                  <th>Pendentes importação</th>
+                  <th>Pendentes conciliação</th>
+                  <th>Total do dia</th>
+                </tr>
+              </thead>
+              <tbody>
+                {resumoDiasPendentes.length === 0 ? (
+                  <tr>
+                    <td colSpan={5}>Nenhuma data pendente para o mês selecionado.</td>
+                  </tr>
+                ) : (
+                  resumoDiasPendentes.map((item) => (
+                    <tr key={`pend-${item.date}`}>
+                      <td data-label="Data pendente">{item.date}</td>
+                      <td data-label="Tipo">
+                        {item.status === "IMPORTACAO_PENDENTE"
+                          ? "Importação pendente"
+                          : item.status === "CONCILIACAO_PENDENTE"
+                          ? "Conciliação pendente"
+                          : "OK"}
+                      </td>
+                      <td data-label="Pendentes importação">{item.pendentesImportacao || 0}</td>
+                      <td data-label="Pendentes conciliação">{item.pendentesConciliacao}</td>
+                      <td data-label="Total do dia">{item.total}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </AppCard>
+
+        <AppCard
+          className="mb-3"
+          title="Execuções da conciliação"
+          subtitle="Histórico das últimas tentativas manuais e automáticas da rotina de conciliação."
+        >
+          <div className="vtur-quote-summary-grid">
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Última execução</span>
+              <strong>{ultimaExecucao ? formatDateTime(ultimaExecucao.created_at) : "-"}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Origem</span>
+              <strong>{ultimaExecucao ? (ultimaExecucao.actor === "user" ? "manual" : "cron") : "-"}</strong>
+            </div>
+            <div className="vtur-quote-summary-item">
+              <span className="vtur-quote-summary-label">Último status</span>
+              <strong>{ultimaExecucao?.status || "-"}</strong>
+            </div>
+            <div className="vtur-form-actions" style={{ alignItems: "flex-end" }}>
+              <AppButton
+                type="button"
+                variant="secondary"
+                disabled={loadingExecucoes || precisaEmpresaMaster}
+                onClick={carregarExecucoes}
+              >
+                {loadingExecucoes ? "Atualizando..." : "Atualizar execuções"}
+              </AppButton>
+            </div>
+          </div>
+
+          <div className="mt-3 table-container">
+            <table className="table-default table-header-blue table-mobile-cards min-w-[980px]">
+              <thead>
+                <tr>
+                  <th>Quando</th>
+                  <th>Origem</th>
+                  <th>Por</th>
+                  <th>Checados</th>
+                  <th>Conciliados</th>
+                  <th>Taxas atualizadas</th>
+                  <th>Pendentes após execução</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {execucoes.length === 0 ? (
+                  <tr>
+                    <td colSpan={8}>
+                      {loadingExecucoes ? "Carregando execuções..." : "Nenhuma execução registrada para esta empresa."}
+                    </td>
+                  </tr>
+                ) : (
+                  execucoes.map((item) => (
+                    <tr key={item.id}>
+                      <td data-label="Quando">{formatDateTime(item.created_at)}</td>
+                      <td data-label="Origem">{item.actor === "user" ? "manual" : "cron"}</td>
+                      <td data-label="Por">
+                        {item.actor_user?.nome_completo || item.actor_user?.email || (item.actor === "user" ? "-" : "cron")}
+                      </td>
+                      <td data-label="Checados">{item.checked}</td>
+                      <td data-label="Conciliados">{item.reconciled}</td>
+                      <td data-label="Taxas atualizadas">{item.updated_taxes}</td>
+                      <td data-label="Pendentes após execução">{item.still_pending}</td>
+                      <td data-label="Status">
+                        {item.status === "error" && item.error_message
+                          ? `${item.status}: ${item.error_message}`
+                          : item.status}
+                      </td>
                     </tr>
                   ))
                 )}
@@ -1278,7 +1541,14 @@ export default function ConciliacaoIsland() {
             <AppButton
               type="button"
               variant="primary"
-              disabled={importando || conciliando || !arquivo || parsedLinhas.length === 0 || precisaEmpresaMaster}
+              disabled={
+                importando ||
+                conciliando ||
+                !arquivo ||
+                parsedLinhas.length === 0 ||
+                !importRankingVendedorId ||
+                precisaEmpresaMaster
+              }
               onClick={importar}
             >
               {importando ? "Importando..." : "Importar"}
@@ -1286,6 +1556,23 @@ export default function ConciliacaoIsland() {
           }
         >
           <div className="vtur-import-upload-stack">
+            <div className="vtur-form-grid vtur-form-grid-2">
+              <AppField
+                as="select"
+                label="Responsável do lote"
+                value={importRankingVendedorId}
+                onChange={(e) => setImportRankingVendedorId(e.target.value)}
+                disabled={loadingOptions || importando || conciliando || precisaEmpresaMaster}
+                options={[
+                  { label: "Selecione...", value: "" },
+                  ...rankingAssignees.map((opt) => ({
+                    label: opt.tipo ? `${opt.nome_completo} (${opt.tipo})` : opt.nome_completo,
+                    value: opt.id,
+                  })),
+                ]}
+              />
+            </div>
+
             <div className="vtur-import-upload-row">
               <label className="vtur-import-upload-trigger" htmlFor="conciliacao-upload-input">
                 Escolher arquivo
@@ -1328,8 +1615,13 @@ export default function ConciliacaoIsland() {
                   <th>Documento</th>
                   <th>Status</th>
                   <th>Descricao</th>
-                  <th>Total</th>
+                  <th>Lançamentos</th>
                   <th>Taxas</th>
+                  <th>Descontos</th>
+                  <th>Abatimentos</th>
+                  <th>Venda real</th>
+                  <th>Comissão loja</th>
+                  <th>% loja</th>
                 </tr>
               }
               empty={preview.length === 0}
@@ -1339,16 +1631,28 @@ export default function ConciliacaoIsland() {
                   description="Selecione um arquivo valido para revisar as primeiras linhas antes da importacao."
                 />
               }
-              colSpan={5}
-              className="table-header-blue table-mobile-cards min-w-[820px]"
+              colSpan={10}
+              className="table-header-blue table-mobile-cards min-w-[1320px]"
             >
               {preview.map((linha) => (
                 <tr key={linha.documento}>
                   <td data-label="Documento">{linha.documento}</td>
                   <td data-label="Status">{linha.status || "OUTRO"}</td>
                   <td data-label="Descricao">{linha.descricao || "-"}</td>
-                  <td data-label="Total">{formatMoney(linha.valor_lancamentos)}</td>
+                  <td data-label="Lançamentos">{formatMoney(linha.valor_lancamentos)}</td>
                   <td data-label="Taxas">{formatMoney(linha.valor_taxas)}</td>
+                  <td data-label="Descontos">{formatMoney(linha.valor_descontos)}</td>
+                  <td data-label="Abatimentos">{formatMoney(linha.valor_abatimentos)}</td>
+                  <td data-label="Venda real">{formatMoney(linha.valor_venda_real)}</td>
+                  <td data-label="Comissão loja">{formatMoney(linha.valor_comissao_loja)}</td>
+                  <td data-label="% loja">
+                    {linha.percentual_comissao_loja != null
+                      ? `${Number(linha.percentual_comissao_loja).toLocaleString("pt-BR", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}%`
+                      : "-"}
+                  </td>
                 </tr>
               ))}
             </DataTable>
@@ -1369,8 +1673,13 @@ export default function ConciliacaoIsland() {
                 <th>Recibo encontrado</th>
                 <th>Vendedor ranking</th>
                 <th>Meta dif.</th>
-                <th>Total (arq)</th>
+                <th>Lançamentos</th>
                 <th>Taxas (arq)</th>
+                <th>Descontos</th>
+                <th>Abatimentos</th>
+                <th>Venda real</th>
+                <th>Comissão loja</th>
+                <th>% loja</th>
                 <th>Total (sist)</th>
                 <th>Taxas (sist)</th>
                 <th>Diff total</th>
@@ -1390,8 +1699,8 @@ export default function ConciliacaoIsland() {
                 }
               />
             }
-            colSpan={13}
-            className="table-header-green table-mobile-cards min-w-[1680px]"
+            colSpan={18}
+            className="table-header-green table-mobile-cards min-w-[2040px]"
           >
             {itens.map((row) => (
               <tr key={row.id}>
@@ -1463,8 +1772,20 @@ export default function ConciliacaoIsland() {
                     </select>
                   )}
                 </td>
-                <td data-label="Total (arq)">{formatMoney(row.valor_lancamentos)}</td>
+                <td data-label="Lançamentos">{formatMoney(row.valor_lancamentos)}</td>
                 <td data-label="Taxas (arq)">{formatMoney(row.valor_taxas)}</td>
+                <td data-label="Descontos">{formatMoney(row.valor_descontos)}</td>
+                <td data-label="Abatimentos">{formatMoney(row.valor_abatimentos)}</td>
+                <td data-label="Venda real">{formatMoney(row.valor_venda_real)}</td>
+                <td data-label="Comissão loja">{formatMoney(row.valor_comissao_loja)}</td>
+                <td data-label="% loja">
+                  {row.percentual_comissao_loja != null
+                    ? `${Number(row.percentual_comissao_loja).toLocaleString("pt-BR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}%`
+                    : "-"}
+                </td>
                 <td data-label="Total (sist)">{formatMoney(row.sistema_valor_total)}</td>
                 <td data-label="Taxas (sist)">{formatMoney(row.sistema_valor_taxas)}</td>
                 <td data-label="Diff total">{formatMoney(row.diff_total)}</td>

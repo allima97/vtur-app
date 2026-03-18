@@ -1,6 +1,6 @@
 import { createServerClient } from "../../../../lib/supabaseServer";
 import { kvCache } from "../../../../lib/kvCache";
-import { computeVendasAggFromRows, fetchVendasAggregateRows } from "../vendas/_aggregates";
+import { fetchAndComputeVendasAgg } from "../vendas/_aggregates";
 
 import { getSupabaseEnv } from "../../users";
 const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv();
@@ -417,11 +417,12 @@ export async function GET({ request }: { request: Request }) {
     const vendasAggPromise = (async (): Promise<VendasAgg> => {
       const companyId =
         requestedCompanyId && requestedCompanyId !== "all" ? requestedCompanyId : null;
-      const rows = await fetchVendasAggregateRows(client, {
+      const agg = await fetchAndComputeVendasAgg(client, {
         companyId,
         vendedorIds: vendedorIds.length > 0 ? vendedorIds : null,
+        inicio,
+        fim,
       });
-      const agg = computeVendasAggFromRows(rows, { inicio, fim });
       if (agg.porProduto.length === 0 && agg.totalVendas > 0) {
         agg.porProduto = await fetchPorProdutoFallback(client, companyId, vendedorIds, inicio, fim);
       }

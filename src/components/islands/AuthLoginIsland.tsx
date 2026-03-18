@@ -4,6 +4,7 @@ import { registrarLog } from "../../lib/logs";
 import { SUPPORT_EMAIL } from "../../lib/systemName";
 import { clearPermissoesCache } from "../../lib/permissoesCache";
 import { refreshPermissoes } from "../../lib/permissoesStore";
+import { hasVerifiedTotpFactor, normalizeMfaRedirectPath } from "../../lib/authMfa";
 import AlertMessage from "../ui/AlertMessage";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
@@ -21,16 +22,6 @@ export default function AuthLoginIsland() {
   const [loading, setLoading] = useState(false);
   const [modalSuspenso, setModalSuspenso] = useState(false);
   const [lembrarEmail, setLembrarEmail] = useState(false);
-
-  async function getIP() {
-    try {
-      const resp = await fetch("https://api.ipify.org?format=json");
-      const j = await resp.json();
-      return j.ip || "";
-    } catch {
-      return "";
-    }
-  }
 
   function mostrarMensagem(msg: string, tipo: "success" | "danger" | "warning" = "danger") {
     setMensagem({ texto: msg, tipo });
@@ -80,6 +71,27 @@ export default function AuthLoginIsland() {
     setModalSuspenso(false);
   }
 
+  function persistirEmailLembrado(emailNormalizado: string) {
+    if (typeof window === "undefined") return;
+    if (lembrarEmail) {
+      window.localStorage.setItem(REMEMBER_EMAIL_KEY, emailNormalizado);
+    } else {
+      window.localStorage.removeItem(REMEMBER_EMAIL_KEY);
+    }
+  }
+
+  async function fetchMfaPolicy() {
+    try {
+      const resp = await fetch("/api/v1/auth/mfa-policy");
+      if (!resp.ok) return { required: false };
+      const payload = (await resp.json()) as { required?: boolean };
+      return { required: Boolean(payload?.required) };
+    } catch (e) {
+      console.error("Falha ao carregar politica MFA", e);
+      return { required: false };
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErro("");
@@ -88,6 +100,10 @@ export default function AuthLoginIsland() {
 
     const emailLimpo = email.trim().toLowerCase();
     const senha = password;
+    const nextUrl =
+      typeof window !== "undefined"
+        ? normalizeMfaRedirectPath(new URLSearchParams(window.location.search).get("next"), "")
+        : "";
 
     if (!emailLimpo || !senha) {
       mostrarMensagem("Informe e-mail e senha");
@@ -95,14 +111,13 @@ export default function AuthLoginIsland() {
       return;
     }
 
-    const ip = await getIP();
     const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
 
     try {
       await registrarLog({ user_id: null, acao: "tentativa_login", modulo: "login", detalhes: { email: emailLimpo } });
       const { data, error } = await supabase.auth.signInWithPassword({ email: emailLimpo, password: senha });
       if (error) {
-        await registrarLog({ user_id: null, acao: "login_falhou", modulo: "login", detalhes: { email, motivo: error.message, ip, userAgent } });
+        await registrarLog({ user_id: null, acao: "login_falhou", modulo: "login", detalhes: { email, motivo: error.message, userAgent } });
         const rawMsg = String(error?.message || "").toLowerCase();
         const needsEmailConfirm =
           rawMsg.includes("email not confirmed") ||
@@ -133,7 +148,7 @@ export default function AuthLoginIsland() {
       }
       const user = data.user;
       const userId = user?.id || null;
-      await registrarLog({ user_id: userId, acao: "login_sucesso", modulo: "login", detalhes: { email: emailLimpo, userId, ip, userAgent } });
+      await registrarLog({ user_id: userId, acao: "login_sucesso", modulo: "login", detalhes: { email: emailLimpo, userId, userAgent } });
       const authedEmail = user?.email || emailLimpo;
       // Buscar dados do usuário
       const { data: perfil, error: userError } = await supabase
@@ -226,21 +241,42 @@ export default function AuthLoginIsland() {
         : tipoNorm.includes("GESTOR")
         ? "/dashboard/gestor"
         : "/dashboard";
+      const destinoFinal = normalizeMfaRedirectPath(nextUrl, destino);
 
-      if (typeof window !== "undefined") {
-        if (lembrarEmail) {
-          window.localStorage.setItem(REMEMBER_EMAIL_KEY, emailLimpo);
-        } else {
-          window.localStorage.removeItem(REMEMBER_EMAIL_KEY);
+      const [{ data: aalData, error: aalError }, { data: factorsData, error: factorsError }] =
+        await Promise.all([
+          supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+          supabase.auth.mfa.listFactors(),
+        ]);
+      const mfaPolicy = await fetchMfaPolicy();
+      const hasVerifiedFactor = hasVerifiedTotpFactor(factorsData || null);
+
+      if (mfaPolicy.required && !hasVerifiedFactor) {
+        persistirEmailLembrado(emailLimpo);
+        window.location.replace(`/perfil?setup_2fa=1&next=${encodeURIComponent(destinoFinal)}`);
+        return;
+      }
+
+      if (!aalError && !factorsError) {
+        const precisaMfa =
+          hasVerifiedFactor &&
+          aalData?.nextLevel === "aal2" &&
+          aalData?.currentLevel !== "aal2";
+        if (precisaMfa) {
+          persistirEmailLembrado(emailLimpo);
+          window.location.replace(`/auth/mfa?next=${encodeURIComponent(destinoFinal)}`);
+          return;
         }
       }
+
+      persistirEmailLembrado(emailLimpo);
 
       clearPermissoesCache();
       await refreshPermissoes();
 
-      window.location.replace(destino);
+      window.location.replace(destinoFinal);
     } catch (e: any) {
-      await registrarLog({ user_id: null, acao: "login_erro_interno", modulo: "login", detalhes: { email, erro: e.message, ip, userAgent } });
+      await registrarLog({ user_id: null, acao: "login_erro_interno", modulo: "login", detalhes: { email, erro: e.message, userAgent } });
       mostrarMensagem("Erro inesperado ao fazer login.");
     } finally {
       setLoading(false);

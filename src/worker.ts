@@ -7,6 +7,7 @@ import { handle } from "@astrojs/cloudflare/handler";
 import { createApiApp } from "./api/apiApp";
 import { applyNoStoreHeaders, isCacheDisabled } from "./lib/cachePolicy";
 import { getMaintenanceStatus } from "./lib/maintenance";
+import { applySecurityHeaders } from "./lib/securityHeaders";
 import { reconcilePendentes } from "./pages/api/v1/conciliacao/_reconcile";
 
 type Env = {
@@ -137,6 +138,7 @@ const fetch: ExportedHandlerFetchHandler = async (
       if (isCacheDisabled()) {
         applyNoStoreHeaders(headers);
       }
+      applySecurityHeaders(headers);
       if (shouldSetBypassCookie) {
         headers.append(
           "Set-Cookie",
@@ -217,6 +219,7 @@ const fetch: ExportedHandlerFetchHandler = async (
     if (isCacheDisabled()) {
       applyNoStoreHeaders(headers);
     }
+    applySecurityHeaders(headers);
     return new Response(`Erro temporário: ${error instanceof Error ? error.message : String(error)}`, {
       status: 503,
       headers,

@@ -1,7 +1,7 @@
 import { createServerClient } from "../../../../lib/supabaseServer";
 import { kvCache } from "../../../../lib/kvCache";
 import { MODULO_ALIASES } from "../../../../config/modulos";
-import { computeVendasAggFromRows, fetchVendasAggregateRows } from "./_aggregates";
+import { fetchAndComputeVendasAgg } from "./_aggregates";
 
 import { getSupabaseEnv } from "../../users";
 const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv();
@@ -367,11 +367,9 @@ export async function GET({ request }: { request: Request }) {
     let kpis: { totalVendas: number; totalTaxas: number; totalLiquido: number; totalSeguro: number } | null = null;
     if (includeKpis && !openId) {
       const hasDates = Boolean(inicio && fim);
-      const aggRows = await fetchVendasAggregateRows(client, {
+      const agg = await fetchAndComputeVendasAgg(client, {
         companyId: companyId || null,
         vendedorIds: vendedorIds.length > 0 ? vendedorIds : null,
-      });
-      const agg = computeVendasAggFromRows(aggRows, {
         inicio: hasDates ? inicio : null,
         fim: hasDates ? fim : null,
       });

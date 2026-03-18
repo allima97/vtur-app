@@ -47,7 +47,7 @@ export const GET: APIRoute = async ({ request }) => {
     const vendedores = (usersData || [])
       .filter((row: any) => {
         const tipoNome = String(row?.user_types?.name || "").toUpperCase();
-        return tipoNome.includes("VENDEDOR") || tipoNome.includes("GESTOR");
+        return tipoNome.includes("VENDEDOR") || tipoNome.includes("GESTOR") || tipoNome.includes("MASTER");
       })
       .map((row: any) => ({
         id: String(row?.id || "").trim(),
