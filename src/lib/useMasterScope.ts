@@ -20,7 +20,10 @@ const getTipoNome = (u: MasterUsuario) =>
   String(u.user_types?.name || "").toUpperCase();
 
 const isGestor = (u: MasterUsuario) => getTipoNome(u).includes("GESTOR");
-const isVendedor = (u: MasterUsuario) => getTipoNome(u).includes("VENDEDOR");
+const canBeSalesOwner = (u: MasterUsuario) => {
+  const tipo = getTipoNome(u);
+  return tipo.includes("VENDEDOR") || tipo.includes("GESTOR") || tipo.includes("MASTER");
+};
 
 export function useMasterScope(enabled: boolean) {
   const [loading, setLoading] = useState(false);
@@ -109,7 +112,7 @@ export function useMasterScope(enabled: boolean) {
     [usuariosScope]
   );
   const vendedoresDisponiveis = useMemo(
-    () => usuariosScope.filter(isVendedor),
+    () => usuariosScope.filter(canBeSalesOwner),
     [usuariosScope]
   );
 

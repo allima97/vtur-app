@@ -286,6 +286,7 @@ export default function FormasPagamentoIsland() {
                           <AppButton
                             type="button"
                             variant="ghost"
+                            className="vtur-table-action"
                             title="Editar"
                             aria-label="Editar"
                             onClick={() => {
@@ -307,6 +308,7 @@ export default function FormasPagamentoIsland() {
                           <AppButton
                             type="button"
                             variant="danger"
+                            className="vtur-table-action"
                             disabled={excluindoId === f.id}
                             title={excluindoId === f.id ? "Excluindo" : "Excluir"}
                             aria-label={excluindoId === f.id ? "Excluindo" : "Excluir"}

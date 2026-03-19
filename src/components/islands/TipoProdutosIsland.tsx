@@ -16,7 +16,6 @@ import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type TipoProduto = {
   id: string;
@@ -569,7 +568,7 @@ export default function TipoProdutosIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="produtos-page">
+      <div className="produtos-page page-content-wrap">
         {mostrarFormulario && (
           <AppCard
             className="form-card mb-3"
@@ -829,8 +828,7 @@ export default function TipoProdutosIsland() {
 
         {!mostrarFormulario && (
           <>
-            <AppToolbar
-              sticky
+            <AppCard
               tone="config"
               className="mb-3 list-toolbar-sticky"
               title="Tipos de produto"
@@ -851,7 +849,7 @@ export default function TipoProdutosIsland() {
                   placeholder="Digite parte do nome..."
                 />
               </div>
-            </AppToolbar>
+            </AppCard>
 
             {erro && (
               <div className="mb-3">
@@ -862,7 +860,7 @@ export default function TipoProdutosIsland() {
             <DataTable
               shellClassName="mb-3"
               className="table-default table-header-blue table-mobile-cards min-w-[720px]"
-              containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+              containerClassName="vtur-scroll-y-65"
               headers={
                 <tr>
                   <th>Nome</th>

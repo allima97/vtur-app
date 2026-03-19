@@ -2,33 +2,9 @@
 import "../../../styles/global.css";
 import DashboardLayout from "../../../layouts/DashboardLayout.astro";
 import RoteiroEditIsland from "../../../components/islands/RoteiroEditIsland";
-import HeaderPage from "../../../components/ui/HeaderPage.astro";
-import { createServerClient } from "@supabase/ssr";
-import { readEnv } from "../../../lib/supabaseServer";
+import { createAstroServerClient } from "../../../lib/supabaseAstro";
 
-const supabaseUrl = readEnv("PUBLIC_SUPABASE_URL");
-const supabaseAnonKey = readEnv("PUBLIC_SUPABASE_ANON_KEY");
-const isProd = readEnv("ENVIRONMENT") === "production" || readEnv("NODE_ENV") === "production";
-const { cookies } = Astro;
-
-const supabaseAuth = createServerClient(supabaseUrl, supabaseAnonKey, {
-  cookies: {
-    get: (name) => cookies.get(name)?.value ?? "",
-    set: (name, value, options) =>
-      cookies.set(name, value, {
-        ...options,
-        httpOnly: true,
-        secure: isProd,
-        sameSite: "Lax",
-        path: "/",
-      }),
-    remove: (name, options) =>
-      cookies.delete(name, {
-        ...options,
-        path: "/",
-      }),
-  },
-});
+const supabaseAuth = createAstroServerClient(Astro);
 
 const {
   data: { user },
@@ -80,26 +56,10 @@ if (!isNew && id) {
 
 const activePage = "orcamentos";
 const pageTitle = isNew ? "Novo Roteiro" : (roteiro?.nome || "Editar Roteiro");
-
-const headerTitle = "Informações do Roteiro";
-const headerName = roteiro?.nome || (isNew ? "Novo Roteiro" : "Roteiro");
-
-function escapeHtml(text: any) {
-  return String(text ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-const backHref = "/orcamentos/personalizados";
-const headerSubtitleHtml = `<a class="page-subtitle-link" href="${backHref}">← Roteiros</a> - ${escapeHtml(headerName)}`;
 ---
 
 <DashboardLayout title={pageTitle} {activePage}>
   <div class="page-content-wrap">
-    <HeaderPage title={headerTitle} subtitleHtml={headerSubtitleHtml} color="blue" />
     <RoteiroEditIsland client:only="react" roteiroId={id || "novo"} roteiro={roteiro} />
   </div>
 </DashboardLayout>

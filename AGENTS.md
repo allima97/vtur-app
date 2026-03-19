@@ -3,7 +3,7 @@
 ## Contexto Rápido
 Projeto: sgtur (Astro/React + Supabase).
 Objetivo atual: convites corporativos (sem e-mail do Supabase), privacidade/escopo por empresa, e migrações de RLS.
-Última atualização: 2026-02-18.
+Última atualização: 2026-03-15.
 
 ## O que foi feito (resumo)
 - **Controle SAC e Viagens (desktop)**: botões agora usam `mobile-stack-buttons` (desktop em linha, mobile empilha).
@@ -43,6 +43,9 @@ Objetivo atual: convites corporativos (sem e-mail do Supabase), privacidade/esco
   - `database/migrations/20260217_perf_indexes_bff.sql`
   - `database/migrations/20260217_rpc_vendas_kpis.sql`
   - `database/migrations/20260218_rpc_dashboard_vendas_summary.sql`
+- **Importação de vendas / clientes**: nova RPC `clientes_resolve_import` para resolver/criar cliente sem depender de `insert` direto sob RLS; a API `/api/v1/clientes/resolve-import` agora tenta essa RPC antes do fallback antigo.
+  - `database/migrations/20260315_clientes_resolve_import_rpc.sql`
+  - `src/pages/api/v1/clientes/resolve-import.ts`
 
 ## Migrações pendentes (aplicar na ordem)
 1. `database/migrations/20260205_clientes_privacidade.sql`
@@ -51,24 +54,26 @@ Objetivo atual: convites corporativos (sem e-mail do Supabase), privacidade/esco
 4. `database/migrations/20260304_clientes_rls_recursion_hotfix.sql` (hotfix erro `42P17` / “não salva clientes”)
 5. `database/migrations/20260305_clientes_shared_by_cpf_company_link.sql` (clientes únicos por CPF + escopo por empresa via `clientes_company`)
 6. `database/migrations/20260306_clientes_created_by_default_trigger.sql` (garante `created_by` no insert + evita 403 RLS ao criar cliente)
-7. `database/migrations/20260206_vendas_company_id.sql`
-8. `database/migrations/20260211_vendas_data_venda.sql` (competência de relatórios/comissões)
-9. `database/migrations/20260211_user_convites.sql` (se ainda não estiver aplicada)
-10. `database/migrations/20260213_relatorios_competencia_data_venda.sql` (RPCs agregadas: usa `data_venda`)
-11. `database/migrations/20260217_perf_indexes_bff.sql`
-12. `database/migrations/20260217_rpc_vendas_kpis.sql`
-13. `database/migrations/20260218_rpc_dashboard_vendas_summary.sql`
-14. `database/migrations/20260311_user_convites_expiration.sql`
-15. `database/migrations/20260311_users_self_lockdown.sql`
-16. `database/migrations/20260312_agenda_todo_user_privacy.sql`
-17. `database/migrations/20260312_user_types_default_perms.sql`
-18. `database/migrations/20260312_rls_gestor_vendedor_master_scope.sql`
-19. `database/migrations/20260312_rls_escalas_master_company_match.sql`
-20. `database/migrations/20260312_rls_escala_horario_usuario_master_company_match.sql`
+7. `database/migrations/20260315_clientes_resolve_import_rpc.sql` (importação resolve/cria cliente via RPC sem depender do insert sob RLS)
+8. `database/migrations/20260206_vendas_company_id.sql`
+9. `database/migrations/20260211_vendas_data_venda.sql` (competência de relatórios/comissões)
+10. `database/migrations/20260211_user_convites.sql` (se ainda não estiver aplicada)
+11. `database/migrations/20260213_relatorios_competencia_data_venda.sql` (RPCs agregadas: usa `data_venda`)
+12. `database/migrations/20260217_perf_indexes_bff.sql`
+13. `database/migrations/20260217_rpc_vendas_kpis.sql`
+14. `database/migrations/20260218_rpc_dashboard_vendas_summary.sql`
+15. `database/migrations/20260311_user_convites_expiration.sql`
+16. `database/migrations/20260311_users_self_lockdown.sql`
+17. `database/migrations/20260312_agenda_todo_user_privacy.sql`
+18. `database/migrations/20260312_user_types_default_perms.sql`
+19. `database/migrations/20260312_rls_gestor_vendedor_master_scope.sql`
+20. `database/migrations/20260312_rls_escalas_master_company_match.sql`
+21. `database/migrations/20260312_rls_escala_horario_usuario_master_company_match.sql`
 
 ## Pendências conhecidas
 - Confirmar e aplicar migrations no Supabase (SQL Editor ou CLI).
 - Se “Clientes” não salva e der 500/`42P17`, aplicar o hotfix: `20260304_clientes_rls_recursion_hotfix.sql`.
+- Se a importação de vendas exibir a mensagem para cadastrar o cliente manualmente por causa de RLS, aplicar `20260315_clientes_resolve_import_rpc.sql`.
 - Validar se outras telas de relatório precisam filtrar por `company_id` no front (o RLS cobre, mas pode otimizar).
 - Garantir `SUPABASE_SERVICE_ROLE_KEY` configurada no ambiente do servidor (necessário para gerar links de convite).
 - Aplicar a migration de correção de RLS da tabela `gestor_vendedor` para permitir gestão de equipe no módulo Master.

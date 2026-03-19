@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import AlertMessage from "../ui/AlertMessage";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
 function cleanEncoding(str: any): string {
@@ -59,18 +60,16 @@ export default function ImportarVendasIsland() {
           subtitle="Selecione um arquivo .xlsx para processar os dados."
         >
           <form onSubmit={handleUpload} className="space-y-3">
-            <div className="form-group m-0">
-              <label htmlFor="importar-vendas-file" className="font-semibold">
-                Arquivo
-              </label>
-              <input
-                id="importar-vendas-file"
-                type="file"
-                accept=".xlsx"
-                ref={inputRef}
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-              />
-            </div>
+            <AppField
+              id="importar-vendas-file"
+              wrapperClassName="form-group m-0"
+              label="Arquivo"
+              type="file"
+              accept=".xlsx"
+              ref={inputRef}
+              onChange={(e) => setFile(e.currentTarget.files?.[0] || null)}
+              caption={file?.name || "Nenhum arquivo selecionado"}
+            />
 
             <div className="mobile-stack-buttons" style={{ justifyContent: "flex-start" }}>
               <AppButton type="submit" variant="primary">

@@ -6,7 +6,8 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { registrarLog } from "../../lib/logs";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
-import AppToolbar from "../ui/primer/AppToolbar";
+import AppField from "../ui/primer/AppField";
+import FileUploadField from "../ui/primer/FileUploadField";
 
 type QuotePrintSettings = {
   id?: string;
@@ -276,8 +277,8 @@ export default function QuotePrintSettingsIsland() {
   }
 
   return (
-    <section className="quote-print-settings-page">
-      <AppToolbar
+    <section className="page-content-wrap quote-print-settings-page">
+      <AppCard
         tone="config"
         title="Parametros do Orcamento (PDF)"
         subtitle="Logo, contatos, rodape e imagem complementar para o template de impressao."
@@ -286,30 +287,15 @@ export default function QuotePrintSettingsIsland() {
       {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
       {sucesso && <AlertMessage variant="success">{sucesso}</AlertMessage>}
 
-      <div className="form-row">
+      <div className="form-row mobile-stack">
         <div className="form-group">
-          <label className="form-label">Logo</label>
-          <div className="file-input-stack">
-            <input
-              id="logo-file-input"
-              className="sr-only"
-              type="file"
-              accept="image/*"
-              onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-              disabled={bloqueado}
-            />
-            <AppButton
-              as="label"
-              htmlFor="logo-file-input"
-              variant="secondary"
-              className="w-full sm:w-auto"
-              style={{ opacity: bloqueado ? 0.6 : 1, pointerEvents: bloqueado ? "none" : "auto" }}
-              aria-disabled={bloqueado}
-            >
-              Escolher arquivo
-            </AppButton>
-            <span className="file-input-name">{logoFile?.name || "Nenhum arquivo escolhido"}</span>
-          </div>
+          <FileUploadField
+            label="Logo"
+            accept="image/*"
+            onChange={(e) => setLogoFile(e.currentTarget.files?.[0] || null)}
+            disabled={bloqueado}
+            fileName={logoFile?.name || "Nenhum arquivo escolhido"}
+          />
           {logoPreview && (
             <img
               src={logoPreview}
@@ -319,18 +305,16 @@ export default function QuotePrintSettingsIsland() {
           )}
         </div>
         <div className="form-group">
-          <label className="form-label">Consultor</label>
-          <input
-            className="form-input"
+          <AppField
+            label="Consultor"
             value={settings.consultor_nome || ""}
             onChange={(e) => setSettings((p) => ({ ...p, consultor_nome: e.target.value }))}
             disabled={bloqueado}
           />
         </div>
         <div className="form-group">
-          <label className="form-label">Filial</label>
-          <input
-            className="form-input"
+          <AppField
+            label="Filial"
             value={settings.filial_nome || ""}
             onChange={(e) => setSettings((p) => ({ ...p, filial_nome: e.target.value }))}
             disabled={bloqueado}
@@ -338,29 +322,26 @@ export default function QuotePrintSettingsIsland() {
         </div>
       </div>
 
-      <div className="form-row">
+      <div className="form-row mobile-stack">
         <div className="form-group">
-          <label className="form-label">Endereco (linha 1)</label>
-          <input
-            className="form-input"
+          <AppField
+            label="Endereco (linha 1)"
             value={settings.endereco_linha1 || ""}
             onChange={(e) => setSettings((p) => ({ ...p, endereco_linha1: e.target.value }))}
             disabled={bloqueado}
           />
         </div>
         <div className="form-group">
-          <label className="form-label">Endereco (linha 2)</label>
-          <input
-            className="form-input"
+          <AppField
+            label="Endereco (linha 2)"
             value={settings.endereco_linha2 || ""}
             onChange={(e) => setSettings((p) => ({ ...p, endereco_linha2: e.target.value }))}
             disabled={bloqueado}
           />
         </div>
         <div className="form-group">
-          <label className="form-label">Endereco (linha 3)</label>
-          <input
-            className="form-input"
+          <AppField
+            label="Endereco (linha 3)"
             value={settings.endereco_linha3 || ""}
             onChange={(e) => setSettings((p) => ({ ...p, endereco_linha3: e.target.value }))}
             disabled={bloqueado}
@@ -368,11 +349,10 @@ export default function QuotePrintSettingsIsland() {
         </div>
       </div>
 
-      <div className="form-row">
+      <div className="form-row mobile-stack">
         <div className="form-group">
-          <label className="form-label">Codigo do pais</label>
-          <input
-            className="form-input"
+          <AppField
+            label="Codigo do pais"
             value={settings.whatsapp_codigo_pais || ""}
             onChange={(e) => setSettings((p) => ({ ...p, whatsapp_codigo_pais: e.target.value }))}
             placeholder="Ex: 55"
@@ -380,27 +360,25 @@ export default function QuotePrintSettingsIsland() {
           />
         </div>
         <div className="form-group">
-          <label className="form-label">Telefone (fixo)</label>
-          <input
-            className="form-input"
+          <AppField
+            label="Telefone (fixo)"
             value={settings.telefone || ""}
             onChange={(e) => setSettings((p) => ({ ...p, telefone: e.target.value }))}
             disabled={bloqueado}
           />
         </div>
         <div className="form-group">
-          <label className="form-label">WhatsApp</label>
-          <input
-            className="form-input"
+          <AppField
+            label="WhatsApp"
             value={settings.whatsapp || ""}
             onChange={(e) => setSettings((p) => ({ ...p, whatsapp: e.target.value }))}
             disabled={bloqueado}
           />
         </div>
         <div className="form-group">
-          <label className="form-label">E-mail</label>
-          <input
-            className="form-input"
+          <AppField
+            label="E-mail"
+            type="email"
             value={settings.email || ""}
             onChange={(e) => setSettings((p) => ({ ...p, email: e.target.value }))}
             disabled={bloqueado}
@@ -409,44 +387,25 @@ export default function QuotePrintSettingsIsland() {
       </div>
 
       <div className="form-group">
-        <label className="form-label">Rodape (informacoes importantes)</label>
-        <textarea
-          className="form-input"
+        <AppField
+          as="textarea"
+          label="Rodape (informacoes importantes)"
           rows={6}
           value={settings.rodape_texto || ""}
           onChange={(e) => setSettings((p) => ({ ...p, rodape_texto: e.target.value }))}
           disabled={bloqueado}
+          caption="Use quebras de linha para cada item."
         />
-        <small style={{ color: "#64748b" }}>
-          Use quebras de linha para cada item.
-        </small>
       </div>
 
       <div className="form-group">
-        <label className="form-label">Imagem complementar (apos informacoes importantes)</label>
-        <div className="file-input-stack">
-          <input
-            id="complement-file-input"
-            className="sr-only"
-            type="file"
-            accept="image/*"
-            onChange={(e) => setComplementImageFile(e.target.files?.[0] || null)}
-            disabled={bloqueado}
-          />
-          <AppButton
-            as="label"
-            htmlFor="complement-file-input"
-            variant="secondary"
-            className="w-full sm:w-auto"
-            style={{ opacity: bloqueado ? 0.6 : 1, pointerEvents: bloqueado ? "none" : "auto" }}
-            aria-disabled={bloqueado}
-          >
-            Escolher arquivo
-          </AppButton>
-          <span className="file-input-name">
-            {complementImageFile?.name || "Nenhum arquivo escolhido"}
-          </span>
-        </div>
+        <FileUploadField
+          label="Imagem complementar (apos informacoes importantes)"
+          accept="image/*"
+          onChange={(e) => setComplementImageFile(e.currentTarget.files?.[0] || null)}
+          disabled={bloqueado}
+          fileName={complementImageFile?.name || "Nenhum arquivo escolhido"}
+        />
         {complementImagePreview && (
           <img
             src={complementImagePreview}

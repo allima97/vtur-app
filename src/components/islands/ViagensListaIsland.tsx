@@ -14,7 +14,6 @@ import TableActions from "../ui/TableActions";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type Viagem = {
   id: string;
@@ -496,7 +495,8 @@ export default function ViagensListaIsland() {
     const mostrarTodos = Boolean(busca.trim() || statusFiltro || inicio || fim);
     return mostrarTodos ? viagensFiltradas : viagensFiltradas.slice(0, 5);
   }, [viagensFiltradas, busca, statusFiltro, inicio, fim]);
-  const compactDateFieldStyle = { flex: "0 0 140px", minWidth: 125 };
+  const statusFieldStyle = { flex: "0 1 150px", minWidth: 130, maxWidth: 170 };
+  const desktopDateFieldStyle = { flex: "1 1 210px", minWidth: 190 };
   const totalColunasTabela = 7;
 
   if (loadingPerm) {
@@ -646,7 +646,12 @@ export default function ViagensListaIsland() {
         )}
 
         {!showForm && (
-          <AppToolbar tone="info" sticky className="list-toolbar-sticky" title="Filtros">
+          <AppCard
+            tone="info"
+            className="list-toolbar-sticky"
+            title="Viagens"
+            subtitle="Gerencie viagens com visao de CRM, status e acompanhamento operacional."
+          >
             <div className="flex flex-col gap-2 sm:hidden">
               <AppField
                 wrapperClassName="form-group"
@@ -673,7 +678,7 @@ export default function ViagensListaIsland() {
                     onChange={(e) => setBusca(e.target.value)}
                   />
                 </div>
-                <div style={{ flex: "1 1 180px" }}>
+                <div style={statusFieldStyle}>
                   <AppField
                     as="select"
                     wrapperClassName="form-group"
@@ -683,7 +688,7 @@ export default function ViagensListaIsland() {
                     options={STATUS_OPCOES.map((op) => ({ value: op.value, label: op.label }))}
                   />
                 </div>
-                <div style={compactDateFieldStyle}>
+                <div style={desktopDateFieldStyle}>
                   <AppField
                     as="input"
                     type="date"
@@ -700,12 +705,12 @@ export default function ViagensListaIsland() {
                     }}
                   />
                 </div>
-                <div style={compactDateFieldStyle}>
+                <div style={desktopDateFieldStyle}>
                   <AppField
                     as="input"
                     type="date"
                     wrapperClassName="form-group"
-                    label="Final"
+                    label="Data Fim"
                     value={fim}
                     min={inicio || undefined}
                     onFocus={selectAllInputOnFocus}
@@ -738,7 +743,7 @@ export default function ViagensListaIsland() {
                 </div>
               </div>
             </div>
-          </AppToolbar>
+          </AppCard>
         )}
 
         {!showForm && showFilters && (
@@ -814,7 +819,7 @@ export default function ViagensListaIsland() {
           <AppCard tone="info" title="Lista de viagens">
             <DataTable
               className="table-header-teal table-mobile-cards min-w-[760px]"
-              containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+              containerClassName="vtur-scroll-y-65"
               headers={
                 <tr>
                   <th>Cliente</th>

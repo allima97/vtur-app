@@ -15,7 +15,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 import { Chart } from "primereact/chart";
 import {
   construirLinkWhatsAppComTexto,
@@ -287,11 +286,19 @@ const GESTOR_WIDGETS: { id: GestorWidgetId; titulo: string }[] = [
   { id: "ranking", titulo: "Ranking da equipe" },
   { id: "vendas_consultor", titulo: "Vendas por consultor" },
   { id: "evolucao", titulo: "Evolução de vendas" },
-  { id: "aniversariantes_clientes", titulo: "Aniversariantes (clientes e acompanhantes)" },
+  { id: "aniversariantes_clientes", titulo: "Aniversariantes" },
   { id: "orcamentos", titulo: "Orçamentos recentes" },
   { id: "viagens", titulo: "Próximas viagens" },
   { id: "follow_up", titulo: "Follow-up" },
 ];
+
+const MOBILE_ACCORDION_WIDGETS: GestorWidgetId[] = [
+  "aniversariantes_clientes",
+  "orcamentos",
+  "viagens",
+  "follow_up",
+];
+
 const GESTOR_KPIS: { id: GestorKpiId; titulo: string }[] = [
   { id: "kpi_vendas", titulo: "Vendas da equipe" },
   { id: "kpi_qtd_vendas", titulo: "Qtd. Vendas" },
@@ -498,8 +505,27 @@ function DashboardGestorIslandInner() {
 
   const widgetAtivo = (id: GestorWidgetId) => widgetVisible[id] !== false;
   const kpiAtivo = (id: GestorKpiId) => kpiVisible[id] !== false;
-  const toggleMobileWidget = (id: GestorWidgetId) =>
-    setMobileWidgetOpen((prev) => ({ ...prev, [id]: !prev[id] }));
+  const toggleMobileWidget = (id: GestorWidgetId) => {
+    if (!MOBILE_ACCORDION_WIDGETS.includes(id)) {
+      setMobileWidgetOpen((prev) => ({ ...prev, [id]: !prev[id] }));
+      return;
+    }
+
+    setMobileWidgetOpen((prev) => {
+      const shouldOpen = !prev[id];
+      const next = { ...prev };
+
+      MOBILE_ACCORDION_WIDGETS.forEach((widgetId) => {
+        next[widgetId] = false;
+      });
+
+      if (shouldOpen) {
+        next[id] = true;
+      }
+
+      return next;
+    });
+  };
 
   const toggleWidget = (id: GestorWidgetId) => {
     const nextVisible = { ...widgetVisible, [id]: !widgetVisible[id] };
@@ -1163,6 +1189,7 @@ function DashboardGestorIslandInner() {
     if (id === "orcamentos") {
       return (
         <AppCard
+          className={hideTitle ? undefined : "dashboard-widget-table-card"}
           title={hideTitle ? undefined : `Orçamentos recentes (${orcamentosRecentes.length})`}
           subtitle={hideTitle ? undefined : "Últimas propostas geradas pela equipe."}
           tone="info"
@@ -1223,8 +1250,9 @@ function DashboardGestorIslandInner() {
 
       return (
         <AppCard
+          className={hideTitle ? undefined : "dashboard-widget-table-card"}
           title={hideTitle ? undefined : `Aniversariantes - ${monthLabel} (${items.length})`}
-          subtitle={hideTitle ? undefined : "Clientes e acompanhantes do escopo atual."}
+          subtitle={undefined}
           tone="info"
         >
           <DataTable
@@ -1306,6 +1334,7 @@ function DashboardGestorIslandInner() {
     if (id === "viagens") {
       return (
         <AppCard
+          className={hideTitle ? undefined : "dashboard-widget-table-card"}
           title={hideTitle ? undefined : `Próximas viagens (${viagensProximas.length})`}
           subtitle={hideTitle ? undefined : "Viagens futuras vinculadas ao escopo da equipe."}
           tone="info"
@@ -1361,6 +1390,7 @@ function DashboardGestorIslandInner() {
     if (id === "follow_up") {
       return (
         <AppCard
+          className={hideTitle ? undefined : "dashboard-widget-table-card"}
           title={hideTitle ? undefined : `Follow-up (${followUpsRecentes.length})`}
           subtitle={hideTitle ? undefined : "Clientes que já retornaram e demandam contato da equipe."}
           tone="info"
@@ -1464,11 +1494,11 @@ function DashboardGestorIslandInner() {
   return (
     <AppPrimerProvider>
       <div className="page-content-wrap dashboard-geral-page gestor-page vtur-dashboard-shell">
-        <AppToolbar
+        <AppCard
+          className="list-toolbar-sticky"
           title={`Dashboard ${isMaster ? "do master" : "do gestor"}`}
           subtitle={`Período: ${formatDateBR(inicio)} até ${formatDateBR(fim)}.`}
           tone="info"
-          sticky
           actions={
             <AppButton type="button" variant="primary" onClick={() => setShowCustomize(true)}>
               Personalizar dashboard
@@ -1480,14 +1510,14 @@ function DashboardGestorIslandInner() {
               label="Data Início"
               type="date"
               value={inicio}
-              onChange={(e) => setInicio(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInicio(e.target.value)}
             />
             <AppField
               label="Data Final"
               type="date"
               min={inicio || undefined}
               value={fim}
-              onChange={(e) => setFim(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFim(e.target.value)}
             />
             {isMaster && (
               <>
@@ -1495,7 +1525,7 @@ function DashboardGestorIslandInner() {
                   as="select"
                   label="Filial"
                   value={masterScope.empresaSelecionada}
-                  onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => masterScope.setEmpresaSelecionada(e.target.value)}
                   options={[
                     { value: "all", label: "Todas" },
                     ...masterScope.empresasAprovadas.map((empresa) => ({
@@ -1508,7 +1538,7 @@ function DashboardGestorIslandInner() {
                   as="select"
                   label="Equipe"
                   value={masterScope.gestorSelecionado}
-                  onChange={(e) => masterScope.setGestorSelecionado(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => masterScope.setGestorSelecionado(e.target.value)}
                   options={[
                     { value: "all", label: "Todas" },
                     ...masterScope.gestoresDisponiveis.map((gestor) => ({
@@ -1521,7 +1551,7 @@ function DashboardGestorIslandInner() {
                   as="select"
                   label="Vendedor"
                   value={masterScope.vendedorSelecionado}
-                  onChange={(e) => masterScope.setVendedorSelecionado(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => masterScope.setVendedorSelecionado(e.target.value)}
                   options={[
                     { value: "all", label: "Todos" },
                     ...masterScope.vendedoresDisponiveis.map((vendedor) => ({
@@ -1533,15 +1563,14 @@ function DashboardGestorIslandInner() {
               </>
             )}
           </div>
-        </AppToolbar>
+        </AppCard>
 
         {isMaster && masterScope.loading && (
           <AppCard tone="config">Carregando escopo master...</AppCard>
         )}
 
         {widgetOrder.map((id) => {
-          const isMobileCollapsible =
-            id === "aniversariantes_clientes" || id === "orcamentos" || id === "viagens" || id === "follow_up";
+          const isMobileCollapsible = MOBILE_ACCORDION_WIDGETS.includes(id);
           const node = renderWidget(id);
           if (!node) return null;
 
@@ -1569,7 +1598,7 @@ function DashboardGestorIslandInner() {
                 </AppButton>
                 {aberto && <div style={{ marginTop: 12 }}>{renderWidget(id, { hideTitle: true })}</div>}
               </div>
-              <div className="hidden sm:block">{node}</div>
+              <div className="mobile-collapsible" data-open="false">{node}</div>
             </React.Fragment>
           );
         })}

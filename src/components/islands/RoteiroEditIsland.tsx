@@ -5,8 +5,8 @@ import { extractPlainTextFromFile } from "../../lib/documentosViagens/extractPla
 import AlertMessage from "../ui/AlertMessage";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type RotHotel = {
@@ -70,15 +70,71 @@ type Cliente = { id: string; nome: string; whatsapp?: string; email?: string };
 type DiaBanco = { id: string; percurso?: string; cidade: string; descricao: string; data?: string };
 
 type AbaId = "hoteis" | "passeios" | "transporte" | "itinerario" | "investimento" | "pagamento" | "inclusoes" | "informacoes";
-const ABAS: { id: AbaId; label: string }[] = [
-  { id: "itinerario", label: "Itinerário Personalizado" },
-  { id: "hoteis", label: "Hotéis Sugeridos" },
-  { id: "passeios", label: "Passeios Principais" },
-  { id: "transporte", label: "Transporte Incluído" },
-  { id: "investimento", label: "Investimento" },
-  { id: "pagamento", label: "Formas de Pagamento" },
-  { id: "inclusoes", label: "Incluído / Não Incluído" },
-  { id: "informacoes", label: "Informações Importantes" },
+type AbaMeta = {
+  id: AbaId;
+  label: string;
+  shortLabel: string;
+  hint: string;
+  icon: string;
+};
+
+const ABAS: AbaMeta[] = [
+  {
+    id: "itinerario",
+    label: "Itinerário Personalizado",
+    shortLabel: "Itinerário",
+    hint: "Dias, percurso e descrição detalhada.",
+    icon: "pi pi-map",
+  },
+  {
+    id: "hoteis",
+    label: "Hotéis Sugeridos",
+    shortLabel: "Hotéis",
+    hint: "Hospedagem, datas, categoria e regime.",
+    icon: "pi pi-building",
+  },
+  {
+    id: "passeios",
+    label: "Passeios Principais",
+    shortLabel: "Passeios",
+    hint: "Passeios, datas, tipo e ingressos.",
+    icon: "pi pi-camera",
+  },
+  {
+    id: "transporte",
+    label: "Transporte Incluído",
+    shortLabel: "Transporte",
+    hint: "Trechos, fornecedores e observações.",
+    icon: "pi pi-car",
+  },
+  {
+    id: "investimento",
+    label: "Investimento",
+    shortLabel: "Investimento",
+    hint: "Valores por pessoa, pax e apartamento.",
+    icon: "pi pi-wallet",
+  },
+  {
+    id: "pagamento",
+    label: "Formas de Pagamento",
+    shortLabel: "Pagamento",
+    hint: "Serviços, taxas e forma de cobrança.",
+    icon: "pi pi-credit-card",
+  },
+  {
+    id: "inclusoes",
+    label: "Incluído / Não Incluído",
+    shortLabel: "Inclusões",
+    hint: "Itens incluídos e excluídos da viagem.",
+    icon: "pi pi-check-square",
+  },
+  {
+    id: "informacoes",
+    label: "Informações Importantes",
+    shortLabel: "Informações",
+    hint: "Regras e observações finais do roteiro.",
+    icon: "pi pi-info-circle",
+  },
 ];
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -166,7 +222,7 @@ const inputSt: React.CSSProperties = {
   borderRadius: 6,
   fontSize: 14,
   outline: "none",
-  background: "#fff",
+  backgroundColor: "#fff",
   color: "#4b5563",
   boxSizing: "border-box",
 };
@@ -206,6 +262,12 @@ function addUtcDays(date: Date, days: number) {
 
 function toISODateUTC(date: Date) {
   return date.toISOString().slice(0, 10);
+}
+
+function minDatePlusOneDay(startDate?: string | null, fallbackDate?: string): string {
+  const start = toUtcDateOrNull(startDate);
+  if (!start) return String(fallbackDate || "");
+  return toISODateUTC(addUtcDays(start, 1));
 }
 
 function buildDiasFromHoteis(params: { hoteis: RotHotel[]; inicioCidade?: string | null }): RotDia[] {
@@ -360,47 +422,39 @@ function RowActions({
         <AppButton
           type="button"
           onClick={onUp}
-          variant="secondary"
-          className="btn-icon"
-          style={actionBtnSt}
+          variant="ghost"
+          className="btn-icon vtur-table-action roteiro-action-btn"
+          icon="pi pi-arrow-up"
           title="Subir"
           aria-label="Subir"
-        >
-          <i className="pi pi-chevron-up" aria-hidden="true" />
-        </AppButton>
+        />
         <AppButton
           type="button"
           onClick={onDown}
-          variant="secondary"
-          className="btn-icon"
-          style={actionBtnSt}
+          variant="ghost"
+          className="btn-icon vtur-table-action roteiro-action-btn"
+          icon="pi pi-arrow-down"
           title="Descer"
           aria-label="Descer"
-        >
-          <i className="pi pi-chevron-down" aria-hidden="true" />
-        </AppButton>
+        />
         <AppButton
           type="button"
           onClick={onAdd}
-          variant="secondary"
-          className="btn-icon"
-          style={actionBtnSt}
+          variant="ghost"
+          className="btn-icon vtur-table-action roteiro-action-btn"
+          icon="pi pi-plus"
           title="Adicionar abaixo"
           aria-label="Adicionar abaixo"
-        >
-          <i className="pi pi-plus" aria-hidden="true" />
-        </AppButton>
+        />
         <AppButton
           type="button"
           onClick={onDelete}
           variant="danger"
-          className="btn-icon danger"
-          style={{ ...actionBtnSt, borderColor: "#fca5a5" }}
+          className="btn-icon danger vtur-table-action roteiro-action-btn"
+          icon="pi pi-trash"
           title="Excluir"
           aria-label="Excluir"
-        >
-          <i className="pi pi-trash" aria-hidden="true" />
-        </AppButton>
+        />
       </div>
     </td>
   );
@@ -563,6 +617,48 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
   const [exportingPdf, setExportingPdf] = useState(false);
   const [previewingPdf, setPreviewingPdf] = useState(false);
   const pdfBusy = exportingPdf || previewingPdf;
+
+  const tabCounts = useMemo<Record<AbaId, number>>(() => {
+    const nonEmptyLineCount = (text: string) =>
+      String(text || "")
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean).length;
+
+    return {
+      itinerario: dias.filter((d) => d.cidade || d.percurso || d.data || d.descricao).length,
+      hoteis: hoteis.filter((h) => h.cidade || h.hotel || h.data_inicio || h.data_fim || h.apto || h.categoria || h.regime).length,
+      passeios: passeios.filter((p) => p.cidade || p.passeio || p.data_inicio || p.data_fim).length,
+      transporte: transportes.filter((t) => t.tipo || t.fornecedor || t.descricao || t.data_inicio || t.data_fim || t.categoria || t.observacao).length,
+      investimento: investimentos.filter((i) => i.tipo || Number(i.valor_por_pessoa) > 0 || Number(i.valor_por_apto) > 0).length,
+      pagamento: pagamentos.filter((p) => p.servico || p.forma_pagamento || Number(p.valor_total_com_taxas) > 0 || Number(p.taxas) > 0).length,
+      inclusoes: nonEmptyLineCount(incluiTexto) + nonEmptyLineCount(naoIncluiTexto),
+      informacoes: nonEmptyLineCount(informacoesImportantes),
+    };
+  }, [
+    dias,
+    hoteis,
+    passeios,
+    transportes,
+    investimentos,
+    pagamentos,
+    incluiTexto,
+    naoIncluiTexto,
+    informacoesImportantes,
+  ]);
+
+  function handleQuickOpenSection() {
+    const firstEmpty = ABAS.find((aba) => tabCounts[aba.id] === 0);
+    setAbaAtiva(firstEmpty?.id || "itinerario");
+  }
+
+  function goToAdjacentSection(offset: number) {
+    const currentIndex = ABAS.findIndex((aba) => aba.id === abaAtiva);
+    if (currentIndex === -1) return;
+    const nextIndex = currentIndex + offset;
+    if (nextIndex < 0 || nextIndex >= ABAS.length) return;
+    setAbaAtiva(ABAS[nextIndex].id);
+  }
 
   // ─── Section list helpers ─────────────────────────────────────────────────
   function listOps<T extends { ordem: number }>(
@@ -823,15 +919,14 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <AppPrimerProvider>
-      <div className="roteiro-edit-page" style={{ padding: "0 0 60px" }}>
-        <AppToolbar
+      <div className="page-content-wrap roteiro-edit-page orcamentos-consulta-page">
+        <AppCard
           className="mb-3"
-          sticky
           tone="info"
           title={isNew ? "Novo roteiro personalizado" : "Editar roteiro personalizado"}
           subtitle="Gerencie hotéis, passeios, transporte, itinerário, investimento e pagamento."
           actions={(
-            <div className="mobile-stack-buttons orcamentos-action-bar" style={{ justifyContent: "flex-end" }}>
+            <div className="mobile-stack-buttons orcamentos-action-bar vtur-actions-end">
               <AppButton
                 type="button"
                 onClick={() => (window.location.href = "/orcamentos/personalizados")}
@@ -931,14 +1026,25 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
           <div className="form-row mobile-stack" style={{ gap: 12, marginTop: 12, alignItems: "flex-end" }}>
             <div style={{ flex: "1 1 360px" }}>
               <label style={labelSt}>Importar roteiro (PDF/Word)</label>
-              <input
-                style={inputSt}
-                type="file"
-                accept=".pdf,.docx,.txt"
-                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-              />
+              <div className="vtur-import-upload-stack">
+                <div className="vtur-import-upload-row">
+                  <label className="vtur-import-upload-trigger" htmlFor="roteiro-import-file-input">
+                    Escolher arquivo
+                  </label>
+                  <input
+                    id="roteiro-import-file-input"
+                    className="sr-only"
+                    type="file"
+                    accept=".pdf,.docx,.txt"
+                    onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                  />
+                  <span className="vtur-import-file-name">
+                    {importFile?.name || "Nenhum arquivo selecionado"}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="mobile-stack-buttons orcamentos-action-bar" style={{ justifyContent: "flex-end" }}>
+            <div className="mobile-stack-buttons orcamentos-action-bar vtur-actions-end">
               <AppButton
                 type="button"
                 onClick={handleImportRoteiroFile}
@@ -951,39 +1057,100 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
           </div>
         </AppCard>
 
-        {/* ─── Tab Strip ───────────────────────────────────────────────── */}
-        <div style={{
-          display: "flex",
-          gap: 0,
-          borderBottom: "2px solid #e5e7eb",
-          marginBottom: 16,
-          overflowX: "auto",
-          WebkitOverflowScrolling: "touch" as any,
-        }}>
-          {ABAS.map((aba) => (
-            <AppButton
-              key={aba.id}
+        {/* ─── Navegação das Seções ────────────────────────────────────── */}
+        <section className="roteiro-section-nav" aria-label="Seções do roteiro">
+          <div className="roteiro-section-nav-mobile">
+            <div className="roteiro-section-nav-mobile-head">
+              <div className="roteiro-section-nav-copy">
+                <span className="roteiro-section-nav-kicker">Etapa atual</span>
+                <strong>{ABAS.find((aba) => aba.id === abaAtiva)?.label || "Itinerário Personalizado"}</strong>
+                <span>{ABAS.find((aba) => aba.id === abaAtiva)?.hint || "Selecione a área que deseja editar."}</span>
+              </div>
+              <span className="roteiro-section-nav-mobile-count">{tabCounts[abaAtiva]}</span>
+            </div>
+            <div className="roteiro-section-nav-mobile-controls">
+              <AppField
+                as="select"
+                label="Seção do roteiro"
+                value={abaAtiva}
+                onChange={(e) => setAbaAtiva(e.target.value as AbaId)}
+                wrapperClassName="m-0 roteiro-section-select-field"
+                options={ABAS.map((aba) => ({
+                  value: aba.id,
+                  label: `${aba.shortLabel} (${tabCounts[aba.id]})`,
+                }))}
+              />
+              <AppButton
+                type="button"
+                variant="secondary"
+                className="roteiro-section-quick-btn"
+                icon="pi pi-sparkles"
+                onClick={handleQuickOpenSection}
+              >
+                Ir para pendências
+              </AppButton>
+            </div>
+            <div className="roteiro-section-nav-mobile-pager">
+              <AppButton
+                type="button"
+                variant="ghost"
+                icon="pi pi-arrow-left"
+                onClick={() => goToAdjacentSection(-1)}
+                disabled={ABAS[0]?.id === abaAtiva}
+              >
+                Anterior
+              </AppButton>
+              <AppButton
+                type="button"
+                variant="ghost"
+                onClick={() => goToAdjacentSection(1)}
+                disabled={ABAS[ABAS.length - 1]?.id === abaAtiva}
+                icon="pi pi-arrow-right"
+                iconPos="right"
+              >
+                Próxima
+              </AppButton>
+            </div>
+          </div>
+
+          <div className="roteiro-tab-grid" role="tablist" aria-label="Seções do roteiro">
+            {ABAS.map((aba) => (
+              <button
+                key={aba.id}
+                type="button"
+                onClick={() => setAbaAtiva(aba.id)}
+                className={`roteiro-tab-card ${abaAtiva === aba.id ? "is-active" : ""}`}
+                aria-pressed={abaAtiva === aba.id}
+              >
+                <span className="roteiro-tab-card-icon" aria-hidden="true">
+                  <i className={aba.icon} />
+                </span>
+                <span className="roteiro-tab-card-copy">
+                  <span className="roteiro-tab-card-title-row">
+                    <span className="roteiro-tab-card-title">{aba.shortLabel}</span>
+                    <span className="roteiro-tab-card-count">{tabCounts[aba.id]}</span>
+                  </span>
+                  <span className="roteiro-tab-card-hint">{aba.hint}</span>
+                </span>
+              </button>
+            ))}
+            <button
               type="button"
-              variant="ghost"
-              onClick={() => setAbaAtiva(aba.id)}
-              style={{
-                padding: "10px 16px",
-                background: "transparent",
-                border: "none",
-                borderBottom: abaAtiva === aba.id ? "3px solid #2563eb" : "3px solid transparent",
-                cursor: "pointer",
-                fontWeight: abaAtiva === aba.id ? 700 : 500,
-                fontSize: 13,
-                color: abaAtiva === aba.id ? "#2563eb" : "#6b7280",
-                whiteSpace: "nowrap",
-                transition: "color 0.15s, border-color 0.15s",
-                marginBottom: -2,
-              }}
+              className="roteiro-tab-card roteiro-tab-card-quick"
+              onClick={handleQuickOpenSection}
             >
-              {aba.label}
-            </AppButton>
-          ))}
-        </div>
+              <span className="roteiro-tab-card-icon" aria-hidden="true">
+                <i className="pi pi-sparkles" />
+              </span>
+              <span className="roteiro-tab-card-copy">
+                <span className="roteiro-tab-card-title-row">
+                  <span className="roteiro-tab-card-title">Ir para pendências</span>
+                </span>
+                <span className="roteiro-tab-card-hint">Leva você para a primeira seção ainda vazia.</span>
+              </span>
+            </button>
+          </div>
+        </section>
 
         {/* ─── Aba: Hotéis Sugeridos ───────────────────────────────────── */}
         {abaAtiva === "hoteis" && (
@@ -1029,7 +1196,8 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                           onFocus={selectAllInputOnFocus}
                           onChange={(e) => {
                             const v = e.target.value;
-                            const fim = h.data_fim && h.data_fim < v ? v : h.data_fim;
+                            const minFim = minDatePlusOneDay(v, hoje);
+                            const fim = h.data_fim && h.data_fim >= minFim ? h.data_fim : minFim;
                             hotelOps.update(i, { data_inicio: v, data_fim: fim, noites: calcNoites(v, fim) });
                           }}
                         />
@@ -1038,12 +1206,13 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                         <input
                           style={{ ...inputSt, width: 120 }}
                           type="date"
-                          min={h.data_inicio || hoje}
+                          min={minDatePlusOneDay(h.data_inicio, hoje)}
                           value={h.data_fim}
                           onFocus={selectAllInputOnFocus}
                           onChange={(e) => {
                             const v = e.target.value;
-                            const bounded = h.data_inicio && v && v < h.data_inicio ? h.data_inicio : v;
+                            const minFim = minDatePlusOneDay(h.data_inicio, hoje);
+                            const bounded = v && v < minFim ? minFim : v;
                             hotelOps.update(i, { data_fim: bounded, noites: calcNoites(h.data_inicio, bounded) });
                           }}
                         />
@@ -1092,7 +1261,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                 </tbody>
               </table>
               {hoteis.length === 0 && (
-                <AppButton type="button" variant="secondary" onClick={() => setHoteis([newHotel(0)])} style={{ marginTop: 8, ...actionBtnSt }}>
+                <AppButton type="button" variant="secondary" className="mt-2" onClick={() => setHoteis([newHotel(0)])}>
                   + Adicionar hotel
                 </AppButton>
               )}
@@ -1186,7 +1355,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                 </tbody>
               </table>
               {passeios.length === 0 && (
-                <AppButton type="button" variant="secondary" onClick={() => setPasseios([newPasseio(0)])} style={{ marginTop: 8, ...actionBtnSt }}>
+                <AppButton type="button" variant="secondary" className="mt-2" onClick={() => setPasseios([newPasseio(0)])}>
                   + Adicionar passeio
                 </AppButton>
               )}
@@ -1248,7 +1417,8 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                           onFocus={selectAllInputOnFocus}
                           onChange={(e) => {
                             const v = e.target.value;
-                            const fim = t.data_fim && t.data_fim < v ? v : t.data_fim;
+                            const minFim = minDatePlusOneDay(v, hoje);
+                            const fim = t.data_fim && t.data_fim >= minFim ? t.data_fim : minFim;
                             transporteOps.update(i, { data_inicio: v, data_fim: fim });
                           }}
                         />
@@ -1257,12 +1427,13 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                         <input
                           style={{ ...inputSt, width: 120 }}
                           type="date"
-                          min={t.data_inicio || hoje}
+                          min={minDatePlusOneDay(t.data_inicio, hoje)}
                           value={t.data_fim}
                           onFocus={selectAllInputOnFocus}
                           onChange={(e) => {
                             const v = e.target.value;
-                            const bounded = t.data_inicio && v && v < t.data_inicio ? t.data_inicio : v;
+                            const minFim = minDatePlusOneDay(t.data_inicio, hoje);
+                            const bounded = v && v < minFim ? minFim : v;
                             transporteOps.update(i, { data_fim: bounded });
                           }}
                         />
@@ -1296,7 +1467,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                 </tbody>
               </table>
               {transportes.length === 0 && (
-                <AppButton type="button" variant="secondary" onClick={() => setTransportes([newTransporte(0)])} style={{ marginTop: 8, ...actionBtnSt }}>
+                <AppButton type="button" variant="secondary" className="mt-2" onClick={() => setTransportes([newTransporte(0)])}>
                   + Adicionar transporte
                 </AppButton>
               )}
@@ -1324,10 +1495,11 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
               </AppButton>
             </div>
             {dias.map((d, i) => (
-              <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "flex-start", flexWrap: "wrap", padding: "8px", background: "#f8fafc", borderRadius: 6, border: "1px solid #e5e7eb" }}>
-                <div>
+              <div key={i} className="roteiro-dia-card">
+                <div className="roteiro-dia-field roteiro-dia-field-date">
                   <label style={{ ...labelSt, marginBottom: 2 }}>Data</label>
                   <input
+                    className="roteiro-dia-input"
                     style={{ ...inputSt, width: 130 }}
                     type="date"
                     value={d.data}
@@ -1335,16 +1507,17 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                     onChange={(e) => diaOps.update(i, { data: e.target.value })}
                   />
                 </div>
-                <div>
+                <div className="roteiro-dia-field roteiro-dia-field-percurso">
                   <label style={{ ...labelSt, marginBottom: 2 }}>Percurso</label>
                   <input
+                    className="roteiro-dia-input"
                     style={{ ...inputSt, width: 180 }}
                     value={d.percurso}
                     onChange={(e) => diaOps.update(i, { percurso: e.target.value })}
                     placeholder="Ex: Roma - Veneza"
                   />
                 </div>
-                <div>
+                <div className="roteiro-dia-field roteiro-dia-field-city">
                   <label style={{ ...labelSt, marginBottom: 2 }}>Cidade/Pernoite</label>
                   <AutocompleteInput
                     style={{ ...inputSt, width: 130 }}
@@ -1355,28 +1528,21 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                     placeholder="Cidade"
                   />
                 </div>
-                <div style={{ flex: 1, minWidth: 200 }}>
+                <div className="roteiro-dia-field roteiro-dia-field-desc">
                   <label style={{ ...labelSt, marginBottom: 2 }}>Descrição do dia</label>
                   <textarea
+                    className="roteiro-dia-input roteiro-dia-textarea"
                     style={{ ...inputSt, minHeight: 60, resize: "vertical" }}
                     value={d.descricao}
                     onChange={(e) => diaOps.update(i, { descricao: e.target.value })}
                     placeholder="Descrição detalhada do dia..."
                   />
                 </div>
-                <div style={{ display: "flex", gap: 4, flexShrink: 0, paddingTop: 20 }}>
-                  <AppButton type="button" variant="secondary" className="btn-icon" onClick={() => diaOps.moveUp(i)} style={actionBtnSt} title="Subir" aria-label="Subir">
-                    <i className="pi pi-chevron-up" aria-hidden="true" />
-                  </AppButton>
-                  <AppButton type="button" variant="secondary" className="btn-icon" onClick={() => diaOps.moveDown(i)} style={actionBtnSt} title="Descer" aria-label="Descer">
-                    <i className="pi pi-chevron-down" aria-hidden="true" />
-                  </AppButton>
-                  <AppButton type="button" variant="secondary" className="btn-icon" onClick={() => diaOps.add(i)} style={actionBtnSt} title="Adicionar" aria-label="Adicionar">
-                    <i className="pi pi-plus" aria-hidden="true" />
-                  </AppButton>
-                  <AppButton type="button" variant="danger" onClick={() => diaOps.remove(i)} style={{ ...actionBtnSt, color: "#dc2626" }} title="Excluir">
-                    <i className="pi pi-trash" aria-hidden="true" />
-                  </AppButton>
+                <div className="roteiro-dia-actions vtur-table-actions">
+                  <AppButton type="button" variant="ghost" className="btn-icon vtur-table-action roteiro-action-btn" icon="pi pi-arrow-up" onClick={() => diaOps.moveUp(i)} title="Subir" aria-label="Subir" />
+                  <AppButton type="button" variant="ghost" className="btn-icon vtur-table-action roteiro-action-btn" icon="pi pi-arrow-down" onClick={() => diaOps.moveDown(i)} title="Descer" aria-label="Descer" />
+                  <AppButton type="button" variant="ghost" className="btn-icon vtur-table-action roteiro-action-btn" icon="pi pi-plus" onClick={() => diaOps.add(i)} title="Adicionar" aria-label="Adicionar" />
+                  <AppButton type="button" variant="danger" className="btn-icon danger vtur-table-action roteiro-action-btn" icon="pi pi-trash" onClick={() => diaOps.remove(i)} title="Excluir" aria-label="Excluir" />
                 </div>
               </div>
             ))}
@@ -1450,7 +1616,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                 </tbody>
               </table>
               {investimentos.length === 0 && (
-                <AppButton type="button" variant="secondary" onClick={() => setInvestimentos([newInvestimento(0)])} style={{ marginTop: 8, ...actionBtnSt }}>
+                <AppButton type="button" variant="secondary" className="mt-2" onClick={() => setInvestimentos([newInvestimento(0)])}>
                   + Adicionar investimento
                 </AppButton>
               )}
@@ -1532,7 +1698,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                 </tbody>
               </table>
               {pagamentos.length === 0 && (
-                <AppButton type="button" variant="secondary" onClick={() => setPagamentos([newPagamento(0)])} style={{ marginTop: 8, ...actionBtnSt }}>
+                <AppButton type="button" variant="secondary" className="mt-2" onClick={() => setPagamentos([newPagamento(0)])}>
                   + Adicionar pagamento
                 </AppButton>
               )}
@@ -1611,7 +1777,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
             <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
               <input style={{ ...inputSt, flex: 1 }} value={diasBuscaCidade} onChange={(e) => setDiasBuscaCidade(e.target.value)} placeholder="Cidade (opcional)" />
               <input style={{ ...inputSt, flex: 2 }} value={diasBuscaQ} onChange={(e) => setDiasBuscaQ(e.target.value)} placeholder="Buscar por texto..." />
-              <AppButton type="button" variant="primary" onClick={handleBuscarDias} disabled={diasBuscaLoading} style={{ padding: "6px 14px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 6, cursor: diasBuscaLoading ? "not-allowed" : "pointer", fontSize: 13 }}>
+              <AppButton type="button" variant="primary" onClick={handleBuscarDias} disabled={diasBuscaLoading}>
                 {diasBuscaLoading ? "..." : "Buscar"}
               </AppButton>
             </div>
@@ -1632,7 +1798,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                 <div style={{ fontSize: 12, color: "#374151" }}>{d.descricao.slice(0, 140)}{d.descricao.length > 140 ? "..." : ""}</div>
               </div>
             ))}
-            <AppButton type="button" variant="secondary" onClick={() => setShowDiasBusca(false)} style={{ marginTop: 12, padding: "7px 16px", background: "#f3f4f6", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13 }}>
+            <AppButton type="button" variant="secondary" className="mt-3" onClick={() => setShowDiasBusca(false)}>
               Fechar
             </AppButton>
           </div>
@@ -1653,7 +1819,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                   <div style={{ fontWeight: 600, fontSize: 14 }}>{gerarClienteSel.nome}</div>
                   {gerarClienteSel.whatsapp && <div style={{ fontSize: 12, color: "#6b7280" }}>{gerarClienteSel.whatsapp}</div>}
                 </div>
-                <AppButton type="button" variant="link" onClick={() => { setGerarClienteSel(null); setGerarClienteQ(""); setGerarClienteNome(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#2563eb", fontSize: 13 }}>Trocar</AppButton>
+                <AppButton type="button" variant="link" onClick={() => { setGerarClienteSel(null); setGerarClienteQ(""); setGerarClienteNome(""); }}>Trocar</AppButton>
               </div>
             ) : (
               <div style={{ marginBottom: 14 }}>
@@ -1694,7 +1860,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
               </div>
             </div>
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <AppButton type="button" variant="secondary" onClick={() => setShowGerarModal(false)} disabled={gerarLoading} style={{ padding: "8px 16px", background: "#f3f4f6", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 14 }}>
+              <AppButton type="button" variant="secondary" onClick={() => setShowGerarModal(false)} disabled={gerarLoading}>
                 Cancelar
               </AppButton>
               <AppButton
@@ -1702,7 +1868,6 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                 variant="primary"
                 onClick={handleGerarOrcamento}
                 disabled={gerarLoading || (!gerarClienteSel && !gerarClienteNome.trim())}
-                style={{ padding: "8px 18px", background: "#059669", color: "#fff", border: "none", borderRadius: 6, cursor: gerarLoading ? "not-allowed" : "pointer", fontWeight: 600, fontSize: 14 }}
               >
                 {gerarLoading ? "Gerando..." : "Gerar Orçamento"}
               </AppButton>

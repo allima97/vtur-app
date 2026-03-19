@@ -1,16 +1,12 @@
 ---
 import "../../styles/global.css";
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
-import CommissionRulesIsland from "../../components/islands/CommissionRulesIsland.tsx";
+import CommissionRulesIsland from "../../components/islands/CommissionRulesIsland";
 
 const activePage = "regras-comissao";
 ---
 
 <DashboardLayout title="Regras de Comissão" {activePage} module="Parametros">
-  <h1 class="page-title">Regras de Comissionamento</h1>
-  <p class="page-subtitle">
-    Cadastre regras gerais ou escalonadas para aplicar em produtos e cálculos de metas.
-  </p>
 
   <CommissionRulesIsland client:load />
 </DashboardLayout>

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import AlertMessage from "../ui/AlertMessage";
 import AppCard from "../ui/primer/AppCard";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type UserWithType = {
   id: string;
@@ -78,7 +77,7 @@ const DashboardRouterIsland: React.FC = () => {
 
   return (
     <section className="dashboard-router-page">
-      <AppToolbar tone="config" title="Carregando seu dashboard..." />
+      <AppCard tone="config" title="Carregando seu dashboard..." />
       <AppCard tone="config">
         <p>{mensagem}</p>
         {erro && <AlertMessage variant="error">{erro}</AlertMessage>}

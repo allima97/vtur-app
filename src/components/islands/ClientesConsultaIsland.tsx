@@ -58,9 +58,17 @@ async function fetchClientesList(params: {
   } as { items: Cliente[]; total: number };
 }
 
-async function fetchClienteHistorico(clienteId: string) {
+async function fetchClienteHistorico(params: {
+  clienteId: string;
+  empresaId?: string;
+  vendedorIds?: string[];
+}) {
   const qs = new URLSearchParams();
-  qs.set("cliente_id", clienteId);
+  qs.set("cliente_id", params.clienteId);
+  if (params.empresaId) qs.set("empresa_id", params.empresaId);
+  if (params.vendedorIds && params.vendedorIds.length > 0) {
+    qs.set("vendedor_ids", params.vendedorIds.join(","));
+  }
   const resp = await fetch(`/api/v1/clientes/historico?${qs.toString()}`);
   if (!resp.ok) {
     throw new Error(await resp.text());
@@ -74,6 +82,7 @@ async function fetchClienteHistorico(clienteId: string) {
       destino_cidade_nome?: string;
       valor_total: number;
       valor_taxas: number;
+      origem_vinculo?: "titular" | "passageiro";
     }[];
     orcamentos: {
       id: string;
@@ -283,13 +292,26 @@ export default function ClientesConsultaIsland() {
     setHistoricoVendas([]);
     setHistoricoOrcamentos([]);
     setLoadingHistorico(true);
+    const filtroVendedorAtivo =
+      isMaster &&
+      (!isTodosFiltro(masterScope.vendedorSelecionado) || masterScope.gestorSelecionado !== "all");
+    const vendorIds = filtroVendedorAtivo ? masterScope.vendedorIds : [];
+    const empresaId =
+      isMaster && masterScope.empresaSelecionada !== "all"
+        ? masterScope.empresaSelecionada
+        : undefined;
     (async () => {
       try {
-        const payload = await fetchClienteHistorico(id);
+        const payload = await fetchClienteHistorico({
+          clienteId: id,
+          empresaId,
+          vendedorIds: vendorIds,
+        });
         setHistoricoVendas(payload.vendas || []);
         setHistoricoOrcamentos(payload.orcamentos || []);
       } catch (e) {
         console.error(e);
+        showToast("Erro ao carregar histórico do cliente.", "error");
       } finally {
         setLoadingHistorico(false);
       }
@@ -438,7 +460,7 @@ export default function ClientesConsultaIsland() {
             />
           ) : (
             <DataTable
-              containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+              containerClassName="vtur-scroll-y-65"
               headers={
                 <tr>
                   <th>Nome</th>
@@ -452,7 +474,7 @@ export default function ClientesConsultaIsland() {
               loadingMessage="Carregando clientes..."
               empty={false}
               colSpan={5}
-              className="table-default table-header-blue clientes-table table-mobile-cards"
+              className="table-default table-header-blue clientes-table table-header-blue table-mobile-cards"
             >
               {clientesExibidos.map((c) => {
                 const whatsappLink = construirLinkWhatsApp(c.whatsapp || c.telefone || "");
@@ -566,7 +588,7 @@ export default function ClientesConsultaIsland() {
                     empty={historicoVendas.length === 0}
                     emptyMessage="Nenhuma venda encontrada."
                     colSpan={5}
-                    className="table-mobile-cards"
+                    className="table-header-blue table-mobile-cards"
                   >
                     {historicoVendas.map((v) => (
                       <tr key={v.id}>
@@ -611,7 +633,7 @@ export default function ClientesConsultaIsland() {
                     empty={historicoOrcamentos.length === 0}
                     emptyMessage="Nenhum orcamento encontrado."
                     colSpan={4}
-                    className="table-mobile-cards"
+                    className="table-header-blue table-mobile-cards"
                   >
                     {historicoOrcamentos.map((o) => (
                       <tr key={o.id}>

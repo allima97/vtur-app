@@ -1246,12 +1246,22 @@ export default function VendasConsultaIsland() {
   // ================================
   return (
     <AppPrimerProvider>
-      <div className="vendas-consulta-page">
+      <div className="page-content-wrap vendas-consulta-page">
         <AppCard
-          className="mb-3"
-          tone="config"
-          title="Filtros do período"
-          subtitle="Refine a consulta por competência, data ou escopo comercial."
+          className="mb-3 list-toolbar-sticky"
+          tone="info"
+          title="Consulta de Vendas"
+          subtitle="Gerencie suas vendas com visão de CRM."
+          actions={
+            <div className="mobile-stack-buttons">
+              <AppButton as="a" href="/vendas/importar" type="button" variant="secondary">
+                Importar contratos
+              </AppButton>
+              <AppButton as="a" href="/vendas/cadastro" type="button" variant="primary">
+                Nova venda
+              </AppButton>
+            </div>
+          }
         >
           <div className="vtur-form-grid vtur-form-grid-4">
             <AppField
@@ -1439,7 +1449,7 @@ export default function VendasConsultaIsland() {
         <DataTable
           shellClassName="mb-3"
           className="table-default table-header-green table-mobile-cards min-w-[820px]"
-          containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+          containerClassName="vtur-scroll-y-65"
           headers={
             <tr>
               <th>Cliente</th>
@@ -1549,7 +1559,7 @@ export default function VendasConsultaIsland() {
                     Visualização completa do recibo
                   </div>
                 </div>
-                <AppButton type="button" variant="ghost" onClick={() => setModalReciboDetalhe(null)}>
+                <AppButton type="button" variant="secondary" onClick={() => setModalReciboDetalhe(null)}>
                   Fechar
                 </AppButton>
               </div>
@@ -1714,8 +1724,8 @@ export default function VendasConsultaIsland() {
       ================================= */}
         {modalVenda && (
         <div className="modal-backdrop modal-venda">
-          <div className="modal-panel vtur-modal-panel-shell" style={{ maxWidth: "min(1100px, 95vw)" }}>
-            <div className="modal-header vtur-modal-header">
+          <div className="modal-panel" style={{ maxWidth: "min(1100px, 95vw)" }}>
+            <div className="modal-header">
               <div>
                 <div
                   className="modal-title"
@@ -1724,12 +1734,12 @@ export default function VendasConsultaIsland() {
                   Detalhes da venda
                 </div>
               </div>
-              <AppButton type="button" variant="ghost" onClick={() => setModalVenda(null)}>
-                Fechar
-              </AppButton>
+              <button className="btn-ghost" onClick={() => setModalVenda(null)}>
+                ✕
+              </button>
             </div>
 
-            <div className="modal-body vtur-modal-body-stack" style={{ overflowX: "auto" }}>
+            <div className="modal-body vtur-venda-modal-body" style={{ overflowX: "auto" }}>
               <AppCard
                 className="mb-3 vtur-modal-section-card"
                 tone="info"

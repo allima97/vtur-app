@@ -21,9 +21,9 @@ import { ToastStack, useToastQueue } from "../ui/Toast";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
+import FileUploadField from "../ui/primer/FileUploadField";
 import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type CidadeSugestao = {
   id: string;
@@ -48,6 +48,26 @@ type TipoPacote = {
   nome: string;
   ativo?: boolean | null;
 };
+
+type VendedorOption = {
+  id: string;
+  nome_completo: string | null;
+};
+
+async function fetchVendasCadastroBase() {
+  const resp = await fetch("/api/v1/vendas/cadastro-base");
+  if (!resp.ok) {
+    throw new Error(await resp.text());
+  }
+  return resp.json() as Promise<{
+    user: {
+      id: string;
+      papel: string;
+      can_assign_vendedor?: boolean;
+    };
+    vendedoresEquipe: VendedorOption[];
+  }>;
+}
 
 const IMPORT_CLIENTE_RLS_MESSAGE =
   "Não foi possível criar o cliente automaticamente devido à política de segurança (RLS). " +
@@ -407,6 +427,10 @@ export default function VendaContratoImportIsland() {
   const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 4000 });
   const [duplicadoModal, setDuplicadoModal] = useState<{ mensagem: string } | null>(null);
   const [tipoPacoteModal, setTipoPacoteModal] = useState<{ mensagem: string } | null>(null);
+  const [contatoModalOpen, setContatoModalOpen] = useState(false);
+  const [contatoTelefone, setContatoTelefone] = useState("");
+  const [contatoWhatsapp, setContatoWhatsapp] = useState("");
+  const [contatoEmail, setContatoEmail] = useState("");
   const isReguaTipoPacote = (valor?: string | null) =>
     normalizeText(valor || "", { trim: true, collapseWhitespace: true }).includes("regua abaixo de 10");
 
@@ -414,6 +438,10 @@ export default function VendaContratoImportIsland() {
   const [loadingProdutos, setLoadingProdutos] = useState(false);
   const [errorProdutos, setErrorProdutos] = useState<string | null>(null);
   const [tiposPacote, setTiposPacote] = useState<TipoPacote[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [canAssignVendedor, setCanAssignVendedor] = useState(false);
+  const [vendedorId, setVendedorId] = useState("");
+  const [vendedoresEquipe, setVendedoresEquipe] = useState<VendedorOption[]>([]);
 
   const [buscaCidade, setBuscaCidade] = useState("");
   const [cidadeId, setCidadeId] = useState("");
@@ -510,6 +538,29 @@ export default function VendaContratoImportIsland() {
       ? produtos.filter((p) => p.todas_as_cidades || p.cidade_id === cidadeId)
       : produtos.filter((p) => p.todas_as_cidades);
   }, [produtos, cidadeId]);
+
+  useEffect(() => {
+    if (loadPerm || !podeVer) return;
+    let active = true;
+    fetchVendasCadastroBase()
+      .then((payload) => {
+        if (!active) return;
+        const user = payload?.user;
+        setCurrentUserId(user?.id || null);
+        setCanAssignVendedor(Boolean(user?.can_assign_vendedor));
+        setVendedoresEquipe(Array.isArray(payload?.vendedoresEquipe) ? payload.vendedoresEquipe : []);
+        if (user?.id) {
+          setVendedorId((prev) => prev || user.id);
+        }
+      })
+      .catch((baseError) => {
+        if (!active) return;
+        console.error(baseError);
+      });
+    return () => {
+      active = false;
+    };
+  }, [loadPerm, podeVer]);
 
   useEffect(() => {
     if (loadPerm || !podeVer) return;
@@ -856,6 +907,12 @@ export default function VendaContratoImportIsland() {
       showToast(msg, "error");
       return;
     }
+    if (canAssignVendedor && !vendedorId) {
+      const msg = "Selecione o vendedor responsável pela venda.";
+      setError(msg);
+      showToast(msg, "error");
+      return;
+    }
     const contratoSemTipoPacote = contratos.findIndex((contrato) => !normalizeText(contrato.tipo_pacote || ""));
     if (contratoSemTipoPacote >= 0) {
       setTipoPacoteModal({
@@ -863,6 +920,18 @@ export default function VendaContratoImportIsland() {
       });
       return;
     }
+    setContatoModalOpen(true);
+  }
+
+  async function persistSaveContrato(contatos?: {
+    telefone?: string | null;
+    whatsapp?: string | null;
+    email?: string | null;
+  }) {
+    const destinoTexto = destinoId
+      ? destinoSelecionado?.nome || buscaDestino.trim()
+      : buscaDestino.trim();
+
     setSaving(true);
     setError(null);
     try {
@@ -879,11 +948,15 @@ export default function VendaContratoImportIsland() {
         principalIndex,
         file,
         contratoFiles,
+        vendedorId: vendedorId || currentUserId || null,
         destinoCidadeId: cidadeId,
         destinoCidadeNome: cidadeNome || null,
         destinoProdutoId: destinoId || null,
         destinoProdutoNome: destinoTexto || null,
         dataVenda,
+        clienteTelefone: contatos?.telefone || null,
+        clienteWhatsapp: contatos?.whatsapp || null,
+        clienteEmail: contatos?.email || null,
       });
       showToast("Venda criada com sucesso.", "success");
       if (typeof window !== "undefined") {
@@ -904,6 +977,19 @@ export default function VendaContratoImportIsland() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleConfirmarContatoSalvar(informarDepois = false) {
+    setContatoModalOpen(false);
+    await persistSaveContrato(
+      informarDepois
+        ? { telefone: null, whatsapp: null, email: null }
+        : {
+            telefone: contatoTelefone.trim() || null,
+            whatsapp: contatoWhatsapp.trim() || null,
+            email: contatoEmail.trim() || null,
+          }
+    );
   }
 
   function handleCancelarImportacao() {
@@ -1019,9 +1105,8 @@ export default function VendaContratoImportIsland() {
   return (
     <AppPrimerProvider>
       <div className="page-content-wrap">
-        <AppToolbar
+        <AppCard
           className="mb-3"
-          sticky
           tone="config"
           title="Importação de contratos"
           subtitle={`Fluxo de ${resumoImportacao} com revisão comercial antes da criação da venda.`}
@@ -1030,7 +1115,7 @@ export default function VendaContratoImportIsland() {
               <AppButton type="button" variant="secondary" onClick={resetImportacao} disabled={extracting}>
                 Limpar importação
               </AppButton>
-              <AppButton type="button" variant="ghost" onClick={handleCancelarImportacao} disabled={saving}>
+              <AppButton type="button" variant="secondary" onClick={handleCancelarImportacao} disabled={saving}>
                 Cancelar
               </AppButton>
             </div>
@@ -1086,7 +1171,7 @@ export default function VendaContratoImportIsland() {
               <strong>{contratosSemCpf}</strong>
             </div>
           </div>
-        </AppToolbar>
+        </AppCard>
 
         {status ? (
           <AlertMessage variant="info" className="mb-3">
@@ -1111,32 +1196,19 @@ export default function VendaContratoImportIsland() {
         >
           <div className="vtur-form-grid vtur-form-grid-2">
             <div className="vtur-import-upload-stack">
-              <label className="form-label">PDF do contrato/orçamento</label>
-              <div className="vtur-import-upload-row">
-                <input
-                  id="contrato-file-input"
-                  type="file"
-                  accept="application/pdf"
-                  className="sr-only"
-                  ref={fileInputRef}
-                  onChange={(e) => {
-                    const nextFile = e.target.files?.[0] || null;
-                    setFile(nextFile);
-                    if (nextFile) {
-                      setTextInput("");
-                    }
-                  }}
-                />
-                <AppButton
-                  type="button"
-                  variant="secondary"
-                  className="vtur-import-upload-button"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  Escolher arquivo
-                </AppButton>
-                <span className="vtur-import-file-name">{file?.name || "Nenhum arquivo selecionado"}</span>
-              </div>
+              <FileUploadField
+                label="PDF do contrato/orçamento"
+                accept="application/pdf"
+                inputRef={fileInputRef}
+                onChange={(e) => {
+                  const nextFile = e.currentTarget.files?.[0] || null;
+                  setFile(nextFile);
+                  if (nextFile) {
+                    setTextInput("");
+                  }
+                }}
+                fileName={file?.name || "Nenhum arquivo escolhido"}
+              />
               <div className="vtur-form-actions orcamentos-action-bar">
                 <AppButton
                   type="button"
@@ -1724,6 +1796,20 @@ export default function VendaContratoImportIsland() {
                   onFocus={selectAllInputOnFocus}
                   onChange={(e) => setDataVenda(e.target.value)}
                 />
+
+                {canAssignVendedor ? (
+                  <AppField
+                    as="select"
+                    label="Vendedor *"
+                    value={vendedorId}
+                    onChange={(e) => setVendedorId(e.target.value)}
+                    required
+                    options={vendedoresEquipe.map((item) => ({
+                      value: item.id,
+                      label: item.nome_completo || "Usuário",
+                    }))}
+                  />
+                ) : null}
               </div>
             </AppCard>
 
@@ -1876,6 +1962,59 @@ export default function VendaContratoImportIsland() {
           onClose={() => setTipoPacoteModal(null)}
           message={tipoPacoteModal?.mensagem || ""}
         />
+
+        {contatoModalOpen ? (
+          <Dialog
+            title="Contato do cliente"
+            width="large"
+            onClose={() => {
+              if (!saving) setContatoModalOpen(false);
+            }}
+            footerButtons={[
+              {
+                content: "Informar depois",
+                buttonType: "default",
+                onClick: () => handleConfirmarContatoSalvar(true),
+                disabled: saving,
+              },
+              {
+                content: saving ? "Salvando..." : "Salvar venda",
+                buttonType: "primary",
+                onClick: () => handleConfirmarContatoSalvar(false),
+                disabled: saving,
+                loading: saving,
+              },
+            ]}
+          >
+            <div className="vtur-modal-body-stack">
+              <p style={{ margin: 0 }}>
+                Você pode complementar os dados do contratante agora ou seguir com a importação e informar depois.
+              </p>
+              <AppField
+                label="Telefone"
+                value={contatoTelefone}
+                onChange={(event: any) => setContatoTelefone(event.target.value)}
+                placeholder="Opcional"
+                disabled={saving}
+              />
+              <AppField
+                label="WhatsApp"
+                value={contatoWhatsapp}
+                onChange={(event: any) => setContatoWhatsapp(event.target.value)}
+                placeholder="Opcional"
+                disabled={saving}
+              />
+              <AppField
+                label="E-mail"
+                type="email"
+                value={contatoEmail}
+                onChange={(event: any) => setContatoEmail(event.target.value)}
+                placeholder="Opcional"
+                disabled={saving}
+              />
+            </div>
+          </Dialog>
+        ) : null}
       </div>
     </AppPrimerProvider>
   );

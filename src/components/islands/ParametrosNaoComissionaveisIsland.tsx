@@ -7,7 +7,6 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { normalizeText } from "../../lib/normalizeText";
 
@@ -146,8 +145,9 @@ export default function ParametrosNaoComissionaveisIsland() {
 
   return (
     <div className="page-content-wrap">
-      <AppToolbar
+      <AppCard
         tone="config"
+        className="mb-3"
         title="Criterios de nao comissao"
         subtitle="Sobrescreve paga_comissao e remove valores de metas, comissoes e relatorios."
       />
@@ -198,7 +198,7 @@ export default function ParametrosNaoComissionaveisIsland() {
           <EmptyState title="Nenhum criterio cadastrado" />
         ) : (
           <DataTable
-            className="table-mobile-cards"
+            className="table-header-blue table-mobile-cards"
             headers={
               <tr>
                 <th>Termo</th>
@@ -214,11 +214,12 @@ export default function ParametrosNaoComissionaveisIsland() {
                 <td data-label="Termo">{t.termo}</td>
                 <td data-label="Ativo">{t.ativo ? "Sim" : "Nao"}</td>
                 <td className="th-actions" data-label="Ações">
-                  <div className="action-buttons">
+                  <div className="action-buttons vtur-table-actions">
                     {podeEditar && (
                       <AppButton
                         type="button"
                         variant="ghost"
+                        className="vtur-table-action"
                         title="Editar"
                         aria-label="Editar"
                         onClick={() => {
@@ -236,6 +237,7 @@ export default function ParametrosNaoComissionaveisIsland() {
                       <AppButton
                         type="button"
                         variant="danger"
+                        className="vtur-table-action"
                         disabled={excluindoId === t.id}
                         title={excluindoId === t.id ? "Excluindo" : "Excluir"}
                         aria-label={excluindoId === t.id ? "Excluindo" : "Excluir"}

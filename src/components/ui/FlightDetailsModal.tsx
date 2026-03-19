@@ -202,7 +202,7 @@ export default function FlightDetailsModal({ details, title, onClose }: FlightDe
           )}
         </div>
         <div className="modal-footer">
-          <AppButton variant="primary" onClick={onClose}>
+          <AppButton variant="secondary" onClick={onClose}>
             Fechar
           </AppButton>
         </div>

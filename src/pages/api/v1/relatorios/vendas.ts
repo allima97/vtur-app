@@ -2,6 +2,7 @@ import { createServerClient } from "../../../../lib/supabaseServer";
 import { kvCache } from "../../../../lib/kvCache";
 import { MODULO_ALIASES } from "../../../../config/modulos";
 import { normalizeText } from "../../../../lib/normalizeText";
+import { fetchEffectiveConciliacaoReceipts } from "../../../../lib/conciliacao/source";
 
 import { getSupabaseEnv } from "../../users";
 const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv();
@@ -178,6 +179,19 @@ function normalizeTerm(value?: string | null) {
   return normalizeText(value || "", { trim: true, collapseWhitespace: true });
 }
 
+function toStr(value?: unknown) {
+  return String(value || "").trim();
+}
+
+function toNumber(value?: unknown) {
+  const parsed = Number(value || 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function isPositive(value?: unknown) {
+  return toNumber(value) > 0;
+}
+
 async function fetchTermosNaoComissionaveis(client: any) {
   try {
     const { data, error } = await client
@@ -229,6 +243,297 @@ function calcularNaoComissionavelPorVenda(
   return mapa;
 }
 
+async function fetchParametrosComissao(client: any, companyId: string | null) {
+  if (!companyId) {
+    return {
+      usar_taxas_na_meta: true,
+      foco_valor: "bruto",
+      conciliacao_sobrepoe_vendas: false,
+    };
+  }
+
+  const { data } = await client
+    .from("parametros_comissao")
+    .select("usar_taxas_na_meta, foco_valor, conciliacao_sobrepoe_vendas")
+    .eq("company_id", companyId)
+    .maybeSingle();
+
+  return {
+    usar_taxas_na_meta: data?.usar_taxas_na_meta ?? true,
+    foco_valor: data?.foco_valor === "liquido" ? "liquido" : "bruto",
+    conciliacao_sobrepoe_vendas: Boolean(data?.conciliacao_sobrepoe_vendas),
+  };
+}
+
+async function applyConciliacaoOverridesToVendas(client: any, companyId: string | null, items: any[]) {
+  if (!companyId || !Array.isArray(items) || items.length === 0) {
+    return items;
+  }
+
+  const receiptIds = items
+    .flatMap((item: any) => (Array.isArray(item?.vendas_recibos) ? item.vendas_recibos : []))
+    .map((recibo: any) => toStr(recibo?.id))
+    .filter(Boolean);
+
+  if (receiptIds.length === 0) return items;
+
+  const concRows: any[] = [];
+  for (let i = 0; i < receiptIds.length; i += 200) {
+    const batch = receiptIds.slice(i, i + 200);
+    const { data, error } = await client
+      .from("conciliacao_recibos")
+      .select(
+        "documento, movimento_data, status, valor_lancamentos, valor_taxas, valor_venda_real, valor_comissao_loja, percentual_comissao_loja, faixa_comissao, venda_recibo_id"
+      )
+      .eq("company_id", companyId)
+      .in("status", ["BAIXA", "OPFAX"] as any)
+      .in("venda_recibo_id", batch)
+      .order("movimento_data", { ascending: true });
+    if (error) throw error;
+    concRows.push(...(Array.isArray(data) ? data : []));
+  }
+
+  if (concRows.length === 0) return items;
+
+  const byDocumento = new Map<string, any[]>();
+  concRows.forEach((row) => {
+    const documento = toStr(row?.documento);
+    if (!documento) return;
+    const bucket = byDocumento.get(documento) || [];
+    bucket.push(row);
+    byDocumento.set(documento, bucket);
+  });
+
+  const overrides = new Map<
+    string,
+    {
+      data_venda: string;
+      valor_bruto_override: number | null;
+      valor_meta_override: number | null;
+      valor_liquido_override: number | null;
+      valor_taxas: number | null;
+      valor_comissao_loja: number | null;
+      percentual_comissao_loja: number | null;
+      faixa_comissao: string | null;
+    }
+  >();
+
+  Array.from(byDocumento.values()).forEach((rows) => {
+    const sortedRows = [...rows].sort((a, b) =>
+      toStr(a?.movimento_data).localeCompare(toStr(b?.movimento_data))
+    );
+    const baixaRows = sortedRows.filter((row) => toStr(row?.status).toUpperCase() === "BAIXA");
+    const confirmed = baixaRows.length > 0;
+    const valuedBaixa = baixaRows.find(
+      (row) => isPositive(row?.valor_venda_real) || isPositive(row?.valor_lancamentos)
+    );
+    const valuedOpfax = sortedRows.find(
+      (row) =>
+        toStr(row?.status).toUpperCase() === "OPFAX" &&
+        (isPositive(row?.valor_venda_real) || isPositive(row?.valor_lancamentos))
+    );
+    const sourceRow =
+      valuedBaixa ||
+      (confirmed ? valuedOpfax : null) ||
+      (confirmed ? baixaRows[0] : null) ||
+      null;
+
+    if (!sourceRow) return;
+    if (!confirmed && toStr(sourceRow?.status).toUpperCase() === "OPFAX") return;
+
+    const linkedReciboId = sortedRows.map((row) => toStr(row?.venda_recibo_id)).find(Boolean);
+    const effectiveDate = toStr(sourceRow?.movimento_data);
+    if (!linkedReciboId || !effectiveDate) return;
+
+    const valorMeta = toNumber(sourceRow?.valor_venda_real);
+    const valorTaxas = toNumber(sourceRow?.valor_taxas);
+    const valorBruto = isPositive(sourceRow?.valor_lancamentos)
+      ? toNumber(sourceRow?.valor_lancamentos)
+      : valorMeta > 0
+      ? valorMeta + valorTaxas
+      : 0;
+
+    overrides.set(linkedReciboId, {
+      data_venda: effectiveDate,
+      valor_bruto_override: valorBruto || null,
+      valor_meta_override: valorMeta || null,
+      valor_liquido_override: valorMeta || null,
+      valor_taxas: valorTaxas || null,
+      valor_comissao_loja: sourceRow?.valor_comissao_loja ?? null,
+      percentual_comissao_loja: sourceRow?.percentual_comissao_loja ?? null,
+      faixa_comissao: toStr(sourceRow?.faixa_comissao) || null,
+    });
+  });
+
+  if (overrides.size === 0) return items;
+
+  return items.map((item: any) => ({
+    ...item,
+    vendas_recibos: (Array.isArray(item?.vendas_recibos) ? item.vendas_recibos : []).map((recibo: any) => {
+      const override = overrides.get(toStr(recibo?.id));
+      if (!override) return recibo;
+      return {
+        ...recibo,
+        data_venda: override.data_venda,
+        valor_taxas: override.valor_taxas,
+        valor_bruto_override: override.valor_bruto_override,
+        valor_meta_override: override.valor_meta_override,
+        valor_liquido_override: override.valor_liquido_override,
+        valor_comissao_loja: override.valor_comissao_loja,
+        percentual_comissao_loja: override.percentual_comissao_loja,
+        faixa_comissao: override.faixa_comissao,
+      };
+    }),
+  }));
+}
+
+async function fetchMatchingBaseReceiptIds(params: {
+  client: any;
+  vendedorIds: string[];
+  papel: Papel;
+  inicio?: string;
+  fim?: string;
+  status?: string;
+  clienteId?: string;
+  valorMin?: number | null;
+  valorMax?: number | null;
+}) {
+  const { client, vendedorIds, papel, inicio, fim, status, clienteId, valorMin, valorMax } = params;
+  const pageSize = 1000;
+  const ids = new Set<string>();
+
+  for (let offset = 0; offset < 10000; offset += pageSize) {
+    let query = client
+      .from("vendas")
+      .select(
+        `
+        vendas_recibos!inner (
+          id
+        )
+      `
+      )
+      .order("data_venda", { ascending: false })
+      .range(offset, offset + pageSize - 1);
+
+    if (papel !== "ADMIN") {
+      query = query.in("vendedor_id", vendedorIds);
+    } else if (vendedorIds.length > 0) {
+      query = query.in("vendedor_id", vendedorIds);
+    }
+
+    if (inicio) query = query.gte("vendas_recibos.data_venda", inicio);
+    if (fim) query = query.lte("vendas_recibos.data_venda", fim);
+    if (status && status !== "todos") query = query.eq("status", status);
+    if (clienteId) query = query.eq("cliente_id", clienteId);
+    if (valorMin != null && Number.isFinite(valorMin)) query = query.gte("valor_total_bruto", valorMin);
+    if (valorMax != null && Number.isFinite(valorMax)) query = query.lte("valor_total_bruto", valorMax);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const chunk = Array.isArray(data) ? data : [];
+    chunk.forEach((row: any) => {
+      const recibos = Array.isArray(row?.vendas_recibos) ? row.vendas_recibos : [];
+      recibos.forEach((recibo: any) => {
+        const id = toStr(recibo?.id);
+        if (id) ids.add(id);
+      });
+    });
+
+    if (chunk.length < pageSize) break;
+  }
+
+  return ids;
+}
+
+function buildSyntheticRelatorioRows(params: {
+  currentItems: any[];
+  concReceipts: Awaited<ReturnType<typeof fetchEffectiveConciliacaoReceipts>>;
+  existingReceiptIds: Set<string>;
+  status?: string;
+  clienteId?: string;
+  valorMin?: number | null;
+  valorMax?: number | null;
+}) {
+  const { currentItems, concReceipts, existingReceiptIds, status, clienteId, valorMin, valorMax } = params;
+  if (clienteId) return [] as any[];
+  if (status && status !== "todos" && status !== "confirmado") return [] as any[];
+
+  const currentSaleIds = new Set(currentItems.map((item: any) => toStr(item?.id)).filter(Boolean));
+
+  return concReceipts
+    .filter((item) => {
+      if (item.linked_recibo_id && existingReceiptIds.has(item.linked_recibo_id)) return false;
+      if (!item.linked_recibo_id && item.linked_venda_id && currentSaleIds.has(item.linked_venda_id)) return false;
+      const bruto = toNumber(item.valor_bruto);
+      if (valorMin != null && Number.isFinite(valorMin) && bruto < valorMin) return false;
+      if (valorMax != null && Number.isFinite(valorMax) && bruto > valorMax) return false;
+      return true;
+    })
+    .map((item) => ({
+      id: item.linked_venda_id || item.id,
+      vendedor_id: item.vendedor_id,
+      numero_venda: null,
+      cliente_id: "",
+      destino_id: "",
+      destino_cidade_id: null,
+      produto_id: item.produto_id,
+      data_venda: item.data_venda,
+      data_embarque: null,
+      valor_total: item.valor_bruto,
+      valor_total_bruto: item.valor_bruto,
+      valor_total_pago: item.valor_bruto,
+      desconto_comercial_valor: 0,
+      valor_nao_comissionado: 0,
+      status: "confirmado",
+      cliente: { nome: null, cpf: null },
+      destino_produto: item.produto
+        ? {
+            id: item.produto.id,
+            nome: item.produto.nome,
+            tipo_produto: item.produto.id,
+            cidade_id: null,
+          }
+        : null,
+      destino_cidade: { nome: null },
+      vendas_recibos: [
+        {
+          id: item.linked_recibo_id || `${item.id}:synthetic`,
+          numero_recibo: item.documento,
+          data_venda: item.data_venda,
+          valor_total: item.valor_bruto,
+          valor_taxas: item.valor_taxas,
+          valor_du: null,
+          valor_rav: null,
+          produto_id: item.produto_id,
+          tipo_pacote: null,
+          valor_bruto_override: item.valor_bruto,
+          valor_meta_override: item.valor_meta_override,
+          valor_liquido_override: item.valor_liquido_override,
+          valor_comissao_loja: item.valor_comissao_loja,
+          percentual_comissao_loja: item.percentual_comissao_loja,
+          faixa_comissao: item.faixa_comissao,
+          produto_resolvido_id: item.produto_id,
+          produto_resolvido: item.produto
+            ? {
+                id: item.produto.id,
+                nome: item.produto.nome,
+                tipo_produto: item.produto.id,
+                cidade_id: null,
+              }
+            : null,
+          tipo_produtos: item.produto
+            ? {
+                id: item.produto.id,
+                nome: item.produto.nome,
+                tipo: item.produto.nome,
+              }
+            : null,
+        },
+      ],
+    }));
+}
+
 export async function GET({ request }: { request: Request }) {
   try {
     const client = buildAuthClient(request);
@@ -268,13 +573,15 @@ export async function GET({ request }: { request: Request }) {
 
     const { data: perfil, error: perfilErr } = await client
       .from("users")
-      .select("id, user_types(name)")
+      .select("id, company_id, user_types(name)")
       .eq("id", user.id)
       .maybeSingle();
     if (perfilErr) throw perfilErr;
 
     const tipoName = String((perfil as any)?.user_types?.name || "");
     const papel = resolvePapel(tipoName);
+    const companyId = toStr((perfil as any)?.company_id) || null;
+    const parametrosComissao = await fetchParametrosComissao(client, companyId);
 
     if (papel !== "ADMIN") {
       const denied = await requireModuloView(
@@ -383,6 +690,7 @@ export async function GET({ request }: { request: Request }) {
         destino_produto:produtos!destino_id (id, nome, tipo_produto, cidade_id),
         destino_cidade:cidades!destino_cidade_id (nome),
         vendas_recibos${hasPeriodo ? "!inner" : ""} (
+          id,
           numero_recibo,
           data_venda,
           valor_total,
@@ -445,9 +753,61 @@ export async function GET({ request }: { request: Request }) {
       }
     }
 
+    let itemsWithOverrides = parametrosComissao.conciliacao_sobrepoe_vendas
+      ? await applyConciliacaoOverridesToVendas(client, companyId, data || [])
+      : data || [];
+
+    let totalAdjusted = typeof count === "number" ? count : (data || []).length;
+    if (parametrosComissao.conciliacao_sobrepoe_vendas && companyId) {
+      const valorMin = Number.isNaN(parseFloat(valorMinRaw.replace(",", ".")))
+        ? null
+        : parseFloat(valorMinRaw.replace(",", "."));
+      const valorMax = Number.isNaN(parseFloat(valorMaxRaw.replace(",", ".")))
+        ? null
+        : parseFloat(valorMaxRaw.replace(",", "."));
+      const concReceipts = await fetchEffectiveConciliacaoReceipts({
+        client,
+        companyId,
+        inicio: inicio || "1900-01-01",
+        fim: fim || "2999-12-31",
+        vendedorIds,
+      });
+      if (concReceipts.length > 0) {
+        const existingReceiptIds = await fetchMatchingBaseReceiptIds({
+          client,
+          vendedorIds,
+          papel,
+          inicio: inicio || undefined,
+          fim: fim || undefined,
+          status,
+          clienteId,
+          valorMin,
+          valorMax,
+        });
+        const syntheticRows = buildSyntheticRelatorioRows({
+          currentItems: itemsWithOverrides,
+          concReceipts,
+          existingReceiptIds,
+          status,
+          clienteId,
+          valorMin,
+          valorMax,
+        });
+        if (syntheticRows.length > 0) {
+          const canAppendSyntheticRows = all || page === 1;
+          if (canAppendSyntheticRows) {
+            itemsWithOverrides = [...itemsWithOverrides, ...syntheticRows].sort((a: any, b: any) =>
+              String(b?.data_venda || "").localeCompare(String(a?.data_venda || ""))
+            );
+          }
+          totalAdjusted += syntheticRows.length;
+        }
+      }
+    }
+
     const payload = {
-      items: data || [],
-      total: typeof count === "number" ? count : (data || []).length,
+      items: itemsWithOverrides,
+      total: totalAdjusted,
       page,
       pageSize,
       ...(includePagamentos ? { pagamentosNaoComissionaveis } : {}),

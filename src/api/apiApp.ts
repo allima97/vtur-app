@@ -1,10 +1,13 @@
 import type { ExecutionContext } from "@cloudflare/workers-types";
 import { Hono } from "hono";
+import { enforceApiRateLimit } from "../lib/apiRateLimit";
 
 import * as AgendaRange from "../pages/api/v1/agenda/range";
 import * as AgendaCreate from "../pages/api/v1/agenda/create";
 import * as AgendaUpdate from "../pages/api/v1/agenda/update";
 import * as AgendaDelete from "../pages/api/v1/agenda/delete";
+import * as AuthMfaPolicy from "../pages/api/v1/auth/mfa-policy";
+import * as ClientLogEvent from "../pages/api/v1/logs/client-event";
 import * as DashboardSummary from "../pages/api/v1/dashboard/summary";
 import * as DashboardWidgets from "../pages/api/v1/dashboard/widgets";
 import * as DashboardAniversariantes from "../pages/api/v1/dashboard/aniversariantes";
@@ -54,6 +57,7 @@ import * as MuralCompany from "../pages/api/v1/mural/company";
 import * as MuralRecados from "../pages/api/v1/mural/recados";
 import * as SessionBootstrap from "../pages/api/v1/session/bootstrap";
 import * as AdminSummary from "../pages/api/v1/admin/summary";
+import * as AdminLogs from "../pages/api/v1/admin/logs";
 import * as ViagensDossie from "../pages/api/v1/viagens/dossie";
 import * as ViagensDossieBatch from "../pages/api/v1/viagens/dossie-batch";
 import * as ViagensList from "../pages/api/v1/viagens/list";
@@ -72,6 +76,7 @@ import * as OrcamentosProdutos from "../pages/api/v1/orcamentos/produtos";
 import * as OrcamentosClienteCreate from "../pages/api/v1/orcamentos/cliente-create";
 import * as OrcamentosSave from "../pages/api/v1/orcamentos/save";
 import * as OrcamentosCreate from "../pages/api/v1/orcamentos/create";
+import * as ConciliacaoExecutions from "../pages/api/v1/conciliacao/executions";
 
 type Env = Record<string, unknown>;
 
@@ -101,6 +106,12 @@ export function createApiApp(params: { astroHandle: AstroHandle }) {
     }
   });
 
+  app.use("/api/*", async (c, next) => {
+    const limited = enforceApiRateLimit(c.req.raw, c.env as Env);
+    if (limited) return limited;
+    await next();
+  });
+
   app.get("/api/v1/health", (c) =>
     c.json(
       {
@@ -110,6 +121,9 @@ export function createApiApp(params: { astroHandle: AstroHandle }) {
       200
     )
   );
+
+  app.get("/api/v1/auth/mfa-policy", (c) => AuthMfaPolicy.GET({ request: c.req.raw }));
+  app.post("/api/v1/logs/client-event", (c) => ClientLogEvent.POST({ request: c.req.raw }));
 
   app.get("/api/v1/agenda/range", (c) => AgendaRange.GET({ request: c.req.raw }));
   app.post("/api/v1/agenda/create", (c) => AgendaCreate.POST({ request: c.req.raw }));
@@ -130,6 +144,7 @@ export function createApiApp(params: { astroHandle: AstroHandle }) {
 
   app.get("/api/v1/dashboard/widgets", (c) => DashboardWidgets.GET({ request: c.req.raw }));
   app.post("/api/v1/dashboard/widgets", (c) => DashboardWidgets.POST({ request: c.req.raw }));
+  app.get("/api/v1/admin/logs", (c) => AdminLogs.GET({ request: c.req.raw }));
 
   app.get("/api/v1/menu/prefs", (c) => MenuPrefs.GET({ request: c.req.raw }));
   app.post("/api/v1/menu/prefs", (c) => MenuPrefs.POST({ request: c.req.raw }));
@@ -217,6 +232,9 @@ export function createApiApp(params: { astroHandle: AstroHandle }) {
   );
   app.get("/api/v1/relatorios/base", (c) =>
     RelatorioBase.GET({ request: c.req.raw })
+  );
+  app.get("/api/v1/conciliacao/executions", (c) =>
+    ConciliacaoExecutions.GET({ request: c.req.raw })
   );
 
   app.get("/api/v1/clientes/list", (c) => ClientesList.GET({ request: c.req.raw }));

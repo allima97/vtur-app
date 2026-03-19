@@ -2,6 +2,11 @@ import { createServerClient } from "../../../../lib/supabaseServer";
 import { kvCache } from "../../../../lib/kvCache";
 import { MODULO_ALIASES } from "../../../../config/modulos";
 import { normalizeText } from "../../../../lib/normalizeText";
+import {
+  applyConciliacaoOverridesToSales,
+  fetchConciliacaoOverrideFlag,
+  getReciboValorBruto,
+} from "../../../../lib/relatorios/conciliacaoGrouped";
 
 import { getSupabaseEnv } from "../../users";
 const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv();
@@ -80,6 +85,39 @@ function paginateAccentInsensitiveRows(rows: any[], page: number, pageSize: numb
   const start = (safePage - 1) * safePageSize;
   const paged = rows.slice(start, start + safePageSize);
   return paged.map((row) => ({ ...row, total_count: total }));
+}
+
+function sortGroupedRows(rows: any[], ordem: string, ordemDesc: boolean) {
+  const direction = ordemDesc ? -1 : 1;
+  return [...rows].sort((a, b) => {
+    const aValue =
+      ordem === "quantidade"
+        ? Number(a?.quantidade || 0)
+        : ordem === "ticket"
+          ? Number(a?.ticket_medio || 0)
+          : Number(a?.total || 0);
+    const bValue =
+      ordem === "quantidade"
+        ? Number(b?.quantidade || 0)
+        : ordem === "ticket"
+          ? Number(b?.ticket_medio || 0)
+          : Number(b?.total || 0);
+    if (aValue !== bValue) return (aValue - bValue) * direction;
+    return String(a?.cliente_nome || "").localeCompare(String(b?.cliente_nome || ""));
+  });
+}
+
+function paginateGroupedRows(rows: any[], page: number, pageSize: number) {
+  const totalCount = rows.length;
+  const totalTotal = rows.reduce((acc, row) => acc + Number(row?.total || 0), 0);
+  const totalQuantidade = rows.reduce((acc, row) => acc + Number(row?.quantidade || 0), 0);
+  const start = (page - 1) * pageSize;
+  return rows.slice(start, start + pageSize).map((row) => ({
+    ...row,
+    total_count: totalCount,
+    total_total: totalTotal,
+    total_quantidade: totalQuantidade,
+  }));
 }
 
 type Papel = "ADMIN" | "MASTER" | "GESTOR" | "VENDEDOR" | "OUTRO";
@@ -191,6 +229,7 @@ export async function GET({ request }: { request: Request }) {
     const fim = String(url.searchParams.get("fim") || "").trim();
     const status = String(url.searchParams.get("status") || "").trim();
     const busca = String(url.searchParams.get("busca") || "").trim();
+    const requestedCompanyId = String(url.searchParams.get("company_id") || "").trim();
     const vendedorIdsRaw = String(url.searchParams.get("vendedor_ids") || "").trim();
     const ordem = String(url.searchParams.get("ordem") || "total").trim();
     const ordemDescRaw = String(url.searchParams.get("ordem_desc") || "").trim();
@@ -213,7 +252,7 @@ export async function GET({ request }: { request: Request }) {
 
     const { data: perfil, error: perfilErr } = await client
       .from("users")
-      .select("id, uso_individual, user_types(name)")
+      .select("id, uso_individual, company_id, user_types(name)")
       .eq("id", user.id)
       .maybeSingle();
     if (perfilErr) throw perfilErr;
@@ -221,6 +260,15 @@ export async function GET({ request }: { request: Request }) {
     const tipoName = String((perfil as any)?.user_types?.name || "");
     const usoIndividual = Boolean((perfil as any)?.uso_individual);
     const papel = resolvePapel(tipoName, usoIndividual);
+    const companyIdFromProfile = String((perfil as any)?.company_id || "").trim() || null;
+    const companyId =
+      papel === "MASTER" || papel === "ADMIN"
+        ? requestedCompanyId === "all"
+          ? null
+          : isUuid(requestedCompanyId)
+            ? requestedCompanyId
+            : companyIdFromProfile
+        : companyIdFromProfile;
 
     if (papel !== "ADMIN") {
       const denied = await requireModuloView(
@@ -270,6 +318,7 @@ export async function GET({ request }: { request: Request }) {
       ordem || "total",
       ordemDesc ? "1" : "0",
       vendorParam ? vendorParam.join(";") : "-",
+      companyId || "-",
       String(page),
       String(pageSize),
     ].join("|");
@@ -300,45 +349,133 @@ export async function GET({ request }: { request: Request }) {
       }
     }
 
-    const { data, error } = await client.rpc("relatorio_vendas_por_cliente", {
-      p_data_inicio: inicio || null,
-      p_data_fim: fim || null,
-      p_status: statusParam,
-      p_busca: buscaParam,
-      p_vendedor_ids: vendorParam,
-      p_ordem: ordem || "total",
-      p_ordem_desc: ordemDesc,
-      p_page: page,
-      p_page_size: pageSize,
-    });
-    if (error) throw error;
+    let rows: any[] = [];
+    const usarConciliacao = await fetchConciliacaoOverrideFlag(client, companyId);
 
-    let rows = data || [];
-    if (buscaParam && rows.length === 0) {
-      const { data: searchFallbackData, error: searchFallbackError } = await client.rpc(
-        "relatorio_vendas_por_cliente",
+    if (usarConciliacao && inicio && fim) {
+      let query = client
+        .from("vendas")
+        .select(
+          `
+            id,
+            vendedor_id,
+            cliente_id,
+            data_venda,
+            valor_total,
+            status,
+            clientes (nome, cpf),
+            vendas_recibos (
+              id,
+              produto_id,
+              data_venda,
+              valor_total,
+              valor_taxas,
+              valor_du,
+              produtos:tipo_produtos!produto_id (id, nome, tipo)
+            )
+          `
+        )
+        .gte("data_venda", inicio)
+        .lte("data_venda", fim);
+      if (companyId) query = query.eq("company_id", companyId);
+      if (statusParam) query = query.eq("status", statusParam);
+      if (vendorParam) query = query.in("vendedor_id", vendorParam);
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const sales = await applyConciliacaoOverridesToSales(client, (data || []) as any[], {
+        companyId,
+        inicio,
+        fim,
+        vendedorIds: vendorParam,
+      });
+
+      const termo = normalizeBusca(buscaParam);
+      const termoDigits = onlyDigits(buscaParam);
+      const grouped = new Map<
+        string,
         {
-          p_data_inicio: inicio || null,
-          p_data_fim: fim || null,
-          p_status: statusParam,
-          p_busca: null,
-          p_vendedor_ids: vendorParam,
-          p_ordem: ordem || "total",
-          p_ordem_desc: ordemDesc,
-          p_page: 1,
-          p_page_size: SEARCH_FALLBACK_PAGE_SIZE,
+          cliente_id: string | null;
+          cliente_nome: string;
+          cliente_cpf: string;
+          quantidade: number;
+          total: number;
         }
-      );
-      if (!searchFallbackError) {
-        const termo = normalizeBusca(buscaParam);
-        const termoDigits = onlyDigits(buscaParam);
-        const filteredRows = (searchFallbackData || []).filter((row: any) => {
-          const clienteNome = normalizeBusca(row?.cliente_nome);
-          if (clienteNome.includes(termo)) return true;
-          if (!termoDigits) return false;
-          return onlyDigits(row?.cliente_cpf).includes(termoDigits);
-        });
-        rows = paginateAccentInsensitiveRows(filteredRows, page, pageSize);
+      >();
+
+      sales.forEach((sale: any) => {
+        const clienteId = sale?.cliente_id || null;
+        const clienteNome = String(sale?.clientes?.nome || "(sem cliente)");
+        const clienteCpf = String(sale?.clientes?.cpf || "");
+        if (termo) {
+          const nomeMatch = normalizeBusca(clienteNome).includes(termo);
+          const cpfMatch = termoDigits ? onlyDigits(clienteCpf).includes(termoDigits) : false;
+          if (!nomeMatch && !cpfMatch) return;
+        }
+        const recibos = Array.isArray(sale?.vendas_recibos) ? sale.vendas_recibos : [];
+        const totalSale =
+          recibos.length > 0
+            ? recibos.reduce((acc: number, recibo: any) => acc + getReciboValorBruto(recibo), 0)
+            : Number(sale?.valor_total || 0);
+        const key = String(clienteId || `nome:${clienteNome.toLowerCase()}:${clienteCpf}`);
+        const current = grouped.get(key) || {
+          cliente_id: clienteId,
+          cliente_nome: clienteNome,
+          cliente_cpf: clienteCpf,
+          quantidade: 0,
+          total: 0,
+        };
+        current.quantidade += 1;
+        current.total += totalSale;
+        grouped.set(key, current);
+      });
+
+      const normalized = Array.from(grouped.values()).map((row) => ({
+        ...row,
+        ticket_medio: row.quantidade > 0 ? row.total / row.quantidade : 0,
+      }));
+      rows = paginateGroupedRows(sortGroupedRows(normalized, ordem || "total", ordemDesc), page, pageSize);
+    } else {
+      const { data, error } = await client.rpc("relatorio_vendas_por_cliente", {
+        p_data_inicio: inicio || null,
+        p_data_fim: fim || null,
+        p_status: statusParam,
+        p_busca: buscaParam,
+        p_vendedor_ids: vendorParam,
+        p_ordem: ordem || "total",
+        p_ordem_desc: ordemDesc,
+        p_page: page,
+        p_page_size: pageSize,
+      });
+      if (error) throw error;
+
+      rows = data || [];
+      if (buscaParam && rows.length === 0) {
+        const { data: searchFallbackData, error: searchFallbackError } = await client.rpc(
+          "relatorio_vendas_por_cliente",
+          {
+            p_data_inicio: inicio || null,
+            p_data_fim: fim || null,
+            p_status: statusParam,
+            p_busca: null,
+            p_vendedor_ids: vendorParam,
+            p_ordem: ordem || "total",
+            p_ordem_desc: ordemDesc,
+            p_page: 1,
+            p_page_size: SEARCH_FALLBACK_PAGE_SIZE,
+          }
+        );
+        if (!searchFallbackError) {
+          const termo = normalizeBusca(buscaParam);
+          const termoDigits = onlyDigits(buscaParam);
+          const filteredRows = (searchFallbackData || []).filter((row: any) => {
+            const clienteNome = normalizeBusca(row?.cliente_nome);
+            if (clienteNome.includes(termo)) return true;
+            if (!termoDigits) return false;
+            return onlyDigits(row?.cliente_cpf).includes(termoDigits);
+          });
+          rows = paginateAccentInsensitiveRows(filteredRows, page, pageSize);
+        }
       }
     }
 

@@ -12,6 +12,18 @@
   color: #f97316;
 }
 
+/* Padronizacao global (exceto To-Do e Agenda): tabelas sem header explicito
+   passam a herdar o mesmo visual-base azul do CRM. */
+.table-mobile-cards:not([class*="table-header-"]) {
+  border-top: 1px solid var(--color-blue-border);
+}
+
+.table-mobile-cards:not([class*="table-header-"]) thead th {
+  background: var(--color-blue-bg);
+  color: var(--color-blue-title);
+  border-bottom: 1px solid var(--color-blue-border);
+}
+
 /* Documentos Viagens: preview/print isolado */
 .doc-template-pre {
   white-space: pre-wrap;
@@ -72,6 +84,11 @@
 
 /* MOBILE CORRIGIDO (corrige screenshots) */
 @media (max-width: 640px) {
+  :root {
+    /* Reserva global para o menu inferior fixo + safe area no mobile. */
+    --vtur-mobile-bottom-clearance: calc(132px + env(safe-area-inset-bottom));
+  }
+
   .table-container { 
     overflow-x: auto; 
     -webkit-overflow-scrolling: touch;
@@ -437,9 +454,57 @@ body {
 }
 
 .list-toolbar-sticky {
-  position: sticky;
-  top: calc(12px + env(safe-area-inset-top));
-  z-index: 20;
+  position: static;
+  top: auto;
+  z-index: auto;
+}
+
+.minhas-preferencias-page .minhas-preferencias-top-card .vtur-app-card-body {
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
+  padding-top: 16px;
+}
+
+.documentos-viagens-page .documentos-viagens-top-card .vtur-app-card-body,
+.circuitos-page .circuitos-top-card .vtur-app-card-body,
+.dashboard-geral-page .dashboard-top-card .vtur-app-card-body {
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
+  padding-top: 16px;
+}
+
+.dashboard-geral-page .dashboard-widget-table-card > .vtur-app-card-header {
+  margin-bottom: 0;
+}
+
+.dashboard-geral-page .dashboard-widget-table-card > .vtur-app-card-body {
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
+  padding-top: 16px;
+}
+
+.dashboard-geral-page .dashboard-widget-table-card > .vtur-app-card-body > .vtur-data-table-shell {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.dashboard-geral-page .dashboard-widget-table-card > .vtur-app-card-body > .vtur-data-table-shell > .vtur-data-table-container {
+  background: transparent;
+}
+
+@media (max-width: 640px) {
+  :is(
+    .relatorio-vendas-page,
+    .relatorio-vendas-destino-page,
+    .relatorio-vendas-produto-page,
+    .relatorio-vendas-cliente-page
+  ) .vtur-app-card.list-toolbar-sticky > .vtur-app-card-body {
+    display: none;
+    border-top: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    min-height: 0;
+  }
 }
 
 .vtur-relatorio-vendas-filters-mobile {
@@ -478,7 +543,9 @@ body {
 
 /* HeaderPage: permite subtítulo com link (ex: "← Roteiros") */
 .page-subtitle-link {
-  text-decoration: underline;
+  text-decoration: none;
+  color: #2563eb;
+  font-weight: 600;
 }
 
 .page-content-wrap {
@@ -563,6 +630,16 @@ body {
 
 .orcamentos-action-bar > :is(.btn-primary, .vtur-app-button-primary, .p-button-primary) {
   box-shadow: none;
+}
+
+.quote-detail-form-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.quote-detail-form-actions > .vtur-app-button {
+  flex: 1 1 0;
 }
 
 /* Documentação */
@@ -747,6 +824,14 @@ body {
   overflow-y: auto;
 }
 
+.vtur-sales-discount-mobile-calculator {
+  display: none !important;
+}
+
+.vtur-sales-discount-mobile-row {
+  min-width: 0;
+}
+
 @media (max-width: 640px) {
   .help-fab {
     display: none;
@@ -759,6 +844,70 @@ body {
     bottom: auto;
     width: min(360px, calc(100% - 32px));
     max-height: 75vh;
+  }
+}
+
+@media (max-width: 1024px) {
+  .help-fab,
+  .sidebar-mobile-trigger {
+    display: none !important;
+  }
+
+  .vtur-sales-discount-mobile-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px;
+    gap: 12px;
+    align-items: end;
+  }
+
+  .vtur-sales-discount-mobile-calculator {
+    display: inline-flex !important;
+    align-self: start;
+    margin-top: 30px;
+  }
+
+  .vtur-sales-discount-mobile-row .vtur-app-field {
+    min-width: 0;
+  }
+
+  .vtur-sales-discount-mobile-calculator {
+    justify-self: end;
+  }
+
+  .vtur-sales-recibos-calculator {
+    display: none !important;
+  }
+
+  .vtur-sales-mobile-wide-field {
+    width: 100% !important;
+    min-width: 0 !important;
+    grid-column: 1 / -1;
+  }
+
+  .vtur-sales-mobile-wide-field .vtur-app-field,
+  .vtur-sales-mobile-wide-field .vtur-app-field-control,
+  .vtur-sales-mobile-wide-field :is(input, select, .p-inputtext) {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .followup-actions-row {
+    grid-template-columns: 1fr;
+  }
+
+  .followup-actions-row .form-group,
+  .followup-status-group,
+  .followup-action-group {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .followup-status-group .vtur-app-field,
+  .followup-status-group .vtur-app-field-control,
+  .followup-status-group :is(select, .p-inputtext),
+  .followup-action-group .vtur-app-button {
+    width: 100% !important;
+    max-width: 100% !important;
   }
 }
 
@@ -910,10 +1059,10 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--vtur-primer-accent, #8e28e2) 0%, var(--vtur-primer-accent-strong, #7c1fd4) 100%);
+  background: linear-gradient(135deg, var(--vtur-primer-accent, #2563eb) 0%, var(--vtur-primer-accent-strong, #1d4ed8) 100%);
   color: white;
   padding: 10px 16px;
-  box-shadow: 0 12px 24px rgba(124, 31, 212, 0.18);
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.18);
 }
 
 .btn-secondary {
@@ -980,6 +1129,123 @@ body {
   gap: 6px;
 }
 
+.parametros-sistema-page {
+  display: grid;
+  gap: 16px;
+}
+
+.parametros-sistema-page > .vtur-app-card + .vtur-app-card,
+.parametros-sistema-grid > .vtur-app-card + .vtur-app-card {
+  margin-top: 0;
+}
+
+.parametros-sistema-status-card .vtur-app-card-body,
+.parametros-sistema-grid .vtur-app-card-body {
+  display: grid;
+  gap: 16px;
+}
+
+.parametros-sistema-status-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.parametros-sistema-status-item {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid #dbe4f0;
+  border-radius: 14px;
+  background: #f8fbff;
+}
+
+.parametros-sistema-status-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.parametros-sistema-status-value {
+  color: #0f172a;
+  font-size: 0.98rem;
+  line-height: 1.4;
+}
+
+.parametros-sistema-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.parametros-sistema-span-2 {
+  grid-column: 1 / -1;
+}
+
+.parametros-sistema-grid > .vtur-app-card {
+  height: 100%;
+  align-self: start;
+}
+
+.parametros-sistema-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.parametros-sistema-option-list {
+  display: grid;
+  gap: 12px;
+}
+
+.parametros-sistema-option-list-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.parametros-sistema-option {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid #dbe4f0;
+  border-radius: 14px;
+  background: #f8fbff;
+}
+
+.parametros-sistema-option-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.parametros-sistema-option-copy,
+.parametros-sistema-field-hint {
+  color: #64748b;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.parametros-sistema-band-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.vtur-conciliacao-inline-alert-copy {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  line-height: 1.5;
+}
+
+.vtur-conciliacao-inline-alert-emphasis {
+  font-weight: 700;
+  color: inherit;
+}
+
 .parametros-avisos-saved-config-row,
 .parametros-avisos-preview-fields-row {
   min-width: 0;
@@ -1005,6 +1271,12 @@ body {
 }
 
 @media (max-width: 900px) {
+  .parametros-sistema-grid,
+  .parametros-sistema-option-list-2,
+  .parametros-sistema-band-grid {
+    grid-template-columns: 1fr;
+  }
+
   .parametros-avisos-preview-fields-row {
     grid-template-columns: 1fr !important;
   }
@@ -1114,6 +1386,47 @@ body {
   margin: 0;
   flex: 0 0 auto;
 }
+
+.parametros-avisos-top-card .vtur-app-card-header {
+  margin-bottom: 0;
+}
+
+.parametros-avisos-top-card .vtur-app-card-body {
+  display: none;
+  border-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.todo-top-card .vtur-app-card-header {
+  margin-bottom: 0;
+}
+
+.todo-top-card .vtur-app-card-body {
+  display: none;
+  border-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.agenda-top-card .vtur-app-card-header {
+  margin-bottom: 0;
+}
+
+.agenda-top-card .vtur-app-card-body {
+  display: none;
+  border-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.mural-recados-top-card .vtur-app-card-header {
+  margin-bottom: 0;
+}
+
+.mural-recados-top-card .vtur-app-card-body {
+  display: none;
+  border-top: 0 !important;
+  padding-top: 0 !important;
+}
+
 
 .produtos-page .form-row {
   display: flex;
@@ -1252,6 +1565,30 @@ body {
   background: #fff1f2;
 }
 
+.icon-action-btn.no-border {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.icon-action-btn.no-border:hover:not(:disabled) {
+  background: rgba(148, 163, 184, 0.12) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.icon-action-btn.no-border.vtur-app-button,
+.icon-action-btn.no-border.p-button {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.icon-action-btn.no-border.vtur-app-button .p-button-icon,
+.icon-action-btn.no-border.p-button .p-button-icon {
+  margin: 0 !important;
+}
+
 .btn-calculator-trigger {
   width: 44px;
   min-width: 44px;
@@ -1265,9 +1602,29 @@ body {
   flex-shrink: 0;
 }
 
+.btn-calculator-trigger.vtur-app-button {
+  border-radius: 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.btn-calculator-trigger.vtur-app-button .p-button-icon,
 .btn-calculator-trigger .pi {
   font-size: 1.2rem;
   line-height: 1;
+  margin: 0 !important;
+}
+
+.btn-calculator-trigger.vtur-app-button:hover:not(:disabled):not(.p-disabled),
+.btn-calculator-trigger.vtur-app-button:focus-visible,
+.btn-calculator-trigger.vtur-app-button:active:not(:disabled):not(.p-disabled) {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 :root {
@@ -1341,6 +1698,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 .form-input,
 .form-select {
+  min-height: 44px;
   padding: 10px 12px;
   border-radius: 14px;
   border: 1px solid rgba(148, 163, 184, 0.24);
@@ -1350,9 +1708,84 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
 }
 
+/* Camada global: normaliza campos nativos sem classe para manter homogeneidade visual
+   em formulários legados, preservando checkbox/radio/file e componentes PrimeReact. */
+.app-main :where(
+  input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not(.form-input):not(.p-inputtext):not(.p-inputnumber-input):not(.sr-only),
+  select:not(.form-select):not(.p-inputtext):not(.p-component),
+  textarea:not(.form-textarea):not(.p-inputtextarea):not(.sr-only)
+) {
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  font-size: 0.95rem;
+  background: rgba(255, 255, 255, 0.96);
+  color: #0f172a;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.app-main :where(
+  input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not(.form-input):not(.p-inputtext):not(.p-inputnumber-input):not(.sr-only),
+  select:not(.form-select):not(.p-inputtext):not(.p-component),
+  textarea:not(.form-textarea):not(.p-inputtextarea):not(.sr-only)
+):focus {
+  outline: none;
+  border-color: rgba(142, 40, 226, 0.32);
+  box-shadow: 0 0 0 3px rgba(142, 40, 226, 0.12);
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: #2563eb;
+}
+
+:is(input[type="file"], .vtur-app-file-input) {
+  width: 100%;
+  max-width: 100%;
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(255, 255, 255, 0.96);
+  color: #0f172a;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+:is(input[type="file"], .vtur-app-file-input)::file-selector-button,
+:is(input[type="file"], .vtur-app-file-input)::-webkit-file-upload-button {
+  margin-right: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  background: #ffffff;
+  color: #334155;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.1;
+  cursor: pointer;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+:is(input[type="file"], .vtur-app-file-input):hover::file-selector-button,
+:is(input[type="file"], .vtur-app-file-input):hover::-webkit-file-upload-button {
+  background: #f8fafc;
+  border-color: rgba(100, 116, 139, 0.45);
+}
+
+:is(input[type="file"], .vtur-app-file-input):disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+:is(input[type="file"], .vtur-app-file-input):disabled::file-selector-button,
+:is(input[type="file"], .vtur-app-file-input):disabled::-webkit-file-upload-button {
+  cursor: not-allowed;
+}
+
 .form-input:focus,
 .form-select:focus,
-.form-textarea:focus {
+.form-textarea:focus,
+:is(input[type="file"], .vtur-app-file-input):focus {
   outline: none;
   border-color: rgba(142, 40, 226, 0.32);
   box-shadow: 0 0 0 3px rgba(142, 40, 226, 0.12);
@@ -1947,9 +2380,9 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
   .table-mobile-cards td {
     display: grid !important;
-    grid-template-columns: 120px 1fr;
-    gap: 10px;
-    padding: 10px 12px;
+    grid-template-columns: minmax(88px, 104px) 1fr;
+    gap: 8px;
+    padding: 9px 11px;
     border-bottom: 1px solid var(--table-card-divider);
     text-align: left !important;
     justify-items: start;
@@ -1968,6 +2401,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   .table-mobile-cards td::before {
     content: attr(data-label);
     font-weight: 700;
+    font-size: 0.78rem;
+    line-height: 1.2;
     color: #334155;
     text-align: left;
     justify-self: start;
@@ -1993,9 +2428,20 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     border-bottom: 0;
   }
 
-  .table-mobile-cards .form-input,
-  .table-mobile-cards .form-select {
-    width: 100%;
+  .table-mobile-cards :is(
+    .form-input,
+    .form-select,
+    .form-textarea,
+    input,
+    select,
+    textarea,
+    .p-inputtext,
+    .p-dropdown,
+    .p-calendar,
+    .p-inputnumber
+  ) {
+    width: 100% !important;
+    max-width: 100% !important;
     min-width: 0 !important;
   }
 
@@ -2214,7 +2660,46 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     min-width: 44px;
   }
 
+  .vtur-card-toolbar-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+    justify-items: stretch;
+  }
+
+  .vtur-card-toolbar-actions .vtur-app-button {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    text-align: center;
+    padding: 10px 12px;
+  }
+
+  .vtur-app-button.p-button-sm:not(.p-button-icon-only),
+  .p-button.p-component.p-button-sm:not(.p-button-icon-only) {
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 0.88rem;
+  }
+
+  .form-row.mobile-stack > *,
+  .vtur-form-grid > *,
+  .vtur-app-card .vtur-form-grid > * {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .form-row.mobile-stack :is(.form-input, .form-select, .form-textarea, .p-inputtext, .p-dropdown, .p-calendar, .p-inputnumber) {
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
   .mobile-stack-buttons,
+  .orcamentos-action-bar,
+  .vtur-app-toolbar-actions,
+  .vtur-app-card-actions,
   .action-buttons,
   .modal-footer,
   .doc-editor-actions,
@@ -2236,7 +2721,59 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     width: 100%;
   }
 
+  :is(.vtur-app-toolbar-actions, .vtur-app-card-actions, .vtur-actions-end) > :is(.btn, .p-button, .vtur-app-button):not(.btn-icon):not(.p-button-icon-only) {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    text-align: center;
+    padding: 10px 12px;
+  }
+
+  .orcamentos-action-bar > :is(.btn, .p-button, .vtur-app-button):not(.btn-icon):not(.p-button-icon-only) {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    text-align: center;
+    padding: 10px 12px;
+  }
+
+  .order-cell-head > .vtur-quote-order-actions,
+  .order-cell-head > .action-buttons.vtur-quote-order-actions,
+  .order-cell-head > .vtur-table-actions.vtur-quote-order-actions {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    flex-wrap: nowrap !important;
+    width: auto !important;
+  }
+
+  .order-cell-head > .vtur-quote-order-actions :is(.vtur-table-action, .vtur-app-button, .p-button) {
+    width: 36px !important;
+    min-width: 36px !important;
+    flex: 0 0 auto !important;
+  }
+
+  .quote-detail-form-actions {
+    flex-direction: row !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .quote-detail-form-actions > .vtur-app-button {
+    width: auto !important;
+    min-width: 0;
+    flex: 1 1 0;
+  }
+
+  .page-content-wrap .table-container {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
   .mobile-stack-buttons .btn:not(.btn-icon),
+  .orcamentos-action-bar .btn:not(.btn-icon),
   .flex.flex-col.gap-2.sm\:hidden .btn:not(.btn-icon),
   .action-buttons .btn:not(.btn-icon),
   .modal-footer .btn:not(.btn-icon),
@@ -2254,6 +2791,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   .viagens-action-buttons .btn:not(.btn-icon),
   .chat-bubble-actions .btn:not(.btn-icon),
   .mobile-stack-buttons button:not(.btn-icon),
+  .orcamentos-action-bar button:not(.btn-icon),
   .flex.flex-col.gap-2.sm\:hidden button:not(.btn-icon),
   .action-buttons button:not(.btn-icon),
   .modal-footer button:not(.btn-icon),
@@ -2271,6 +2809,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   .viagens-action-buttons button:not(.btn-icon),
   .chat-bubble-actions button:not(.btn-icon),
   .mobile-stack-buttons a:not(.btn-icon),
+  .orcamentos-action-bar a:not(.btn-icon),
   .flex.flex-col.gap-2.sm\:hidden a:not(.btn-icon),
   .action-buttons a:not(.btn-icon),
   .modal-footer a:not(.btn-icon),
@@ -2309,11 +2848,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   .btn-calculator-trigger.vtur-app-button,
   .mobile-stack-buttons .btn-calculator-trigger.vtur-app-button,
   .mobile-actionbar .btn-calculator-trigger.vtur-app-button {
-    width: 44px !important;
-    min-width: 44px !important;
-    padding: 0 !important;
-    justify-content: center !important;
-    text-align: center !important;
+    display: none !important;
   }
 
   .mobile-actionbar {
@@ -2451,6 +2986,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 2px;
     text-decoration: none;
     color: #e2e8f0;
@@ -2494,9 +3030,33 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 
   .mobile-bottom-nav-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.35rem;
+    height: 1.35rem;
     font-size: 1.1rem;
     line-height: 1;
     position: relative;
+  }
+
+  .mobile-bottom-nav > .p-button.mobile-bottom-nav-item {
+    min-height: auto;
+    padding: 6px 2px;
+    gap: 2px;
+    border-radius: 10px;
+    box-shadow: none;
+  }
+
+  .mobile-bottom-nav > .p-button.mobile-bottom-nav-item .p-button-label {
+    width: 100%;
+    text-align: center;
+    font-weight: 400;
+    line-height: 1.2;
+  }
+
+  .mobile-bottom-nav > .p-button.mobile-bottom-nav-item .p-button-icon {
+    margin: 0;
   }
 
   .mobile-badge {
@@ -2550,7 +3110,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
   .app-main {
     padding-top: calc(16px + env(safe-area-inset-top));
-    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+    padding-bottom: var(--vtur-mobile-bottom-clearance);
+  }
+
+  .page-content-wrap {
+    padding-bottom: var(--vtur-mobile-bottom-clearance);
   }
 
   .clientes-page .table-mobile-cards.table-header-blue {
@@ -3400,25 +3964,26 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   flex-wrap: wrap;
 }
 
+/* Compat legado: tokens/classes "purple" apontam para a paleta azul SGVTUR */
 :root {
-  --color-purple-bg: #eff6ff;
-  --color-purple-border: #bfdbfe;
-  --color-purple-title: #1d4ed8;
+  --color-purple-bg: var(--color-blue-bg);
+  --color-purple-border: var(--color-blue-border);
+  --color-purple-title: var(--color-blue-title);
 }
 
-/* Header purple */
+/* Header purple (alias azul) */
 .purple-header h1 { color: var(--color-purple-title); }
 
-/* Purple card */
+/* Purple card (alias azul) */
 .card-purple {
   background: var(--color-purple-bg);
   border: 1px solid var(--color-purple-border);
 }
 
-/* Purple table header */
+/* Purple table header (alias azul) */
 .table-header-purple thead th { color: var(--color-purple-title); }
 
-/* Optional purple button */
+/* Optional purple button (alias azul) */
 .btn-purple {
   background: #2563eb;
   color: white;
@@ -3532,6 +4097,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 .modal-backdrop.modal-venda {
   z-index: 1200;
+  align-items: flex-start;
+  padding: 24px 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .modal-backdrop.modal-recibo {
   z-index: 1210;
@@ -3553,6 +4122,34 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   max-height: 80vh;
   display: flex;
   flex-direction: column;
+}
+
+.calculator-modal-backdrop {
+  z-index: 1250;
+}
+
+.calculator-modal-panel {
+  overscroll-behavior: contain;
+}
+
+.calculator-modal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.calculator-modal-title {
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.calculator-modal-close-btn.vtur-app-button {
+  min-height: 36px;
+  padding-inline: 14px;
 }
 
 .modal-header {
@@ -3579,6 +4176,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.vtur-venda-modal-panel {
+  max-height: min(88vh, calc(100vh - 48px));
+}
+
+.vtur-venda-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding-bottom: 18px;
 }
 
 .vtur-legacy-module {
@@ -3627,6 +4236,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 @media (max-width: 640px) {
+  .modal-backdrop.modal-venda {
+    padding: 0;
+  }
+
   .modal-panel {
     width: 100vw;
     height: 100svh;
@@ -3646,6 +4259,33 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     bottom: 0;
     z-index: 1;
     background: #ffffff;
+  }
+
+  .calculator-modal-backdrop {
+    align-items: flex-start;
+    padding: calc(env(safe-area-inset-top, 0px) + 8px) 8px calc(env(safe-area-inset-bottom, 0px) + 8px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .calculator-modal-panel {
+    margin: 0 auto;
+    border-radius: 14px;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+  }
+
+  .calculator-modal-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding-bottom: 6px;
+    background: inherit;
+  }
+
+  .calculator-modal-close-btn.vtur-app-button {
+    min-width: 92px;
   }
 }
 
@@ -3705,9 +4345,28 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   gap: 12px;
 }
 
+.perfil-grid > .form-group {
+  min-width: 0;
+}
+
+.perfil-grid .vtur-app-field,
+.perfil-grid .vtur-app-field-control,
+.perfil-grid .vtur-app-field :is(input, select, textarea, .p-inputtext, .p-inputtextarea) {
+  width: 100%;
+  min-width: 0;
+}
+
 .perfil-grid-main {
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1.1fr);
+  grid-template-columns: minmax(0, 2.1fr) minmax(180px, 1.1fr) minmax(0, 1.05fr) minmax(150px, 0.78fr);
   margin-top: 16px;
+}
+
+.perfil-main-cpf-field {
+  min-width: 0;
+}
+
+.perfil-main-birth-field {
+  min-width: 0;
 }
 
 .perfil-grid-address {
@@ -3716,8 +4375,13 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 .perfil-grid-contact {
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 0.6fr);
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 1.1fr) minmax(0, 1fr) max-content;
   margin-top: 12px;
+}
+
+.perfil-contact-state-field {
+  justify-self: start;
+  width: 84px;
 }
 
 .perfil-text-wrap {
@@ -3758,6 +4422,24 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   display: flex;
   flex-direction: column;
   min-height: 100%;
+}
+
+.perfil-page .vtur-app-card > .vtur-app-card-header {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.perfil-page .vtur-app-card > .vtur-app-card-body {
+  padding-top: 16px;
+}
+
+.perfil-secondary-cards {
+  width: 100%;
+}
+
+.perfil-secondary-cards > .vtur-app-card {
+  width: 100%;
+  min-width: 0;
 }
 
 .perfil-warning-text {
@@ -3838,6 +4520,23 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 .personalizar-menu-section-title {
   margin-top: 0;
+  margin-bottom: 8px;
+  color: #0f172a;
+  opacity: 1;
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
+  margin-top: 0;
+  margin-bottom: 8px;
+  padding-inline: 0;
+  color: #0f172a;
+  opacity: 1;
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
 }
 
 .personalizar-menu-list {
@@ -3876,10 +4575,38 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 .personalizar-menu-item-actions {
+  display: grid;
+  grid-template-columns: minmax(170px, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.personalizar-menu-item-section-field {
+  min-width: 0;
+}
+
+.personalizar-menu-item-icon-actions {
   display: flex;
   gap: 6px;
-  flex-wrap: wrap;
   justify-content: flex-end;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.personalizar-menu-icon-btn.p-button-icon-only {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 10px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.personalizar-menu-icon-btn.p-button-icon-only .p-button-icon {
+  margin: 0 !important;
+  font-size: 0.95rem;
 }
 
 .personalizar-menu-section-select {
@@ -3888,8 +4615,117 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 @media (max-width: 640px) {
+  .personalizar-menu-page {
+    padding-bottom: calc(var(--vtur-mobile-bottom-clearance, 132px) + 24px);
+    min-width: 0;
+  }
+
+  .personalizar-menu-page > .vtur-app-card:last-child {
+    margin-bottom: calc(var(--vtur-mobile-bottom-clearance, 132px) + 12px);
+  }
+
+  .personalizar-menu-page > .vtur-app-card {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .personalizar-menu-page .personalizar-menu-list:last-child {
+    padding-bottom: 12px;
+  }
+
+  .personalizar-menu-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .personalizar-menu-item-copy {
+    width: 100%;
+  }
+
+  .personalizar-menu-item-actions {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 8px;
+  }
+
+  .personalizar-menu-item-section-field {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .personalizar-menu-item-section-field .vtur-app-field-label {
+    display: none;
+  }
+
+  .personalizar-menu-item-icon-actions {
+    width: auto;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .personalizar-menu-section-select {
+    min-width: 0;
+    width: 100%;
+  }
+
   .perfil-grid {
     grid-template-columns: 1fr !important;
+  }
+
+
+.quote-print-settings-page {
+  min-width: 0;
+}
+
+.quote-print-settings-page .form-row,
+.quote-print-settings-page .form-group,
+.quote-print-settings-page .vtur-import-upload-stack,
+.quote-print-settings-page .vtur-import-upload-row {
+  min-width: 0;
+}
+
+.quote-print-settings-page .vtur-import-file-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .quote-print-settings-page .form-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .quote-print-settings-page .vtur-app-card {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .quote-print-settings-page .vtur-import-upload-row {
+    align-items: stretch;
+  }
+
+  .quote-print-settings-page .vtur-import-upload-trigger,
+  .quote-print-settings-page .vtur-import-file-name {
+    width: 100%;
+  }
+
+  .quote-print-settings-page img {
+    max-width: 100%;
+    height: auto;
+  }
+}
+  .perfil-contact-state-field {
+    width: 100%;
+  }
+
+  .perfil-secondary-cards {
+    grid-template-columns: 1fr !important;
+  }
+
+  .perfil-secondary-cards > .vtur-app-card {
+    width: 100% !important;
+    min-width: 0 !important;
   }
 }
 
@@ -3897,6 +4733,46 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 @media (max-width: 640px) {
   .quote-items-table.table-mobile-cards td {
     grid-template-columns: 1fr !important;
+  }
+
+  .quote-items-table.table-mobile-cards td.order-cell {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 12px;
+  }
+
+  .quote-items-table.table-mobile-cards td.order-cell::before {
+    display: none;
+  }
+
+  .quote-items-table.table-mobile-cards td.order-cell > * {
+    width: auto !important;
+    min-width: auto !important;
+  }
+
+  .quote-items-table.table-mobile-cards td.order-cell .order-cell-head {
+    flex: 0 0 auto;
+    min-width: auto;
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: nowrap;
+  }
+
+  .quote-items-table.table-mobile-cards td.order-cell .order-label {
+    display: none !important;
+  }
+
+  .quote-items-table.table-mobile-cards td.order-cell .order-value {
+    margin-top: 0;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    order: -1;
+    display: inline-flex;
+    align-items: center;
+    align-self: center;
+    min-height: 36px;
+    line-height: 1;
   }
 
   .quote-items-table.table-mobile-cards td::before {
@@ -3914,20 +4790,35 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .pagination-controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
 }
 
 .pagination-controls__summary {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pagination-controls__summary-label {
   color: #64748b;
-  font-size: 0.9rem;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pagination-controls__summary-value {
+  color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 700;
 }
 
 .pagination-controls__actions {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   align-items: center;
   flex-wrap: wrap;
 }
@@ -3935,55 +4826,129 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .pagination-controls__page-size {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .pagination-controls__page-size-label {
   color: #64748b;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .pagination-controls__page-size-select {
-  min-width: 90px;
+  min-width: 104px;
+  min-height: 44px;
+  border-radius: 12px;
 }
 
 .pagination-controls__pager {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
 }
 
 .pagination-controls__page-label {
   align-self: center;
-  color: #64748b;
-  font-size: 0.9rem;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.9);
+  color: #334155;
+  font-size: 0.88rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.pagination-controls__pager .vtur-app-button,
+.pagination-controls__nav-button.vtur-app-button {
+  min-height: 44px;
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+
+.vtur-app-card-actions > .pagination-controls {
+  width: 100%;
+}
+
+.vtur-app-card-actions > .pagination-controls .pagination-controls__actions {
+  justify-content: flex-end;
 }
 
 @media (max-width: 640px) {
   .pagination-controls {
     flex-direction: column;
     align-items: stretch;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .pagination-controls__summary {
+    padding: 12px 14px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 14px;
+    background: rgba(248, 250, 252, 0.92);
   }
 
   .pagination-controls__actions {
     width: 100%;
     flex-direction: column;
     align-items: stretch;
+    gap: 12px;
   }
 
   .pagination-controls__page-size {
     width: 100%;
-    justify-content: space-between;
+    display: grid;
+    gap: 6px;
+  }
+
+  .pagination-controls__page-size-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .pagination-controls__page-size-select {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    border-radius: 12px;
   }
 
   .pagination-controls__pager {
     width: 100%;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .pagination-controls__pager .vtur-app-button,
+  .pagination-controls__nav-button.vtur-app-button {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    padding: 10px 12px;
   }
 
   .pagination-controls__page-label {
-    flex: 1;
+    grid-column: 1 / -1;
+    order: -1;
+    width: 100%;
+    min-height: 44px;
     text-align: center;
+    padding: 8px 12px;
+    font-size: 0.84rem;
+  }
+
+  .vtur-app-card-actions > .pagination-controls .pagination-controls__actions {
+    justify-content: stretch;
   }
 }
 
@@ -4302,14 +5267,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 /* Agenda (mobile): card do mês + FAB */
 .agenda-month-card {
-  padding: 12px 14px;
+  padding: 2px 2px 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
 }
 
 .agenda-month-title {
   font-size: 1.15rem;
   font-weight: 900;
   color: #0f172a;
-  text-align: center;
+  text-align: left;
   line-height: 1.1;
 }
 
@@ -4320,7 +5289,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   z-index: 35;
   width: 52px;
   height: 52px;
-  border-radius: 999px;
+  border-radius: var(--radius-md);
   background: var(--fc-button-bg-color, #2563eb);
   color: #fff;
   border: none;
@@ -4329,6 +5298,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   font-weight: 800;
   cursor: pointer;
   box-shadow: 0 18px 34px rgba(15, 23, 42, 0.22);
+}
+
+.agenda-fab.p-button {
+  border-radius: var(--radius-md) !important;
 }
 
 .agenda-add-btn.btn-primary {
@@ -4347,6 +5320,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 /* Agenda (mobile): feriados/eventos longos não podem "sumir" na célula do dia */
 @media (max-width: 768px) {
+  .agenda-page {
+    gap: 8px !important;
+  }
+
   .sac-page .form-input[type="date"],
   .sac-page .form-input[type="time"],
   .agenda-page .form-input[type="date"],
@@ -4357,6 +5334,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   .sac-page .form-row.mobile-stack,
   .agenda-page .form-row.mobile-stack {
     grid-template-columns: 1fr !important;
+  }
+
+  .agenda-calendar-shell .agenda-calendar-mobile {
+    margin-top: 4px;
   }
 
   .agenda-calendar-mobile .fc .fc-toolbar.fc-header-toolbar {
@@ -4726,7 +5707,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   max-width: 52px;
   max-height: 52px;
   padding: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-md);
   aspect-ratio: 1 / 1;
   box-sizing: border-box;
   background: #2563eb;
@@ -4747,7 +5728,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   max-width: 52px !important;
   max-height: 52px !important;
   padding: 0 !important;
-  border-radius: 50% !important;
+  border-radius: var(--radius-md) !important;
 }
 
 .todo-fab.p-button .p-button-label {
@@ -4811,7 +5792,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     max-width: 52px !important;
     max-height: 52px !important;
     padding: 0 !important;
-    border-radius: 50% !important;
+    border-radius: var(--radius-md) !important;
     /* Evita sobrepor o menu inferior (mobile-bottom-nav) */
     bottom: calc(84px + env(safe-area-inset-bottom));
     z-index: 34;
@@ -6080,7 +7061,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 .chat-inline-btn:hover {
-  text-decoration: underline;
+  text-decoration: none;
+  color: #1d4ed8;
 }
 
 .chat-inline-btn--danger {
@@ -6470,8 +7452,256 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 }
 
-/* Roteiro (editor): mobile cards com labels por coluna e ações compactas */
+/* Roteiro (editor): navegação profissional de seções */
+.roteiro-edit-page .roteiro-section-nav {
+  display: grid;
+  gap: 14px;
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+.roteiro-edit-page .roteiro-section-nav-mobile {
+  display: none;
+}
+
+.roteiro-edit-page .roteiro-tab-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.roteiro-edit-page .roteiro-tab-card {
+  appearance: none;
+  border: 1px solid #dbe3ea;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  color: #0f172a;
+  padding: 14px 16px;
+  min-height: 108px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  text-align: left;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease, background-color 0.16s ease;
+}
+
+.roteiro-edit-page .roteiro-tab-card:hover {
+  border-color: #bfdbfe;
+  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.1);
+  transform: translateY(-1px);
+}
+
+.roteiro-edit-page .roteiro-tab-card.is-active {
+  border-color: #93c5fd;
+  background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
+  box-shadow: 0 16px 30px rgba(37, 99, 235, 0.16);
+}
+
+.roteiro-edit-page .roteiro-tab-card-quick {
+  border-style: dashed;
+}
+
+.roteiro-edit-page .roteiro-tab-card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 1.1rem;
+}
+
+.roteiro-edit-page .roteiro-tab-card.is-active .roteiro-tab-card-icon {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.roteiro-edit-page .roteiro-tab-card-copy {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.roteiro-edit-page .roteiro-tab-card-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.roteiro-edit-page .roteiro-tab-card-title {
+  font-size: 0.98rem;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.roteiro-edit-page .roteiro-tab-card-count {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 0.79rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.roteiro-edit-page .roteiro-tab-card.is-active .roteiro-tab-card-count {
+  background: rgba(37, 99, 235, 0.16);
+  color: #1d4ed8;
+}
+
+.roteiro-edit-page .roteiro-tab-card-hint {
+  color: #52607a;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.roteiro-edit-page .roteiro-section-nav-kicker {
+  display: inline-block;
+  margin-bottom: 4px;
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.roteiro-edit-page {
+  min-width: 0;
+}
+
+.roteiro-edit-page .roteiro-dia-card {
+  display: grid;
+  grid-template-columns: minmax(110px, 140px) minmax(160px, 1.15fr) minmax(130px, 160px) minmax(220px, 2fr) auto;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: flex-start;
+  padding: 8px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.roteiro-edit-page .roteiro-dia-field {
+  min-width: 0;
+}
+
+.roteiro-edit-page .roteiro-dia-actions {
+  align-self: start;
+  justify-content: center;
+  padding-top: 20px;
+}
+
+.roteiro-edit-page .roteiro-action-btn.p-button-icon-only {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.roteiro-edit-page .roteiro-action-btn.p-button-icon-only .p-button-icon {
+  margin: 0 !important;
+}
+
 @media (max-width: 640px) {
+  .roteiro-edit-page .roteiro-tab-grid {
+    display: none;
+  }
+
+  .roteiro-edit-page .roteiro-section-nav {
+    gap: 12px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+  }
+
+  .roteiro-edit-page .roteiro-section-nav-mobile {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid #dbe3ea;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+  }
+
+  .roteiro-edit-page .roteiro-section-nav-mobile-head {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  .roteiro-edit-page .roteiro-section-nav-copy {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+  }
+
+  .roteiro-edit-page .roteiro-section-nav-copy strong {
+    color: #0f172a;
+    font-size: 1rem;
+    line-height: 1.25;
+  }
+
+  .roteiro-edit-page .roteiro-section-nav-copy span:last-child {
+    color: #52607a;
+    font-size: 0.86rem;
+    line-height: 1.45;
+  }
+
+  .roteiro-edit-page .roteiro-section-nav-mobile-count {
+    min-width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 0.86rem;
+    font-weight: 800;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .roteiro-edit-page .roteiro-section-nav-mobile-controls {
+    display: grid;
+    gap: 10px;
+  }
+
+  .roteiro-edit-page .roteiro-section-select-field {
+    min-width: 0;
+  }
+
+  .roteiro-edit-page .roteiro-section-select-field .vtur-app-field-label {
+    margin-bottom: 6px;
+  }
+
+  .roteiro-edit-page .roteiro-section-quick-btn.vtur-app-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .roteiro-edit-page .roteiro-section-nav-mobile-pager {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .roteiro-edit-page .roteiro-section-nav-mobile-pager .vtur-app-button {
+    width: 100%;
+    justify-content: center;
+  }
+
   .roteiro-edit-page .roteiro-edit-table td::before {
     color: #334155;
     font-weight: 700;
@@ -6482,6 +7712,31 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   .roteiro-edit-page .roteiro-edit-table textarea {
     min-height: 42px;
     font-size: 0.92rem;
+  }
+
+  .roteiro-edit-page .roteiro-dia-card {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .roteiro-edit-page .roteiro-dia-field,
+  .roteiro-edit-page .roteiro-dia-field > * {
+    min-width: 0;
+  }
+
+  .roteiro-edit-page .roteiro-dia-card :is(input, textarea, .p-inputtext) {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .roteiro-edit-page .roteiro-dia-actions {
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    padding-top: 0;
   }
 
   .roteiro-edit-page .roteiro-edit-table .th-actions .action-buttons.roteiro-row-actions {
@@ -6535,6 +7790,12 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   .roteiro-edit-table-pagamento td:nth-child(2)::before { content: "Valor Total c/Taxas"; }
   .roteiro-edit-table-pagamento td:nth-child(3)::before { content: "Taxas"; }
   .roteiro-edit-table-pagamento td:nth-child(4)::before { content: "Forma de Pagamento"; }
+}
+
+@media (min-width: 641px) and (max-width: 1080px) {
+  .roteiro-edit-page .roteiro-tab-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* Escala: tabela grade no mobile com scroll horizontal e primeira coluna fixa */
@@ -6622,6 +7883,29 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 @media (max-width: 640px) {
+  /* Agenda + Tarefas (mobile): padrao unico de botoes arredondados (referencia Minha Agenda) */
+  .agenda-calendar-mobile .fc .fc-button,
+  .todo-board .todo-mobile-tabs .vtur-app-button,
+  .todo-board .todo-mobile-sectionbar .btn {
+    min-height: 40px !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  .agenda-calendar-mobile .fc .fc-button {
+    padding: 0.42rem 0.62rem !important;
+    font-size: 0.82rem !important;
+    line-height: 1 !important;
+  }
+
+  .agenda-calendar-mobile .fc .fc-button-group > .fc-button {
+    border-radius: var(--radius-md) !important;
+  }
+
+  .todo-board .icon-action-btn,
+  .todo-board .todo-action-btn.btn-icon {
+    border-radius: var(--radius-md) !important;
+  }
+
   .todo-board .todo-action-btn.btn-icon {
     width: 30px;
     min-width: 30px;
@@ -6637,6 +7921,57 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 /* Mobile tables: padronizar todas as table-mobile-cards no mesmo visual de vendas */
 @media (max-width: 640px) {
+  .minha-escala-page .minha-escala-toolbar-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .minha-escala-page .minha-escala-toolbar-actions .vtur-app-button {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+  }
+
+  .roteiro-edit-page .vtur-app-button:not(.btn-icon):not(.p-button-icon-only) {
+    min-height: 44px !important;
+    padding: 10px 14px !important;
+    font-size: 0.9rem !important;
+  }
+
+  .roteiro-edit-page .vtur-app-button.btn-icon,
+  .roteiro-edit-page .btn-icon {
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .roteiro-edit-page .mobile-stack-buttons .vtur-app-button {
+    width: 100% !important;
+  }
+
+  .todo-board .vtur-app-button:not(.btn-icon):not(.p-button-icon-only):not(.icon-action-btn) {
+    min-height: 40px !important;
+    padding: 8px 12px !important;
+    font-size: 0.88rem !important;
+  }
+
+  .todo-board .icon-action-btn,
+  .todo-board .todo-action-btn.btn-icon {
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+  }
+
   .table-container:has(.table-mobile-cards)::before,
   .table-container:has(.table-mobile-cards)::after {
     display: none !important;
@@ -6677,6 +8012,27 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     background: #ffffff !important;
   }
 
+  .table-mobile-cards:not(.table-mobile-plain) td:not(.th-actions) {
+    grid-template-columns: minmax(88px, 104px) 1fr !important;
+    gap: 8px !important;
+    padding: 8px 10px !important;
+    align-items: start !important;
+  }
+
+  .table-mobile-cards:not(.table-mobile-plain) tbody td:first-child {
+    padding-left: 10px !important;
+  }
+
+  .table-mobile-cards:not(.table-mobile-plain) td:not(.th-actions)::before {
+    font-size: 0.78rem;
+    line-height: 1.15;
+    margin-top: 1px;
+    text-align: left !important;
+    justify-self: start !important;
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+  }
+
   .table-mobile-cards:not(.table-mobile-plain) td:last-child {
     border-bottom: 0 !important;
   }
@@ -6700,14 +8056,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
   .table-mobile-cards td.th-actions > :is(.action-buttons, .vtur-table-actions, .action-buttons-quote, .action-buttons-center, .viagens-action-buttons) {
     width: 100% !important;
-    min-height: 4rem;
+    min-height: 3rem;
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
     flex-wrap: wrap !important;
     overflow-x: visible !important;
     gap: 0.5rem !important;
-    padding: 0.85rem 1rem !important;
+    padding: 0.5rem 0.75rem !important;
     margin: 0 !important;
     background: #ffffff !important;
   }
@@ -6721,5 +8077,44 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     justify-content: center !important;
     flex-wrap: wrap !important;
     overflow-x: visible !important;
+  }
+
+  .table-mobile-cards td.th-actions :is(.vtur-table-action, .vtur-app-button, .p-button).p-button-icon-only {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0 !important;
+    border-radius: 10px !important;
+    justify-content: center !important;
+  }
+
+  .table-mobile-cards td.th-actions :is(.btn-icon, .icon-action-btn) {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0 !important;
+    border-radius: 10px !important;
+    justify-content: center !important;
+    display: inline-flex !important;
+    align-items: center !important;
+  }
+
+  .page-content-wrap :is(.form-row.mobile-stack, .vtur-form-grid) > [style*="min-width"] {
+    min-width: 0 !important;
+    width: 100% !important;
+    flex: 1 1 100% !important;
+  }
+
+  .page-content-wrap :is(.form-row.mobile-stack, .vtur-form-grid) :is(.form-group, [class*="form-group"])[style*="min-width"] {
+    min-width: 0 !important;
+    width: 100% !important;
+    flex: 1 1 100% !important;
+  }
+
+  .page-content-wrap :is(.form-row.mobile-stack, .vtur-form-grid) :is(input, select, textarea, .p-inputtext, .p-dropdown, .p-calendar, .p-inputnumber)[style*="width"] {
+    width: 100% !important;
+    max-width: 100% !important;
   }
 }

@@ -8,7 +8,8 @@ import TableActions from "../ui/TableActions";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
-import AppToolbar from "../ui/primer/AppToolbar";
+import AppField from "../ui/primer/AppField";
+import FileUploadField from "../ui/primer/FileUploadField";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { supabase } from "../../lib/supabase";
 import {
@@ -397,15 +398,25 @@ export default function DocumentosViagensIsland() {
   return (
     <div className="page-content-wrap documentos-viagens-page">
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
-      <AppToolbar
+      <AppCard
         tone="info"
-        className="list-toolbar-sticky"
+        className="mb-3 list-toolbar-sticky documentos-viagens-top-card"
         title="Documentos de viagens"
         subtitle="Upload, gestao de modelos e impressao de documentos."
-      />
-
+        actions={
+          !mostrarUpload ? (
+            <AppButton
+              type="button"
+              variant="primary"
+              onClick={abrirUpload}
+              disabled={!podeCriar}
+            >
+              Enviar documento
+            </AppButton>
+          ) : undefined
+        }
+      >
       {!mostrarUpload && (
-        <AppCard tone="info" className="mb-3">
           <div
             className="form-row mobile-stack"
             style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
@@ -419,19 +430,9 @@ export default function DocumentosViagensIsland() {
                 wrapperClassName="m-0"
               />
             </div>
-            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
-              <AppButton
-                type="button"
-                variant="primary"
-                onClick={abrirUpload}
-                disabled={!podeCriar}
-              >
-                Enviar documento
-              </AppButton>
-            </div>
           </div>
-        </AppCard>
       )}
+      </AppCard>
 
       {mostrarUpload && (
         <AppCard tone="info" className="form-card mb-3" title="Enviar documento">
@@ -443,17 +444,15 @@ export default function DocumentosViagensIsland() {
           </div>
 
           <div className="form-row" style={{ alignItems: "flex-end" }}>
-            <div className="form-group" style={{ flex: 2, minWidth: 260 }}>
-              <label className="form-label">Arquivo (PDF/DOCX/ODT/XLS)</label>
-              <input
-                className="form-input"
-                type="file"
-                accept=".pdf,.docx,.odt,.xls,.xlsx,.txt"
-                disabled={uploading || !podeCriar}
-                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-              />
-            </div>
-            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+            <FileUploadField
+              wrapperClassName="form-group"
+              label="Arquivo (PDF/DOCX/ODT/XLS)"
+              accept=".pdf,.docx,.odt,.xls,.xlsx,.txt"
+              disabled={uploading || !podeCriar}
+              onChange={(e) => setSelectedFile(e.currentTarget.files?.[0] || null)}
+              fileName={selectedFile?.name || "Nenhum arquivo escolhido"}
+            />
+            <div className="mobile-stack-buttons vtur-actions-end">
               <AppButton
                 type="button"
                 variant="primary"
@@ -476,7 +475,7 @@ export default function DocumentosViagensIsland() {
           </div>
 
           <DataTable
-            className="table-mobile-cards"
+            className="table-header-blue table-mobile-cards"
             headers={
               <tr>
                 <th>Nome</th>
@@ -541,7 +540,7 @@ export default function DocumentosViagensIsland() {
         >
           <div className="flex items-center justify-between gap-3" style={{ flexWrap: "wrap" }}>
             <div />
-            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+            <div className="mobile-stack-buttons vtur-actions-end">
               <AppButton
                 type="button"
                 variant="secondary"
@@ -569,16 +568,14 @@ export default function DocumentosViagensIsland() {
           </div>
 
           <div className="form-row" style={{ alignItems: "flex-end" }}>
-            <div className="form-group" style={{ flex: 2, minWidth: 260 }}>
-              <label className="form-label">Título</label>
-              <input
-                className="form-input"
-                value={modelTitle}
-                onChange={(e) => setModelTitle(e.target.value)}
-                disabled={!podeEditar}
-              />
-            </div>
-            <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+            <AppField
+              wrapperClassName="form-group"
+              label="Título"
+              value={modelTitle}
+              onChange={(e) => setModelTitle(e.currentTarget.value)}
+              disabled={!podeEditar}
+            />
+            <div className="mobile-stack-buttons vtur-actions-end">
               <AppButton
                 type="button"
                 variant="secondary"
@@ -590,23 +587,21 @@ export default function DocumentosViagensIsland() {
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">
-              {"Texto do modelo (use {{campo_x}}, {{data}}, {{assinatura_1}})"}
-            </label>
-            <textarea
-              className="form-input"
-              style={{ minHeight: 220, fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" }}
-              value={modelText}
-              onChange={(e) => setModelText(e.target.value)}
-              disabled={!podeEditar}
-            />
-          </div>
+          <AppField
+            as="textarea"
+            wrapperClassName="form-group"
+            label={"Texto do modelo (use {{campo_x}}, {{data}}, {{assinatura_1}})"}
+            className="form-textarea"
+            style={{ minHeight: 220, fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" }}
+            value={modelText}
+            onChange={(e) => setModelText(e.currentTarget.value)}
+            disabled={!podeEditar}
+          />
 
           <div className="form-group">
             <label className="form-label">Campos</label>
             <DataTable
-              className="table-mobile-cards"
+              className="table-header-blue table-mobile-cards"
               headers={
                 <tr>
                   <th>Campo</th>

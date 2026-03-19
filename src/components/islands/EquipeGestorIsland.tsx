@@ -10,7 +10,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type UsuarioRow = {
   id: string;
@@ -687,9 +686,9 @@ export default function EquipeGestorIsland() {
   if (loadingPerm) return <LoadingUsuarioContext />;
   if (!podeVer) {
     return (
-      <div style={{ padding: 20 }}>
-        <h3>Você não possui acesso aos parâmetros.</h3>
-      </div>
+      <AppPrimerProvider>
+        <AppCard tone="config">Você não possui acesso aos parâmetros.</AppCard>
+      </AppPrimerProvider>
     );
   }
 
@@ -720,11 +719,10 @@ export default function EquipeGestorIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="mt-6 gestor-page vtur-legacy-module">
-        <AppToolbar
+      <div className="gestor-page vtur-legacy-module page-content-wrap">
+        <AppCard
           className="mb-3 list-toolbar-sticky"
           tone="info"
-          sticky
           title="Equipe do gestor"
           subtitle="Gerencie os vendedores vinculados à sua empresa."
           actions={
@@ -748,7 +746,7 @@ export default function EquipeGestorIsland() {
       )}
       {equipeCompartilhadaBase && (
         <div className="mb-3 mt-3">
-          <AlertMessage variant="info">
+          <AlertMessage variant="info" className="vtur-alert-inline">
             Sua equipe está compartilhada com{" "}
             <strong>{equipeCompartilhadaBase.nome || "outro gestor"}</strong>. Para evitar
             duplicidade, a edição da equipe fica concentrada no gestor base / Master.
@@ -766,7 +764,7 @@ export default function EquipeGestorIsland() {
               tone="config"
               title="Cadastrar usuário da equipe"
               actions={
-                <AppButton type="button" variant="default" onClick={() => setCreateOpen(false)}>
+                <AppButton type="button" variant="secondary" onClick={() => setCreateOpen(false)}>
                   Fechar
                 </AppButton>
               }
@@ -805,7 +803,7 @@ export default function EquipeGestorIsland() {
             subtitle="Usuários convidados que ainda não finalizaram o perfil."
           >
             <div className="table-container overflow-x-auto" style={{ marginTop: 12 }}>
-              <table className="table-default table-mobile-cards min-w-[780px]">
+              <table className="table-default table-header-blue table-mobile-cards min-w-[780px]">
                 <thead>
                   <tr>
                     <th>E-mail</th>
@@ -856,7 +854,7 @@ export default function EquipeGestorIsland() {
           </AppCard>
 
           <div className="table-container overflow-x-auto">
-            <table className="table-default table-mobile-cards min-w-[720px]">
+            <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
               <thead>
                 <tr>
                   <th>Nome</th>
@@ -952,7 +950,7 @@ export default function EquipeGestorIsland() {
               Gestores
             </h5>
             <div className="table-container overflow-x-auto" style={{ marginTop: 12 }}>
-              <table className="table-default table-mobile-cards escala-horario-table min-w-[820px]">
+              <table className="table-default table-header-blue table-mobile-cards escala-horario-table min-w-[820px]">
                 <thead>
                   <tr>
                     <th>Gestor</th>
@@ -1093,9 +1091,10 @@ export default function EquipeGestorIsland() {
                             </select>
                           </td>
                           <td className="th-actions" data-label="Ações">
-                            <div className="action-buttons">
+                            <div className="action-buttons vtur-table-actions">
                               <AppButton
                                 variant="primary"
+                                className="vtur-table-action"
                                 onClick={() => salvarHorarioUsuario(u.id)}
                                 disabled={!podeEditarHorarios || salvando}
                                 title={salvando ? "Salvando horário" : "Salvar horário"}
@@ -1170,7 +1169,7 @@ export default function EquipeGestorIsland() {
               Vendedores
             </h5>
             <div className="table-container overflow-x-auto" style={{ marginTop: 12 }}>
-              <table className="table-default table-mobile-cards escala-horario-table min-w-[820px]">
+              <table className="table-default table-header-blue table-mobile-cards escala-horario-table min-w-[820px]">
                 <thead>
                   <tr>
                     <th>Vendedor</th>
@@ -1307,9 +1306,10 @@ export default function EquipeGestorIsland() {
                             </select>
                           </td>
                           <td className="th-actions" data-label="Ações">
-                            <div className="action-buttons">
+                            <div className="action-buttons vtur-table-actions">
                               <AppButton
                                 variant="primary"
+                                className="vtur-table-action"
                                 onClick={() => salvarHorarioUsuario(u.id)}
                                 disabled={!podeEditarHorarios || salvando}
                                 title={salvando ? "Salvando horário" : "Salvar horário"}

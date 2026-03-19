@@ -22,11 +22,6 @@ import {
   writeMenuPrefs,
   type MenuPrefsV1,
 } from "../../lib/menuPrefs";
-import {
-  PRIME_DEFAULT_THEME,
-  PRIME_THEME_OPTIONS,
-} from "../../lib/primeTheme";
-import { usePrimeTheme } from "../../lib/usePrimeTheme";
 import IslandErrorBoundary from "../ui/IslandErrorBoundary";
 import AppButton from "../ui/primer/AppButton";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
@@ -115,11 +110,6 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
   const [updatingPerms, setUpdatingPerms] = useState(false);
   const [permSyncMsg, setPermSyncMsg] = useState<string | null>(null);
-  const {
-    themeName: activePrimeTheme,
-    isApplying: switchingPrimeTheme,
-    applyTheme: applyPrimeTheme,
-  } = usePrimeTheme();
   const [menuPrefs, setMenuPrefs] = useState<MenuPrefsV1>(() =>
     MENU_PREFS_ENABLED ? readMenuPrefs(null) : { v: 1, hidden: [], order: {} }
   );
@@ -136,8 +126,6 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
   const menuIsMaster = /MASTER/i.test(menuUserType || "");
   const menuIsVendedor = /VENDEDOR/i.test(menuUserType || "");
   const menuIsGestor = /GESTOR/i.test(menuUserType || "");
-  const activePrimeThemeLabel =
-    PRIME_THEME_OPTIONS.find((option) => option.name === activePrimeTheme)?.label || "Padrao";
 
   const permLevel = (p?: Permissao | null): number => {
     switch (p) {
@@ -496,7 +484,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "informativos",
       href: "/operacao/recados",
       active: "operacao_recados",
-      icon: "pi pi-file",
+      icon: "pi pi-comments",
       label: (
         <span className="sidebar-link-label">
           Mural de Recados
@@ -539,7 +527,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "informativos",
       href: "/perfil/escala",
       active: "perfil-escala",
-      icon: "pi pi-calendar",
+      icon: "pi pi-clock",
       label: "Minha Escala",
       canShow: menuIsVendedor,
     });
@@ -550,7 +538,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "operacao",
       href: "/vendas/consulta",
       active: "vendas",
-      icon: "pi pi-file",
+      icon: "pi pi-money-bill",
       label: "Vendas",
       canShow: canMenuExact("Vendas"),
     });
@@ -731,7 +719,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "relatorios",
       href: "/relatorios/vendas-por-cliente",
       active: "relatorios-vendas-cliente",
-      icon: "pi pi-user",
+      icon: "pi pi-address-book",
       label: "Vendas por cliente",
       canShow: canMenuExact("RelatorioClientes") || canMenuExact("Relatorios"),
     });
@@ -796,8 +784,8 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       section: "parametros",
       href: "/parametros/avisos",
       active: "parametros-avisos",
-      icon: "pi pi-megaphone",
-      label: "Avisos",
+      icon: "pi pi-share-alt",
+      label: "CRM",
       canShow: canMenuExact("Avisos") || canMenuExact("ParametrosAvisos") || canMenuExact("Parametros"),
     });
     entries.push({
@@ -1296,28 +1284,6 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
     }
   }
 
-  const applyThemeFromMenu = useCallback(
-    async (themeName: string) => {
-      try {
-        await applyPrimeTheme(themeName);
-      } catch (error) {
-        console.error("Erro ao trocar tema PrimeReact:", error);
-      }
-    },
-    [applyPrimeTheme]
-  );
-
-  const handleThemeSelectChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    void applyThemeFromMenu(event.target.value);
-  };
-
-  const handleThemeCycle = () => {
-    const names = PRIME_THEME_OPTIONS.map((option) => option.name);
-    const currentIndex = names.indexOf(activePrimeTheme);
-    const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % names.length;
-    void applyThemeFromMenu(names[nextIndex] || PRIME_DEFAULT_THEME);
-  };
-
   const cadastrosMenu = [
     { name: "Produtos", href: "/cadastros/produtos", active: "produtos", icon: "pi pi-ticket", label: "Produtos" },
     { name: "Circuitos", href: "/cadastros/circuitos", active: "circuitos", icon: "pi pi-compass", label: "Circuitos" },
@@ -1621,41 +1587,6 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
         {menuUserId && (
           <div>
             <div className="vtur-sidebar-action-group">
-              {isSidebarCollapsed ? (
-                <AppButton
-                  type="button"
-                  variant="secondary"
-                  className="sidebar-theme-cycle-btn"
-                  onClick={handleThemeCycle}
-                  disabled={switchingPrimeTheme}
-                  icon={`pi pi-palette${switchingPrimeTheme ? " pi-spin" : ""}`}
-                  title={`Tema atual: ${activePrimeThemeLabel}. Clique para alternar.`}
-                >
-                  <span className="sr-only">
-                    {switchingPrimeTheme ? "Alternando tema..." : "Alternar tema"}
-                  </span>
-                </AppButton>
-              ) : (
-                <div className="vtur-sidebar-theme-picker">
-                  <label htmlFor="sidebar-theme-select" className="vtur-sidebar-theme-label">
-                    <i className="pi pi-palette" aria-hidden="true" />
-                    <span>Tema visual</span>
-                  </label>
-                  <select
-                    id="sidebar-theme-select"
-                    className="vtur-sidebar-theme-select"
-                    value={activePrimeTheme}
-                    onChange={handleThemeSelectChange}
-                    disabled={switchingPrimeTheme}
-                  >
-                    {PRIME_THEME_OPTIONS.map((option) => (
-                      <option key={option.name} value={option.name}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
               <AppButton
                 type="button"
                 variant="secondary"

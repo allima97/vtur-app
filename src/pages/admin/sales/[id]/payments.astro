@@ -4,9 +4,69 @@ import { supabaseServer as supabase } from "../../../../lib/supabaseServer";
 import Button from "../../../../components/ui/Button.astro";
 
 const saleId = Astro.params.id;
+const pathname = new URL(Astro.request.url).pathname;
+const supabaseAny = supabase as any;
+
+type SaleRecord = {
+  id: string;
+  client_id: string | null;
+  seller_id: string | null;
+  total: number | string;
+  paid_total: number | string;
+  balance_due: number | string;
+  currency: string;
+  financial_status: string;
+};
+
+type ClientRecord = {
+  nome: string | null;
+};
+
+type SellerRecord = {
+  nome_completo: string | null;
+};
+
+type PaymentRecord = {
+  id: string;
+  method: string;
+  amount: number | string;
+  status: string;
+  created_at: string;
+};
+
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  const intent = String(formData.get("intent") ?? "");
+
+  if (intent === "simple") {
+    const amount = Number(formData.get("amount"));
+    const method = String(formData.get("method") ?? "");
+    const { error } = await supabaseAny.rpc("registrar_pagamento_simples", {
+      p_sale_id: saleId,
+      p_method: method,
+      p_amount: amount,
+    });
+    if (error) throw error;
+    return Astro.redirect(pathname);
+  }
+
+  if (intent === "installments") {
+    const total = Number(formData.get("total"));
+    const installments = Number(formData.get("installments"));
+    const { error } = await supabaseAny.rpc("registrar_pagamento_parcelado", {
+      p_sale_id: saleId,
+      p_method: "CREDIT_CARD",
+      p_total_amount: total,
+      p_installments: installments,
+      p_first_due_date: new Date().toISOString().slice(0, 10),
+    });
+    if (error) throw error;
+    return Astro.redirect(pathname);
+  }
+}
 
 /* 1️⃣ VENDA (SEM JOIN) */
-const { data: sale, error: saleError } = await supabase
+const { data: saleData, error: saleError } = await supabaseAny
   .from("sale")
   .select(`
     id,
@@ -21,27 +81,33 @@ const { data: sale, error: saleError } = await supabase
   .eq("id", saleId)
   .single();
 
+const sale = saleData as SaleRecord | null;
+
 if (!sale) {
   console.error(saleError);
   throw new Error("Venda não encontrada");
 }
 
 /* 2️⃣ CLIENTE */
-const { data: client } = await supabase
+const { data: clientData } = await supabaseAny
   .from("clientes")
   .select("nome")
   .eq("id", sale.client_id)
   .single();
 
+const client = clientData as ClientRecord | null;
+
 /* 3️⃣ VENDEDOR */
-const { data: seller } = await supabase
+const { data: sellerData } = await supabaseAny
   .from("users")
   .select("nome_completo")
   .eq("id", sale.seller_id)
   .single();
 
+const seller = sellerData as SellerRecord | null;
+
 /* 4️⃣ PAGAMENTOS */
-const { data: payments } = await supabase
+const { data: paymentsData } = await supabaseAny
   .from("payment")
   .select(`
     id,
@@ -53,44 +119,9 @@ const { data: payments } = await supabase
   .eq("sale_id", saleId)
   .order("created_at", { ascending: false });
 
-/* 5️⃣ ACTIONS */
-async function pagarSimples(formData: FormData) {
-  "use server";
-
-  const amount = Number(formData.get("amount"));
-  const method = String(formData.get("method"));
-
-  const { error } = await supabase.rpc(
-    "registrar_pagamento_simples",
-    {
-      p_sale_id: saleId,
-      p_method: method,
-      p_amount: amount
-    }
-  );
-
-  if (error) throw error;
-}
-
-async function pagarParcelado(formData: FormData) {
-  "use server";
-
-  const total = Number(formData.get("total"));
-  const installments = Number(formData.get("installments"));
-
-  const { error } = await supabase.rpc(
-    "registrar_pagamento_parcelado",
-    {
-      p_sale_id: saleId,
-      p_method: "CREDIT_CARD",
-      p_total_amount: total,
-      p_installments: installments,
-      p_first_due_date: new Date().toISOString().slice(0,10)
-    }
-  );
-
-  if (error) throw error;
-}
+const payments = (paymentsData ?? []) as PaymentRecord[];
+const clientName = client?.nome ?? "-";
+const sellerName = seller?.nome_completo ?? "-";
 ---
 
 <html lang="pt-BR">
@@ -141,8 +172,8 @@ async function pagarParcelado(formData: FormData) {
     <h1>Pagamentos da Venda</h1>
 
     <p>
-      Cliente: <strong>{client?.nome ?? "-"}</strong><br />
-      Vendedor: <strong>{seller?.nome_completo ?? "-"}</strong>
+      Cliente: <strong>{clientName}</strong><br />
+      Vendedor: <strong>{sellerName}</strong>
     </p>
 
     <hr />
@@ -157,7 +188,8 @@ async function pagarParcelado(formData: FormData) {
     <hr />
 
     <h2>Registrar pagamento (PIX / Transferência)</h2>
-    <form method="post" action={pagarSimples}>
+    <form method="post" action={pathname}>
+      <input type="hidden" name="intent" value="simple" />
       <input type="number" step="0.01" name="amount" placeholder="Valor" required />
       <select name="method">
         <option value="PIX">PIX</option>
@@ -170,7 +202,8 @@ async function pagarParcelado(formData: FormData) {
     <hr />
 
     <h2>Pagamento com cartão (parcelado)</h2>
-    <form method="post" action={pagarParcelado}>
+    <form method="post" action={pathname}>
+      <input type="hidden" name="intent" value="installments" />
       <input type="number" step="0.01" name="total" placeholder="Valor total" required />
       <input type="number" name="installments" placeholder="Parcelas" min="1" max="12" required />
       <Button type="submit">Criar parcelamento</Button>

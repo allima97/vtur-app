@@ -7,6 +7,7 @@ import {
   isSystemAdminRole,
   normalizeUserType,
 } from "./lib/adminAccess";
+import { hasVerifiedTotpFactor, normalizeMfaRedirectPath } from "./lib/authMfa";
 
 const supabaseUrl = readEnv("SUPABASE_URL") || readEnv("PUBLIC_SUPABASE_URL");
 const supabaseAnonKey = readEnv("PUBLIC_SUPABASE_ANON_KEY") || readEnv("SUPABASE_ANON_KEY");
@@ -54,6 +55,12 @@ const setPerm = (perms: Record<string, string>, key: string, perm: string) => {
   const normalizedKey = key.toLowerCase();
   const atual = perms[normalizedKey] ?? "none";
   perms[normalizedKey] = permLevel(perm) > permLevel(atual) ? perm : atual;
+};
+
+const normalizeModuloKey = (value?: string | null) => {
+  const raw = String(value || "").trim().toLowerCase();
+  if (!raw) return "";
+  return MODULO_ALIASES[raw] || raw.replace(/\s+/g, "_");
 };
 
 const buildPerms = (
@@ -117,6 +124,16 @@ function isInvalidSupabaseCookieError(error: unknown): boolean {
     "expired",
   ];
   return patterns.some((pattern) => message.includes(pattern));
+}
+
+function buildLoginRedirectUrl(url: URL) {
+  const nextPath = `${url.pathname}${url.search || ""}`;
+  return `/auth/login?next=${encodeURIComponent(nextPath)}`;
+}
+
+function buildMfaSetupRedirectUrl(url: URL) {
+  const nextPath = `${url.pathname}${url.search || ""}`;
+  return `/perfil?setup_2fa=1&next=${encodeURIComponent(nextPath)}`;
 }
 
 export const onRequest = defineMiddleware(async (context, next) => {
@@ -212,7 +229,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       return makeMutable(new Response(null, {
         status: 302,
         headers: [
-          ["location", "/auth/login"],
+          ["location", buildLoginRedirectUrl(url)],
           ...headers.map((value) => ["set-cookie", value]),
         ],
       }));
@@ -236,14 +253,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return makeMutable(new Response(null, {
       status: 302,
       headers: [
-        ["location", "/auth/login"],
+        ["location", buildLoginRedirectUrl(url)],
         ...headers.map((value) => ["set-cookie", value]),
       ],
     }));
   }
 
   if (!user) {
-    return makeMutable(Response.redirect(new URL("/auth/login", url), 302));
+    return makeMutable(Response.redirect(new URL(buildLoginRedirectUrl(url), url), 302));
   }
   context.locals.userId = user.id;
   context.locals.userEmail = user.email ?? "";
@@ -288,6 +305,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     "/api/welcome-email",
     "/api/users",
   ];
+  const isMfaRoute = pathname.startsWith("/auth/mfa");
 
   if (shouldRefreshMenuCache) {
     const [accRowsRes, userTypeRes] = await Promise.all([
@@ -387,6 +405,58 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
+  try {
+    const { data: companyRow, error: companyErr } = await supabase
+      .from("users")
+      .select("company_id")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (companyErr) {
+      throw companyErr;
+    }
+
+    const companyId = String((companyRow as any)?.company_id || "").trim() || null;
+    let mfaObrigatorio = false;
+    if (companyId) {
+      const { data: paramData, error: paramErr } = await supabase
+        .from("parametros_comissao")
+        .select("mfa_obrigatorio")
+        .eq("company_id", companyId)
+        .maybeSingle();
+      if (paramErr) {
+        throw paramErr;
+      }
+      mfaObrigatorio = Boolean((paramData as any)?.mfa_obrigatorio);
+    }
+
+    const [{ data: aalData, error: aalError }, { data: factorsData, error: factorsError }] =
+      await Promise.all([
+        supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+        supabase.auth.mfa.listFactors(),
+      ]);
+    if (!aalError && !factorsError) {
+      const hasFactor = hasVerifiedTotpFactor(factorsData || null);
+      if (mfaObrigatorio && !hasFactor && !pathname.startsWith("/perfil")) {
+        return makeMutable(
+          Response.redirect(new URL(buildMfaSetupRedirectUrl(url), url), 302)
+        );
+      }
+
+      const precisaMfa =
+        hasFactor &&
+        aalData?.nextLevel === "aal2" &&
+        aalData?.currentLevel !== "aal2";
+      if (precisaMfa && !isMfaRoute) {
+        const nextPath = normalizeMfaRedirectPath(`${pathname}${url.search || ""}`, "/dashboard");
+        return makeMutable(
+          Response.redirect(new URL(`/auth/mfa?next=${encodeURIComponent(nextPath)}`, url), 302)
+        );
+      }
+    }
+  } catch (mfaError) {
+    console.error("[middleware] falha ao verificar MFA", mfaError);
+  }
+
   // ============================
   // 1) MAPEAMENTO DE ROTAS → MÓDULOS
   // ============================
@@ -414,13 +484,22 @@ export const onRequest = defineMiddleware(async (context, next) => {
     ),
   );
 
+  const modulosPermitidos = new Set<string>();
+  modulosConsulta.forEach((entry) => {
+    const normalized = normalizeModuloKey(entry);
+    if (normalized) modulosPermitidos.add(normalized);
+  });
+
   const { data: accRows } = await supabase
     .from("modulo_acesso")
     .select("permissao, ativo, modulo")
-    .eq("usuario_id", user.id)
-    .in("modulo", modulosConsulta);
+    .eq("usuario_id", user.id);
 
-  const acessosValidos = (accRows || []).filter((row) => row?.ativo);
+  const acessosValidos = (accRows || []).filter((row) => {
+    if (!row?.ativo) return false;
+    const moduloKey = normalizeModuloKey(row?.modulo);
+    return moduloKey ? modulosPermitidos.has(moduloKey) : false;
+  });
   if (acessosValidos.length === 0) {
     return makeMutable(Response.redirect(new URL("/negado", url), 302));
   }

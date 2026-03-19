@@ -1,5 +1,6 @@
 import { createServerClient } from "../../../../lib/supabaseServer";
 import { kvCache } from "../../../../lib/kvCache";
+import { fetchAndComputeVendasAgg } from "../vendas/_aggregates";
 
 import { getSupabaseEnv } from "../../users";
 const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv();
@@ -153,132 +154,6 @@ function isRpcMissing(error: any, fnName: string) {
     code === "42883" ||
     (needle && message.includes(needle) && (message.includes("does not exist") || message.includes("could not find")))
   );
-}
-
-function clamp01(value: number) {
-  if (!Number.isFinite(value)) return 0;
-  return Math.max(0, Math.min(1, value));
-}
-
-function computeVendasAggFromRows(rows: any[]): VendasAgg {
-  let totalVendas = 0;
-  let totalTaxas = 0;
-  let totalSeguro = 0;
-
-  const timelineMap = new Map<string, number>();
-  const destinoMap = new Map<string, number>();
-  const produtoMap = new Map<string, { id: string; name: string; value: number }>();
-  const vendedorMap = new Map<string, { vendedor_id: string; total: number; qtd: number }>();
-
-  const includesSeguro = (tipo: string, nome: string) => {
-    const t = (tipo || "").toLowerCase();
-    const n = (nome || "").toLowerCase();
-    return t.includes("seguro") || n.includes("seguro");
-  };
-
-  let qtdVendas = 0;
-
-  rows.forEach((venda) => {
-    const recibos: any[] = Array.isArray(venda?.vendas_recibos) ? venda.vendas_recibos : [];
-
-    if (recibos.length === 0) {
-      const vendaTotal = Number(venda?.valor_total || 0);
-      const vendaTaxas = Number(venda?.valor_taxas || 0);
-      totalVendas += vendaTotal;
-      totalTaxas += vendaTaxas;
-      qtdVendas += vendaTotal > 0 ? 1 : 0;
-
-      const dia = String(venda?.data_venda || "").slice(0, 10);
-      if (dia) timelineMap.set(dia, (timelineMap.get(dia) || 0) + vendaTotal);
-
-      const destinoNome = String(venda?.destinos?.nome || venda?.destino?.nome || "Sem destino");
-      destinoMap.set(destinoNome, (destinoMap.get(destinoNome) || 0) + vendaTotal);
-      const produtoId = String(venda?.destinos?.tipo_produto || venda?.destino?.tipo_produto || "").trim();
-      const produtoKey = produtoId || `nome:${destinoNome.toLowerCase()}`;
-      const currentProd = produtoMap.get(produtoKey);
-      if (!currentProd) {
-        produtoMap.set(produtoKey, { id: produtoKey, name: destinoNome, value: vendaTotal });
-      } else {
-        currentProd.value += vendaTotal;
-      }
-
-      const vendedorId = String(venda?.vendedor_id || "unknown");
-      const currentVend =
-        vendedorMap.get(vendedorId) || { vendedor_id: vendedorId, total: 0, qtd: 0 };
-      currentVend.total += vendaTotal;
-      currentVend.qtd += vendaTotal > 0 ? 1 : 0;
-      vendedorMap.set(vendedorId, currentVend);
-      return;
-    }
-
-    const destinoNome = String(venda?.destinos?.nome || venda?.destino?.nome || "Sem destino");
-    const vendedorId = String(venda?.vendedor_id || "unknown");
-
-    recibos.forEach((r) => {
-      const bruto = Number(r?.valor_total || 0);
-      const taxas = Number(r?.valor_taxas || 0);
-      const dia = String(r?.data_venda || venda?.data_venda || "").slice(0, 10);
-
-      totalVendas += bruto;
-      totalTaxas += taxas;
-      qtdVendas += 1;
-
-      if (dia) timelineMap.set(dia, (timelineMap.get(dia) || 0) + bruto);
-      destinoMap.set(destinoNome, (destinoMap.get(destinoNome) || 0) + bruto);
-
-      const produto = r?.produtos || null;
-      if (produto && produto.exibe_kpi_comissao !== false) {
-        const name = String(produto?.nome || "Produto");
-        const idRaw = String(produto?.id || "").trim();
-        const id = idRaw || `nome:${name.toLowerCase()}`;
-        const current = produtoMap.get(id);
-        if (!current) {
-          produtoMap.set(id, { id, name, value: bruto });
-        } else {
-          current.value += bruto;
-        }
-
-        if (includesSeguro(String(produto?.tipo || ""), String(produto?.nome || ""))) {
-          totalSeguro += bruto;
-        }
-      }
-
-      const currentVend =
-        vendedorMap.get(vendedorId) || { vendedor_id: vendedorId, total: 0, qtd: 0 };
-      currentVend.total += bruto;
-      currentVend.qtd += 1;
-      vendedorMap.set(vendedorId, currentVend);
-    });
-  });
-
-  const totalLiquido = totalVendas - totalTaxas;
-  const ticketMedio = qtdVendas > 0 ? totalVendas / qtdVendas : 0;
-
-  const timeline = Array.from(timelineMap.entries())
-    .sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([date, value]) => ({ date, value }));
-
-  const topDestinos = Array.from(destinoMap.entries())
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 8);
-
-  const porProduto = Array.from(produtoMap.values()).sort((a, b) => b.value - a.value);
-
-  const porVendedor = Array.from(vendedorMap.values()).sort((a, b) => b.total - a.total);
-
-  return {
-    totalVendas,
-    totalTaxas,
-    totalLiquido,
-    totalSeguro,
-    qtdVendas,
-    ticketMedio,
-    timeline,
-    topDestinos,
-    porProduto,
-    porVendedor,
-  };
 }
 
 async function fetchGestorEquipeIdsComGestor(client: any, gestorId: string) {
@@ -542,126 +417,16 @@ export async function GET({ request }: { request: Request }) {
     const vendasAggPromise = (async (): Promise<VendasAgg> => {
       const companyId =
         requestedCompanyId && requestedCompanyId !== "all" ? requestedCompanyId : null;
-
-      try {
-        const { data: rpcData, error: rpcErr } = await client.rpc("rpc_dashboard_vendas_summary", {
-          p_company_id: companyId,
-          p_vendedor_ids: vendedorIds.length > 0 ? vendedorIds : null,
-          p_inicio: inicio,
-          p_fim: fim,
-        });
-
-        if (rpcErr) throw rpcErr;
-        const row = Array.isArray(rpcData) ? rpcData[0] : rpcData;
-        if (!row) throw new Error("RPC rpc_dashboard_vendas_summary sem retorno.");
-
-        const timelineRaw = (row as any)?.timeline;
-        const topDestinosRaw = (row as any)?.top_destinos;
-        const porProdutoRaw = (row as any)?.por_produto;
-        const porVendedorRaw = (row as any)?.por_vendedor;
-
-        const timeline = Array.isArray(timelineRaw)
-          ? timelineRaw
-              .map((item: any) => ({
-                date: String(item?.date || "").slice(0, 10),
-                value: Number(item?.value || 0),
-              }))
-              .filter((item: any) => Boolean(item.date))
-          : [];
-
-        const topDestinos = Array.isArray(topDestinosRaw)
-          ? topDestinosRaw.map((item: any) => ({
-              name: String(item?.name || "Sem destino"),
-              value: Number(item?.value || 0),
-            }))
-          : [];
-
-        let porProduto = Array.isArray(porProdutoRaw)
-          ? porProdutoRaw.map((item: any) => {
-              const name = String(item?.name || "Produto");
-              const idRaw = String(item?.id || "").trim();
-              return {
-                id: idRaw || `nome:${name.toLowerCase()}`,
-                name,
-                value: Number(item?.value || 0),
-              };
-            })
-          : [];
-
-        const porVendedor = Array.isArray(porVendedorRaw)
-          ? porVendedorRaw.map((item: any) => ({
-              vendedor_id: String(item?.vendedor_id || "unknown"),
-              total: Number(item?.total || 0),
-              qtd: Number(item?.qtd || 0),
-            }))
-          : [];
-
-        const totalVendas = Number((row as any)?.total_vendas || 0);
-        const totalTaxas = Number((row as any)?.total_taxas || 0);
-        const totalLiquido = Number((row as any)?.total_liquido || totalVendas - totalTaxas);
-        const totalSeguro = Number((row as any)?.total_seguro || 0);
-        const qtdVendas = Number((row as any)?.qtd_vendas || 0);
-        const ticketMedio = Number((row as any)?.ticket_medio || 0);
-
-        if (porProduto.length === 0 && totalVendas > 0) {
-          porProduto = await fetchPorProdutoFallback(client, companyId, vendedorIds, inicio, fim);
-        }
-
-        return {
-          totalVendas,
-          totalTaxas,
-          totalLiquido,
-          totalSeguro,
-          qtdVendas,
-          ticketMedio,
-          timeline,
-          topDestinos,
-          porProduto,
-          porVendedor,
-        };
-      } catch (rpcError: any) {
-        if (!isRpcMissing(rpcError, "rpc_dashboard_vendas_summary")) {
-          throw rpcError;
-        }
+      const agg = await fetchAndComputeVendasAgg(client, {
+        companyId,
+        vendedorIds: vendedorIds.length > 0 ? vendedorIds : null,
+        inicio,
+        fim,
+      });
+      if (agg.porProduto.length === 0 && agg.totalVendas > 0) {
+        agg.porProduto = await fetchPorProdutoFallback(client, companyId, vendedorIds, inicio, fim);
       }
-
-      let vendasQuery = client
-        .from("vendas")
-        .select(
-          `
-            id,
-            vendedor_id,
-            destino_id,
-            data_venda,
-            valor_total,
-            valor_taxas,
-            destinos:produtos!destino_id (nome, tipo_produto),
-            vendas_recibos (
-              id,
-              data_venda,
-              valor_total,
-              valor_taxas,
-              produtos:tipo_produtos!produto_id (id, nome, tipo, exibe_kpi_comissao)
-            )
-          `
-        )
-        .eq("cancelada", false);
-
-      // Competência por recibo: filtra pelo mês do recibo.
-      vendasQuery = vendasQuery
-        .gte("vendas_recibos.data_venda", inicio)
-        .lte("vendas_recibos.data_venda", fim);
-
-      if (companyId) {
-        vendasQuery = vendasQuery.eq("company_id", companyId);
-      }
-      if (vendedorIds.length > 0) {
-        vendasQuery = vendasQuery.in("vendedor_id", vendedorIds);
-      }
-
-      const { data, error } = await vendasQuery;
-      if (error) throw error;
-      return computeVendasAggFromRows(data || []);
+      return agg;
     })();
 
     const tiposPromise = (async () => {

@@ -10,29 +10,31 @@ type AppCardProps = React.HTMLAttributes<HTMLElement> & {
 type TableDetection = {
   hasTable: boolean;
   hasDataTable: boolean;
+  hasNestedCard: boolean;
 };
 
 function mergeTableDetection(base: TableDetection, next: TableDetection): TableDetection {
   return {
     hasTable: base.hasTable || next.hasTable,
     hasDataTable: base.hasDataTable || next.hasDataTable,
+    hasNestedCard: base.hasNestedCard || next.hasNestedCard,
   };
 }
 
 function detectTableContent(node: React.ReactNode): TableDetection {
   if (node === null || node === undefined || typeof node === "boolean") {
-    return { hasTable: false, hasDataTable: false };
+    return { hasTable: false, hasDataTable: false, hasNestedCard: false };
   }
 
   if (Array.isArray(node)) {
     return node.reduce<TableDetection>(
       (acc, child) => mergeTableDetection(acc, detectTableContent(child)),
-      { hasTable: false, hasDataTable: false }
+      { hasTable: false, hasDataTable: false, hasNestedCard: false }
     );
   }
 
   if (!React.isValidElement(node)) {
-    return { hasTable: false, hasDataTable: false };
+    return { hasTable: false, hasDataTable: false, hasNestedCard: false };
   }
 
   const rawType = node.type as unknown;
@@ -49,10 +51,12 @@ function detectTableContent(node: React.ReactNode): TableDetection {
     className
   );
   const classHintsDataTable = /\b(vtur-data-table-shell|vtur-data-table)\b/.test(className);
+  const isNestedCardComponent = componentName === "AppCard";
 
   const own: TableDetection = {
     hasTable: Boolean(isNativeTable || isDataTableComponent || classHintsTable),
     hasDataTable: Boolean(isDataTableComponent || classHintsDataTable),
+    hasNestedCard: Boolean(isNestedCardComponent || /\bvtur-app-card\b/.test(className)),
   };
 
   return mergeTableDetection(own, detectTableContent(node.props?.children));
@@ -67,17 +71,22 @@ export default function AppCard({
   children,
   ...props
 }: AppCardProps) {
+  const hasBody = React.Children.toArray(children).some(
+    (child) => child !== null && child !== undefined && typeof child !== "boolean"
+  );
   const tableDetection = detectTableContent(children);
   const tableLayoutClass = tableDetection.hasTable
     ? tableDetection.hasDataTable
       ? "vtur-app-card-has-datatable"
       : "vtur-app-card-has-table"
     : "";
+  const shellLayoutClass =
+    tableDetection.hasNestedCard && !tableDetection.hasTable ? "vtur-app-card-shell" : "";
 
   return (
     <section
       {...props}
-      className={["vtur-app-card", `vtur-app-card-${tone}`, tableLayoutClass, className]
+      className={["vtur-app-card", `vtur-app-card-${tone}`, tableLayoutClass, shellLayoutClass, className]
         .filter(Boolean)
         .join(" ")}
     >
@@ -98,7 +107,7 @@ export default function AppCard({
           {actions && <div className="vtur-app-card-actions">{actions}</div>}
         </div>
       )}
-      <div className="vtur-app-card-body">{children}</div>
+      {hasBody ? <div className="vtur-app-card-body">{children}</div> : null}
     </section>
   );
 }

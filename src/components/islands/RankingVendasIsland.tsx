@@ -10,7 +10,6 @@ import AlertMessage from "../ui/AlertMessage";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type Papel = "GESTOR" | "MASTER" | "OUTRO" | "VIEWER";
 
@@ -22,6 +21,10 @@ type VendaRecibo = {
   valor_total: number | null;
   valor_taxas: number | null;
   produto_id: string | null;
+  valor_meta_override?: number | null;
+  valor_liquido_override?: number | null;
+  valor_comissao_loja?: number | null;
+  percentual_comissao_loja?: number | null;
   tipo_produtos?: { id: string; nome: string | null } | null;
 };
 
@@ -239,18 +242,43 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
 
         const tipo = String((usuarioDb as Usuario | null)?.user_types?.name || "").toUpperCase();
         const isGestorTipo = tipo.includes("GESTOR");
-        const isVendedor = tipo.includes("VENDEDOR");
         let nextPapel: Papel = "OUTRO";
         if (tipo.includes("MASTER")) nextPapel = "MASTER";
         else if (isGestorTipo) nextPapel = "GESTOR";
-        else if (effectiveViewOnly && isVendedor) nextPapel = "VIEWER";
+        else if (effectiveViewOnly) nextPapel = "VIEWER";
         else if (podeVer) nextPapel = "GESTOR";
         setPapel(nextPapel);
         setCompanyId(usuarioDb?.company_id || null);
         setCompanyNome(usuarioDb?.companies?.nome_fantasia || null);
 
         if (nextPapel === "GESTOR") {
-          const equipe = await fetchGestorEquipeVendedorIds(auth.user.id);
+          const empresaId = usuarioDb?.company_id || null;
+          const [gestoresGrupo, equipe] = await Promise.all([
+            empresaId
+              ? (async () => {
+                  const { data, error } = await supabase
+                    .from("users")
+                    .select("id, nome_completo, participa_ranking, user_types(name)")
+                    .eq("company_id", empresaId);
+                  if (error) throw error;
+
+                  const gestoresEmpresa = (data || [])
+                    .filter((row: any) => {
+                      const tipoNome = String(row?.user_types?.name || "").toUpperCase();
+                      return tipoNome.includes("GESTOR");
+                    })
+                    .map((row: any) => ({
+                      id: String(row?.id || "").trim(),
+                      nome: formatNome(row?.nome_completo) || "Gestor",
+                      participa: Boolean(row?.participa_ranking),
+                    }))
+                    .filter((row) => Boolean(row.id));
+
+                  return gestoresEmpresa;
+                })()
+              : Promise.resolve([]),
+            fetchGestorEquipeVendedorIds(auth.user.id),
+          ]);
           setEquipeIds(equipe);
 
           const { data: nomes, error: nomesErr } = await supabase
@@ -265,12 +293,21 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
           });
           setEquipeNomes(map);
 
-          const gestorId = auth.user.id;
-          const gestorNome = formatNome(usuarioDb?.nome_completo) || "Gestor";
-          setGestoresNomes({ [gestorId]: gestorNome });
-          setGestorRankingFlags({
-            [gestorId]: Boolean((usuarioDb as Usuario | null)?.participa_ranking),
+          const gestoresEmpresa = gestoresGrupo.length > 0
+            ? gestoresGrupo
+            : [{
+                id: auth.user.id,
+                nome: formatNome(usuarioDb?.nome_completo) || "Gestor",
+                participa: Boolean((usuarioDb as Usuario | null)?.participa_ranking),
+              }];
+          const gestoresMap: Record<string, string> = {};
+          const flagsMap: Record<string, boolean> = {};
+          gestoresEmpresa.forEach((gestor) => {
+            gestoresMap[gestor.id] = gestor.nome;
+            flagsMap[gestor.id] = gestor.participa;
           });
+          setGestoresNomes(gestoresMap);
+          setGestorRankingFlags(flagsMap);
         }
 
         if (nextPapel === "VIEWER") {
@@ -313,7 +350,7 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
     }
 
     loadUser();
-  }, [loadingPerm]);
+  }, [effectiveViewOnly, loadingPerm, podeVer]);
 
   useEffect(() => {
     if (papel !== "MASTER") return;
@@ -389,7 +426,9 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
 
   const gestoresSelecionados = useMemo(() => {
     if (papel === "GESTOR") {
-      return userId && gestorRankingFlags[userId] ? [userId] : [];
+      return Object.entries(gestorRankingFlags)
+        .filter(([, flag]) => flag)
+        .map(([id]) => id);
     }
     if (papel === "MASTER") {
       if (masterScope.vendedorSelecionado !== "all") return [];
@@ -433,16 +472,13 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
         nome: formatNome(g.nome_completo) || "Gestor",
       }));
     }
-    if (papel === "GESTOR" && userId) {
-      return [
-        {
-          id: userId,
-          nome: gestoresNomes[userId] || "Gestor",
-        },
-      ];
+    if (papel === "GESTOR") {
+      return Object.entries(gestoresNomes)
+        .map(([id, nome]) => ({ id, nome: nome || "Gestor" }))
+        .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
     }
     return [];
-  }, [papel, userId, gestoresNomes, masterScope.gestoresDisponiveis]);
+  }, [papel, gestoresNomes, masterScope.gestoresDisponiveis]);
 
   useEffect(() => {
     if (!inicio || !fim) return;
@@ -594,8 +630,12 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
       (v.vendas_recibos || []).forEach((r) => {
         const bruto = Number(r.valor_total || 0);
         const taxas = Number(r.valor_taxas || 0);
-        const liquido = bruto - taxas;
-        const baseMeta = calcularBaseMeta(bruto, liquido, params);
+        const liquido =
+          r.valor_liquido_override != null ? Number(r.valor_liquido_override || 0) : bruto - taxas;
+        const baseMeta =
+          r.valor_meta_override != null
+            ? Number(r.valor_meta_override || 0)
+            : calcularBaseMeta(bruto, liquido, params);
         if (!totalsByVendor[vid]) {
           totalsByVendor[vid] = { bruto: 0, liquido: 0, baseMeta: 0 };
         }
@@ -710,30 +750,41 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
     : "Ranking por produto";
 
   if (loadingPerm) return <LoadingUsuarioContext />;
-  if (!podeVer) return <div>Você não possui acesso a este relatório.</div>;
-
-  if (!podeVer) return <div>Você não possui acesso a este relatório.</div>;
+  if (!podeVer) {
+    return (
+      <AppPrimerProvider>
+        <AppCard tone="config">Você não possui acesso a este relatório.</AppCard>
+      </AppPrimerProvider>
+    );
+  }
 
   return (
     <AppPrimerProvider>
-    <div className="ranking-vendas-page vtur-legacy-module">
+    <div className="ranking-vendas-page vtur-legacy-module page-content-wrap">
       {!effectiveViewOnly && papel === "MASTER" && (
-        <AppToolbar title="Ranking de vendas" subtitle="Compare desempenho por mês, equipe e produto." tone="info" sticky>
+        <AppCard
+          title="Ranking de vendas"
+          subtitle="Compare desempenho por mês, equipe e produto."
+          tone="info"
+          className="mb-3 list-toolbar-sticky"
+        >
           <div className="vtur-form-grid vtur-form-grid-3">
             <AppField as="select" label="Filial" value={masterScope.empresaSelecionada} onChange={(e) => masterScope.setEmpresaSelecionada(e.target.value)} options={[{ label: "Todas", value: "all" }, ...masterScope.empresasAprovadas.map((empresa) => ({ label: empresa.nome_fantasia, value: empresa.id }))]} />
             <AppField as="select" label="Equipe" value={masterScope.gestorSelecionado} onChange={(e) => masterScope.setGestorSelecionado(e.target.value)} options={[{ label: "Todas", value: "all" }, ...masterScope.gestoresDisponiveis.map((gestor) => ({ label: formatNome(gestor.nome_completo) || "Gestor", value: gestor.id }))]} />
             <AppField as="select" label="Vendedor" value={masterScope.vendedorSelecionado} onChange={(e) => masterScope.setVendedorSelecionado(e.target.value)} options={[{ label: "Todos", value: "all" }, ...masterScope.vendedoresDisponiveis.map((vendedor) => ({ label: formatNome(vendedor.nome_completo) || "Vendedor", value: vendedor.id }))]} />
           </div>
-        </AppToolbar>
+        </AppCard>
       )}
 
       {!effectiveViewOnly && gestoresParaConfig.length > 0 && (
-        <AppCard className="card-config mb-3">
-          <div className="mb-2">
-            <strong>Gestores no ranking</strong>
-          </div>
+        <AppCard
+          title="Gestores no ranking"
+          subtitle="Defina quais gestores corporativos aparecem no ranking compartilhado da empresa."
+          tone="config"
+          className="card-config mb-3"
+        >
           <div className="table-container">
-            <table className="table-default table-mobile-cards">
+            <table className="table-default table-header-blue table-mobile-cards">
               <thead>
                 <tr>
                   <th>Gestor</th>
@@ -776,28 +827,28 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
 
       {!loadingDados && equipeFiltroIds.length > 0 && (
         <>
-          {effectiveViewOnly && (
-            <AppCard className="card-config mb-3">
-              <div className="form-group" style={{ marginBottom: 8 }}>
-                <label className="form-label">Mes</label>
-                <select
-                  className="form-select"
-                  value={mesSelecionado}
-                  onChange={(e) => setMesSelecionado(e.target.value)}
-                  style={{ width: "100%" }}
-                >
-                  {mesOpcoes.map((mes) => (
-                    <option key={mes} value={mes}>
-                      {monthLabel(mes)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ color: "#64748b", fontSize: "0.9rem" }}>
-                Utilize o abaixo filtro para navegar em outros meses.
-              </div>
-            </AppCard>
-          )}
+          <AppCard
+            tone="config"
+            className="card-config mb-3"
+            title="Período do ranking"
+            subtitle="Escolha o mês de competência para navegar no histórico do ranking de vendas."
+          >
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Mês</label>
+              <select
+                className="form-select"
+                value={mesSelecionado}
+                onChange={(e) => setMesSelecionado(e.target.value)}
+                style={{ width: "100%" }}
+              >
+                {mesOpcoes.map((mes) => (
+                  <option key={mes} value={mes}>
+                    {monthLabel(mes)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </AppCard>
 
           <div className="ranking-layout">
             <section className="ranking-main">

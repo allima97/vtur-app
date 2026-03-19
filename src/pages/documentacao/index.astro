@@ -1,14 +1,10 @@
 ---
 import Layout from "../../layouts/DashboardLayout.astro";
-import DocumentationPortalIsland from "../../components/islands/DocumentationPortalIsland.tsx";
+import DocumentationPortalIsland from "../../components/islands/DocumentationPortalIsland";
 
 const pageTitle = "Documentação do Sistema";
 ---
 
 <Layout title={pageTitle} module="Admin" activePage="documentacao">
-  <div class="vtur-app-card vtur-app-card-info mb-3 list-toolbar-sticky">
-    <h1 class="page-title">{pageTitle}</h1>
-    <p class="page-subtitle">Guias e instruções para uso do sistema.</p>
-  </div>
   <DocumentationPortalIsland client:only="react" />
 </Layout>

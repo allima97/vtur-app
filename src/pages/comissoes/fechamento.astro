@@ -1,11 +1,10 @@
 ---
 import Layout from "../../layouts/DashboardLayout.astro";
-import FechamentoComissaoIsland from "../../components/islands/FechamentoComissaoIsland.tsx";
+import FechamentoComissaoIsland from "../../components/islands/FechamentoComissaoIsland";
 
 const pageTitle = "Fechamento de Comissão";
 ---
 
 <Layout title={pageTitle} module="Metas">
-  <h1 class="page-title">{pageTitle}</h1>
   <FechamentoComissaoIsland client:load />
 </Layout>

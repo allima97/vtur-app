@@ -1,17 +1,11 @@
 ---
 import DashboardLayout from "../../../layouts/DashboardLayout.astro";
-import HeaderPage from "../../../components/ui/HeaderPage.astro";
-import RankingVendasIsland from "../../../components/islands/RankingVendasIsland.tsx";
+import RankingVendasIsland from "../../../components/islands/RankingVendasIsland";
 
 const activePage = "relatorios-ranking-vendas";
 ---
 
 <DashboardLayout title="Ranking de Vendas" {activePage}>
-  <HeaderPage
-    title="Ranking de Vendas"
-    subtitle="Visualizacao somente leitura para exportacao."
-    color="green"
-  />
 
   <RankingVendasIsland client:load viewOnly />
 </DashboardLayout>

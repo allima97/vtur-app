@@ -4,6 +4,7 @@ import AlertMessage from "../ui/AlertMessage";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
 type EmpresaOption = { id: string; nome_fantasia: string; status: string };
@@ -987,6 +988,21 @@ export default function MuralRecadosIsland() {
   return (
     <AppPrimerProvider>
     <div className="mural-recados mural-whatsapp">
+      <AppCard
+        tone="info"
+        className="mb-3 mural-recados-top-card"
+        title="Mural de Recados"
+        subtitle="Gerencie recados e conversas com visao de CRM."
+        actions={
+          <AppButton
+            type="button"
+            variant={formOpen ? "secondary" : "primary"}
+            onClick={toggleFormOpen}
+          >
+            {formOpen ? "Cancelar" : "Novo recado"}
+          </AppButton>
+        }
+      />
       {erro && (
         <div style={{ marginBottom: 12 }}>
           <AlertMessage variant="error">{erro}</AlertMessage>
@@ -1224,16 +1240,17 @@ export default function MuralRecadosIsland() {
                     onChange={(e) => addAnexos(e.target.files)}
                   />
                 )}
-                <div className="form-group">
-                  <textarea
-                    className="form-input"
-                    value={conteudo}
-                    onChange={(e) => setConteudo(e.target.value)}
-                    placeholder="Escreva aqui..."
-                    rows={3}
-                    style={{ resize: "vertical" }}
-                  />
-                </div>
+                <AppField
+                  as="textarea"
+                  wrapperClassName="form-group"
+                  label="Mensagem"
+                  className="form-textarea"
+                  value={conteudo}
+                  onChange={(e) => setConteudo(e.currentTarget.value)}
+                  placeholder="Escreva aqui..."
+                  rows={3}
+                  style={{ resize: "vertical" }}
+                />
 
                 {!supportsAttachments && (
                   <small style={{ color: "#64748b" }}>
@@ -1265,7 +1282,7 @@ export default function MuralRecadosIsland() {
                   </div>
                 )}
 
-                <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end", marginTop: 12 }}>
+                <div className="mobile-stack-buttons vtur-actions-end" style={{ marginTop: 12 }}>
                   {supportsAttachments && (
                     <AppButton
                       type="button"
@@ -1508,16 +1525,17 @@ export default function MuralRecadosIsland() {
                       onChange={(e) => addAnexos(e.target.files)}
                     />
                   )}
-                  <div className="form-group">
-                    <textarea
-                      className="form-input"
-                      value={conteudo}
-                      onChange={(e) => setConteudo(e.target.value)}
-                      placeholder="Escreva aqui..."
-                      rows={3}
-                      style={{ resize: "vertical" }}
-                    />
-                  </div>
+                  <AppField
+                    as="textarea"
+                    wrapperClassName="form-group"
+                    label="Mensagem"
+                    className="form-textarea"
+                    value={conteudo}
+                    onChange={(e) => setConteudo(e.currentTarget.value)}
+                    placeholder="Escreva aqui..."
+                    rows={3}
+                    style={{ resize: "vertical" }}
+                  />
 
                   {!supportsAttachments && (
                     <small style={{ color: "#64748b" }}>
@@ -1549,7 +1567,7 @@ export default function MuralRecadosIsland() {
                     </div>
                   )}
 
-                  <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end", marginTop: 12 }}>
+                  <div className="mobile-stack-buttons vtur-actions-end" style={{ marginTop: 12 }}>
                     {supportsAttachments && (
                       <AppButton
                         type="button"

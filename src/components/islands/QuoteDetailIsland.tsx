@@ -2,7 +2,6 @@ import React, { useMemo, useRef, useState, useCallback, useEffect } from "react"
 import { formatNumberBR } from "../../lib/format";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import FlightDetailsModal, { FlightDetails } from "../ui/FlightDetailsModal";
-import CalculatorModal from "../ui/CalculatorModal";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import AlertMessage from "../ui/AlertMessage";
 import TableActions from "../ui/TableActions";
@@ -10,7 +9,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type QuoteRecord = {
   id: string;
@@ -164,7 +162,6 @@ export default function QuoteDetailIsland(props: {
   const [exportDiscount, setExportDiscount] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [flightModal, setFlightModal] = useState<{ details: FlightDetails; title?: string } | null>(null);
-  const [showCalculator, setShowCalculator] = useState(false);
   const subtotalAtual = useMemo(
     () => items.reduce((sum, item) => sum + Number(item.total_amount || 0), 0),
     [items]
@@ -598,8 +595,7 @@ export default function QuoteDetailIsland(props: {
   return (
     <AppPrimerProvider>
       <div className="page-content-wrap orcamentos-detalhe-page">
-        <AppToolbar
-          sticky
+        <AppCard
           tone="info"
           className="mb-3 list-toolbar-sticky"
           title="Detalhe do orcamento"
@@ -623,16 +619,6 @@ export default function QuoteDetailIsland(props: {
               >
                 PDF somente total
               </AppButton>
-              <AppButton
-                type="button"
-                variant="secondary"
-                className="btn-calculator-trigger"
-                onClick={() => setShowCalculator(true)}
-                aria-label="Calculadora"
-                title="Calculadora"
-              >
-                <i className="pi pi-calculator" aria-hidden="true" />
-              </AppButton>
             </div>
           }
         >
@@ -654,7 +640,7 @@ export default function QuoteDetailIsland(props: {
               <strong>R$ {formatCurrency(totalGeralAtual)}</strong>
             </div>
           </div>
-        </AppToolbar>
+        </AppCard>
 
         {exportError && (
           <AlertMessage variant="error" className="mb-3">
@@ -1170,7 +1156,7 @@ export default function QuoteDetailIsland(props: {
           </div>
         </AppCard>
 
-        <div className="vtur-form-actions">
+        <div className="vtur-form-actions quote-detail-form-actions">
           {isEditing ? (
             <>
               <AppButton
@@ -1222,10 +1208,6 @@ export default function QuoteDetailIsland(props: {
           confirmVariant="danger"
           onCancel={() => setItemParaExcluir(null)}
           onConfirm={confirmarRemocaoItem}
-        />
-        <CalculatorModal
-          open={showCalculator}
-          onClose={() => setShowCalculator(false)}
         />
       </div>
     </AppPrimerProvider>

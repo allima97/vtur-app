@@ -7,20 +7,38 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import CalculatorModal from "../ui/CalculatorModal";
 import AlertMessage from "../ui/AlertMessage";
 import { formatCurrencyBRL, formatNumberBR } from "../../lib/format";
-import { calcularDescontoAplicado, calcularPctFixoProduto, regraProdutoTemFixo } from "../../lib/comissaoUtils";
+import {
+  calcularPctFixoProduto,
+  hasConciliacaoCommissionRule,
+  regraProdutoTemFixo,
+  resolveConciliacaoCommissionSelection,
+  type ConciliacaoCommissionBandRule,
+} from "../../lib/comissaoUtils";
 import { carregarTermosNaoComissionaveis, calcularNaoComissionavelPorVenda } from "../../lib/pagamentoUtils";
 import { normalizeText } from "../../lib/normalizeText";
 import { fetchGestorEquipeIdsComGestor } from "../../lib/gestorEquipe";
+import {
+  buildConciliacaoSyntheticVendas,
+  fetchEffectiveConciliacaoReceipts,
+  hasConciliacaoOverride,
+} from "../../lib/conciliacao/source";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type Parametros = {
   usar_taxas_na_meta: boolean;
   foco_valor: "bruto" | "liquido";
   foco_faturamento: "bruto" | "liquido";
+  conciliacao_sobrepoe_vendas: boolean;
+  conciliacao_regra_ativa: boolean;
+  conciliacao_tipo?: "GERAL" | "ESCALONAVEL";
+  conciliacao_meta_nao_atingida: number | null;
+  conciliacao_meta_atingida: number | null;
+  conciliacao_super_meta: number | null;
+  conciliacao_tiers?: Tier[];
+  conciliacao_faixas_loja?: ConciliacaoCommissionBandRule[];
 };
 
 type UserCtx = {
@@ -75,12 +93,19 @@ type Produto = {
 };
 
 type Recibo = {
+  id?: string | null;
   valor_total: number | null;
   valor_taxas: number | null;
   valor_du?: number | null;
   valor_rav?: number | null;
   produto_id: string | null;
   tipo_pacote?: string | null;
+  valor_bruto_override?: number | null;
+  valor_meta_override?: number | null;
+  valor_liquido_override?: number | null;
+  valor_comissao_loja?: number | null;
+  percentual_comissao_loja?: number | null;
+  faixa_comissao?: string | null;
   tipo_produtos?: Produto | null;
   regra_produto?: RegraProduto | null;
 };
@@ -189,6 +214,43 @@ function formatPeriodoLabel(value: string) {
 function isSeguroProduto(produto?: Produto | null) {
   const nome = (produto?.nome || "").toLowerCase();
   return nome.includes("seguro");
+}
+
+function getReciboBrutoTotal(recibo: Recibo) {
+  if (hasConciliacaoOverride(recibo)) {
+    return Math.max(0, Number(recibo.valor_bruto_override ?? recibo.valor_total ?? 0));
+  }
+  return Math.max(0, Number(recibo.valor_total || 0));
+}
+
+function getReciboTaxasEfetivas(recibo: Recibo) {
+  if (hasConciliacaoOverride(recibo)) {
+    return Math.max(0, Number(recibo.valor_taxas ?? 0));
+  }
+  const taxasBrutas = Math.max(0, Number(recibo.valor_taxas ?? 0));
+  const du = Math.max(0, Number(recibo.valor_du ?? 0));
+  return Math.max(0, taxasBrutas - du);
+}
+
+function getReciboLiquido(recibo: Recibo) {
+  if (recibo.valor_liquido_override != null) {
+    return Math.max(0, Number(recibo.valor_liquido_override || 0));
+  }
+  const brutoSemRav = Math.max(0, Number(recibo.valor_total || 0) - Number(recibo.valor_rav || 0));
+  return Math.max(0, brutoSemRav - getReciboTaxasEfetivas(recibo));
+}
+
+function getReciboMeta(recibo: Recibo, parametros: Parametros) {
+  if (recibo.valor_meta_override != null) {
+    return Math.max(0, Number(recibo.valor_meta_override || 0));
+  }
+  const liquido = getReciboLiquido(recibo);
+  const brutoTotal = getReciboBrutoTotal(recibo);
+  return parametros.foco_valor === "liquido"
+    ? liquido
+    : parametros.usar_taxas_na_meta
+    ? brutoTotal
+    : liquido;
 }
 
 function formatPct(value: number) {
@@ -406,7 +468,8 @@ export default function ComissionamentoIsland() {
           : null
         : userCtx.companyId;
 
-      const paramsCols = "usar_taxas_na_meta, foco_valor, foco_faturamento";
+      const paramsCols =
+        "usar_taxas_na_meta, foco_valor, foco_faturamento, conciliacao_sobrepoe_vendas, conciliacao_regra_ativa, conciliacao_tipo, conciliacao_meta_nao_atingida, conciliacao_meta_atingida, conciliacao_super_meta, conciliacao_tiers, conciliacao_faixas_loja";
       let paramsData: any = null;
       if (companyIdFiltro) {
         const { data } = await supabase
@@ -506,6 +569,7 @@ export default function ComissionamentoIsland() {
 	          valor_total_bruto,
 	          valor_total_pago,
             vendas_recibos!inner (
+              id,
               data_venda,
 	            valor_total,
 	            valor_taxas,
@@ -539,6 +603,7 @@ export default function ComissionamentoIsland() {
 	          valor_total_bruto,
 	          valor_total_pago,
             vendas_recibos!inner (
+              id,
               data_venda,
 	            valor_total,
 	            valor_taxas,
@@ -652,8 +717,42 @@ export default function ComissionamentoIsland() {
               foco_valor: paramsData.foco_valor === "liquido" ? "liquido" : "bruto",
               foco_faturamento:
                 paramsData.foco_faturamento === "liquido" ? "liquido" : "bruto",
+              conciliacao_sobrepoe_vendas: Boolean(paramsData.conciliacao_sobrepoe_vendas),
+              conciliacao_regra_ativa: Boolean(paramsData.conciliacao_regra_ativa),
+              conciliacao_tipo:
+                paramsData.conciliacao_tipo === "ESCALONAVEL" ? "ESCALONAVEL" : "GERAL",
+              conciliacao_meta_nao_atingida:
+                paramsData.conciliacao_meta_nao_atingida != null
+                  ? Number(paramsData.conciliacao_meta_nao_atingida)
+                  : null,
+              conciliacao_meta_atingida:
+                paramsData.conciliacao_meta_atingida != null
+                  ? Number(paramsData.conciliacao_meta_atingida)
+                  : null,
+              conciliacao_super_meta:
+                paramsData.conciliacao_super_meta != null
+                  ? Number(paramsData.conciliacao_super_meta)
+                  : null,
+              conciliacao_tiers: Array.isArray(paramsData.conciliacao_tiers)
+                ? (paramsData.conciliacao_tiers as Tier[])
+                : [],
+              conciliacao_faixas_loja: Array.isArray((paramsData as any).conciliacao_faixas_loja)
+                ? ((paramsData as any).conciliacao_faixas_loja as ConciliacaoCommissionBandRule[])
+                : [],
             } as Parametros)
-          : { usar_taxas_na_meta: true, foco_valor: "bruto", foco_faturamento: "bruto" }
+          : {
+              usar_taxas_na_meta: true,
+              foco_valor: "bruto",
+              foco_faturamento: "bruto",
+              conciliacao_sobrepoe_vendas: false,
+              conciliacao_regra_ativa: false,
+              conciliacao_tipo: "GERAL",
+              conciliacao_meta_nao_atingida: null,
+              conciliacao_meta_atingida: null,
+              conciliacao_super_meta: null,
+              conciliacao_tiers: [],
+              conciliacao_faixas_loja: [],
+            }
       );
       setMetasProduto((metasProdData || []) as MetaProduto[]);
       setRegras(regrasMap);
@@ -665,7 +764,33 @@ export default function ComissionamentoIsland() {
         vendasList.map((v) => v.id)
       );
       setPagamentosNaoComissionaveis(pagamentosMap);
-      setVendas(vendasList);
+      let vendasFinal = vendasList;
+      if (Boolean(paramsData?.conciliacao_sobrepoe_vendas) && companyIdFiltro) {
+        const concReceipts = await fetchEffectiveConciliacaoReceipts({
+          client: supabase,
+          companyId: companyIdFiltro,
+          inicio: periodoAtual.inicio,
+          fim: periodoAtual.fim,
+          vendedorIds: vendedorFiltro,
+        });
+        if (concReceipts.length > 0) {
+          const syntheticSales = buildConciliacaoSyntheticVendas(concReceipts);
+          const overriddenReceiptIds = new Set(
+            syntheticSales.map((sale) => sale.linked_recibo_id).filter(Boolean)
+          );
+          const baseSales = vendasList.flatMap((sale) => {
+            const recibos = (sale.vendas_recibos || []).filter(
+              (recibo) => !overriddenReceiptIds.has(String(recibo.id || "").trim())
+            );
+            if (recibos.length === 0) return [];
+            return [{ ...sale, vendas_recibos: recibos }];
+          });
+          vendasFinal = [...baseSales, ...(syntheticSales as unknown as Venda[])].sort((a, b) =>
+            String(b.data_venda || "").localeCompare(String(a.data_venda || ""))
+          );
+        }
+      }
+      setVendas(vendasFinal);
     } catch (e: any) {
       console.error(e);
       setErro("Erro ao carregar dados de comissionamento.");
@@ -719,11 +844,24 @@ export default function ComissionamentoIsland() {
     const brutoPorProduto: Record<string, number> = {};
     const liquidoPorProduto: Record<string, number> = {};
     const baseComPorProduto: Record<string, number> = {};
-    const bucketTotals: Record<string, { prodId: string; tipoPacoteKey: string; baseCom: number; valorLiquido: number }> = {};
+    const bucketTotals: Record<
+      string,
+      {
+        prodId: string;
+        tipoPacoteKey: string;
+        baseCom: number;
+        valorLiquido: number;
+        isConciliacao: boolean;
+        percentualComissaoLoja: number | null;
+        faixaComissao: string | null;
+        isSeguroViagem: boolean;
+      }
+    > = {};
 
     let baseMeta = 0;
     let totalBruto = 0;
     let totalTaxas = 0;
+    let totalLiquido = 0;
     let comissaoGeral = 0;
     let comissaoDif = 0;
     const pctComissaoGeralSet = new Set<number>();
@@ -758,41 +896,33 @@ export default function ComissionamentoIsland() {
     // 1) Agrega totais por produto e base de meta
     vendas.forEach((v) => {
       const recibosVenda = v.vendas_recibos || [];
-      const totalBrutoVenda = recibosVenda.reduce(
-        (sum, r) => sum + Math.max(0, Number(r.valor_total || 0)),
-        0
-      );
-      const naoComissionado =
-        pagamentosNaoComissionaveis.get(v.id) ?? Number(v.valor_nao_comissionado || 0);
-      const descontoAplicado = calcularDescontoAplicado(
-        totalBrutoVenda,
-        v.valor_total_bruto,
-        v.valor_total_pago
-      );
-      const baseComissionavel = Math.max(0, totalBrutoVenda - descontoAplicado - naoComissionado);
-      const fatorComissionavel =
-        totalBrutoVenda > 0 ? Math.max(0, baseComissionavel / totalBrutoVenda) : 1;
-
       recibosVenda.forEach((r) => {
         const prodId = r.tipo_produtos?.id || r.produto_id || "";
         const prod = produtos[prodId];
         if (!prod) return;
-        // Regra (conforme cadastro):
-        // - `valor_total` já inclui taxas + RAV.
-        // - RAV (valor_rav) não entra em meta nem comissão.
-        // - Taxas não comissionam, exceto DU (valor_du), que é parte comissionável das taxas.
-        const brutoSemRav = Math.max(0, Number(r.valor_total || 0) - Number(r.valor_rav || 0));
-        const taxasEfetivas = Math.max(0, Number(r.valor_taxas || 0) - Number(r.valor_du || 0));
-        const liquido = Math.max(0, brutoSemRav - taxasEfetivas);
-
-        // Para meta: se parâmetro ativo, usa bruto; senão, usa líquido.
-        const valParaMeta = parametros.usar_taxas_na_meta ? brutoSemRav : liquido;
+        const brutoTotal = getReciboBrutoTotal(r);
+        const taxasEfetivas = getReciboTaxasEfetivas(r);
+        const liquido = getReciboLiquido(r);
+        const valParaMeta = getReciboMeta(r, parametros);
         // Para comissão (valor): sempre usa o líquido.
         const baseCom = liquido;
         const tipoPacoteKey = normalizeText(r.tipo_pacote || "", { trim: true, collapseWhitespace: true });
-        const bucketKey = `${prodId}::${tipoPacoteKey || "default"}`;
+        const isConciliacao = hasConciliacaoOverride(r);
+        const percentualComissaoLoja =
+          r.percentual_comissao_loja != null ? Number(r.percentual_comissao_loja) : null;
+        const faixaComissao = r.faixa_comissao || null;
+        const isSeguroViagem = isSeguroProduto(prod);
+        const bucketKey = [
+          prodId,
+          tipoPacoteKey || "default",
+          isConciliacao ? "conciliacao" : "base",
+          isConciliacao ? faixaComissao || "sem-faixa" : "sem-faixa",
+          isConciliacao && percentualComissaoLoja != null
+            ? String(percentualComissaoLoja)
+            : "sem-pct-loja",
+        ].join("::");
 
-        brutoPorProduto[prodId] = (brutoPorProduto[prodId] || 0) + brutoSemRav;
+        brutoPorProduto[prodId] = (brutoPorProduto[prodId] || 0) + brutoTotal;
         liquidoPorProduto[prodId] = (liquidoPorProduto[prodId] || 0) + liquido;
         baseMetaPorProduto[prodId] = (baseMetaPorProduto[prodId] || 0) + valParaMeta;
         baseComPorProduto[prodId] = (baseComPorProduto[prodId] || 0) + baseCom;
@@ -802,18 +932,21 @@ export default function ComissionamentoIsland() {
           tipoPacoteKey,
           baseCom: 0,
           valorLiquido: 0,
+          isConciliacao,
+          percentualComissaoLoja,
+          faixaComissao,
+          isSeguroViagem,
         };
         bucket.baseCom += baseCom;
         bucket.valorLiquido += liquido;
         bucketTotals[bucketKey] = bucket;
 
         if (prod.soma_na_meta) baseMeta += valParaMeta;
-        totalBruto += brutoSemRav;
+        totalBruto += brutoTotal;
         totalTaxas += taxasEfetivas;
+        totalLiquido += liquido;
       });
     });
-
-    const totalLiquido = totalBruto - totalTaxas;
     const pctMetaGeral =
       metaGeral?.meta_geral && metaGeral.meta_geral > 0 ? (baseMeta / metaGeral.meta_geral) * 100 : 0;
 
@@ -838,6 +971,34 @@ export default function ComissionamentoIsland() {
       const regProdPacote = getRegraPacote(prodId, bucket.tipoPacoteKey);
       const regProdBase = regraProdutoMap[prodId];
       let regProd = regProdPacote || regProdBase;
+
+      if (bucket.isConciliacao && hasConciliacaoCommissionRule(parametros)) {
+        const conciliacaoSelection = resolveConciliacaoCommissionSelection(parametros, {
+          faixa_comissao: bucket.faixaComissao,
+          percentual_comissao_loja: bucket.percentualComissaoLoja,
+          is_seguro_viagem: bucket.isSeguroViagem,
+        });
+        if (conciliacaoSelection.kind === "CONCILIACAO" && conciliacaoSelection.rule) {
+          const pctCom = calcularPctPorRegra(conciliacaoSelection.rule, pctMetaGeral);
+          const val = baseComBucket * (pctCom / 100);
+          if (pctCom > 0) {
+            if (isPassagemFacial) {
+              pctPassagemFacialSet.add(pctCom);
+            } else {
+              pctComissaoGeralSet.add(pctCom);
+            }
+          }
+          if (isPassagemFacial) {
+            comissaoPassagemFacial += val;
+          } else {
+            comissaoGeral += val;
+          }
+          if (isSeguro) {
+            comissaoSeguroViagem += val;
+          }
+          return;
+        }
+      }
 
       if (prod.regra_comissionamento === "diferenciado") {
         totalValorMetaDiferenciada += valorLiquidoProduto;
@@ -1109,8 +1270,8 @@ export default function ComissionamentoIsland() {
 
       <AppField
         label="Data Início"
-        type={periodoEditavel ? "date" : "text"}
-        value={periodoEditavel ? periodo.inicio : formatPeriodoLabel(periodo.inicio)}
+        type="date"
+        value={periodo.inicio}
         readOnly={!periodoEditavel}
         onChange={(e) => {
           if (!periodoEditavel) return;
@@ -1120,8 +1281,8 @@ export default function ComissionamentoIsland() {
 
       <AppField
         label="Data Final"
-        type={periodoEditavel ? "date" : "text"}
-        value={periodoEditavel ? periodo.fim : formatPeriodoLabel(periodo.fim)}
+        type="date"
+        value={periodo.fim}
         readOnly={!periodoEditavel}
         onChange={(e) => {
           if (!periodoEditavel) return;
@@ -1133,13 +1294,12 @@ export default function ComissionamentoIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="comissionamento-page">
-        <AppToolbar
-          sticky
+      <div className="comissionamento-page page-content-wrap">
+        <AppCard
           tone="info"
           className="mb-3 list-toolbar-sticky"
           title="Comissionamento"
-          subtitle={`Resumo de meta, faturamento e comissão. ${periodoSubtitulo}`}
+          subtitle={`Gerencie metas e comissoes com visao de CRM. ${periodoSubtitulo}`}
           actions={
             <div className="vtur-quote-top-actions">
               <AppButton type="button" variant="secondary" className="sm:hidden" onClick={() => setShowFilters(true)}>
@@ -1152,16 +1312,15 @@ export default function ComissionamentoIsland() {
                 onClick={() => setShowCalculator(true)}
                 aria-label="Calculadora"
                 title="Calculadora"
-              >
-                <i className="pi pi-calculator" aria-hidden="true" />
-              </AppButton>
+                icon="pi pi-calculator"
+              />
             </div>
           }
         >
           <div className="hidden sm:block">
             <div className="vtur-commission-filters-grid">{filtrosFields}</div>
           </div>
-        </AppToolbar>
+        </AppCard>
 
         {showFilters ? (
           <Dialog
@@ -1215,7 +1374,7 @@ export default function ComissionamentoIsland() {
             <AppCard
               className="mb-3"
               title="Como está seu progresso"
-              subtitle="Evolução de meta, faturamento bruto, taxas, líquido e volume comercial."
+              subtitle="Evolução da meta e da base usada no comissionamento do período selecionado."
             >
               <div className="vtur-commission-kpi-grid">
                 <div className="vtur-commission-kpi-card vtur-commission-kpi-positive">
@@ -1223,7 +1382,7 @@ export default function ComissionamentoIsland() {
                   <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(metaGeral?.meta_geral || 0)}</strong>
                 </div>
                 <div className="vtur-commission-kpi-card vtur-commission-kpi-warning">
-                  <span className="vtur-commission-kpi-label">{`Total bruto (${resumo.pctMetaGeral.toFixed(2).replace(".", ",")}%)`}</span>
+                  <span className="vtur-commission-kpi-label">{`Vendas para meta (${resumo.pctMetaGeral.toFixed(2).replace(".", ",")}%)`}</span>
                   <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(resumo.totalBruto)}</strong>
                 </div>
                 <div className="vtur-commission-kpi-card vtur-commission-kpi-info">
@@ -1231,7 +1390,7 @@ export default function ComissionamentoIsland() {
                   <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(resumo.totalTaxas)}</strong>
                 </div>
                 <div className="vtur-commission-kpi-card vtur-commission-kpi-accent">
-                  <span className="vtur-commission-kpi-label">Total líquido</span>
+                  <span className="vtur-commission-kpi-label">Base líquida comissão</span>
                   <strong className="vtur-commission-kpi-value">{formatCurrencyBRL(resumo.totalLiquido)}</strong>
                 </div>
                 <div className="vtur-commission-kpi-card vtur-commission-kpi-neutral">

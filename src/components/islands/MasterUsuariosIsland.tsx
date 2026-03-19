@@ -10,7 +10,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type UserRow = {
   id: string;
@@ -50,6 +49,15 @@ type ConviteRow = {
   expires_at?: string | null;
 };
 
+type MfaStatusMap = Record<
+  string,
+  {
+    enabled: boolean;
+    verified_count: number;
+    factor_count: number;
+  }
+>;
+
 const isType = (u: UserRow, role: string) =>
   String(u.user_types?.name || "").toUpperCase().includes(role);
 
@@ -72,6 +80,9 @@ export default function MasterUsuariosIsland() {
   const [relacoes, setRelacoes] = useState<Record<string, boolean>>({});
   const [salvandoId, setSalvandoId] = useState<string | null>(null);
   const [salvandoEquipeCompartilhada, setSalvandoEquipeCompartilhada] = useState(false);
+  const [resetandoMfaId, setResetandoMfaId] = useState<string | null>(null);
+  const [mfaStatuses, setMfaStatuses] = useState<MfaStatusMap>({});
+  const [mfaLoading, setMfaLoading] = useState(false);
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [novoNomeCompleto, setNovoNomeCompleto] = useState("");
@@ -95,6 +106,10 @@ export default function MasterUsuariosIsland() {
       carregarUsuarios();
     }
   }, [loadingPerm, podeVer, isMaster]);
+
+  useEffect(() => {
+    carregarMfaStatuses(usuarios.map((u) => u.id));
+  }, [usuarios]);
 
   useEffect(() => {
     if (!empresaEquipeId && empresas.length > 0) {
@@ -215,6 +230,33 @@ export default function MasterUsuariosIsland() {
     }
   }
 
+  async function carregarMfaStatuses(userIds: string[]) {
+    const ids = Array.from(new Set(userIds.filter(Boolean)));
+    if (ids.length === 0) {
+      setMfaStatuses({});
+      return;
+    }
+    try {
+      setMfaLoading(true);
+      const resp = await fetch("/api/master/auth/mfa-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_ids: ids }),
+      });
+      const raw = await resp.text();
+      const payload = raw ? JSON.parse(raw) : {};
+      if (!resp.ok) {
+        throw new Error(payload?.error || raw || "Falha ao carregar status do 2FA.");
+      }
+      setMfaStatuses((payload?.statuses || {}) as MfaStatusMap);
+    } catch (error) {
+      console.error(error);
+      setMfaStatuses({});
+    } finally {
+      setMfaLoading(false);
+    }
+  }
+
   async function carregarConvites(idsEmpresas: string[]) {
     if (!idsEmpresas.length) {
       setConvitesPendentes([]);
@@ -286,6 +328,50 @@ export default function MasterUsuariosIsland() {
     } catch (e) {
       const msg = String(e?.message || "Erro ao atualizar status do usuário.");
       showToast(msg, "error");
+    }
+  }
+
+  async function resetarMfa(user: UserRow) {
+    const nome = user.nome_completo || user.email || "este usuário";
+    const confirmado = window.confirm(
+      `Resetar o 2FA de ${nome}?\n\nTodos os fatores autenticadores serão removidos e as sessões ativas do usuário serão encerradas.`
+    );
+    if (!confirmado) return;
+
+    try {
+      setResetandoMfaId(user.id);
+      const resp = await fetch("/api/master/auth/reset-mfa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: user.id, email: user.email || undefined }),
+      });
+
+      const raw = await resp.text();
+      let payload: any = null;
+      try {
+        payload = raw ? JSON.parse(raw) : null;
+      } catch {
+        payload = null;
+      }
+
+      if (!resp.ok) {
+        throw new Error(payload?.error || raw || "Falha ao resetar 2FA.");
+      }
+
+      const deletedCount = Number(payload?.deleted_count || 0);
+      setMfaStatuses((prev) => ({
+        ...prev,
+        [user.id]: { enabled: false, verified_count: 0, factor_count: 0 },
+      }));
+      if (deletedCount > 0) {
+        showToast(`2FA resetado com sucesso. ${deletedCount} fator(es) removido(s).`, "success");
+      } else {
+        showToast("O usuário não possuía fatores 2FA cadastrados.", "success");
+      }
+    } catch (e: any) {
+      showToast(String(e?.message || "Erro ao resetar 2FA."), "error");
+    } finally {
+      setResetandoMfaId(null);
     }
   }
 
@@ -472,19 +558,18 @@ export default function MasterUsuariosIsland() {
   if (loadingPerm) return <LoadingUsuarioContext />;
   if (!podeVer || !isMaster) {
     return (
-      <div style={{ padding: 20 }}>
-        <h3>Apenas usuários MASTER podem acessar este módulo.</h3>
-      </div>
+      <AppPrimerProvider>
+        <AppCard tone="config">Apenas usuários MASTER podem acessar este módulo.</AppCard>
+      </AppPrimerProvider>
     );
   }
 
   return (
     <AppPrimerProvider>
-      <div className="mt-6 admin-page admin-usuarios-page vtur-legacy-module">
-        <AppToolbar
+      <div className="mt-6 admin-page admin-usuarios-page vtur-legacy-module page-content-wrap">
+        <AppCard
           className="mb-3 list-toolbar-sticky"
           tone="info"
-          sticky
           title="Usuários do portfólio"
           subtitle="Cadastre, ative e organize equipes das empresas aprovadas."
           actions={
@@ -505,7 +590,7 @@ export default function MasterUsuariosIsland() {
               ]}
             />
           </div>
-        </AppToolbar>
+        </AppCard>
 
       {erro && (
         <div className="mb-3">
@@ -526,6 +611,7 @@ export default function MasterUsuariosIsland() {
                 <th>E-mail</th>
                 <th>Cargo</th>
                 <th>Empresa</th>
+                <th>2FA</th>
                 <th>Status</th>
                 <th className="th-actions">Ações</th>
               </tr>
@@ -534,7 +620,7 @@ export default function MasterUsuariosIsland() {
             <tbody>
               {usuariosFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={6}>Nenhum usuário corporativo encontrado.</td>
+                  <td colSpan={7}>Nenhum usuário corporativo encontrado.</td>
                 </tr>
               )}
               {usuariosFiltrados.map((u) => (
@@ -543,6 +629,20 @@ export default function MasterUsuariosIsland() {
                   <td data-label="E-mail">{u.email || "-"}</td>
                   <td data-label="Cargo">{u.user_types?.name || "-"}</td>
                   <td data-label="Empresa">{u.companies?.nome_fantasia || "—"}</td>
+                  <td data-label="2FA">
+                    {mfaLoading && !mfaStatuses[u.id] ? (
+                      <span className="text-slate-500">Carregando...</span>
+                    ) : mfaStatuses[u.id]?.enabled ? (
+                      <span className="text-emerald-600 font-bold">
+                        Ativo
+                        {mfaStatuses[u.id]?.verified_count > 1
+                          ? ` (${mfaStatuses[u.id]?.verified_count})`
+                          : ""}
+                      </span>
+                    ) : (
+                      <span className="text-slate-500">Inativo</span>
+                    )}
+                  </td>
                   <td data-label="Status">
                     <span className={u.active ? "text-emerald-500 font-bold" : "text-rose-500 font-bold"}>
                       {u.active ? "Ativo" : "Inativo"}
@@ -550,6 +650,19 @@ export default function MasterUsuariosIsland() {
                   </td>
                   <td className="th-actions" data-label="Ações">
                     <div className="action-buttons">
+                      <AppButton
+                        variant="ghost"
+                        className="icon-action-btn"
+                        onClick={() => resetarMfa(u)}
+                        disabled={resetandoMfaId === u.id}
+                        title="Resetar 2FA"
+                        aria-label="Resetar 2FA"
+                      >
+                        <span aria-hidden="true">
+                          <i className="pi pi-shield" />
+                        </span>
+                        <span className="sr-only">Resetar 2FA</span>
+                      </AppButton>
                       <AppButton
                         variant="ghost"
                         className="icon-action-btn"
@@ -787,7 +900,7 @@ export default function MasterUsuariosIsland() {
               <h4 className="text-lg font-semibold">Cadastro de usuário corporativo</h4>
               <AppButton
                 type="button"
-                variant="default"
+                variant="secondary"
                 onClick={() => setCreateModalOpen(false)}
                 disabled={enviandoConvite}
               >
@@ -862,7 +975,7 @@ export default function MasterUsuariosIsland() {
               </AppButton>
               <AppButton
                 type="button"
-                variant="default"
+                variant="secondary"
                 onClick={() => setCreateModalOpen(false)}
                 disabled={enviandoConvite}
               >

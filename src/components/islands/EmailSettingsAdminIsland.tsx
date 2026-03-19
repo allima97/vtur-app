@@ -9,7 +9,7 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
+import PasswordField from "../ui/primer/PasswordField";
 
 type EmailSettings = {
   id?: string;
@@ -49,8 +49,6 @@ const EmailSettingsAdminIsland: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [mostrarSenha, setMostrarSenha] = useState(false);
-  const [mostrarResend, setMostrarResend] = useState(false);
   const [usarSmtp, setUsarSmtp] = useState(false);
   const [testeEmail, setTesteEmail] = useState("");
   const [enviandoTeste, setEnviandoTeste] = useState(false);
@@ -232,9 +230,8 @@ const EmailSettingsAdminIsland: React.FC = () => {
 
   return (
     <AppPrimerProvider>
-      <div className="mt-6 admin-page admin-email-page">
-        <AppToolbar
-          sticky
+      <div className="mt-6 admin-page admin-email-page page-content-wrap">
+        <AppCard
           tone="config"
           className="mb-3 list-toolbar-sticky"
           title="Configuracoes de envio de e-mail"
@@ -259,31 +256,14 @@ const EmailSettingsAdminIsland: React.FC = () => {
               subtitle="Configure a API do Resend e valide rapidamente com um envio de teste."
             >
               <div className="vtur-form-grid vtur-form-grid-2">
-                <div>
-                  <label className="form-label">Resend API Key (recomendado)</label>
-                  <div className="password-field">
-                    <input
-                      className="form-input"
-                      type={mostrarResend ? "text" : "password"}
-                      value={form.resend_api_key}
-                      onChange={(e) => setForm((prev) => ({ ...prev, resend_api_key: e.target.value }))}
-                      placeholder="re_..."
-                    />
-                    <AppButton
-                      type="button"
-                      variant="ghost"
-                      className="password-toggle"
-                      onClick={() => setMostrarResend((prev) => !prev)}
-                      aria-label={mostrarResend ? "Ocultar chave" : "Mostrar chave"}
-                      aria-pressed={mostrarResend}
-                    >
-                      <i className={mostrarResend ? "pi pi-eye-slash" : "pi pi-eye"} aria-hidden="true" />
-                    </AppButton>
-                  </div>
-                  <div className="vtur-inline-note">
-                    Esta chave e usada para enviar via API HTTP, evitando limitacoes de SMTP no ambiente Cloudflare.
-                  </div>
-                </div>
+                <PasswordField
+                  label="Resend API Key (recomendado)"
+                  value={form.resend_api_key}
+                  onChange={(e) => setForm((prev) => ({ ...prev, resend_api_key: e.target.value }))}
+                  placeholder="re_..."
+                  caption="Esta chave e usada para enviar via API HTTP, evitando limitacoes de SMTP no ambiente Cloudflare."
+                  toggleLabels={{ show: "Mostrar chave", hide: "Ocultar chave" }}
+                />
 
                 <div className="vtur-form-grid vtur-form-grid-2">
                   <AppField
@@ -384,29 +364,12 @@ const EmailSettingsAdminIsland: React.FC = () => {
                       onChange={(e) => setForm((prev) => ({ ...prev, smtp_user: e.target.value }))}
                       disabled={!usarSmtp}
                     />
-                    <div>
-                      <label className="form-label">Senha SMTP</label>
-                      <div className="password-field">
-                        <input
-                          className="form-input"
-                          type={mostrarSenha ? "text" : "password"}
-                          value={form.smtp_pass}
-                          onChange={(e) => setForm((prev) => ({ ...prev, smtp_pass: e.target.value }))}
-                          disabled={!usarSmtp}
-                        />
-                        <AppButton
-                          type="button"
-                          variant="ghost"
-                          className="password-toggle"
-                          onClick={() => setMostrarSenha((prev) => !prev)}
-                          aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
-                          aria-pressed={mostrarSenha}
-                          disabled={!usarSmtp}
-                        >
-                          <i className={mostrarSenha ? "pi pi-eye-slash" : "pi pi-eye"} aria-hidden="true" />
-                        </AppButton>
-                      </div>
-                    </div>
+                    <PasswordField
+                      label="Senha SMTP"
+                      value={form.smtp_pass}
+                      onChange={(e) => setForm((prev) => ({ ...prev, smtp_pass: e.target.value }))}
+                      disabled={!usarSmtp}
+                    />
                   </div>
                 </>
               )}

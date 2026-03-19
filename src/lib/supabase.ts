@@ -1,49 +1,61 @@
 import { createBrowserClient } from "@supabase/ssr";
 
-// Fallbacks públicos (publishable) – já estão em wrangler.toml
-const FALLBACK_SUPABASE_URL = "https://ggqmvruerbaqxthhnxrm.supabase.co";
-const FALLBACK_SUPABASE_ANON_KEY =
-  "sb_publishable_yO4zM8WFfmRTZKtBG1PaHw_9pLyVXMh";
+type BrowserSupabaseClient = ReturnType<typeof createBrowserClient>;
 
-// Tenta usar as envs do build; se vierem vazias, cai para os fallbacks
-const supabaseUrl =
-  (import.meta.env.PUBLIC_SUPABASE_URL as string | undefined) ||
-  FALLBACK_SUPABASE_URL;
+let cachedClient: BrowserSupabaseClient | null = null;
 
-const supabaseAnonKey =
-  (import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string | undefined) ||
-  FALLBACK_SUPABASE_ANON_KEY;
+function getSupabaseConfig() {
+  const supabaseUrl = String(import.meta.env.PUBLIC_SUPABASE_URL || "").trim();
+  const supabaseAnonKey = String(import.meta.env.PUBLIC_SUPABASE_ANON_KEY || "").trim();
 
-const supabaseProjectRef =
-  supabaseUrl?.match(/https:\/\/([a-z0-9-]+)\.supabase\.co/i)?.[1] ?? "";
+  if (!supabaseUrl || !supabaseAnonKey) {
+    const missing = [
+      !supabaseUrl && "PUBLIC_SUPABASE_URL",
+      !supabaseAnonKey && "PUBLIC_SUPABASE_ANON_KEY",
+    ]
+      .filter(Boolean)
+      .join(", ");
 
-const supabaseCookieName = supabaseProjectRef
-  ? `sb-${supabaseProjectRef}-auth-token`
-  : "sb-auth-token";
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  const missing = [
-    !supabaseUrl && "PUBLIC_SUPABASE_URL",
-    !supabaseAnonKey && "PUBLIC_SUPABASE_ANON_KEY",
-  ]
-    .filter(Boolean)
-    .join(", ");
-
-  const msg =
-    `Faltam variáveis de ambiente: ${missing}. ` +
-    "Configure-as nas variáveis do Cloudflare ou em um arquivo .env.local. " +
-    "Consulte /test-env para validar.";
-
-  if (typeof console !== "undefined") {
-    console.error("[supabase] " + msg);
+    throw new Error(
+      `Faltam variáveis de ambiente: ${missing}. ` +
+        "Configure-as nas variáveis do Cloudflare ou em um arquivo .env.local. " +
+        "Consulte /test-env para validar."
+    );
   }
+
+  const supabaseProjectRef =
+    supabaseUrl.match(/https:\/\/([a-z0-9-]+)\.supabase\.co/i)?.[1] ?? "";
+
+  const supabaseCookieName = supabaseProjectRef
+    ? `sb-${supabaseProjectRef}-auth-token`
+    : "sb-auth-token";
+
+  return {
+    supabaseUrl,
+    supabaseAnonKey,
+    supabaseCookieName,
+  };
 }
 
-// Usa sempre os valores já resolvidos (com fallback)
-export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey, {
-  cookieOptions: {
-    name: supabaseCookieName,
-    path: "/",
-    sameSite: "lax",
+function getSupabaseClient() {
+  if (cachedClient) return cachedClient;
+
+  const { supabaseUrl, supabaseAnonKey, supabaseCookieName } = getSupabaseConfig();
+  cachedClient = createBrowserClient(supabaseUrl, supabaseAnonKey, {
+    cookieOptions: {
+      name: supabaseCookieName,
+      path: "/",
+      sameSite: "lax",
+    },
+  });
+
+  return cachedClient;
+}
+
+export const supabase = new Proxy({} as BrowserSupabaseClient, {
+  get(_target, prop) {
+    const client = getSupabaseClient() as any;
+    const value = client[prop];
+    return typeof value === "function" ? value.bind(client) : value;
   },
 });

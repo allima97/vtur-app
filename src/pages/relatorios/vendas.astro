@@ -1,17 +1,10 @@
 ---
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
-import HeaderPage from "../../components/ui/HeaderPage.astro";
-import RelatorioVendasIsland from "../../components/islands/RelatorioVendasIsland.tsx";
+import RelatorioVendasIsland from "../../components/islands/RelatorioVendasIsland";
 
 const activePage = "relatorios-vendas";
 ---
 
 <DashboardLayout title="Relatório de Vendas" {activePage}>
-  <HeaderPage
-    title="Relatório de Vendas"
-    subtitle="Filtre e analise vendas por período, cliente, destino e produto."
-    color="blue"
-  />
-
   <RelatorioVendasIsland client:only="react" />
 </DashboardLayout>

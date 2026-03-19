@@ -15,7 +15,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type ClienteOption = {
   id: string;
@@ -341,9 +340,8 @@ export default function ConsultoriaOnlineIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="consultoria-page">
-        <AppToolbar
-          sticky
+      <div className="consultoria-page page-content-wrap">
+        <AppCard
           tone="config"
           className="mb-3 list-toolbar-sticky"
           title={mostrarFormulario ? (editandoId ? "Editar consultoria" : "Nova consultoria") : "Consultoria online"}
@@ -397,7 +395,7 @@ export default function ConsultoriaOnlineIsland() {
               </div>
             </>
           ) : null}
-        </AppToolbar>
+        </AppCard>
 
         {error ? (
           <AlertMessage variant="error" className="mb-3">

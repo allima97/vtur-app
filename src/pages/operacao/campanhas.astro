@@ -1,18 +1,11 @@
 ---
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
-import HeaderPage from "../../components/ui/HeaderPage.astro";
-import CampanhasIsland from "../../components/islands/CampanhasIsland.tsx";
+import CampanhasIsland from "../../components/islands/CampanhasIsland";
 
 const activePage = "operacao_campanhas";
 ---
 
 <DashboardLayout title="Campanhas" activePage={activePage}>
-  <HeaderPage
-    title="Campanhas"
-    subtitle="Acompanhe todas as campanhas disparadas aos clientes."
-    color="blue"
-  />
-
   <div class="page-content-wrap">
     <CampanhasIsland client:load />
   </div>

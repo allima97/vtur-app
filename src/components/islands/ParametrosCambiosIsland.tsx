@@ -13,7 +13,6 @@ import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 const MOEDA_SUGESTOES = ["R$", "USD", "EUR"];
 
@@ -286,8 +285,9 @@ export default function ParametrosCambiosIsland() {
 
   return (
     <section className="cambios-page">
-      <AppToolbar
+      <AppCard
         tone="config"
+        className="mb-3"
         title="Cambios"
         subtitle="Cadastre o valor de cambio aplicado em cada dia."
       />
@@ -322,7 +322,7 @@ export default function ParametrosCambiosIsland() {
             </div>
           )}
 
-          <div className="mt-6" style={{ maxHeight: "65vh", overflowY: "auto" }}>
+          <div className="mt-6 vtur-scroll-y-65">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2">
               <strong>{tituloTabela}</strong>
               <AppButton
@@ -338,7 +338,7 @@ export default function ParametrosCambiosIsland() {
               <EmptyState title="Nenhum cambio cadastrado ainda" />
             ) : (
               <DataTable
-                className="table-mobile-cards min-w-[600px]"
+                className="table-header-blue table-mobile-cards min-w-[600px]"
                 headers={
                   <tr>
                     <th>Data</th>
@@ -366,11 +366,12 @@ export default function ParametrosCambiosIsland() {
                     </td>
                     {podeExcluir && (
                       <td className="th-actions" data-label="Ações">
-                        <div className="action-buttons">
+                        <div className="action-buttons vtur-table-actions">
                           {podeEscrever && (
                             <AppButton
                               type="button"
                               variant="ghost"
+                              className="vtur-table-action"
                               title="Editar cambio"
                               aria-label="Editar câmbio"
                               onClick={() => handleEdit(cambio)}
@@ -381,6 +382,7 @@ export default function ParametrosCambiosIsland() {
                           <AppButton
                             type="button"
                             variant="danger"
+                            className="vtur-table-action"
                             title="Excluir cambio"
                             aria-label="Excluir câmbio"
                             onClick={() => solicitarExclusao(cambio)}

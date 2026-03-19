@@ -5,13 +5,21 @@ import { refreshPermissoes } from "../../lib/permissoesStore";
 import { clearPermissoesCache } from "../../lib/permissoesCache";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
+import {
+  buildTotpQrDataUrl,
+  getPendingTotpFactors,
+  getPrimaryVerifiedTotpFactor,
+  normalizeMfaCode,
+  normalizeMfaRedirectPath,
+} from "../../lib/authMfa";
 import AlertMessage from "../ui/AlertMessage";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppDialog from "../ui/primer/AppDialog";
+import AppField from "../ui/primer/AppField";
 import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
+import PasswordField from "../ui/primer/PasswordField";
 
 type Perfil = {
   nome_completo: string;
@@ -147,6 +155,20 @@ function obterCamposObrigatoriosFaltando(perfil: Perfil | null, usoIndividual: b
   };
 }
 
+type MfaFactor = {
+  id: string;
+  friendly_name?: string | null;
+  factor_type?: string | null;
+  status?: string | null;
+};
+
+type MfaPendingEnrollment = {
+  factorId: string;
+  qrCode: string;
+  secret: string;
+  uri: string;
+};
+
 export default function PerfilIsland() {
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [loading, setLoading] = useState(true);
@@ -157,8 +179,6 @@ export default function PerfilIsland() {
   const [confirmaSenha, setConfirmaSenha] = useState("");
   const [novoEmail, setNovoEmail] = useState("");
   const [onboarding, setOnboarding] = useState(false);
-  const [mostrarSenha, setMostrarSenha] = useState(false);
-  const [mostrarConfirmacao, setMostrarConfirmacao] = useState(false);
   const [usoIndividual, setUsoIndividual] = useState<boolean | null>(null);
   const [empresaAtual, setEmpresaAtual] = useState<{
     id?: string | null;
@@ -178,8 +198,22 @@ export default function PerfilIsland() {
   const [camposObrigatorios, setCamposObrigatorios] = useState<CampoObrigatorioKey[]>([]);
   const [forcePasswordRequired, setForcePasswordRequired] = useState(false);
   const [atualizandoPermissoes, setAtualizandoPermissoes] = useState(false);
+  const [mfaLoading, setMfaLoading] = useState(false);
+  const [mfaBusy, setMfaBusy] = useState(false);
+  const [mfaErro, setMfaErro] = useState<string | null>(null);
+  const [mfaCurrentLevel, setMfaCurrentLevel] = useState<string | null>(null);
+  const [mfaNextLevel, setMfaNextLevel] = useState<string | null>(null);
+  const [mfaVerifiedFactor, setMfaVerifiedFactor] = useState<MfaFactor | null>(null);
+  const [mfaPendingEnrollment, setMfaPendingEnrollment] = useState<MfaPendingEnrollment | null>(null);
+  const [mfaFriendlyName, setMfaFriendlyName] = useState("Meu autenticador");
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaObrigatorio, setMfaObrigatorio] = useState(false);
   const bloqueiaEmpresaTipo = Boolean(perfil?.created_by_gestor);
   const usoBloqueado = bloqueiaEmpresaTipo || (Boolean(perfil?.company_id) && usoIndividual === false);
+  const searchParams =
+    typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const setup2faObrigatorio = searchParams?.get("setup_2fa") === "1";
+  const setup2faNext = normalizeMfaRedirectPath(searchParams?.get("next"), "/dashboard");
 
   function focarCampoPendente(keys: CampoObrigatorioKey[]) {
     if (!keys.length || typeof window === "undefined") return;
@@ -324,6 +358,191 @@ export default function PerfilIsland() {
 
     carregar();
   }, []);
+
+  async function carregarMfa() {
+    try {
+      setMfaLoading(true);
+      setMfaErro(null);
+      const [{ data: aalData, error: aalError }, { data: factorsData, error: factorsError }] =
+        await Promise.all([
+          supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+          supabase.auth.mfa.listFactors(),
+        ]);
+      if (aalError) throw aalError;
+      if (factorsError) throw factorsError;
+
+      const verifiedFactor = getPrimaryVerifiedTotpFactor(factorsData || null);
+      setMfaCurrentLevel(aalData?.currentLevel || null);
+      setMfaNextLevel(aalData?.nextLevel || null);
+      setMfaVerifiedFactor((verifiedFactor as MfaFactor | null) || null);
+    } catch (e: any) {
+      console.error("Erro ao carregar MFA", e);
+      setMfaErro("Nao foi possivel carregar o status do 2FA.");
+    } finally {
+      setMfaLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    carregarMfa();
+  }, []);
+
+  async function carregarPoliticaMfa() {
+    try {
+      const resp = await fetch("/api/v1/auth/mfa-policy");
+      if (!resp.ok) return;
+      const payload = (await resp.json()) as { required?: boolean };
+      setMfaObrigatorio(Boolean(payload?.required));
+    } catch (e) {
+      console.error("Erro ao carregar politica MFA", e);
+    }
+  }
+
+  useEffect(() => {
+    carregarPoliticaMfa();
+  }, []);
+
+  async function iniciarMfaTotp() {
+    try {
+      setMfaBusy(true);
+      setMfaErro(null);
+      setMsg(null);
+
+      const { data: factorsData, error: listError } = await supabase.auth.mfa.listFactors();
+      if (listError) throw listError;
+
+      const pendentes = getPendingTotpFactors(factorsData || null);
+      for (const factor of pendentes) {
+        const { error: unenrollError } = await supabase.auth.mfa.unenroll({ factorId: factor.id });
+        if (unenrollError) {
+          console.warn("Falha ao limpar fator pendente de MFA", unenrollError);
+        }
+      }
+
+      const { data, error } = await supabase.auth.mfa.enroll({
+        factorType: "totp",
+        issuer: "VTUR",
+        friendlyName: mfaFriendlyName.trim() || "Meu autenticador",
+      });
+      if (error) throw error;
+
+      setMfaPendingEnrollment({
+        factorId: data.id,
+        qrCode: data.totp.qr_code,
+        secret: data.totp.secret,
+        uri: data.totp.uri,
+      });
+      setMfaCode("");
+      setMsg("Escaneie o QR Code e confirme o codigo para ativar o 2FA.");
+    } catch (e: any) {
+      console.error("Erro ao iniciar MFA", e);
+      setMfaErro("Nao foi possivel iniciar a configuracao do 2FA.");
+    } finally {
+      setMfaBusy(false);
+    }
+  }
+
+  async function confirmarMfaTotp() {
+    if (!mfaPendingEnrollment) return;
+    const code = normalizeMfaCode(mfaCode);
+    if (code.length !== 6) {
+      setMfaErro("Informe o codigo de 6 digitos do aplicativo autenticador.");
+      return;
+    }
+
+    try {
+      setMfaBusy(true);
+      setMfaErro(null);
+      setMsg(null);
+      const { error } = await supabase.auth.mfa.challengeAndVerify({
+        factorId: mfaPendingEnrollment.factorId,
+        code,
+      });
+      if (error) throw error;
+
+      const { data: authData } = await supabase.auth.getUser();
+      await registrarLog({
+        user_id: authData?.user?.id || null,
+        acao: "mfa_ativado",
+        modulo: "perfil",
+        detalhes: { factorId: mfaPendingEnrollment.factorId },
+      });
+
+      setMfaPendingEnrollment(null);
+      setMfaCode("");
+      setMsg("Verificacao em duas etapas ativada com sucesso.");
+      clearPermissoesCache();
+      await refreshPermissoes();
+      await carregarMfa();
+      if (setup2faObrigatorio) {
+        window.location.replace(setup2faNext);
+      }
+    } catch (e: any) {
+      console.error("Erro ao confirmar MFA", e);
+      setMfaErro("Nao foi possivel confirmar o codigo do 2FA.");
+    } finally {
+      setMfaBusy(false);
+    }
+  }
+
+  async function cancelarConfiguracaoMfa() {
+    if (!mfaPendingEnrollment) return;
+    try {
+      setMfaBusy(true);
+      setMfaErro(null);
+      const { error } = await supabase.auth.mfa.unenroll({
+        factorId: mfaPendingEnrollment.factorId,
+      });
+      if (error) throw error;
+      setMfaPendingEnrollment(null);
+      setMfaCode("");
+      setMsg("Configuracao de 2FA cancelada.");
+      await carregarMfa();
+    } catch (e: any) {
+      console.error("Erro ao cancelar MFA", e);
+      setMfaErro("Nao foi possivel cancelar a configuracao do 2FA.");
+    } finally {
+      setMfaBusy(false);
+    }
+  }
+
+  async function removerMfaTotp() {
+    if (!mfaVerifiedFactor) return;
+    if (mfaObrigatorio) {
+      setMfaErro("O 2FA esta marcado como obrigatorio para esta empresa e nao pode ser removido.");
+      return;
+    }
+    const confirmed =
+      typeof window === "undefined"
+        ? true
+        : window.confirm("Deseja remover a verificacao em duas etapas desta conta?");
+    if (!confirmed) return;
+
+    try {
+      setMfaBusy(true);
+      setMfaErro(null);
+      setMsg(null);
+      const { error } = await supabase.auth.mfa.unenroll({ factorId: mfaVerifiedFactor.id });
+      if (error) throw error;
+
+      const { data: authData } = await supabase.auth.getUser();
+      await registrarLog({
+        user_id: authData?.user?.id || null,
+        acao: "mfa_removido",
+        modulo: "perfil",
+        detalhes: { factorId: mfaVerifiedFactor.id },
+      });
+
+      setMfaVerifiedFactor(null);
+      setMsg("Verificacao em duas etapas removida com sucesso.");
+      await carregarMfa();
+    } catch (e: any) {
+      console.error("Erro ao remover MFA", e);
+      setMfaErro("Nao foi possivel remover o 2FA desta conta.");
+    } finally {
+      setMfaBusy(false);
+    }
+  }
 
   function atualizarCampo(campo: keyof Perfil, valor: string) {
     setPerfil((prev) => (prev ? { ...prev, [campo]: valor } : prev));
@@ -673,12 +892,11 @@ function formatCnpj(value: string) {
         onCancel={() => setModalSairOnboarding(false)}
       />
 
-      <AppToolbar
+      <AppCard
         title="Meu perfil"
         subtitle={onboarding ? "Finalize seu cadastro para liberar o acesso ao sistema." : `Revise seus dados, acesso e vínculo atual${cidadeEstado ? ` • ${cidadeEstado}` : ""}.`}
         tone="info"
         className="mb-3"
-        sticky
       />
       {onboarding && (
         <AppCard tone="config">
@@ -700,6 +918,12 @@ function formatCnpj(value: string) {
       {(forcePasswordRequired || perfil?.must_change_password) && (
         <AlertMessage variant="warning" role="alert">
           Por seguranca, altere sua senha antes de acessar os modulos do sistema.
+        </AlertMessage>
+      )}
+
+      {setup2faObrigatorio && !mfaVerifiedFactor && (
+        <AlertMessage variant="warning" role="alert">
+          Sua empresa exige verificacao em duas etapas. Configure o aplicativo autenticador abaixo para liberar o acesso ao sistema.
         </AlertMessage>
       )}
 
@@ -759,16 +983,14 @@ function formatCnpj(value: string) {
             </div>
           <div className="perfil-grid perfil-grid-main">
             <div className="form-group">
-              <label>Nome completo</label>
-              <input
+              <AppField
+                label="Nome completo"
                 value={perfil.nome_completo}
                 onChange={(e) => atualizarCampo("nome_completo", e.target.value)}
-                onBlur={(e) =>
-                  atualizarCampo("nome_completo", titleCaseWithExceptions(e.target.value))
-                }
+                onBlur={(e) => atualizarCampo("nome_completo", titleCaseWithExceptions(e.target.value))}
                 required
                 id="perfil-nome-completo"
-                className={`form-input${camposObrigatorios.includes("nome_completo") ? " perfil-input-pendente" : ""}`}
+                className={camposObrigatorios.includes("nome_completo") ? "perfil-input-pendente" : undefined}
                 aria-invalid={camposObrigatorios.includes("nome_completo") ? "true" : undefined}
               />
               {camposObrigatorios.includes("nome_completo") && (
@@ -777,29 +999,27 @@ function formatCnpj(value: string) {
                 </small>
               )}
             </div>
-            <div className="form-group">
-              <label>CPF</label>
-              <input
-                className={`form-input${camposObrigatorios.includes("cpf") ? " perfil-input-pendente" : ""}`}
+            <div className="form-group perfil-main-cpf-field">
+              <AppField
+                label="CPF"
+                className={camposObrigatorios.includes("cpf") ? "perfil-input-pendente" : undefined}
                 value={formatCpf(perfil.cpf || "")}
                 onChange={(e) => atualizarCampo("cpf", formatCpf(e.target.value))}
                 placeholder="000.000.000-00"
               />
             </div>
             <div className="form-group">
-              <label>RG</label>
-              <input
-                className="form-input"
+              <AppField
+                label="RG"
                 value={perfil.rg || ""}
                 onChange={(e) => atualizarCampo("rg", e.target.value)}
                 placeholder="Documento"
                 disabled={!camposExtrasOk}
               />
             </div>
-            <div className="form-group">
-              <label>Data Nascimento</label>
-              <input
-                className="form-input"
+            <div className="form-group perfil-main-birth-field">
+              <AppField
+                label="Data Nascimento"
                 type="date"
                 value={perfil.data_nascimento || ""}
                 onFocus={selectAllInputOnFocus}
@@ -811,9 +1031,9 @@ function formatCnpj(value: string) {
 
           <div className="perfil-grid perfil-grid-address">
             <div className="form-group">
-              <label>CEP</label>
-              <input
-                className={`form-input${camposObrigatorios.includes("cep") ? " perfil-input-pendente" : ""}`}
+              <AppField
+                label="CEP"
+                className={camposObrigatorios.includes("cep") ? "perfil-input-pendente" : undefined}
                 value={formatCep(perfil.cep || "")}
                 onChange={(e) => {
                   const val = formatCep(e.target.value);
@@ -833,9 +1053,8 @@ function formatCnpj(value: string) {
               </small>
             </div>
             <div className="form-group">
-              <label>Endereço</label>
-              <input
-                className="form-input"
+              <AppField
+                label="Endereço"
                 value={perfil.endereco || ""}
                 onChange={(e) => atualizarCampo("endereco", e.target.value)}
                 placeholder="Rua / Avenida"
@@ -843,9 +1062,8 @@ function formatCnpj(value: string) {
               />
             </div>
             <div className="form-group">
-              <label>Número</label>
-              <input
-                className="form-input"
+              <AppField
+                label="Número"
                 value={perfil.numero || ""}
                 onChange={(e) => atualizarCampo("numero", e.target.value)}
                 placeholder="Nº"
@@ -854,9 +1072,8 @@ function formatCnpj(value: string) {
               />
             </div>
             <div className="form-group">
-              <label>Complemento</label>
-              <input
-                className="form-input"
+              <AppField
+                label="Complemento"
                 value={perfil.complemento || ""}
                 onChange={(e) => atualizarCampo("complemento", e.target.value)}
                 placeholder="Opcional"
@@ -867,9 +1084,8 @@ function formatCnpj(value: string) {
 
           <div className="perfil-grid perfil-grid-contact">
             <div className="form-group">
-              <label>E-mail</label>
-              <input
-                className="form-input"
+              <AppField
+                label="E-mail"
                 type="email"
                 value={perfil.email}
                 onChange={(e) => {
@@ -881,9 +1097,9 @@ function formatCnpj(value: string) {
               />
             </div>
             <div className="form-group">
-              <label>Telefone</label>
-              <input
-                className={`form-input${camposObrigatorios.includes("telefone") ? " perfil-input-pendente" : ""}`}
+              <AppField
+                label="Telefone"
+                className={camposObrigatorios.includes("telefone") ? "perfil-input-pendente" : undefined}
                 value={formatTelefone(perfil.telefone || "")}
                 onChange={(e) => atualizarCampo("telefone", formatTelefone(e.target.value))}
                 placeholder="(00) 00000-0000"
@@ -897,9 +1113,8 @@ function formatCnpj(value: string) {
               )}
             </div>
             <div className="form-group">
-              <label>WhatsApp</label>
-              <input
-                className="form-input"
+              <AppField
+                label="WhatsApp"
                 value={formatTelefone(perfil.whatsapp || "")}
                 onChange={(e) => atualizarCampo("whatsapp", formatTelefone(e.target.value))}
                 placeholder="(00) 00000-0000"
@@ -907,9 +1122,9 @@ function formatCnpj(value: string) {
               />
             </div>
             <div className="form-group">
-              <label>Cidade</label>
-              <input
-                className={`form-input${camposObrigatorios.includes("cidade") ? " perfil-input-pendente" : ""}`}
+              <AppField
+                label="Cidade"
+                className={camposObrigatorios.includes("cidade") ? "perfil-input-pendente" : undefined}
                 value={perfil.cidade || ""}
                 onChange={(e) => atualizarCampo("cidade", e.target.value)}
                 id="perfil-cidade"
@@ -921,10 +1136,10 @@ function formatCnpj(value: string) {
                 </small>
               )}
             </div>
-            <div className="form-group">
-              <label>Estado</label>
-              <input
-                className={`form-input${camposObrigatorios.includes("estado") ? " perfil-input-pendente" : ""}`}
+            <div className="form-group perfil-contact-state-field">
+              <AppField
+                label="Estado"
+                className={camposObrigatorios.includes("estado") ? "perfil-input-pendente" : undefined}
                 value={perfil.estado || ""}
                 maxLength={2}
                 onChange={(e) => atualizarCampo("estado", e.target.value.toUpperCase())}
@@ -941,19 +1156,17 @@ function formatCnpj(value: string) {
           </div>
           <div className="mobile-stack-buttons perfil-section-actions">
             <AppButton type="button" variant="primary" onClick={salvarPerfil} disabled={salvando}>
-              <i className="pi pi-save" aria-hidden="true" />
               {salvando ? "Salvando..." : "Salvar dados"}
             </AppButton>
           </div>
         </AppCard>
 
-        <div className="grid md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 perfil-secondary-cards">
           <AppCard title="Dados de acesso" tone="config" className="perfil-card-fill">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <div className="form-group perfil-access-email-group">
-                <label>E-mail de login</label>
-                <input
-                  className="form-input"
+                <AppField
+                  label="E-mail de login"
                   value={novoEmail}
                   onChange={(e) => setNovoEmail(e.target.value.toLowerCase())}
                   type="email"
@@ -969,52 +1182,21 @@ function formatCnpj(value: string) {
             </div>
 
             <h4 className="perfil-password-title">Alterar senha</h4>
-            <div className="form-group perfil-password-group">
-              <label>Nova senha</label>
-              <div className="password-field">
-                <input
-                  className="form-input"
-                  type={mostrarSenha ? "text" : "password"}
-                  value={novaSenha}
-                  onChange={(e) => setNovaSenha(e.target.value)}
-                  placeholder="Mínimo 6 caracteres"
-                />
-                <AppButton
-                  type="button"
-                  variant="ghost"
-                  className="password-toggle"
-                  onClick={() => setMostrarSenha((prev) => !prev)}
-                  aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
-                  aria-pressed={mostrarSenha}
-                >
-                  <i className={mostrarSenha ? "pi pi-eye-slash" : "pi pi-eye"} />
-                </AppButton>
-              </div>
-            </div>
-            <div className="form-group perfil-password-group">
-              <label>Confirmar senha</label>
-              <div className="password-field">
-                <input
-                  className="form-input"
-                  type={mostrarConfirmacao ? "text" : "password"}
-                  value={confirmaSenha}
-                  onChange={(e) => setConfirmaSenha(e.target.value)}
-                />
-                <AppButton
-                  type="button"
-                  variant="ghost"
-                  className="password-toggle"
-                  onClick={() => setMostrarConfirmacao((prev) => !prev)}
-                  aria-label={mostrarConfirmacao ? "Ocultar senha" : "Mostrar senha"}
-                  aria-pressed={mostrarConfirmacao}
-                >
-                  <i className={mostrarConfirmacao ? "pi pi-eye-slash" : "pi pi-eye"} />
-                </AppButton>
-              </div>
-            </div>
+            <PasswordField
+              wrapperClassName="form-group perfil-password-group"
+              label="Nova senha"
+              value={novaSenha}
+              onChange={(e) => setNovaSenha(e.target.value)}
+              placeholder="Mínimo 6 caracteres"
+            />
+            <PasswordField
+              wrapperClassName="form-group perfil-password-group"
+              label="Confirmar senha"
+              value={confirmaSenha}
+              onChange={(e) => setConfirmaSenha(e.target.value)}
+            />
             <div className="mobile-stack-buttons perfil-section-actions">
               <AppButton type="button" variant="primary" onClick={alterarSenha} disabled={salvando}>
-                <i className="pi pi-key" aria-hidden="true" />
                 Alterar senha
               </AppButton>
               <AppButton
@@ -1023,13 +1205,138 @@ function formatCnpj(value: string) {
                 onClick={atualizarPermissoesAgora}
                 disabled={salvando || atualizandoPermissoes}
               >
-                <i className="pi pi-refresh" aria-hidden="true" />
                 {atualizandoPermissoes ? "Atualizando permissoes..." : "Atualizar permissoes"}
               </AppButton>
             </div>
           </AppCard>
 
-          <AppCard title="Empresa" className="perfil-card-fill">
+          <AppCard title="Verificacao em duas etapas" tone="config" className="perfil-card-fill">
+            {mfaErro && (
+              <small className="perfil-warning-text mb-2 block" role="alert">
+                {mfaErro}
+              </small>
+            )}
+            {mfaLoading ? (
+              <p>Carregando configuracao do 2FA...</p>
+            ) : (
+              <>
+                <p className="perfil-text-wrap">
+                  <strong>Status:</strong>{" "}
+                  {mfaVerifiedFactor ? "Ativo" : "Inativo"}
+                  <br />
+                  <strong>Politica da empresa:</strong> {mfaObrigatorio ? "2FA obrigatorio" : "2FA opcional"}
+                  <br />
+                  <strong>Nivel atual:</strong> {mfaCurrentLevel || "aal1"}
+                  <br />
+                  <strong>Proximo nivel:</strong> {mfaNextLevel || "-"}
+                  {mfaVerifiedFactor && (
+                    <>
+                      <br />
+                      <strong>Fator:</strong>{" "}
+                      {mfaVerifiedFactor.friendly_name || "Aplicativo autenticador"}
+                    </>
+                  )}
+                </p>
+
+                {!mfaVerifiedFactor && !mfaPendingEnrollment && (
+                  <>
+                    <div className="form-group">
+                      <AppField
+                        label="Nome do dispositivo"
+                        value={mfaFriendlyName}
+                        onChange={(e) => setMfaFriendlyName(e.target.value)}
+                        placeholder="Meu autenticador"
+                      />
+                      <small>Esse nome ajuda a identificar o dispositivo cadastrado.</small>
+                    </div>
+                    <div className="mobile-stack-buttons perfil-section-actions">
+                      <AppButton
+                        type="button"
+                        variant="primary"
+                        onClick={iniciarMfaTotp}
+                        disabled={mfaBusy}
+                      >
+                        {mfaBusy ? "Preparando..." : "Ativar 2FA"}
+                      </AppButton>
+                    </div>
+                  </>
+                )}
+
+                {mfaPendingEnrollment && (
+                  <>
+                    <div className="form-group">
+                      <img
+                        src={buildTotpQrDataUrl(mfaPendingEnrollment.qrCode)}
+                        alt="QR Code para configurar o autenticador"
+                        style={{ width: "100%", maxWidth: 220, borderRadius: 12, border: "1px solid #d0d7de" }}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <AppField
+                        label="Chave manual"
+                        value={mfaPendingEnrollment.secret}
+                        readOnly
+                      />
+                      <small>Use esta chave se nao conseguir escanear o QR Code.</small>
+                    </div>
+                    <div className="form-group">
+                      <AppField
+                        label="Codigo do autenticador"
+                        value={mfaCode}
+                        onChange={(e) => setMfaCode(normalizeMfaCode(e.target.value))}
+                        placeholder="000000"
+                        inputMode="numeric"
+                        maxLength={6}
+                      />
+                    </div>
+                    <div className="mobile-stack-buttons perfil-section-actions">
+                      <AppButton
+                        type="button"
+                        variant="primary"
+                        onClick={confirmarMfaTotp}
+                        disabled={mfaBusy}
+                      >
+                        {mfaBusy ? "Confirmando..." : "Confirmar 2FA"}
+                      </AppButton>
+                      <AppButton
+                        type="button"
+                        variant="secondary"
+                        onClick={cancelarConfiguracaoMfa}
+                        disabled={mfaBusy}
+                      >
+                        Cancelar configuracao
+                      </AppButton>
+                    </div>
+                  </>
+                )}
+
+                {mfaVerifiedFactor && (
+                  <>
+                    <small className="perfil-company-note">
+                      No proximo login, o sistema exigira o codigo do aplicativo autenticador.
+                    </small>
+                    {mfaObrigatorio && (
+                      <small className="perfil-company-note">
+                        Este fator nao pode ser removido enquanto a politica de 2FA obrigatorio estiver ativa para a empresa.
+                      </small>
+                    )}
+                    <div className="mobile-stack-buttons perfil-section-actions">
+                      <AppButton
+                        type="button"
+                        variant="secondary"
+                        onClick={removerMfaTotp}
+                        disabled={mfaBusy || mfaObrigatorio}
+                      >
+                        {mfaBusy ? "Removendo..." : "Remover 2FA"}
+                      </AppButton>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </AppCard>
+
+          <AppCard title="Empresa" tone="info" className="perfil-card-fill">
             {empresaAtual ? (
               <p className="perfil-text-wrap perfil-company-summary">
                 <strong>Empresa:</strong> {empresaAtual.nome_empresa || "-"}<br />

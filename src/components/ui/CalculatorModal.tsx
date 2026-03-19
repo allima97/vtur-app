@@ -108,6 +108,7 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
   const [calcError, setCalcError] = useState<string | null>(null);
   const [calcPosition, setCalcPosition] = useState<{ x: number; y: number } | null>(null);
   const [calcDragging, setCalcDragging] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const calcPanelRef = useRef<HTMLDivElement | null>(null);
   const calcInputRef = useRef<HTMLInputElement | null>(null);
   const calcDragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -305,6 +306,7 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
   };
 
   const startCalcDrag = (clientX: number, clientY: number) => {
+    if (isMobileViewport) return;
     const panel = calcPanelRef.current;
     if (!panel) return;
     const rect = panel.getBoundingClientRect();
@@ -316,6 +318,7 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
   };
 
   const handleCalcMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (isMobileViewport) return;
     const target = event.target as HTMLElement;
     if (target.closest("button") || target.tagName === "INPUT") return;
     event.preventDefault();
@@ -323,6 +326,7 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
   };
 
   const handleCalcTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (isMobileViewport) return;
     const target = event.target as HTMLElement;
     if (target.closest("button") || target.tagName === "INPUT") return;
     const touch = event.touches[0];
@@ -331,7 +335,28 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
   };
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(max-width: 640px)");
+    const syncViewport = () => setIsMobileViewport(media.matches);
+    syncViewport();
+    const onChange = () => syncViewport();
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", onChange);
+      return () => media.removeEventListener("change", onChange);
+    }
+    media.addListener(onChange);
+    return () => media.removeListener(onChange);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileViewport) return;
+    setCalcDragging(false);
+    setCalcPosition(null);
+  }, [isMobileViewport]);
+
+  useEffect(() => {
     if (!open) return;
+    if (isMobileViewport) return;
     if (calcPosition) return;
     const id = window.requestAnimationFrame(() => {
       const panel = calcPanelRef.current;
@@ -345,10 +370,10 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
       setCalcPosition(initial);
     });
     return () => window.cancelAnimationFrame(id);
-  }, [open, calcPosition]);
+  }, [open, calcPosition, isMobileViewport]);
 
   useEffect(() => {
-    if (!calcDragging) return;
+    if (!calcDragging || isMobileViewport) return;
     const handleMove = (clientX: number, clientY: number) => {
       setCalcPosition((prev) => {
         const offset = calcDragOffsetRef.current;
@@ -377,7 +402,7 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
       window.removeEventListener("touchend", stopDrag);
       window.removeEventListener("touchcancel", stopDrag);
     };
-  }, [calcDragging]);
+  }, [calcDragging, isMobileViewport]);
 
   useEffect(() => {
     if (!open) return;
@@ -465,18 +490,21 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
   if (!open) return null;
 
   return (
-    <div className="modal-backdrop">
+    <div className="modal-backdrop calculator-modal-backdrop" onClick={onClose}>
       <div
-        className="modal-panel"
+        className="modal-panel calculator-modal-panel"
         style={{
           maxWidth: 360,
-          width: "92vw",
+          width: isMobileViewport ? "min(360px, calc(100vw - 16px))" : "92vw",
           padding: 0,
           overflow: "hidden",
-          position: "fixed",
-          left: calcPosition ? calcPosition.x : "50%",
-          top: calcPosition ? calcPosition.y : "50%",
-          transform: calcPosition ? "none" : "translate(-50%, -50%)",
+          position: isMobileViewport ? "relative" : "fixed",
+          left: isMobileViewport ? "auto" : calcPosition ? calcPosition.x : "50%",
+          top: isMobileViewport ? "auto" : calcPosition ? calcPosition.y : "50%",
+          transform: isMobileViewport ? "none" : calcPosition ? "none" : "translate(-50%, -50%)",
+          maxHeight: isMobileViewport
+            ? "calc(100svh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 16px)"
+            : undefined,
           background: "#d0d0d0",
           backgroundImage:
             "repeating-linear-gradient(90deg, rgba(255,255,255,0.35), rgba(255,255,255,0.35) 2px, rgba(0,0,0,0.06) 4px)",
@@ -485,8 +513,24 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
           boxShadow: "0 14px 26px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.7)",
         }}
         ref={calcPanelRef}
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Calculadora"
       >
         <div style={{ background: "transparent", padding: "10px 10px 12px" }}>
+          <div className="calculator-modal-toolbar">
+            <span className="calculator-modal-title">Calculadora</span>
+            <AppButton
+              type="button"
+              variant="secondary"
+              onClick={onClose}
+              aria-label="Fechar calculadora"
+              className="calculator-modal-close-btn"
+            >
+              Fechar
+            </AppButton>
+          </div>
           <div
             style={{
               background: "linear-gradient(180deg, #86c2d1, #7bb7c6)",
@@ -503,26 +547,6 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
             onMouseDown={handleCalcMouseDown}
             onTouchStart={handleCalcTouchStart}
           >
-            <AppButton
-              type="button"
-              variant="ghost"
-              onClick={onClose}
-              aria-label="Fechar calculadora"
-              style={{
-                position: "absolute",
-                left: 10,
-                top: 10,
-                border: "none",
-                background: "transparent",
-                color: "#2f2f2f",
-                fontSize: "0.85rem",
-                cursor: "pointer",
-              }}
-              onMouseDown={(event) => event.stopPropagation()}
-              onTouchStart={(event) => event.stopPropagation()}
-            >
-              X
-            </AppButton>
             <input
               type="text"
               value={formatCalcDisplay(calcValue)}

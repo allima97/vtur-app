@@ -6,7 +6,6 @@ import { ToastStack, useToastQueue } from "../ui/Toast";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import AppCard from "../ui/primer/AppCard";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type EmpresaRow = {
   id: string;
@@ -105,11 +104,10 @@ export default function MasterEmpresasIsland() {
   return (
     <AppPrimerProvider>
     <div className="mt-6 admin-page admin-empresas-page vtur-legacy-module">
-      <AppToolbar
+      <AppCard
         title="Empresas do portfólio"
         subtitle="Empresas atribuídas pelo admin."
         tone="info"
-        sticky
       />
 
       {erro && (

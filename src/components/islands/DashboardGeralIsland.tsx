@@ -30,7 +30,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 // ----------------- TIPOS -----------------
 
@@ -206,7 +205,7 @@ const ALL_WIDGETS: { id: WidgetId; titulo: string }[] = [
   { id: "vendas_destino", titulo: "Vendas por destino" },
   { id: "vendas_produto", titulo: "Vendas por produto" },
   { id: "timeline", titulo: "Evolução das vendas" },
-  { id: "aniversariantes_clientes", titulo: "Aniversariantes (clientes e acompanhantes)" },
+  { id: "aniversariantes_clientes", titulo: "Aniversariantes" },
   { id: "orcamentos", titulo: "Orçamentos recentes" },
   { id: "consultorias", titulo: "Lembretes de consultoria" },
   { id: "viagens", titulo: "Próximas viagens" },
@@ -446,7 +445,9 @@ function toLineChartConfig(
   const podeVerDashboard = can("Dashboard");
   const podeVerOperacao = can("Operacao");
   const podeVerConsultoria = can("Consultoria Online") || can("Consultoria");
-  const showRankingView = userCtx?.papel === "VENDEDOR";
+  const showRankingView = Boolean(
+    userCtx && userCtx.papel !== "GESTOR" && userCtx.papel !== "ADMIN" && userCtx.papel !== "ADMINISTRADOR"
+  );
   const assinaturaUsuario = useMemo(() => {
     const nome = String(userCtx?.nome || "").trim();
     return nome || "André Lima";
@@ -524,11 +525,17 @@ function toLineChartConfig(
   }, []);
 
   useEffect(() => {
+    if (isMobile) {
+      setShowCalculator(false);
+    }
+  }, [isMobile]);
+
+  useEffect(() => {
     const id = setInterval(() => setAgora(Date.now()), 30000);
     return () => clearInterval(id);
   }, []);
 
-  const chartPrefsEffective = useMemo(() => {
+  const chartPrefsEffective = useMemo<Record<WidgetId, ChartType>>(() => {
     if (!isMobile) return chartPrefs;
     return {
       ...chartPrefs,
@@ -599,7 +606,25 @@ function toLineChartConfig(
 
   const widgetAtivo = (id: WidgetId) => widgetVisible[id] !== false;
   const toggleMobileWidget = (id: WidgetId) => {
-    setMobileWidgetOpen((prev) => ({ ...prev, [id]: !prev[id] }));
+    if (!mobileAccordionWidgetIds.includes(id)) {
+      setMobileWidgetOpen((prev) => ({ ...prev, [id]: !prev[id] }));
+      return;
+    }
+
+    setMobileWidgetOpen((prev) => {
+      const shouldOpen = !prev[id];
+      const next = { ...prev };
+
+      mobileAccordionWidgetIds.forEach((widgetId) => {
+        next[widgetId] = false;
+      });
+
+      if (shouldOpen) {
+        next[id] = true;
+      }
+
+      return next;
+    });
   };
 
   function salvarKpiLocal(order: KpiId[], visible: Record<KpiId, boolean>, charts?: Record<WidgetId, ChartType>) {
@@ -1450,6 +1475,13 @@ function toLineChartConfig(
   };
 
   const tableScrollMaxHeight = 180;
+  const mobileAccordionWidgetIds: WidgetId[] = [
+    "aniversariantes_clientes",
+    "orcamentos",
+    "viagens",
+    "follow_up",
+  ];
+
   const tableWidgetIds: WidgetId[] = [
     "aniversariantes_clientes",
     "orcamentos",
@@ -1460,7 +1492,7 @@ function toLineChartConfig(
 
   const getTableWidgetLabel = (id: WidgetId) => {
     if (id === "aniversariantes_clientes") {
-      return `Aniversariantes (clientes e acompanhantes) (${clientesAniversariantes.length})`;
+      return `Aniversariantes (${clientesAniversariantes.length})`;
     }
     if (id === "orcamentos") return `Orçamentos recentes (${orcamentosRecentes.length})`;
     if (id === "consultorias") return `Lembretes de consultoria (${lembretesDashboard.length})`;
@@ -1885,8 +1917,9 @@ function toLineChartConfig(
         const shouldScroll = items.length > 6;
         return (
           <AppCard
+            className={hideTitle ? undefined : "dashboard-widget-table-card"}
             title={hideTitle ? undefined : `Aniversariantes - ${monthLabel} (${items.length})`}
-            subtitle={hideTitle ? undefined : "Clientes e acompanhantes com aniversário neste mês."}
+            subtitle={undefined}
             tone="info"
           >
             <DataTable
@@ -1972,6 +2005,7 @@ function toLineChartConfig(
         const shouldScrollOrcamentos = orcamentosRecentes.length > 3;
         return (
           <AppCard
+            className={hideTitle ? undefined : "dashboard-widget-table-card"}
             title={hideTitle ? undefined : `Orçamentos recentes (${orcamentosRecentes.length})`}
             subtitle={hideTitle ? undefined : "Últimas propostas comerciais do período."}
             tone="info"
@@ -2111,6 +2145,7 @@ function toLineChartConfig(
         const shouldScrollViagens = proximasViagensAgrupadas.length > 3;
         return (
           <AppCard
+            className={hideTitle ? undefined : "dashboard-widget-table-card"}
             title={hideTitle ? undefined : `Próximas viagens (${proximasViagensAgrupadas.length})`}
             subtitle={hideTitle ? undefined : "Embarques futuros agrupados por venda."}
             tone="info"
@@ -2195,6 +2230,7 @@ function toLineChartConfig(
         const shouldScrollFollowUp = followUpsRecentes.length > 3;
         return (
           <AppCard
+            className={hideTitle ? undefined : "dashboard-widget-table-card"}
             title={hideTitle ? undefined : `Follow-Up (${followUpsRecentes.length})`}
             subtitle={hideTitle ? undefined : "Clientes que já retornaram e precisam de contato."}
             tone="info"
@@ -2316,15 +2352,20 @@ function toLineChartConfig(
   return (
     <AppPrimerProvider>
       <div className="page-content-wrap dashboard-geral-page vtur-dashboard-shell">
-        <AppToolbar
+        <AppCard
+          className="dashboard-top-card"
           title="Dashboard comercial"
           subtitle="Acompanhe vendas, metas, orçamentos, consultorias, viagens e follow-up com personalização por widget."
           tone="info"
-          sticky
           actions={
             <div className="vtur-dashboard-toolbar-actions">
-              <div className="sm:hidden">
-                <AppButton type="button" variant="secondary" onClick={() => setShowFilters(true)}>
+              <div className="vtur-dashboard-mobile-quick-actions sm:hidden">
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  className="dashboard-mobile-filter-btn"
+                  onClick={() => setShowFilters(true)}
+                >
                   Filtros
                 </AppButton>
               </div>
@@ -2336,16 +2377,17 @@ function toLineChartConfig(
                   Ranking de vendas
                 </AppButton>
               )}
-              <AppButton
-                type="button"
-                variant="secondary"
-                className="btn-calculator-trigger"
-                onClick={() => setShowCalculator(true)}
-                aria-label="Calculadora"
-                title="Calculadora"
-              >
-                <i className="pi pi-calculator" aria-hidden="true" />
-              </AppButton>
+              {!isMobile && (
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  className="btn-calculator-trigger"
+                  onClick={() => setShowCalculator(true)}
+                  aria-label="Calculadora"
+                  title="Calculadora"
+                  icon="pi pi-calculator"
+                />
+              )}
             </div>
           }
         >
@@ -2379,7 +2421,7 @@ function toLineChartConfig(
                 type="date"
                 value={inicio}
                 onFocus={selectAllInputOnFocus}
-                onChange={(e) => {
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                   const nextInicio = e.target.value;
                   setPresetPeriodo("personalizado");
                   setInicio(nextInicio);
@@ -2392,7 +2434,7 @@ function toLineChartConfig(
                 value={fim}
                 min={inicio || undefined}
                 onFocus={selectAllInputOnFocus}
-                onChange={(e) => {
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                   setPresetPeriodo("personalizado");
                   const nextFim = e.target.value;
                   setFim(boundDateEndISO(inicio, nextFim));
@@ -2400,7 +2442,7 @@ function toLineChartConfig(
               />
             </div>
           </div>
-        </AppToolbar>
+        </AppCard>
 
         {showFilters && (
           <Dialog
@@ -2421,7 +2463,7 @@ function toLineChartConfig(
                     as="select"
                     label="Preset"
                     value={presetPeriodo}
-                    onChange={(e) => aplicarPreset(e.target.value as PresetPeriodo)}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => aplicarPreset(e.target.value as PresetPeriodo)}
                     options={[
                       { value: "mes_atual", label: "Mês atual" },
                       { value: "ultimos_30", label: "Últimos 30 dias" },
@@ -2435,7 +2477,7 @@ function toLineChartConfig(
                         type="date"
                         value={inicio}
                         onFocus={selectAllInputOnFocus}
-                        onChange={(e) => {
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           const nextInicio = e.target.value;
                           setPresetPeriodo("personalizado");
                           setInicio(nextInicio);
@@ -2448,7 +2490,7 @@ function toLineChartConfig(
                         value={fim}
                         min={inicio || undefined}
                         onFocus={selectAllInputOnFocus}
-                        onChange={(e) => {
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           setPresetPeriodo("personalizado");
                           const nextFim = e.target.value;
                           setFim(boundDateEndISO(inicio, nextFim));
@@ -2498,7 +2540,7 @@ function toLineChartConfig(
                       </div>
                     )}
                   </div>
-                  <div className="hidden sm:block">{node}</div>
+                  <div className="mobile-collapsible" data-open="false">{node}</div>
                 </React.Fragment>
               );
             })}
@@ -2596,7 +2638,7 @@ function toLineChartConfig(
           </Dialog>
         )}
 
-        <CalculatorModal open={showCalculator} onClose={() => setShowCalculator(false)} />
+        {!isMobile && <CalculatorModal open={showCalculator} onClose={() => setShowCalculator(false)} />}
 
         {orcamentoSelecionado && (
           <Dialog

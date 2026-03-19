@@ -44,6 +44,11 @@
   max-width: 400px;
 }
 
+/* Mantem o efeito da pincelada superior, alinhado ao azul padrao do auth. */
+.auth-body .auth-card::before {
+  background: linear-gradient(90deg, #3b82f6, rgba(59, 130, 246, 0));
+}
+
 .auth-card-lg {
   max-width: 460px;
 }
@@ -233,6 +238,31 @@
   font-weight: 700;
 }
 
+/* Auth: fixa botões no padrão azul CRM/SaaS, independente do tema global ativo. */
+.auth-body .vtur-app-button-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-color: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.22);
+}
+
+.auth-body .vtur-app-button-primary:hover:not(:disabled):not(.p-disabled) {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border-color: #1d4ed8;
+}
+
+.auth-body .vtur-app-button-secondary {
+  background: #ffffff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.auth-body .vtur-app-button-secondary:hover:not(:disabled):not(.p-disabled) {
+  background: #eff6ff;
+  border-color: #60a5fa;
+  color: #1e40af;
+}
+
 .auth-divider {
   display: flex;
   align-items: center;
@@ -327,6 +357,34 @@
 
 .form-input:focus {
   outline: none;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* Login auth: padroniza foco dos campos AppField (ex.: e-mail) no mesmo azul da senha. */
+.auth-body .vtur-app-field :is(input, select, textarea):focus,
+.auth-body .vtur-app-field :is(input, select, textarea):focus-visible,
+.auth-body .vtur-app-field :is(.p-inputtext, .p-inputtextarea):enabled:focus {
+  outline: none;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.auth-body .vtur-app-field input[type="email"]:enabled:hover {
+  border-color: #60a5fa;
+}
+
+/* Evita laranja do browser, mantendo estado neutro quando sem interação. */
+.auth-body .vtur-app-field input[type="email"]:required:invalid:not(:focus):not(:hover),
+.auth-body .vtur-app-field input[type="email"]:user-invalid:not(:focus):not(:hover),
+.auth-body .vtur-app-field input[type="email"]:invalid:not(:focus):not(:hover) {
+  border-color: #cbd5e1;
+  box-shadow: none;
+}
+
+.auth-body .vtur-app-field input[type="email"]:required:invalid:is(:focus, :hover),
+.auth-body .vtur-app-field input[type="email"]:user-invalid:is(:focus, :hover),
+.auth-body .vtur-app-field input[type="email"]:invalid:is(:focus, :hover) {
   border-color: #60a5fa;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }

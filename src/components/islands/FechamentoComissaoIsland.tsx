@@ -7,15 +7,24 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 import {
   calcularValorComissao,
 } from "../../lib/comissao";
 import { buildMonthOptionsYYYYMM, formatCurrencyBRL, formatDateBR, formatMonthYearBR } from "../../lib/format";
-import { calcularDescontoAplicado } from "../../lib/comissaoUtils";
+import {
+  calcularDescontoAplicado,
+  hasConciliacaoCommissionRule,
+  resolveConciliacaoCommissionSelection,
+  type ConciliacaoCommissionBandRule,
+} from "../../lib/comissaoUtils";
 import { carregarTermosNaoComissionaveis, calcularNaoComissionavelPorVenda } from "../../lib/pagamentoUtils";
 import { normalizeText } from "../../lib/normalizeText";
 import { fetchGestorEquipeIdsComGestor } from "../../lib/gestorEquipe";
+import {
+  buildConciliacaoSyntheticVendas,
+  fetchEffectiveConciliacaoReceipts,
+  hasConciliacaoOverride,
+} from "../../lib/conciliacao/source";
 
 type Usuario = {
   id: string;
@@ -55,12 +64,19 @@ type MetaVendedor = {
 };
 
 type VendaRecibo = {
+  id?: string | null;
   valor_total: number | null;
   valor_taxas: number | null;
   valor_du?: number | null;
   valor_rav?: number | null;
   produto_id?: string | null;
   tipo_pacote?: string | null;
+  valor_bruto_override?: number | null;
+  valor_meta_override?: number | null;
+  valor_liquido_override?: number | null;
+  valor_comissao_loja?: number | null;
+  percentual_comissao_loja?: number | null;
+  faixa_comissao?: string | null;
 };
 
 type Venda = {
@@ -92,6 +108,20 @@ type RegraProduto = {
 type ParametrosComissao = {
   usar_taxas_na_meta: boolean;
   foco_valor?: "bruto" | "liquido";
+  conciliacao_sobrepoe_vendas?: boolean;
+  conciliacao_regra_ativa?: boolean;
+  conciliacao_tipo?: "GERAL" | "ESCALONAVEL";
+  conciliacao_meta_nao_atingida?: number | null;
+  conciliacao_meta_atingida?: number | null;
+  conciliacao_super_meta?: number | null;
+  conciliacao_tiers?: {
+    faixa: "PRE" | "POS";
+    de_pct: number;
+    ate_pct: number;
+    inc_pct_meta: number;
+    inc_pct_comissao: number;
+  }[];
+  conciliacao_faixas_loja?: ConciliacaoCommissionBandRule[];
 };
 
 function getPeriodoAtualYYYYMM() {
@@ -115,6 +145,41 @@ function getPrimeiroDiaMesSeguinte(periodoYYYYMM: string) {
 
   const mesFinal = String(proximoMes).padStart(2, "0");
   return `${anoFinal}-${mesFinal}-01`;
+}
+
+function getReciboBrutoTotal(recibo: VendaRecibo) {
+  if (hasConciliacaoOverride(recibo)) {
+    return Math.max(0, Number(recibo.valor_bruto_override ?? recibo.valor_total ?? 0));
+  }
+  return Math.max(0, Number(recibo.valor_total ?? 0));
+}
+
+function getReciboTaxasEfetivas(recibo: VendaRecibo) {
+  if (hasConciliacaoOverride(recibo)) {
+    return Math.max(0, Number(recibo.valor_taxas ?? 0));
+  }
+  return Math.max(0, Number(recibo.valor_taxas ?? 0) - Number(recibo.valor_du ?? 0));
+}
+
+function getReciboLiquido(recibo: VendaRecibo) {
+  if (recibo.valor_liquido_override != null) {
+    return Math.max(0, Number(recibo.valor_liquido_override || 0));
+  }
+  const brutoSemRav = Math.max(0, Number(recibo.valor_total ?? 0) - Number(recibo.valor_rav ?? 0));
+  return Math.max(0, brutoSemRav - getReciboTaxasEfetivas(recibo));
+}
+
+function getReciboMeta(recibo: VendaRecibo, parametros: ParametrosComissao) {
+  if (recibo.valor_meta_override != null) {
+    return Math.max(0, Number(recibo.valor_meta_override || 0));
+  }
+  const liquido = getReciboLiquido(recibo);
+  const brutoTotal = getReciboBrutoTotal(recibo);
+  return parametros.foco_valor === "liquido"
+    ? liquido
+    : parametros.usar_taxas_na_meta
+    ? brutoTotal
+    : liquido;
 }
 
 export default function FechamentoComissaoIsland() {
@@ -272,7 +337,7 @@ export default function FechamentoComissaoIsland() {
       // carregar metas e vendas iniciais
       if (vendedorDefault) {
         await carregarMetaDoPeriodo(vendedorDefault, periodo);
-        await carregarVendasPeriodo(vendedorDefault, periodo);
+        await carregarVendasPeriodo([vendedorDefault], periodo, parametros);
       }
 
       // carregar regras por produto
@@ -373,20 +438,53 @@ export default function FechamentoComissaoIsland() {
 
   async function carregarParametrosComissao(user: Usuario | null) {
     if (!user) {
-      return { usar_taxas_na_meta: true } as ParametrosComissao;
+      return {
+        usar_taxas_na_meta: true,
+        foco_valor: "bruto",
+        conciliacao_sobrepoe_vendas: false,
+        conciliacao_regra_ativa: false,
+        conciliacao_tipo: "GERAL",
+        conciliacao_meta_nao_atingida: null,
+        conciliacao_meta_atingida: null,
+        conciliacao_super_meta: null,
+        conciliacao_tiers: [],
+        conciliacao_faixas_loja: [],
+      } as ParametrosComissao;
     }
 
     // 1º: uso individual → busca por owner_user_id
     if (user.uso_individual) {
       const { data } = await supabase
         .from("parametros_comissao")
-        .select("usar_taxas_na_meta")
+        .select(
+          "usar_taxas_na_meta, foco_valor, conciliacao_sobrepoe_vendas, conciliacao_regra_ativa, conciliacao_tipo, conciliacao_meta_nao_atingida, conciliacao_meta_atingida, conciliacao_super_meta, conciliacao_tiers, conciliacao_faixas_loja"
+        )
         .eq("owner_user_id", user.id)
         .maybeSingle();
 
       if (data) {
         return {
           usar_taxas_na_meta: data.usar_taxas_na_meta ?? true,
+          foco_valor: data.foco_valor === "liquido" ? "liquido" : "bruto",
+          conciliacao_sobrepoe_vendas: Boolean(data.conciliacao_sobrepoe_vendas),
+          conciliacao_regra_ativa: Boolean(data.conciliacao_regra_ativa),
+          conciliacao_tipo: data.conciliacao_tipo === "ESCALONAVEL" ? "ESCALONAVEL" : "GERAL",
+          conciliacao_meta_nao_atingida:
+            data.conciliacao_meta_nao_atingida != null
+              ? Number(data.conciliacao_meta_nao_atingida)
+              : null,
+          conciliacao_meta_atingida:
+            data.conciliacao_meta_atingida != null
+              ? Number(data.conciliacao_meta_atingida)
+              : null,
+          conciliacao_super_meta:
+            data.conciliacao_super_meta != null ? Number(data.conciliacao_super_meta) : null,
+          conciliacao_tiers: Array.isArray((data as any).conciliacao_tiers)
+            ? ((data as any).conciliacao_tiers as ParametrosComissao["conciliacao_tiers"])
+            : [],
+          conciliacao_faixas_loja: Array.isArray((data as any).conciliacao_faixas_loja)
+            ? ((data as any).conciliacao_faixas_loja as ConciliacaoCommissionBandRule[])
+            : [],
         };
       }
     }
@@ -395,19 +493,52 @@ export default function FechamentoComissaoIsland() {
     if (user.company_id) {
       const { data } = await supabase
         .from("parametros_comissao")
-        .select("usar_taxas_na_meta")
+        .select(
+          "usar_taxas_na_meta, foco_valor, conciliacao_sobrepoe_vendas, conciliacao_regra_ativa, conciliacao_tipo, conciliacao_meta_nao_atingida, conciliacao_meta_atingida, conciliacao_super_meta, conciliacao_tiers, conciliacao_faixas_loja"
+        )
         .eq("company_id", user.company_id)
         .maybeSingle();
 
       if (data) {
         return {
           usar_taxas_na_meta: data.usar_taxas_na_meta ?? true,
+          foco_valor: data.foco_valor === "liquido" ? "liquido" : "bruto",
+          conciliacao_sobrepoe_vendas: Boolean(data.conciliacao_sobrepoe_vendas),
+          conciliacao_regra_ativa: Boolean(data.conciliacao_regra_ativa),
+          conciliacao_tipo: data.conciliacao_tipo === "ESCALONAVEL" ? "ESCALONAVEL" : "GERAL",
+          conciliacao_meta_nao_atingida:
+            data.conciliacao_meta_nao_atingida != null
+              ? Number(data.conciliacao_meta_nao_atingida)
+              : null,
+          conciliacao_meta_atingida:
+            data.conciliacao_meta_atingida != null
+              ? Number(data.conciliacao_meta_atingida)
+              : null,
+          conciliacao_super_meta:
+            data.conciliacao_super_meta != null ? Number(data.conciliacao_super_meta) : null,
+          conciliacao_tiers: Array.isArray((data as any).conciliacao_tiers)
+            ? ((data as any).conciliacao_tiers as ParametrosComissao["conciliacao_tiers"])
+            : [],
+          conciliacao_faixas_loja: Array.isArray((data as any).conciliacao_faixas_loja)
+            ? ((data as any).conciliacao_faixas_loja as ConciliacaoCommissionBandRule[])
+            : [],
         };
       }
     }
 
     // fallback
-    return { usar_taxas_na_meta: true } as ParametrosComissao;
+    return {
+      usar_taxas_na_meta: true,
+      foco_valor: "bruto",
+      conciliacao_sobrepoe_vendas: false,
+      conciliacao_regra_ativa: false,
+      conciliacao_tipo: "GERAL",
+      conciliacao_meta_nao_atingida: null,
+      conciliacao_meta_atingida: null,
+      conciliacao_super_meta: null,
+      conciliacao_tiers: [],
+      conciliacao_faixas_loja: [],
+    } as ParametrosComissao;
   }
 
   // ==========================================
@@ -464,7 +595,11 @@ export default function FechamentoComissaoIsland() {
     return mapa;
   }
 
-  async function carregarVendasPeriodo(vendedorIds: string[], periodoYYYYMM: string) {
+  async function carregarVendasPeriodo(
+    vendedorIds: string[],
+    periodoYYYYMM: string,
+    parametrosAtivos?: ParametrosComissao | null
+  ) {
     if (!vendedorIds || vendedorIds.length === 0) {
       setVendasPeriodo([]);
       return;
@@ -484,6 +619,7 @@ export default function FechamentoComissaoIsland() {
 	          valor_total_bruto,
 	          valor_total_pago,
             vendas_recibos!inner (
+              id,
               data_venda,
 	            produto_id,
 	            valor_total,
@@ -507,8 +643,38 @@ export default function FechamentoComissaoIsland() {
     }
 
     const vendasData = (data || []) as Venda[];
-    setVendasPeriodo(vendasData);
-    await carregarPagamentosNaoComissionaveis(vendasData.map((v) => v.id));
+    const pagamentosMap = await carregarPagamentosNaoComissionaveis(vendasData.map((v) => v.id));
+    let vendasFinal = vendasData;
+
+    const paramsResolved = parametrosAtivos ?? parametros;
+    if (paramsResolved?.conciliacao_sobrepoe_vendas && usuario?.company_id) {
+      const concReceipts = await fetchEffectiveConciliacaoReceipts({
+        client: supabase,
+        companyId: usuario.company_id,
+        inicio,
+        fim: getPrimeiroDiaMesSeguinte(periodoYYYYMM).slice(0, 10),
+        vendedorIds,
+      });
+      const concReceiptsNoPeriodo = concReceipts.filter((item) => item.data_venda >= inicio && item.data_venda < proxMes);
+      if (concReceiptsNoPeriodo.length > 0) {
+        const syntheticSales = buildConciliacaoSyntheticVendas(concReceiptsNoPeriodo);
+        const overriddenReceiptIds = new Set(
+          syntheticSales.map((sale) => sale.linked_recibo_id).filter(Boolean)
+        );
+        const baseSales = vendasData.flatMap((sale) => {
+          const recibos = (sale.vendas_recibos || []).filter(
+            (recibo) => !overriddenReceiptIds.has(String(recibo.id || "").trim())
+          );
+          if (recibos.length === 0) return [];
+          return [{ ...sale, vendas_recibos: recibos }];
+        });
+        vendasFinal = [...baseSales, ...(syntheticSales as unknown as Venda[])].sort((a, b) =>
+          String(b.data_venda || "").localeCompare(String(a.data_venda || ""))
+        );
+      }
+    }
+
+    setVendasPeriodo(vendasFinal);
   }
 
   // ==========================================
@@ -529,9 +695,9 @@ export default function FechamentoComissaoIsland() {
         setIdsEquipe([vendedorSelecionado]);
       }
 
-      await carregarVendasPeriodo(vendedoresParaConsulta, periodo);
+      await carregarVendasPeriodo(vendedoresParaConsulta, periodo, parametros);
     })();
-  }, [vendedorSelecionado, periodo]);
+  }, [vendedorSelecionado, periodo, parametros]);
 
   // ==========================================
   // CÁLCULOS EM MEMÓRIA
@@ -539,35 +705,49 @@ export default function FechamentoComissaoIsland() {
   const valoresCalculados = useMemo(() => {
     let totalBruto = 0;
     let totalTaxas = 0;
+    let liquido = 0;
+    let baseMeta = 0;
 
     for (const v of vendasPeriodo) {
       const recibosVenda = v.vendas_recibos || [];
-      const totalBrutoVenda = recibosVenda.reduce((acc, r) => {
-        return acc + Math.max(0, Number(r.valor_total ?? 0));
-      }, 0);
-      const naoComissionado =
-        pagamentosNaoComissionaveis.get(v.id) ?? Number(v.valor_nao_comissionado || 0);
-      const descontoAplicado = calcularDescontoAplicado(
-        totalBrutoVenda,
-        v.valor_total_bruto,
-        v.valor_total_pago
-      );
-      const baseComissionavel = Math.max(0, totalBrutoVenda - descontoAplicado - naoComissionado);
-      const fatorComissionavel =
-        totalBrutoVenda > 0 ? Math.max(0, baseComissionavel / totalBrutoVenda) : 1;
+      const saleHasOverride = recibosVenda.some((recibo) => hasConciliacaoOverride(recibo));
+
+      let fatorComissionavel = 1;
+      if (!saleHasOverride) {
+        const totalBrutoVenda = recibosVenda.reduce((acc, r) => acc + getReciboBrutoTotal(r), 0);
+        const naoComissionado =
+          pagamentosNaoComissionaveis.get(v.id) ?? Number(v.valor_nao_comissionado || 0);
+        const descontoAplicado = calcularDescontoAplicado(
+          totalBrutoVenda,
+          v.valor_total_bruto,
+          v.valor_total_pago
+        );
+        const baseComissionavel = Math.max(0, totalBrutoVenda - descontoAplicado - naoComissionado);
+        fatorComissionavel =
+          totalBrutoVenda > 0 ? Math.max(0, baseComissionavel / totalBrutoVenda) : 1;
+      }
 
       for (const r of recibosVenda) {
-        const brutoSemRav = Math.max(0, Number(r.valor_total ?? 0) - Number(r.valor_rav ?? 0));
-        const taxasEfetivas = Math.max(0, Number(r.valor_taxas ?? 0) - Number(r.valor_du ?? 0));
-        totalBruto += brutoSemRav * fatorComissionavel;
-        totalTaxas += taxasEfetivas * fatorComissionavel;
+        const brutoRecibo = getReciboBrutoTotal(r);
+        const taxasEfetivas = getReciboTaxasEfetivas(r);
+        const liquidoRecibo = getReciboLiquido(r);
+        const metaRecibo = getReciboMeta(r, parametros || { usar_taxas_na_meta: true, foco_valor: "bruto" });
+        if (saleHasOverride) {
+          totalBruto += brutoRecibo;
+          totalTaxas += taxasEfetivas;
+          liquido += liquidoRecibo;
+          baseMeta += metaRecibo;
+        } else {
+          totalBruto += brutoRecibo * fatorComissionavel;
+          totalTaxas += taxasEfetivas * fatorComissionavel;
+          liquido += liquidoRecibo * fatorComissionavel;
+          baseMeta += metaRecibo * fatorComissionavel;
+        }
       }
     }
 
-    const liquido = totalBruto - totalTaxas;
-
-    return { totalBruto, totalTaxas, liquido };
-  }, [vendasPeriodo, pagamentosNaoComissionaveis]);
+    return { totalBruto, totalTaxas, liquido, baseMeta };
+  }, [vendasPeriodo, pagamentosNaoComissionaveis, parametros]);
 
   // ==========================================
   // FECHAMENTO (BOTÃO CALCULAR)
@@ -596,17 +776,12 @@ export default function FechamentoComissaoIsland() {
         return;
       }
 
-      const { totalBruto, totalTaxas, liquido } = valoresCalculados;
+      const { totalBruto, totalTaxas, liquido, baseMeta } = valoresCalculados;
 
       setValorBruto(totalBruto);
       setValorTaxas(totalTaxas);
       setValorLiquido(liquido);
 
-      const baseMeta = parametros.foco_valor === "liquido"
-        ? liquido
-        : parametros.usar_taxas_na_meta
-          ? totalBruto
-          : liquido;
       setBaseMetaUsada(baseMeta);
 
       const metaPlanejada = metaAtual.meta_geral || 0;
@@ -629,36 +804,59 @@ export default function FechamentoComissaoIsland() {
       );
       const pctBase = resultado.pctComissao;
 
-      // Ajuste por regra de produto: pondera comissão conforme regra vinculada
+      // Ajuste por regra de produto e conciliação: pondera pelo líquido efetivamente comissionável.
       let pctComissaoFinal = pctBase;
-      if (regrasProduto && vendasPeriodo.length > 0) {
+      if (vendasPeriodo.length > 0) {
         let somaPeso = 0;
         let somaPct = 0;
         vendasPeriodo.forEach((v) => {
           const recibosVenda = v.vendas_recibos || [];
-          const totalBrutoVenda = recibosVenda.reduce((acc, r) => acc + (r.valor_total ?? 0), 0);
-          const naoComissionado =
-            pagamentosNaoComissionaveis.get(v.id) ?? Number(v.valor_nao_comissionado || 0);
-          const descontoAplicado = calcularDescontoAplicado(
-            totalBrutoVenda,
-            v.valor_total_bruto,
-            v.valor_total_pago
-          );
-          const baseComissionavel = Math.max(0, totalBrutoVenda - descontoAplicado - naoComissionado);
-          const fatorComissionavel =
-            totalBrutoVenda > 0 ? Math.max(0, baseComissionavel / totalBrutoVenda) : 1;
+          const saleHasOverride = recibosVenda.some((recibo) => hasConciliacaoOverride(recibo));
+          let fatorComissionavel = 1;
+          if (!saleHasOverride) {
+            const totalBrutoVenda = recibosVenda.reduce((acc, r) => acc + getReciboBrutoTotal(r), 0);
+            const naoComissionado =
+              pagamentosNaoComissionaveis.get(v.id) ?? Number(v.valor_nao_comissionado || 0);
+            const descontoAplicado = calcularDescontoAplicado(
+              totalBrutoVenda,
+              v.valor_total_bruto,
+              v.valor_total_pago
+            );
+            const baseComissionavel = Math.max(0, totalBrutoVenda - descontoAplicado - naoComissionado);
+            fatorComissionavel =
+              totalBrutoVenda > 0 ? Math.max(0, baseComissionavel / totalBrutoVenda) : 1;
+          }
 
           recibosVenda.forEach((r) => {
             const prodId = (r as any).produto_id;
             const tipoPacoteKey = normalizeText(r.tipo_pacote || "", { trim: true, collapseWhitespace: true });
             const regraPacote = prodId && tipoPacoteKey ? regrasProdutoPacote[prodId]?.[tipoPacoteKey] : null;
             const regra = regraPacote || (prodId ? regrasProduto[prodId] : null);
-            const liquidoRecibo = (r.valor_total ?? 0) * fatorComissionavel - (r.valor_taxas ?? 0);
-            if (regra && liquidoRecibo > 0) {
-              const pct = calcularPctPorRegra(regra, porcentagemMeta);
-              somaPct += pct * liquidoRecibo;
-              somaPeso += liquidoRecibo;
+            const liquidoRecibo = saleHasOverride
+              ? getReciboLiquido(r)
+              : getReciboLiquido(r) * fatorComissionavel;
+            if (liquidoRecibo <= 0) return;
+
+            let pct = pctBase;
+            const conciliacaoSelection =
+              hasConciliacaoOverride(r) && hasConciliacaoCommissionRule(parametros)
+                ? resolveConciliacaoCommissionSelection(parametros, {
+                    faixa_comissao: r.faixa_comissao || null,
+                    percentual_comissao_loja:
+                      r.percentual_comissao_loja != null
+                        ? Number(r.percentual_comissao_loja)
+                        : null,
+                  })
+                : null;
+
+            if (conciliacaoSelection?.kind === "CONCILIACAO") {
+              pct = calcularPctPorRegra(conciliacaoSelection.rule, porcentagemMeta);
+            } else if (regra) {
+              pct = calcularPctPorRegra(regra, porcentagemMeta);
             }
+
+            somaPct += pct * liquidoRecibo;
+            somaPeso += liquidoRecibo;
           });
         });
         if (somaPeso > 0) {
@@ -709,7 +907,7 @@ export default function FechamentoComissaoIsland() {
     <AppPrimerProvider>
     <div className="min-h-screen bg-slate-50 p-2 md:p-6 comissionamento-page gestor-page vtur-legacy-module">
       {/* BARRA DE CONTEXTO */}
-      <AppToolbar title="Fechamento de comissão" subtitle="Consolide meta, base, comissão aplicada e vendas do período." tone="info" sticky>
+      <AppCard title="Fechamento de comissão" subtitle="Consolide meta, base, comissão aplicada e vendas do período." tone="info" sticky>
       <div className="mb-4 p-3 rounded-lg bg-emerald-950 border border-emerald-800 text-emerald-100 text-sm flex flex-wrap gap-3 items-center justify-between">
         <div>
           <strong>Módulo:</strong> Fechamento de Comissão
@@ -801,7 +999,7 @@ export default function FechamentoComissaoIsland() {
           </div>
         )}
       </div>
-      </AppToolbar>
+      </AppCard>
 
       {/* FILTROS */}
       <AppCard className="mb-3" tone="info" title="Filtros e cálculo">
@@ -986,28 +1184,39 @@ export default function FechamentoComissaoIsland() {
             {vendasPeriodo.map((v) => {
               let bruto = 0;
               let taxas = 0;
+              let liquido = 0;
 
               const recibosVenda = v.vendas_recibos || [];
-              const totalBrutoVenda = recibosVenda.reduce((acc, r) => acc + (r.valor_total ?? 0), 0);
-              const naoComissionado =
-                pagamentosNaoComissionaveis.get(v.id) ?? Number(v.valor_nao_comissionado || 0);
-              const descontoAplicado = calcularDescontoAplicado(
-                totalBrutoVenda,
-                v.valor_total_bruto,
-                v.valor_total_pago
-              );
-              const baseComissionavel = Math.max(0, totalBrutoVenda - descontoAplicado - naoComissionado);
-              const fatorComissionavel =
-                totalBrutoVenda > 0 ? Math.max(0, baseComissionavel / totalBrutoVenda) : 1;
-
-              for (const r of recibosVenda) {
-                const vt = (r.valor_total ?? 0) * fatorComissionavel;
-                const tx = r.valor_taxas ?? 0;
-                bruto += vt + tx;
-                taxas += tx;
+              const saleHasOverride = recibosVenda.some((recibo) => hasConciliacaoOverride(recibo));
+              let fatorComissionavel = 1;
+              if (!saleHasOverride) {
+                const totalBrutoVenda = recibosVenda.reduce((acc, r) => acc + getReciboBrutoTotal(r), 0);
+                const naoComissionado =
+                  pagamentosNaoComissionaveis.get(v.id) ?? Number(v.valor_nao_comissionado || 0);
+                const descontoAplicado = calcularDescontoAplicado(
+                  totalBrutoVenda,
+                  v.valor_total_bruto,
+                  v.valor_total_pago
+                );
+                const baseComissionavel = Math.max(0, totalBrutoVenda - descontoAplicado - naoComissionado);
+                fatorComissionavel =
+                  totalBrutoVenda > 0 ? Math.max(0, baseComissionavel / totalBrutoVenda) : 1;
               }
 
-              const liquido = bruto - taxas;
+              for (const r of recibosVenda) {
+                const brutoRecibo = getReciboBrutoTotal(r);
+                const taxasRecibo = getReciboTaxasEfetivas(r);
+                const liquidoRecibo = getReciboLiquido(r);
+                if (saleHasOverride) {
+                  bruto += brutoRecibo;
+                  taxas += taxasRecibo;
+                  liquido += liquidoRecibo;
+                } else {
+                  bruto += brutoRecibo * fatorComissionavel;
+                  taxas += taxasRecibo * fatorComissionavel;
+                  liquido += liquidoRecibo * fatorComissionavel;
+                }
+              }
 
               return (
                 <tr key={v.id}>

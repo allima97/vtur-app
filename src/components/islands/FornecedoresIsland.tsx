@@ -13,7 +13,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type Fornecedor = {
   id: string;
@@ -484,8 +483,7 @@ export default function FornecedoresIsland() {
     <AppPrimerProvider>
       <div className="page-content-wrap fornecedores-page">
         {!mostrarFormulario && (
-          <AppToolbar
-            sticky
+          <AppCard
             tone="config"
             className="mb-3 list-toolbar-sticky"
             title="Fornecedores"
@@ -512,7 +510,7 @@ export default function FornecedoresIsland() {
                 caption="Consulte parceiros comerciais por nome completo, fantasia ou responsavel."
               />
             </div>
-          </AppToolbar>
+          </AppCard>
         )}
 
         {mostrarFormulario && (
@@ -756,8 +754,8 @@ export default function FornecedoresIsland() {
               subtitle="Acompanhe parceiros comerciais, contatos e condicoes operacionais com leitura rapida."
             >
               <DataTable
-                className="fornecedores-table table-mobile-cards"
-                containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+                className="fornecedores-table table-header-blue table-mobile-cards"
+                containerClassName="vtur-scroll-y-65"
                 headers={
                   <tr>
                     <th>Nome fantasia</th>

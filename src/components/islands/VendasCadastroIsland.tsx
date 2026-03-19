@@ -13,6 +13,7 @@ import AlertMessage from "../ui/AlertMessage";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
+import FileUploadField from "../ui/primer/FileUploadField";
 import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
@@ -50,6 +51,7 @@ async function fetchVendasCadastroBase(params?: { noCache?: boolean }) {
       company_id: string | null;
       uso_individual: boolean;
       is_gestor: boolean;
+      can_assign_vendedor?: boolean;
     };
     vendedoresEquipe: VendedorOption[];
     clientes: Cliente[];
@@ -260,7 +262,7 @@ export default function VendasCadastroIsland() {
   >([]);
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [vendedoresEquipe, setVendedoresEquipe] = useState<VendedorOption[]>([]);
-  const [isGestorUser, setIsGestorUser] = useState(false);
+  const [canAssignVendedor, setCanAssignVendedor] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [usoIndividual, setUsoIndividual] = useState<boolean>(false);
@@ -268,7 +270,9 @@ export default function VendasCadastroIsland() {
   const [formVenda, setFormVenda] = useState<FormVenda>(initialVenda);
   const [recibos, setRecibos] = useState<FormRecibo[]>([]);
   const [reciboEmEdicao, setReciboEmEdicao] = useState<number | null>(null);
+  const [recibosExpandidos, setRecibosExpandidos] = useState<Record<number, boolean>>({});
   const [pagamentos, setPagamentos] = useState<PagamentoVenda[]>([]);
+  const [pagamentosExpandidos, setPagamentosExpandidos] = useState<Record<number, boolean>>({});
 
   const [editId, setEditId] = useState<string | null>(null);
   const [orcamentoId, setOrcamentoId] = useState<string | null>(null);
@@ -312,7 +316,7 @@ export default function VendasCadastroIsland() {
       setCurrentUserId(user.id || null);
       setCompanyId(user.company_id || null);
       setUsoIndividual(Boolean(user.uso_individual));
-      setIsGestorUser(Boolean(user.is_gestor));
+      setCanAssignVendedor(Boolean(user.can_assign_vendedor));
       setVendedoresEquipe(payload.vendedoresEquipe || []);
 
       if (user.id) {
@@ -468,6 +472,7 @@ export default function VendasCadastroIsland() {
         };
       });
       setRecibos(garantirReciboPrincipal(recibosComPrincipal));
+      setRecibosExpandidos({});
 
       const { data: pagamentosData } = await supabase
         .from("vendas_pagamentos")
@@ -494,6 +499,7 @@ export default function VendasCadastroIsland() {
           : [],
       }));
       setPagamentos(pagamentosFormatados);
+      setPagamentosExpandidos({});
     } catch (e) {
       console.error(e);
       setErro("Erro ao carregar venda para edição.");
@@ -643,7 +649,9 @@ export default function VendasCadastroIsland() {
       if (recibosGerados.length) {
         setRecibos(garantirReciboPrincipal(recibosGerados));
       }
+      setRecibosExpandidos({});
       setPagamentos([]);
+      setPagamentosExpandidos({});
       if (produtosAtualizados.length !== produtosLista.length) {
         setProdutos(produtosAtualizados);
       }
@@ -811,6 +819,13 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
     });
   }
 
+  function toggleRecibo(index: number) {
+    setRecibosExpandidos((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
+  }
+
   function updateRecibo(index: number, campo: string, valor: string) {
     setRecibos((prev) => {
       const novo = [...prev];
@@ -889,6 +904,13 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
     setPagamentos((prev) => [...prev, { ...initialPagamento }]);
   }
 
+  function togglePagamento(index: number) {
+    setPagamentosExpandidos((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
+  }
+
   function updatePagamento(index: number, campo: keyof PagamentoVenda, valor: string) {
     setPagamentos((prev) => {
       const next = [...prev];
@@ -904,6 +926,15 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
 
   function removerPagamento(index: number) {
     setPagamentos((prev) => prev.filter((_, i) => i !== index));
+    setPagamentosExpandidos((prev) => {
+      const next: Record<number, boolean> = {};
+      Object.entries(prev).forEach(([key, value]) => {
+        const current = Number(key);
+        if (current < index) next[current] = value;
+        if (current > index) next[current - 1] = value;
+      });
+      return next;
+    });
   }
 
   function addParcelaPagamento(index: number) {
@@ -957,6 +988,15 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
       const novo = prev.filter((_, i) => i !== index);
       return garantirReciboPrincipal(novo);
     });
+    setRecibosExpandidos((prev) => {
+      const next: Record<number, boolean> = {};
+      Object.entries(prev).forEach(([key, value]) => {
+        const current = Number(key);
+        if (current < index) next[current] = value;
+        if (current > index) next[current - 1] = value;
+      });
+      return next;
+    });
   }
 
   function marcarReciboPrincipal(index: number) {
@@ -975,7 +1015,9 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
       data_lancamento: new Date().toISOString().substring(0, 10),
     });
     setRecibos([]);
+    setRecibosExpandidos({});
     setPagamentos([]);
+    setPagamentosExpandidos({});
     setEditId(null);
     setCidadePrefill({ id: "", nome: "" });
     setBuscaCliente("");
@@ -1073,7 +1115,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
         return;
       }
       const vendedorResponsavel = formVenda.vendedor_id || userId;
-      if (isGestorUser && !formVenda.vendedor_id) {
+      if (canAssignVendedor && !formVenda.vendedor_id) {
         setErro("Selecione o vendedor responsável pela venda.");
         showToast("Selecione o vendedor responsável pela venda.", "error");
         setSalvando(false);
@@ -1495,23 +1537,31 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
     <AppPrimerProvider>
       <div className="page-content-wrap">
         <AppCard
+          className="mb-3"
           title={editId ? "Editar venda" : "Cadastro de venda"}
           subtitle={
             editId
               ? "Modo edicao: altere cliente, cidade de destino, embarque e recibos sem mudar a logica operacional."
               : "Registre a venda completa no CRM, organize recibos e mantenha o fluxo comercial padronizado."
           }
-          tone="config"
-        >
-          {erro && (
-            <AlertMessage variant="error" className="mb-3">
-              <strong>{erro}</strong>
-            </AlertMessage>
-          )}
+          tone="info"
+        />
 
-          <form onSubmit={salvarVenda}>
+        {erro && (
+          <AlertMessage variant="error" className="mb-3">
+            <strong>{erro}</strong>
+          </AlertMessage>
+        )}
+
+        <form onSubmit={salvarVenda}>
+          <AppCard
+            title="Dados da venda"
+            subtitle="Informe cliente, destino e datas da operacao comercial."
+            tone="config"
+            className="mb-3"
+          >
             <div className="vtur-form-grid vtur-form-grid-4">
-              {isGestorUser && (
+              {canAssignVendedor && (
                 <AppField
                   as="select"
                   label="Vendedor *"
@@ -1529,9 +1579,9 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
               )}
 
               <div className="form-group min-w-0 vtur-city-picker">
-                <label className="form-label">Cliente *</label>
-                <input
-                  className="form-input"
+                <AppField
+                  label="Cliente *"
+                  wrapperClassName="min-w-0"
                   placeholder="Buscar cliente por nome ou CPF..."
                   autoComplete="off"
                   value={buscaCliente || clienteSelecionado?.nome || ""}
@@ -1589,9 +1639,9 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
               </div>
 
               <div className="form-group min-w-0 vtur-city-picker">
-                <label className="form-label">Cidade de Destino *</label>
-                <input
-                  className="form-input"
+                <AppField
+                  label="Cidade de Destino *"
+                  wrapperClassName="min-w-0"
                   placeholder="Digite o nome da cidade"
                   value={buscaDestino}
                   onChange={(e) => handleCidadeDestino(e.target.value)}
@@ -1641,109 +1691,106 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 )}
               </div>
 
-              <div className="form-group min-w-0">
-                <label className="form-label">Lançada em</label>
-                <input
-                  className="form-input vtur-date-native"
-                  type="date"
-                  value={formVenda.data_lancamento}
-                  onFocus={selectAllInputOnFocus}
-                  onChange={(e) =>
-                    setFormVenda((prev) => ({ ...prev, data_lancamento: e.target.value }))
-                  }
-                />
-              </div>
+              <AppField
+                label="Lançada em"
+                wrapperClassName="form-group min-w-0 vtur-sales-mobile-wide-field"
+                type="date"
+                value={formVenda.data_lancamento}
+                onFocus={selectAllInputOnFocus}
+                onChange={(e) =>
+                  setFormVenda((prev) => ({ ...prev, data_lancamento: e.target.value }))
+                }
+              />
 
-              <div className="form-group min-w-0">
-                <label className="form-label">
-                  Data da venda *{" "}
-                  <span
-                    title="Informe a data da venda conforme no Systur, usada para emissao de NF."
-                    style={{ color: "#0ea5e9", cursor: "help" }}
-                  >
-                    ?
-                  </span>
-                </label>
-                <input
-                  className="form-input vtur-date-native"
-                  type="date"
-                  value={formVenda.data_venda}
-                  onFocus={selectAllInputOnFocus}
-                  onChange={(e) => setFormVenda((prev) => ({ ...prev, data_venda: e.target.value }))}
-                  required
-                />
-              </div>
+              <AppField
+                label={
+                  <>
+                    Data da venda *{" "}
+                    <span
+                      title="Informe a data da venda conforme no Systur, usada para emissao de NF."
+                      style={{ color: "#0ea5e9", cursor: "help" }}
+                    >
+                      ?
+                    </span>
+                  </>
+                }
+                wrapperClassName="form-group min-w-0 vtur-sales-mobile-wide-field"
+                type="date"
+                value={formVenda.data_venda}
+                onFocus={selectAllInputOnFocus}
+                onChange={(e) => setFormVenda((prev) => ({ ...prev, data_venda: e.target.value }))}
+                required
+              />
 
-              <div className="form-group min-w-0">
-                <label className="form-label">Data de embarque</label>
-                <input
-                  className="form-input vtur-date-native"
-                  type="date"
-                  value={formVenda.data_embarque}
-                  onFocus={selectAllInputOnFocus}
-                  onChange={(e) =>
-                    setFormVenda((prev) => {
-                      const proximaData = e.target.value;
-                      const minDataFinal = proximaData || "";
-                      const dataFinalAtualizada =
-                        prev.data_final && minDataFinal && prev.data_final < minDataFinal
-                          ? minDataFinal
-                          : prev.data_final;
-                      return {
-                        ...prev,
-                        data_embarque: proximaData,
-                        data_final: dataFinalAtualizada,
-                      };
-                    })
-                  }
-                />
-              </div>
+              <AppField
+                label="Data de embarque"
+                wrapperClassName="form-group min-w-0 vtur-sales-mobile-wide-field"
+                type="date"
+                value={formVenda.data_embarque}
+                onFocus={selectAllInputOnFocus}
+                onChange={(e) =>
+                  setFormVenda((prev) => {
+                    const proximaData = e.target.value;
+                    const minDataFinal = proximaData || "";
+                    const dataFinalAtualizada =
+                      prev.data_final && minDataFinal && prev.data_final < minDataFinal
+                        ? minDataFinal
+                        : prev.data_final;
+                    return {
+                      ...prev,
+                      data_embarque: proximaData,
+                      data_final: dataFinalAtualizada,
+                    };
+                  })
+                }
+              />
 
-              <div className="form-group min-w-0">
-                <label className="form-label">Data final</label>
-                <input
-                  className="form-input vtur-date-native"
-                  type="date"
-                  value={formVenda.data_final}
-                  min={formVenda.data_embarque || undefined}
-                  onFocus={selectAllInputOnFocus}
-                  onChange={(e) =>
-                    setFormVenda({
-                      ...formVenda,
-                      data_final:
-                        formVenda.data_embarque && e.target.value && e.target.value < formVenda.data_embarque
-                          ? formVenda.data_embarque
-                          : e.target.value,
-                    })
-                  }
-                />
-              </div>
+              <AppField
+                label="Data final"
+                wrapperClassName="form-group min-w-0 vtur-sales-mobile-wide-field"
+                type="date"
+                value={formVenda.data_final}
+                min={formVenda.data_embarque || undefined}
+                onFocus={selectAllInputOnFocus}
+                onChange={(e) =>
+                  setFormVenda({
+                    ...formVenda,
+                    data_final:
+                      formVenda.data_embarque && e.target.value && e.target.value < formVenda.data_embarque
+                        ? formVenda.data_embarque
+                        : e.target.value,
+                  })
+                }
+              />
             </div>
+          </AppCard>
 
           <AppCard
             title="Condicoes comerciais"
             subtitle="Configure o desconto comercial da venda quando houver negociacao aprovada."
             tone="info"
-            style={{ marginTop: 18 }}
+            className="mb-3"
           >
             <div className="vtur-form-grid vtur-form-grid-2">
-              <AppField
-                as="select"
-                label="Aplicar desconto comercial?"
-                value={formVenda.desconto_comercial_aplicado ? "sim" : "nao"}
-                onChange={(e) =>
-                  setFormVenda((prev) => ({
-                    ...prev,
-                    desconto_comercial_aplicado: e.target.value === "sim",
-                    desconto_comercial_valor:
-                      e.target.value === "sim" ? prev.desconto_comercial_valor : "",
-                  }))
-                }
-                options={[
-                  { value: "nao", label: "Nao" },
-                  { value: "sim", label: "Sim" },
-                ]}
-              />
+              <div className="vtur-sales-discount-mobile-row">
+                <AppField
+                  as="select"
+                  label="Aplicar desconto comercial?"
+                  value={formVenda.desconto_comercial_aplicado ? "sim" : "nao"}
+                  onChange={(e) =>
+                    setFormVenda((prev) => ({
+                      ...prev,
+                      desconto_comercial_aplicado: e.target.value === "sim",
+                      desconto_comercial_valor:
+                        e.target.value === "sim" ? prev.desconto_comercial_valor : "",
+                    }))
+                  }
+                  options={[
+                    { value: "nao", label: "Nao" },
+                    { value: "sim", label: "Sim" },
+                  ]}
+                />
+              </div>
               {formVenda.desconto_comercial_aplicado && (
                 <AppField
                   label="Valor do desconto"
@@ -1773,25 +1820,26 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
             title="Recibos da venda"
             subtitle="Monte os itens da venda, pagamentos e comprovantes dentro do fluxo principal do CRM."
             tone="info"
-            style={{ marginTop: 18 }}
+            className="mb-3"
             actions={
               <AppButton
                 type="button"
                 variant="secondary"
-                className="btn-calculator-trigger"
+                className="btn-calculator-trigger vtur-sales-recibos-calculator"
                 onClick={() => setShowCalculator(true)}
                 aria-label="Calculadora"
                 title="Calculadora"
-              >
-                <i className="pi pi-calculator" aria-hidden="true" />
-              </AppButton>
+                icon="pi pi-calculator"
+              />
             }
-          >
-            {recibos.map((r, i) => {
+          />
+
+          {recibos.map((r, i) => {
             const produtoSelecionado = produtos.find((p) => p.id === r.produto_id);
             const nomeProdutoAtual = produtoSelecionado?.nome || "";
             const produtosFiltrados = filtrarProdutos(buscaProduto, r.tipo_produto_id);
             const existeProdutoGlobal = existeProdutoGlobalParaTipo(r.tipo_produto_id);
+            const reciboAberto = Boolean(recibosExpandidos[i]);
             const produtoDesabilitado =
               !r.tipo_produto_id || (!formVenda.destino_id && !existeProdutoGlobal);
             const placeholderProduto = !r.tipo_produto_id
@@ -1810,11 +1858,31 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 }
                 className="vtur-sales-embedded-card"
                 actions={
-                  <AppButton type="button" variant="danger" onClick={() => removerRecibo(i)}>
-                    Remover recibo
-                  </AppButton>
+                  <div className="vtur-card-toolbar-actions">
+                    <AppButton
+                      type="button"
+                      variant="ghost"
+                      className="icon-action-btn no-border"
+                      onClick={() => toggleRecibo(i)}
+                      aria-label={reciboAberto ? "Recolher recibo" : "Expandir recibo"}
+                      title={reciboAberto ? "Recolher recibo" : "Expandir recibo"}
+                      icon={reciboAberto ? "pi pi-chevron-up" : "pi pi-chevron-down"}
+                    />
+                    <AppButton
+                      type="button"
+                      variant="danger"
+                      className="icon-action-btn danger no-border"
+                      onClick={() => removerRecibo(i)}
+                      aria-label="Remover recibo"
+                      title="Remover recibo"
+                    >
+                      <i className="pi pi-trash" aria-hidden="true" />
+                    </AppButton>
+                  </div>
                 }
               >
+                {reciboAberto ? (
+                <>
                 <div className="vtur-form-grid vtur-form-grid-4">
                   <AppField
                     as="select"
@@ -1833,9 +1901,9 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                   />
 
                   <div className="form-group min-w-0">
-                    <label className="form-label">Produto *</label>
-                    <input
-                      className="form-input search-input-field w-full"
+                    <AppField
+                      label="Produto *"
+                      className="search-input-field w-full"
                       list={`listaProdutos-${i}`}
                       placeholder={placeholderProduto}
                       value={
@@ -1936,8 +2004,9 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                         )}
                     </select>
                     {tiposPacote.length === 0 && (
-                      <input
-                        className="form-input mt-2"
+                      <AppField
+                        wrapperClassName="mt-2"
+                        label="Tipo de Pacote (manual)"
                         value={r.tipo_pacote || ""}
                         onChange={(e) => updateRecibo(i, "tipo_pacote", e.target.value)}
                         placeholder="Ex: Somente Hotel"
@@ -2020,30 +2089,32 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 </div>
 
                 <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 16 }}>
-                  <div className="form-group min-w-0">
-                    <label className="form-label">Contrato (PDF)</label>
-                    <input
-                      type="file"
-                      accept="application/pdf"
-                      className="form-input"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] || null;
-                        setRecibos((prev) => {
-                          const next = [...prev];
-                          next[i] = { ...next[i], contrato_file: file, contrato_url: next[i].contrato_url };
-                          return next;
-                        });
-                      }}
-                    />
-                    {r.contrato_url && (
-                      <div className="vtur-sales-contract-link">
-                        <a className="link" href={r.contrato_url} target="_blank" rel="noreferrer">
-                          Ver contrato anexado
-                        </a>
-                      </div>
-                    )}
-                  </div>
+                  <FileUploadField
+                    wrapperClassName="form-group min-w-0"
+                    label="Contrato (PDF)"
+                    accept="application/pdf"
+                    onChange={(e) => {
+                      const file = e.currentTarget.files?.[0] || null;
+                      setRecibos((prev) => {
+                        const next = [...prev];
+                        next[i] = { ...next[i], contrato_file: file, contrato_url: next[i].contrato_url };
+                        return next;
+                      });
+                    }}
+                    fileName={r.contrato_file?.name || "Nenhum arquivo escolhido"}
+                  />
+                  {r.contrato_url && (
+                    <div className="vtur-sales-contract-link">
+                      <a className="link" href={r.contrato_url} target="_blank" rel="noreferrer">
+                        Ver contrato anexado
+                      </a>
+                    </div>
+                  )}
                 </div>
+                </>
+                ) : (
+                  <div className="vtur-sales-empty-state">Recibo recolhido. Clique na seta para abrir.</div>
+                )}
               </AppCard>
             );
           })}
@@ -2056,6 +2127,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
 
           {pagamentos.map((p, idx) => {
             const formaSelecionada = formasPagamento.find((f) => f.id === p.forma_id);
+            const pagamentoAberto = Boolean(pagamentosExpandidos[idx]);
             return (
               <AppCard
                 key={`pag-${idx}`}
@@ -2063,11 +2135,31 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 subtitle="Defina a forma, os valores e a distribuicao em parcelas."
                 className="vtur-sales-embedded-card"
                 actions={
-                  <AppButton type="button" variant="danger" onClick={() => removerPagamento(idx)}>
-                    Remover pagamento
-                  </AppButton>
+                  <div className="vtur-card-toolbar-actions">
+                    <AppButton
+                      type="button"
+                      variant="ghost"
+                      className="icon-action-btn no-border"
+                      onClick={() => togglePagamento(idx)}
+                      aria-label={pagamentoAberto ? "Recolher pagamento" : "Expandir pagamento"}
+                      title={pagamentoAberto ? "Recolher pagamento" : "Expandir pagamento"}
+                      icon={pagamentoAberto ? "pi pi-chevron-up" : "pi pi-chevron-down"}
+                    />
+                    <AppButton
+                      type="button"
+                      variant="danger"
+                      className="icon-action-btn danger no-border"
+                      onClick={() => removerPagamento(idx)}
+                      aria-label="Remover pagamento"
+                      title="Remover pagamento"
+                    >
+                      <i className="pi pi-trash" aria-hidden="true" />
+                    </AppButton>
+                  </div>
                 }
               >
+                {pagamentoAberto ? (
+                <>
                 <div className="vtur-form-grid vtur-form-grid-4">
                   <AppField
                     as="select"
@@ -2156,8 +2248,15 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                     <strong>Parcelas</strong>
                     <p>Organize vencimento e valor por parcela.</p>
                   </div>
-                  <AppButton type="button" variant="secondary" onClick={() => addParcelaPagamento(idx)}>
-                    Adicionar parcela
+                  <AppButton
+                    type="button"
+                    variant="secondary"
+                    className="icon-action-btn"
+                    onClick={() => addParcelaPagamento(idx)}
+                    aria-label="Adicionar parcela"
+                    title="Adicionar parcela"
+                  >
+                    <i className="pi pi-plus" aria-hidden="true" />
                   </AppButton>
                 </div>
                 {(p.parcelas || []).length === 0 ? (
@@ -2208,11 +2307,12 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                             <AppButton
                               type="button"
                               variant="danger"
+                              className="icon-action-btn danger no-border"
                               onClick={() => removerParcelaPagamento(idx, parcelaIdx)}
                               title="Remover parcela"
                               aria-label="Remover parcela"
                             >
-                              Remover parcela
+                              <i className="pi pi-trash" aria-hidden="true" />
                             </AppButton>
                           </div>
                         </div>
@@ -2220,26 +2320,29 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                     ))}
                   </div>
                 )}
+                </>
+                ) : (
+                  <div className="vtur-sales-empty-state">Pagamento recolhido. Clique na seta para abrir.</div>
+                )}
               </AppCard>
             );
           })}
-            <div className="vtur-form-actions">
-              <AppButton type="button" variant="secondary" onClick={addPagamento}>
-                Adicionar pagamento
-              </AppButton>
-              <AppButton type="button" variant="secondary" onClick={addRecibo}>
-                Adicionar recibo
-              </AppButton>
-              <AppButton type="submit" variant="primary" disabled={salvando}>
-                {salvando ? "Salvando..." : "Salvar venda"}
-              </AppButton>
-              <AppButton type="button" variant="ghost" onClick={cancelarCadastro}>
-                Cancelar
-              </AppButton>
-            </div>
-          </AppCard>
+
+          <div className="vtur-form-actions">
+            <AppButton type="button" variant="secondary" onClick={addPagamento}>
+              Adicionar pagamento
+            </AppButton>
+            <AppButton type="button" variant="secondary" onClick={addRecibo}>
+              Adicionar recibo
+            </AppButton>
+            <AppButton type="submit" variant="primary" disabled={salvando}>
+              {salvando ? "Salvando..." : "Salvar venda"}
+            </AppButton>
+            <AppButton type="button" variant="secondary" onClick={cancelarCadastro}>
+              Cancelar
+            </AppButton>
+          </div>
         </form>
-      </AppCard>
       <AppNoticeDialog
         open={Boolean(duplicadoModal)}
         title="ATENCAO!"

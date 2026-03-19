@@ -1,15 +1,62 @@
 :root {
-  --vtur-primer-accent: #8e28e2;
-  --vtur-primer-accent-strong: #5630ff;
+  --vtur-primer-accent: #2563eb;
+  --vtur-primer-accent-strong: #1d4ed8;
+  --vtur-primer-accent-soft: #60a5fa;
   --vtur-primer-ink: #09112e;
   --vtur-primer-muted: #52607a;
+  --vtur-section-blue-bg: #ebf8ff;
+  --vtur-section-blue-border: #bfdbfe;
+  --vtur-section-blue-title: #1d4ed8;
+  --vtur-section-teal-bg: #f0fdfa;
+  --vtur-section-teal-border: #99f6e4;
+  --vtur-section-teal-title: #0f766e;
+  --vtur-section-green-bg: #ecfdf3;
+  --vtur-section-green-border: #bbf7d0;
+  --vtur-section-green-title: #15803d;
+  --vtur-section-config-bg: #fff7ed;
+  --vtur-section-config-border: #fed7aa;
+  --vtur-section-config-title: #c2410c;
   --vtur-primer-surface: #ffffff;
   --vtur-primer-surface-alt: #f4f1eb;
   --vtur-primer-border: rgba(9, 17, 46, 0.14);
   --vtur-primer-sidebar-hover: rgba(255, 255, 255, 0.08);
+  --vtur-button-primary-bg: linear-gradient(135deg, var(--vtur-primer-accent) 0%, var(--vtur-primer-accent-strong) 100%);
+  --vtur-button-primary-hover-bg: linear-gradient(135deg, #3b82f6 0%, var(--vtur-primer-accent) 100%);
+  --vtur-button-primary-active-bg: linear-gradient(135deg, var(--vtur-primer-accent-strong) 0%, #1e40af 100%);
+  --vtur-button-primary-border: var(--vtur-primer-accent-strong);
+  --vtur-button-primary-hover-border: var(--vtur-primer-accent);
+  --vtur-button-primary-active-border: #1e40af;
+  --vtur-button-secondary-bg: #ffffff;
+  --vtur-button-secondary-border: #93c5fd;
+  --vtur-button-secondary-text: #1d4ed8;
+  --vtur-button-secondary-hover-bg: #eff6ff;
+  --vtur-button-secondary-hover-border: #60a5fa;
+  --vtur-button-secondary-hover-text: #1e40af;
+  --vtur-button-ghost-text: #2563eb;
+  --vtur-button-ghost-hover-bg: rgba(59, 130, 246, 0.12);
+  --vtur-button-ghost-hover-text: #1d4ed8;
+  --vtur-button-focus-ring: 0 0 0 0.2rem rgba(96, 165, 250, 0.28);
   --vtur-warning-bg: #ffffff;
   --vtur-warning-border: #f97316;
   --vtur-warning-text: #f97316;
+}
+
+:where(body.sakai-theme, .vtur-primer-scope) {
+  --primary-50: #eff6ff;
+  --primary-100: #dbeafe;
+  --primary-200: #bfdbfe;
+  --primary-300: #93c5fd;
+  --primary-400: #60a5fa;
+  --primary-500: #3b82f6;
+  --primary-600: #2563eb;
+  --primary-700: #1d4ed8;
+  --primary-800: #1e40af;
+  --primary-900: #1e3a8a;
+  --primary-color: var(--primary-600);
+  --primary-color-text: #ffffff;
+  --focus-ring: var(--vtur-button-focus-ring);
+  --highlight-bg: var(--primary-50);
+  --highlight-text-color: var(--primary-700);
 }
 
 .vtur-primer-scope {
@@ -28,29 +75,28 @@
 }
 
 .vtur-page-header.vtur-app-toolbar {
-  margin: 0 0 20px;
-  padding: 0 0 14px;
-  border: 0;
-  border-radius: 0;
-  border-bottom: 1px solid rgba(9, 17, 46, 0.14);
-  background: transparent;
-  box-shadow: none;
+  margin: 0 0 18px;
+  padding: 18px 20px;
+  border: 1px solid var(--vtur-primer-border);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+  box-shadow: 0 16px 38px rgba(15, 23, 42, 0.08);
 }
 
 .vtur-page-header-blue :is(h1, [data-component="PH_Title"], .vtur-app-toolbar-title) {
-  color: #0a0d26;
+  color: var(--vtur-section-blue-title);
 }
 
 .vtur-page-header-teal :is(h1, [data-component="PH_Title"], .vtur-app-toolbar-title) {
-  color: #0f766e;
+  color: var(--vtur-section-teal-title);
 }
 
 .vtur-page-header-green :is(h1, [data-component="PH_Title"], .vtur-app-toolbar-title) {
-  color: #5630ff;
+  color: var(--vtur-section-green-title);
 }
 
 .vtur-page-header-config :is(h1, [data-component="PH_Title"], .vtur-app-toolbar-title) {
-  color: #8e28e2;
+  color: var(--vtur-section-config-title);
 }
 
 .vtur-page-header :is([data-component="PH_Title"], .vtur-app-toolbar-title) {
@@ -82,11 +128,13 @@
 }
 
 .vtur-app-card-info {
-  border-color: rgba(59, 130, 246, 0.22);
+  border-color: var(--vtur-section-blue-border);
+  background: linear-gradient(180deg, var(--vtur-section-blue-bg), #fff);
 }
 
 .vtur-app-card-config {
-  border-color: rgba(142, 40, 226, 0.22);
+  border-color: var(--vtur-section-config-border);
+  background: linear-gradient(180deg, var(--vtur-section-config-bg), #fff);
 }
 
 .vtur-app-card-header {
@@ -119,6 +167,23 @@
   min-width: 0;
 }
 
+/* Quando um card atua apenas como container de outros cards (formularios/modais),
+   achatamos o visual para evitar card dentro de card. */
+.vtur-app-card-shell {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.vtur-app-card-shell > .vtur-app-card-header {
+  margin-bottom: 12px;
+}
+
+.vtur-app-card-shell > .vtur-app-card-body {
+  padding: 0;
+}
+
 .vtur-app-toolbar {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
   border: 1px solid var(--vtur-primer-border);
@@ -132,12 +197,13 @@
 }
 
 .vtur-app-toolbar-info {
-  border-color: rgba(59, 130, 246, 0.24);
+  border-color: var(--vtur-section-blue-border);
+  background: linear-gradient(180deg, var(--vtur-section-blue-bg), #fff);
 }
 
 .vtur-app-toolbar-config {
-  border-color: rgba(142, 40, 226, 0.24);
-  background: linear-gradient(180deg, rgba(250, 245, 255, 0.95), rgba(255, 255, 255, 0.98));
+  border-color: var(--vtur-section-config-border);
+  background: linear-gradient(180deg, var(--vtur-section-config-bg), #fff);
 }
 
 .vtur-app-toolbar-sticky {
@@ -157,7 +223,7 @@
 
 .vtur-app-toolbar-title {
   margin: 0;
-  font-size: 1.02rem;
+  font-size: 1.08rem;
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--vtur-primer-ink);
@@ -166,33 +232,166 @@
 .vtur-app-toolbar-subtitle {
   margin: 6px 0 0;
   color: var(--vtur-primer-muted);
-  font-size: 0.93rem;
+  font-size: 0.94rem;
 }
 
 .vtur-app-toolbar-actions {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  margin-left: auto;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.vtur-actions-end {
+  justify-content: flex-end;
+}
+
+.vtur-scroll-y-65 {
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+.vtur-app-toolbar-actions > :is(.btn, .p-button, .vtur-app-button):not(.btn-icon):not(.p-button-icon-only) {
+  min-height: 42px;
+  border-radius: 12px;
+  white-space: nowrap;
 }
 
 .vtur-app-toolbar-body {
   margin-top: 16px;
 }
 
-.vtur-app-button {
-  border-radius: 999px;
-  font-weight: 700;
+.vtur-app-toolbar.list-toolbar-sticky .vtur-app-toolbar-body,
+.vtur-app-card.list-toolbar-sticky .vtur-app-card-body {
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
+  padding-top: 16px;
 }
 
+.vtur-app-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 42px;
+  padding: 0.72rem 1.15rem;
+  border-radius: 999px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-decoration: none !important;
+}
+
+:where(body.sakai-theme, .vtur-primer-scope) :is(.p-button, .vtur-app-button) {
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+:where(body.sakai-theme, .vtur-primer-scope) :is(.p-button, .vtur-app-button):is(:focus, :focus-visible),
+:where(body.sakai-theme, .vtur-primer-scope) :is(.p-button, .vtur-app-button).p-focus {
+  outline: none;
+  box-shadow: var(--vtur-button-focus-ring) !important;
+}
+
+.vtur-app-button:not(.p-button-icon-only) {
+  white-space: nowrap;
+}
+
+a.vtur-app-button,
+a.vtur-app-button:hover,
+a.vtur-app-button:focus,
+a.vtur-app-button:active,
+a.vtur-app-button:visited {
+  text-decoration: none !important;
+}
+
+.vtur-app-button-default,
 .vtur-app-button-primary {
-  background: linear-gradient(135deg, var(--vtur-primer-accent) 0%, var(--vtur-primer-accent-strong) 100%);
-  border-color: var(--vtur-primer-accent-strong);
+  background: var(--vtur-button-primary-bg);
+  border-color: var(--vtur-button-primary-border);
   color: #fff;
 }
 
+.vtur-app-button-default:hover:not(:disabled):not(.p-disabled),
+.vtur-app-button-primary:hover:not(:disabled):not(.p-disabled) {
+  background: var(--vtur-button-primary-hover-bg);
+  border-color: var(--vtur-button-primary-hover-border);
+}
+
+.vtur-app-button-default:active:not(:disabled):not(.p-disabled),
+.vtur-app-button-primary:active:not(:disabled):not(.p-disabled) {
+  background: var(--vtur-button-primary-active-bg);
+  border-color: var(--vtur-button-primary-active-border);
+}
+
 .vtur-app-button-secondary {
-  border-color: rgba(99, 102, 241, 0.3);
-  color: #4338ca;
+  background: var(--vtur-button-secondary-bg);
+  border-color: var(--vtur-button-secondary-border);
+  color: var(--vtur-button-secondary-text);
+}
+
+.vtur-app-button-secondary.p-button-outlined {
+  background: var(--vtur-button-secondary-bg);
+  border-color: var(--vtur-button-secondary-border);
+  color: var(--vtur-button-secondary-text);
+}
+
+.vtur-app-button-secondary:hover:not(:disabled):not(.p-disabled) {
+  background: var(--vtur-button-secondary-hover-bg);
+  border-color: var(--vtur-button-secondary-hover-border);
+  color: var(--vtur-button-secondary-hover-text);
+}
+
+.vtur-app-button-ghost,
+.vtur-app-button-link {
+  background: transparent;
+  border-color: transparent;
+  color: var(--vtur-button-ghost-text);
+}
+
+.vtur-app-button-ghost:hover:not(:disabled):not(.p-disabled),
+.vtur-app-button-link:hover:not(:disabled):not(.p-disabled) {
+  background: var(--vtur-button-ghost-hover-bg);
+  border-color: transparent;
+  color: var(--vtur-button-ghost-hover-text);
+}
+
+:where(body.sakai-theme, .vtur-primer-scope) .p-button.p-button-warning,
+:where(body.sakai-theme, .vtur-primer-scope) .p-button-group.p-button-warning > .p-button,
+:where(body.sakai-theme, .vtur-primer-scope) .p-splitbutton.p-button-warning > .p-button,
+:where(body.sakai-theme, .vtur-primer-scope) .p-fileupload-choose.p-button-warning {
+  background: var(--vtur-button-primary-bg);
+  border-color: var(--vtur-button-primary-border);
+  color: #ffffff;
+}
+
+:where(body.sakai-theme, .vtur-primer-scope)
+  :is(.p-button.p-button-warning, .p-button-group.p-button-warning > .p-button, .p-splitbutton.p-button-warning > .p-button, .p-fileupload-choose.p-button-warning):not(:disabled):hover {
+  background: var(--vtur-button-primary-hover-bg);
+  border-color: var(--vtur-button-primary-hover-border);
+  color: #ffffff;
+}
+
+:where(body.sakai-theme, .vtur-primer-scope)
+  :is(.p-button.p-button-warning, .p-button-group.p-button-warning > .p-button, .p-splitbutton.p-button-warning > .p-button, .p-fileupload-choose.p-button-warning):not(:disabled):active {
+  background: var(--vtur-button-primary-active-bg);
+  border-color: var(--vtur-button-primary-active-border);
+  color: #ffffff;
+}
+
+:where(body.sakai-theme, .vtur-primer-scope) .p-button.p-button-warning.p-button-outlined,
+:where(body.sakai-theme, .vtur-primer-scope) .p-button.p-button-warning.p-button-text,
+:where(body.sakai-theme, .vtur-primer-scope) .p-button.p-button-warning.p-button-link {
+  background: transparent;
+  border-color: var(--vtur-button-secondary-border);
+  color: var(--vtur-button-secondary-text);
+}
+
+:where(body.sakai-theme, .vtur-primer-scope)
+  :is(.p-button.p-button-warning.p-button-outlined, .p-button.p-button-warning.p-button-text, .p-button.p-button-warning.p-button-link):not(:disabled):hover {
+  background: var(--vtur-button-secondary-hover-bg);
+  border-color: var(--vtur-button-secondary-hover-border);
+  color: var(--vtur-button-secondary-hover-text);
 }
 
 .vtur-app-button-danger {
@@ -270,7 +469,20 @@
 .vtur-app-field textarea {
   border-radius: 14px;
   border: 1px solid #d6d9e7;
-  padding: 0.65rem 0.75rem;
+  min-height: 44px;
+  padding: 0.68rem 0.85rem;
+  background: rgba(255, 255, 255, 0.98);
+  color: var(--vtur-primer-ink);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.vtur-app-field textarea {
+  min-height: 120px;
+}
+
+.vtur-app-field .vtur-app-file-input {
+  padding: 6px;
+  min-height: 0;
 }
 
 .vtur-app-field-caption {
@@ -416,11 +628,27 @@
   width: 100%;
 }
 
-.vtur-alert-inline .p-message-wrapper {
+.vtur-alert .p-message-wrapper {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: nowrap;
   gap: 0.5rem;
+}
+
+.vtur-alert .p-message-icon {
+  flex: 0 0 auto;
+  margin-top: 0.1rem;
+}
+
+.vtur-alert .p-message-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.vtur-alert-inline .p-message-wrapper {
+  align-items: flex-start;
 }
 
 .vtur-alert-inline .p-message-icon {
@@ -428,8 +656,8 @@
 }
 
 .vtur-alert-inline .p-message-text {
-  white-space: nowrap;
-  overflow-wrap: normal;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .sakai-theme .vtur-alert .p-message.p-message-warn {
@@ -500,6 +728,16 @@
   flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-end;
+}
+
+@media (min-width: 640px) {
+  .vtur-dashboard-toolbar-actions .btn-calculator-trigger.vtur-app-button {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    min-height: 42px;
+    align-self: center;
+  }
 }
 
 .vtur-dashboard-preset-row {
@@ -704,6 +942,14 @@
   margin-top: 8px;
 }
 
+.quote-print-settings-page .vtur-app-toolbar + .vtur-app-card {
+  margin-top: 18px;
+}
+
+.documentos-viagens-page .vtur-app-toolbar + .vtur-app-card {
+  margin-top: 18px;
+}
+
 .vtur-sales-section-heading {
   display: grid;
   gap: 4px;
@@ -826,14 +1072,14 @@
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
-.vtur-sidebar-nav .vtur-sidebar-nav-item [data-component="ActionList.LeadingVisual"] {
+.vtur-sidebar-nav .vtur-sidebar-nav-item .vtur-legacy-nav-leading {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: currentColor;
 }
 
-.vtur-sidebar-nav .vtur-sidebar-nav-item [data-component="ActionList.LeadingVisual"] > * {
+.vtur-sidebar-nav .vtur-sidebar-nav-item .vtur-legacy-nav-leading > * {
   width: 20px;
   height: 20px;
 }
@@ -1034,6 +1280,9 @@
 .vtur-quote-summary-item {
   display: grid;
   gap: 6px;
+  justify-items: center;
+  text-align: center;
+  align-content: center;
   padding: 14px 16px;
   border: 1px solid rgba(148, 163, 184, 0.24);
   border-radius: 18px;
@@ -1048,12 +1297,304 @@
   letter-spacing: -0.02em;
 }
 
+.vtur-conciliacao-nav-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.vtur-conciliacao-nav-card {
+  appearance: none;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  text-align: center;
+  align-content: center;
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.vtur-conciliacao-nav-card strong {
+  color: var(--vtur-primer-ink);
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.vtur-conciliacao-nav-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.vtur-conciliacao-nav-card.active {
+  border-color: rgba(37, 99, 235, 0.45);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(239, 246, 255, 0.96) 100%);
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.16);
+}
+
+.vtur-conciliacao-nav-hint {
+  color: var(--vtur-primer-muted);
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
 .vtur-quote-summary-label {
   color: var(--vtur-primer-muted);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.vtur-conciliacao-overview {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.9fr);
+}
+
+.vtur-conciliacao-month-banner {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  text-align: center;
+  padding: 14px 18px;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(239, 246, 255, 0.92) 0%, rgba(255, 255, 255, 0.92) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.vtur-conciliacao-month-banner strong {
+  color: var(--vtur-primer-ink);
+  font-size: 1.12rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.vtur-conciliacao-calendar-card,
+.vtur-conciliacao-pending-card {
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  padding: 16px;
+}
+
+.vtur-conciliacao-calendar-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.vtur-conciliacao-calendar-head h4,
+.vtur-conciliacao-pending-card h4 {
+  margin: 0 0 4px;
+  color: var(--vtur-primer-ink);
+  font-size: 1rem;
+}
+
+.vtur-conciliacao-calendar-head p,
+.vtur-conciliacao-pending-card p {
+  margin: 0;
+  color: var(--vtur-primer-muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.vtur-conciliacao-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  justify-content: flex-end;
+}
+
+.vtur-conciliacao-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.84rem;
+  color: var(--vtur-primer-muted);
+}
+
+.vtur-conciliacao-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.vtur-conciliacao-dot.ok { background: #16a34a; }
+.vtur-conciliacao-dot.conciliacao { background: #f59e0b; }
+.vtur-conciliacao-dot.importacao { background: #ef4444; }
+.vtur-conciliacao-dot.ranking { background: #2563eb; }
+
+.vtur-conciliacao-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.vtur-conciliacao-calendar-weekday {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--vtur-primer-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.vtur-conciliacao-calendar-day {
+  appearance: none;
+  min-height: 72px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: #f8fafc;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  text-align: left;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+
+.vtur-conciliacao-calendar-day:not(:disabled) {
+  cursor: pointer;
+}
+
+.vtur-conciliacao-calendar-day:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+}
+
+.vtur-conciliacao-calendar-day:disabled {
+  opacity: 0.45;
+}
+
+.vtur-conciliacao-calendar-day.empty {
+  background: transparent;
+  border-style: dashed;
+}
+
+.vtur-conciliacao-calendar-day.ok {
+  background: rgba(22, 163, 74, 0.08);
+  border-color: rgba(22, 163, 74, 0.22);
+}
+
+.vtur-conciliacao-calendar-day.conciliacao {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.28);
+}
+
+.vtur-conciliacao-calendar-day.importacao {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.24);
+}
+
+.vtur-conciliacao-calendar-day.ranking {
+  background: rgba(37, 99, 235, 0.1);
+  border-color: rgba(37, 99, 235, 0.24);
+}
+
+.vtur-conciliacao-calendar-day-number {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--vtur-primer-ink);
+}
+
+.vtur-conciliacao-calendar-day-meta {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--vtur-primer-muted);
+}
+
+.vtur-conciliacao-pending-chips {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.vtur-conciliacao-pending-chip {
+  appearance: none;
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  background: #fff;
+  cursor: pointer;
+}
+
+.vtur-conciliacao-pending-chip strong {
+  color: var(--vtur-primer-ink);
+  font-size: 0.92rem;
+}
+
+.vtur-conciliacao-pending-chip span {
+  color: var(--vtur-primer-muted);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.vtur-conciliacao-pending-chip.importacao {
+  background: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.18);
+}
+
+.vtur-conciliacao-pending-chip.conciliacao {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+.vtur-conciliacao-pending-chip.ranking {
+  background: rgba(37, 99, 235, 0.06);
+  border-color: rgba(37, 99, 235, 0.18);
+}
+
+.vtur-conciliacao-pending-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+@media (max-width: 960px) {
+  .vtur-conciliacao-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .vtur-conciliacao-calendar-head {
+    flex-direction: column;
+  }
+
+  .vtur-conciliacao-legend {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .vtur-conciliacao-calendar-grid {
+    gap: 6px;
+  }
+
+  .vtur-conciliacao-calendar-day {
+    min-height: 60px;
+    padding: 8px 6px;
+  }
+
+  .vtur-conciliacao-calendar-day-meta {
+    font-size: 0.7rem;
+  }
 }
 
 .vtur-quote-inline-card {
@@ -1545,6 +2086,35 @@
   justify-content: center;
 }
 
+.vtur-import-upload-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.44);
+  background: #ffffff;
+  color: var(--vtur-primer-muted);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.1;
+  cursor: pointer;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+  white-space: nowrap;
+}
+
+.vtur-import-upload-trigger:hover {
+  background: rgba(248, 250, 252, 0.92);
+  border-color: rgba(100, 116, 139, 0.5);
+  color: var(--vtur-primer-ink);
+}
+
+.vtur-import-upload-trigger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
 .vtur-import-file-name {
   color: var(--vtur-primer-muted);
   font-size: 0.9rem;
@@ -1690,6 +2260,8 @@
 .vtur-commission-kpi-card {
   display: grid;
   gap: 8px;
+  justify-items: center;
+  align-content: center;
   padding: 18px;
   border-radius: 18px;
   border: 1px solid rgba(148, 163, 184, 0.2);
@@ -1704,6 +2276,7 @@
   line-height: 1.4;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  text-align: center;
   color: var(--vtur-primer-muted);
 }
 
@@ -1711,6 +2284,7 @@
   font-size: 1.2rem;
   font-weight: 700;
   line-height: 1.15;
+  text-align: center;
   color: var(--vtur-primer-ink);
 }
 
@@ -1846,6 +2420,18 @@
 }
 
 @media (max-width: 640px) {
+  .vtur-app-card-actions {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .vtur-app-card-actions .vtur-app-button:not(.p-button-icon-only) {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+
   .vtur-form-actions {
     flex-direction: column;
   }
@@ -1899,6 +2485,10 @@
     width: 100%;
   }
 
+  .vtur-import-upload-trigger {
+    width: 100%;
+  }
+
   .vtur-commission-kpi-grid,
   .vtur-commission-filters-grid {
     grid-template-columns: 1fr;
@@ -1915,6 +2505,29 @@
   .vtur-dashboard-config-actions .vtur-app-button {
     width: 100%;
     justify-content: center;
+  }
+
+  .dashboard-geral-page .vtur-dashboard-mobile-quick-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .dashboard-geral-page .vtur-dashboard-mobile-quick-actions .dashboard-mobile-filter-btn.vtur-app-button {
+    width: auto !important;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .dashboard-geral-page .vtur-dashboard-mobile-quick-actions .dashboard-mobile-calculator-btn.vtur-app-button {
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    flex: 0 0 44px;
   }
 
   .vtur-dashboard-link-card,

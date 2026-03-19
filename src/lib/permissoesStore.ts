@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { supabase } from "./supabase";
 import { MAPA_MODULOS, listarModulosComHeranca } from "../config/modulos";
 import { isSystemAdminRole } from "./adminAccess";
@@ -165,6 +165,7 @@ export async function refreshPermissoes() {
 
 export function usePermissoesStore() {
   const [hydrated, setHydrated] = useState(false);
+  const hasBackgroundRefreshedRef = useRef(false);
 
   useEffect(() => {
     setHydrated(true);
@@ -193,6 +194,20 @@ export function usePermissoesStore() {
       }, 0);
     }
   }, [hydrated, snapshot.ready, snapshot.loading]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!snapshot.ready || snapshot.loading) return;
+    const cacheUserId = snapshot.cache?.userId ?? snapshot.userId;
+    if (!cacheUserId) return;
+    if (hasBackgroundRefreshedRef.current) return;
+
+    hasBackgroundRefreshedRef.current = true;
+
+    setTimeout(() => {
+      refreshPermissoes();
+    }, 0);
+  }, [hydrated, snapshot.ready, snapshot.loading, snapshot.cache?.updatedAt, snapshot.cache?.userId, snapshot.userId]);
 
   const acessos = snapshot.cache?.acessos || {};
   const userType = snapshot.cache?.userType ?? snapshot.userType ?? "";

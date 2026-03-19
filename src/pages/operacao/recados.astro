@@ -1,17 +1,10 @@
 ---
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
-import HeaderPage from "../../components/ui/HeaderPage.astro";
 import MuralRecadosIsland from "../../components/islands/MuralRecadosIsland";
 const activePage = "operacao_recados";
 ---
 
 <DashboardLayout title="Mural de Recados" activePage={activePage}>
-  <HeaderPage
-    title="Mural de Recados"
-    subtitle="Envie mensagens para a empresa ou converse diretamente com colegas."
-    color="blue"
-  />
-
   <div class="page-content-wrap">
     <MuralRecadosIsland client:load />
   </div>

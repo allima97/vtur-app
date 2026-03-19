@@ -225,7 +225,7 @@ export default function ConsultoriaLembretesModalIsland() {
           <div className="modal-title vtur-warning-text" style={{ fontWeight: 800 }}>
             Lembrete de consultoria
           </div>
-          <AppButton type="button" variant="ghost" onClick={fecharModal}>
+          <AppButton type="button" variant="secondary" onClick={fecharModal}>
             Fechar
           </AppButton>
         </div>

@@ -8,7 +8,7 @@ import TableActions from "../ui/TableActions";
 import SearchInput from "../ui/SearchInput";
 import AppButton from "../ui/primer/AppButton";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
+import AppCard from "../ui/primer/AppCard";
 
 type Roteiro = {
   id: string;
@@ -70,14 +70,13 @@ export default function RoteiroListIsland() {
   return (
     <AppPrimerProvider>
       <div className="page-content-wrap orcamentos-consulta-page">
-        <AppToolbar
-          className="mb-3"
-          sticky
+        <AppCard
+          className="mb-3 list-toolbar-sticky"
           tone="info"
           title="Roteiros personalizados"
           subtitle="Busque, edite e remova roteiros salvos."
           actions={(
-            <div className="mobile-stack-buttons orcamentos-action-bar" style={{ justifyContent: "flex-end" }}>
+            <div className="mobile-stack-buttons orcamentos-action-bar vtur-actions-end">
               <AppButton as="a" href="/orcamentos/personalizados/novo" variant="primary">
                 Novo Roteiro
               </AppButton>
@@ -101,7 +100,7 @@ export default function RoteiroListIsland() {
               />
             </div>
           </div>
-        </AppToolbar>
+        </AppCard>
 
         {error && (
           <AlertMessage variant="error" className="mb-3">
@@ -123,9 +122,9 @@ export default function RoteiroListIsland() {
         )}
 
         {(loading || filtered.length > 0) && (
-          <div className="table-container overflow-x-auto" style={{ maxHeight: "65vh", overflowY: "auto" }}>
+          <div className="table-container overflow-x-auto vtur-scroll-y-65">
             <table className="table-default table-header-blue table-mobile-cards min-w-[900px]">
-              <thead style={{ position: "sticky", top: 0, zIndex: 1 }}>
+              <thead>
                 <tr>
                   <th>Nome</th>
                   <th>Duração</th>

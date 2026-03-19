@@ -1,26 +1,10 @@
 ---
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
-import HeaderPage from "../../components/ui/HeaderPage.astro";
-import VendasConsultaIsland from "../../components/islands/VendasConsultaIsland.tsx";
+import VendasConsultaIsland from "../../components/islands/VendasConsultaIsland";
 
 const activePage = "vendas";
 ---
 
 <DashboardLayout title="Consulta de Vendas" {activePage}>
-  <HeaderPage
-    title="Consulta de Vendas"
-    subtitle="Aqui voce pode consultar suas vendas por Cliente, Destino, Produto, Recibo atraves do filtro."
-    color="green"
-  >
-    <div class="mobile-stack-buttons">
-      <a class="p-button p-component p-button-outlined vtur-app-button vtur-app-button-secondary" href="/vendas/importar">
-        Importar contratos
-      </a>
-      <a class="p-button p-component vtur-app-button vtur-app-button-primary" href="/vendas/cadastro">
-        Nova venda
-      </a>
-    </div>
-  </HeaderPage>
-
   <VendasConsultaIsland client:load />
 </DashboardLayout>

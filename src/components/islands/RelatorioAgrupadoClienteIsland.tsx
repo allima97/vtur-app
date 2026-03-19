@@ -19,7 +19,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type StatusFiltro = "todos" | "aberto" | "confirmado" | "cancelado";
 
@@ -83,6 +82,7 @@ async function fetchRelatorioClientes(params: {
   dataFim?: string;
   status?: string;
   busca?: string;
+  companyId?: string;
   vendedorIds?: string[] | null;
   ordem: string;
   ordemDesc: boolean;
@@ -95,6 +95,7 @@ async function fetchRelatorioClientes(params: {
   if (params.dataFim) qs.set("fim", params.dataFim);
   if (params.status && params.status !== "todos") qs.set("status", params.status);
   if (params.busca) qs.set("busca", params.busca);
+  if (params.companyId) qs.set("company_id", params.companyId);
   if (params.vendedorIds && params.vendedorIds.length > 0) {
     qs.set("vendedor_ids", params.vendedorIds.join(","));
   }
@@ -379,11 +380,14 @@ export default function RelatorioAgrupadoClienteIsland() {
       }
 
       const paginaAtual = Math.max(1, pageOverride ?? page);
+      const companyIdFiltro =
+        userCtx.papel === "MASTER" ? masterScope.empresaSelecionada : undefined;
       const rows = (await fetchRelatorioClientes({
         dataInicio: dataInicio || "",
         dataFim: dataFim || "",
         status: statusFiltro,
         busca: buscaCliente,
+        companyId: companyIdFiltro,
         vendedorIds: vendedorIdsFiltro && vendedorIdsFiltro.length > 0 ? vendedorIdsFiltro : null,
         ordem: ordenacao,
         ordemDesc,
@@ -440,11 +444,14 @@ export default function RelatorioAgrupadoClienteIsland() {
     }
 
     while (true) {
+      const companyIdFiltro =
+        userCtx.papel === "MASTER" ? masterScope.empresaSelecionada : undefined;
       const rows = (await fetchRelatorioClientes({
         dataInicio: dataInicio || "",
         dataFim: dataFim || "",
         status: statusFiltro,
         busca: buscaCliente,
+        companyId: companyIdFiltro,
         vendedorIds: vendedorIdsFiltro && vendedorIdsFiltro.length > 0 ? vendedorIdsFiltro : null,
         ordem: ordenacao,
         ordemDesc,
@@ -811,15 +818,14 @@ export default function RelatorioAgrupadoClienteIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="relatorio-vendas-cliente-page">
+      <div className="relatorio-vendas-cliente-page page-content-wrap">
         <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
-        <AppToolbar
-          sticky
+        <AppCard
           tone="config"
           className="mb-3 list-toolbar-sticky"
-          title="Relatório agrupado por cliente"
-          subtitle={`Período: ${periodoResumo}. Consolidação por cliente no recorte atual.`}
+          title="Vendas por Cliente"
+          subtitle={`Gerencie indicadores por cliente com visao de CRM. Periodo: ${periodoResumo}.`}
           actions={
             <div className="vtur-quote-top-actions">
               <AppButton type="button" variant="secondary" className="sm:hidden" onClick={() => setShowFilters(true)}>
@@ -835,7 +841,7 @@ export default function RelatorioAgrupadoClienteIsland() {
           }
         >
           <div className="hidden sm:block">{renderFiltersGrid()}</div>
-        </AppToolbar>
+        </AppCard>
 
         {showFilters ? (
           <Dialog

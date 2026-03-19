@@ -1,14 +1,12 @@
 ---
 import "../../styles/global.css";
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
-import MetasVendedorIsland from "../../components/islands/MetasVendedorIsland.tsx";
+import MetasVendedorIsland from "../../components/islands/MetasVendedorIsland";
 
 const activePage = "parametros-metas";
 ---
 
 <DashboardLayout title="Metas" {activePage} module="Parametros">
-  <h1 class="page-title">Metas por vendedor</h1>
-  <p class="page-subtitle">Defina metas mensais e vincule templates de comissão.</p>
 
   <MetasVendedorIsland client:load />
 </DashboardLayout>

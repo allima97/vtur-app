@@ -7,7 +7,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 import PerformanceDashboardIsland from "./PerformanceDashboardIsland";
 
 type BillingRow = {
@@ -364,11 +363,11 @@ export default function DashboardAdminIsland() {
   return (
     <AppPrimerProvider>
       <div className="page-content-wrap dashboard-admin-page admin-page admin-dashboard-page vtur-dashboard-shell">
-        <AppToolbar
+        <AppCard
+          className="mb-3 list-toolbar-sticky"
           title="Dashboard administrativo"
           subtitle="Controle geral do sistema, manutencao, cobrancas, atalhos operacionais e monitoramento de performance."
           tone="config"
-          sticky
         />
 
         <AppCard

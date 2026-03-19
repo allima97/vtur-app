@@ -2,8 +2,37 @@ body.sakai-theme {
   --sgvtur-bg: #f4f1eb;
   --sgvtur-ink: #09112e;
   --sgvtur-muted: #52607a;
-  --sgvtur-accent: #8e28e2;
-  --sgvtur-accent-strong: #5630ff;
+  --vtur-topbar-height: 4.6rem;
+  --vtur-desktop-shell-top: 5.6rem;
+  --vtur-desktop-content-top: 3.5rem;
+  --vtur-mobile-content-top: calc(var(--vtur-topbar-height) + 0.8rem + env(safe-area-inset-top));
+  --sgvtur-section-blue-bg: #ebf8ff;
+  --sgvtur-section-blue-border: #bfdbfe;
+  --sgvtur-section-blue-title: #1d4ed8;
+  --sgvtur-section-teal-bg: #f0fdfa;
+  --sgvtur-section-teal-border: #99f6e4;
+  --sgvtur-section-teal-title: #0f766e;
+  --sgvtur-section-green-bg: #ecfdf3;
+  --sgvtur-section-green-border: #bbf7d0;
+  --sgvtur-section-green-title: #15803d;
+  --sgvtur-section-config-bg: #fff7ed;
+  --sgvtur-section-config-border: #fed7aa;
+  --sgvtur-section-config-title: #c2410c;
+  --sgvtur-accent: #2563eb;
+  --sgvtur-accent-strong: #1d4ed8;
+  --primary-50: #eff6ff;
+  --primary-100: #dbeafe;
+  --primary-200: #bfdbfe;
+  --primary-300: #93c5fd;
+  --primary-400: #60a5fa;
+  --primary-500: #3b82f6;
+  --primary-600: #2563eb;
+  --primary-700: #1d4ed8;
+  --primary-800: #1e40af;
+  --primary-900: #1e3a8a;
+  --primary-color: var(--primary-600);
+  --primary-color-text: #ffffff;
+  --focus-ring: 0 0 0 0.2rem rgba(96, 165, 250, 0.28);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.95)),
     radial-gradient(circle at 12% 12%, rgba(142, 40, 226, 0.1), transparent 30%),
@@ -31,7 +60,7 @@ body.sakai-theme .app-topbar {
   left: 0;
   right: 0;
   z-index: 997;
-  height: 4.6rem;
+  height: var(--vtur-topbar-height);
   padding: 0 1.5rem;
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
@@ -41,7 +70,7 @@ body.sakai-theme .app-topbar {
 
 body.sakai-theme .app-sidebar {
   position: fixed;
-  top: 5.6rem;
+  top: var(--vtur-desktop-shell-top);
   left: 1rem;
   z-index: 999;
   width: 286px;
@@ -57,7 +86,7 @@ body.sakai-theme .app-sidebar {
 
 body.sakai-theme .app-main {
   margin-left: calc(1rem + 286px + 1rem) !important;
-  padding: calc(4.6rem + 1rem) 1rem 1.25rem 0.75rem;
+  padding: var(--vtur-desktop-content-top) 1rem 1.25rem 0.75rem !important;
   min-height: 100vh;
   min-width: 0;
 }
@@ -98,9 +127,18 @@ body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item {
   padding: 0.75rem 1rem;
 }
 
+body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item .vtur-legacy-nav-leading :is(.pi, svg) {
+  color: #93c5fd !important;
+  transition: color 0.2s ease;
+}
+
 body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:hover {
   background: rgba(148, 163, 184, 0.2);
   color: #f8fafc;
+}
+
+body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:hover .vtur-legacy-nav-leading :is(.pi, svg) {
+  color: #dbeafe !important;
 }
 
 body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item[aria-current="page"] {
@@ -109,6 +147,18 @@ body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item[aria-current="page"] {
   font-weight: 400;
   box-shadow: none;
   border-color: transparent !important;
+}
+
+body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item[aria-current="page"] .vtur-legacy-nav-leading :is(.pi, svg) {
+  color: #2563eb !important;
+}
+
+body.sakai-theme .mobile-bottom-nav .mobile-bottom-nav-icon :is(.pi, svg) {
+  color: #93c5fd !important;
+}
+
+body.sakai-theme .mobile-bottom-nav .mobile-bottom-nav-item.active .mobile-bottom-nav-icon :is(.pi, svg) {
+  color: #2563eb !important;
 }
 
 body.sakai-theme .vtur-sidebar-nav .vtur-sidebar-nav-item:focus-visible {
@@ -132,57 +182,13 @@ body.sakai-theme .sidebar-desktop-toggle {
   display: none;
 }
 
-body.sakai-theme .vtur-sidebar-theme-picker {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-body.sakai-theme .vtur-sidebar-theme-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin-left: 0.2rem;
-  color: rgba(226, 232, 240, 0.88);
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-
-body.sakai-theme .vtur-sidebar-theme-select {
-  width: 100%;
-  min-height: 2.45rem;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  border-radius: 10px;
-  background: rgba(15, 23, 42, 0.78);
-  color: #e2e8f0;
-  font-size: 0.9rem;
-  padding: 0.5rem 0.72rem;
-}
-
-body.sakai-theme .vtur-sidebar-theme-select:focus {
-  outline: none;
-  border-color: rgba(186, 230, 253, 0.78);
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.28);
-}
-
-body.sakai-theme .vtur-sidebar-theme-select:disabled {
-  opacity: 0.72;
-  cursor: not-allowed;
-}
-
-body.sakai-theme .vtur-sidebar-theme-select option {
-  color: #0f172a;
-  background: #f8fafc;
-}
-
-body.sakai-theme .app-sidebar :is(.sidebar-refresh-perms-btn, .sidebar-theme-cycle-btn).vtur-app-button-secondary {
+body.sakai-theme .app-sidebar .sidebar-refresh-perms-btn.vtur-app-button-secondary {
   background: rgba(51, 65, 85, 0.55);
   border-color: rgba(148, 163, 184, 0.5);
   color: #e2e8f0;
 }
 
-body.sakai-theme .app-sidebar
-  :is(.sidebar-refresh-perms-btn, .sidebar-theme-cycle-btn).vtur-app-button-secondary:hover:not(:disabled):not(.p-disabled) {
+body.sakai-theme .app-sidebar .sidebar-refresh-perms-btn.vtur-app-button-secondary:hover:not(:disabled):not(.p-disabled) {
   background: rgba(71, 85, 105, 0.72);
   border-color: rgba(186, 230, 253, 0.62);
   color: #f8fafc;
@@ -206,7 +212,7 @@ body.sakai-theme .vtur-app-card {
 body.sakai-theme .vtur-app-card .vtur-app-card-header {
   margin: 0;
   padding: 1rem 1.25rem;
-  background: linear-gradient(180deg, rgba(142, 40, 226, 0.08), rgba(255, 255, 255, 0.96));
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.1), rgba(255, 255, 255, 0.96));
   border-bottom: 1px solid rgba(9, 17, 46, 0.1);
 }
 
@@ -243,19 +249,19 @@ body.sakai-theme .vtur-page-header .vtur-app-toolbar-subtitle {
 }
 
 body.sakai-theme .vtur-page-header-blue .vtur-app-toolbar-title {
-  color: #0a0d26;
+  color: var(--sgvtur-section-blue-title);
 }
 
 body.sakai-theme .vtur-page-header-teal .vtur-app-toolbar-title {
-  color: #0f766e;
+  color: var(--sgvtur-section-teal-title);
 }
 
 body.sakai-theme .vtur-page-header-green .vtur-app-toolbar-title {
-  color: #5630ff;
+  color: var(--sgvtur-section-green-title);
 }
 
 body.sakai-theme .vtur-page-header-config .vtur-app-toolbar-title {
-  color: #8e28e2;
+  color: var(--sgvtur-section-config-title);
 }
 
 body.sakai-theme .page-header h1 {
@@ -269,19 +275,69 @@ body.sakai-theme .page-header p {
 }
 
 body.sakai-theme .blue-header h1 {
-  color: #0a0d26;
+  color: var(--sgvtur-section-blue-title);
 }
 
 body.sakai-theme .teal-header h1 {
-  color: #0f766e;
+  color: var(--sgvtur-section-teal-title);
 }
 
 body.sakai-theme .green-header h1 {
-  color: #5630ff;
+  color: var(--sgvtur-section-green-title);
 }
 
 body.sakai-theme .config-header h1 {
-  color: #8e28e2;
+  color: var(--sgvtur-section-config-title);
+}
+
+body.sakai-theme :is(.card-blue, .table-wrapper.card-blue) {
+  background: var(--sgvtur-section-blue-bg);
+  border-color: var(--sgvtur-section-blue-border);
+}
+
+body.sakai-theme :is(.card-teal, .table-wrapper.card-teal) {
+  background: var(--sgvtur-section-teal-bg);
+  border-color: var(--sgvtur-section-teal-border);
+}
+
+body.sakai-theme :is(.card-green, .table-wrapper.card-green) {
+  background: var(--sgvtur-section-green-bg);
+  border-color: var(--sgvtur-section-green-border);
+}
+
+body.sakai-theme :is(.card-config, .table-wrapper.card-config) {
+  background: var(--sgvtur-section-config-bg);
+  border-color: var(--sgvtur-section-config-border);
+}
+
+body.sakai-theme .vtur-app-card.vtur-app-card-info {
+  border-color: var(--sgvtur-section-blue-border);
+  background: linear-gradient(180deg, var(--sgvtur-section-blue-bg), #fff);
+}
+
+body.sakai-theme .vtur-app-card.vtur-app-card-info .vtur-app-card-header {
+  background: linear-gradient(180deg, rgba(191, 219, 254, 0.5), rgba(255, 255, 255, 0.96));
+  border-bottom-color: var(--sgvtur-section-blue-border);
+}
+
+body.sakai-theme .vtur-app-card.vtur-app-card-config {
+  border-color: var(--sgvtur-section-config-border);
+  background: linear-gradient(180deg, var(--sgvtur-section-config-bg), #fff);
+}
+
+body.sakai-theme .vtur-app-card.vtur-app-card-config .vtur-app-card-header {
+  background: linear-gradient(180deg, rgba(254, 215, 170, 0.45), rgba(255, 255, 255, 0.96));
+  border-bottom-color: var(--sgvtur-section-config-border);
+}
+
+body.sakai-theme .vtur-app-toolbar.vtur-app-toolbar-info {
+  border-color: var(--sgvtur-section-blue-border);
+  background: linear-gradient(180deg, var(--sgvtur-section-blue-bg), #fff);
+}
+
+body.sakai-theme .vtur-app-toolbar.vtur-app-toolbar-config {
+  border-color: var(--sgvtur-section-config-border);
+  background: linear-gradient(180deg, var(--sgvtur-section-config-bg), #fff);
 }
 
 body.sakai-theme .vtur-app-card .vtur-app-card-body {
@@ -346,6 +402,40 @@ body.sakai-theme .vtur-app-card.vtur-app-card-has-datatable > .vtur-app-card-bod
   box-shadow: 0 14px 34px rgba(9, 17, 46, 0.06);
 }
 
+body.sakai-theme .dashboard-geral-page .vtur-app-card.dashboard-widget-table-card.vtur-app-card-has-datatable {
+  border: 1px solid rgba(9, 17, 46, 0.12);
+  background: linear-gradient(180deg, rgba(244, 249, 255, 0.96), rgba(255, 255, 255, 0.98));
+  box-shadow: 0 14px 34px rgba(9, 17, 46, 0.06);
+  overflow: hidden;
+}
+
+body.sakai-theme .dashboard-geral-page .vtur-app-card.dashboard-widget-table-card.vtur-app-card-has-datatable > .vtur-app-card-header {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(180deg, rgba(191, 219, 254, 0.5), rgba(255, 255, 255, 0.96));
+  border-bottom: 1px solid var(--sgvtur-section-blue-border);
+}
+
+body.sakai-theme .dashboard-geral-page .vtur-app-card.dashboard-widget-table-card.vtur-app-card-has-datatable > .vtur-app-card-body {
+  padding: 0;
+  border-top: 0;
+}
+
+body.sakai-theme .dashboard-geral-page .vtur-app-card.dashboard-widget-table-card.vtur-app-card-has-datatable > .vtur-app-card-body > .vtur-data-table-shell {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+
+body.sakai-theme .dashboard-geral-page .vtur-app-card.dashboard-widget-table-card.vtur-app-card-has-datatable > .vtur-app-card-body > .vtur-data-table-shell > .vtur-data-table-container {
+  background: transparent;
+}
+
 /* Estrutura legado (Astro sem AppCard React): titulo e tabela em caixas separadas. */
 body.sakai-theme .vtur-card-table-split {
   border: 0;
@@ -360,7 +450,7 @@ body.sakai-theme .vtur-card-table-split > .page-title {
   padding: 1rem 1.25rem;
   border: 1px solid rgba(9, 17, 46, 0.12);
   border-radius: 14px;
-  background: linear-gradient(180deg, rgba(142, 40, 226, 0.08), rgba(255, 255, 255, 0.96));
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.1), rgba(255, 255, 255, 0.96));
   box-shadow: 0 14px 34px rgba(9, 17, 46, 0.06);
 }
 
@@ -472,15 +562,56 @@ body.sakai-theme .vtur-app-button {
   border-radius: 8px;
 }
 
+body.sakai-theme :is(.p-button, .vtur-app-button):is(:focus, :focus-visible),
+body.sakai-theme :is(.p-button, .vtur-app-button).p-focus {
+  outline: none;
+  box-shadow: var(--focus-ring) !important;
+}
+
 body.sakai-theme .vtur-app-button-primary {
-  background: #4f46e5;
-  border-color: #4f46e5;
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+  border-color: var(--primary-700);
   box-shadow: none;
 }
 
 body.sakai-theme .vtur-app-button-primary:hover {
-  background: #4338ca;
-  border-color: #4338ca;
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+  border-color: var(--primary-600);
+}
+
+body.sakai-theme .vtur-app-button-default {
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+  border-color: var(--primary-700);
+  color: #ffffff;
+}
+
+body.sakai-theme .vtur-app-button-default:hover:not(:disabled):not(.p-disabled) {
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+  border-color: var(--primary-600);
+}
+
+body.sakai-theme .vtur-app-button-secondary {
+  background: #ffffff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+body.sakai-theme .vtur-app-button-secondary:hover:not(:disabled):not(.p-disabled) {
+  background: #eff6ff;
+  border-color: #60a5fa;
+  color: #1e40af;
+}
+
+body.sakai-theme :is(.vtur-app-button-ghost, .vtur-app-button-link) {
+  background: transparent;
+  border-color: transparent;
+  color: #2563eb;
+}
+
+body.sakai-theme :is(.vtur-app-button-ghost, .vtur-app-button-link):hover:not(:disabled):not(.p-disabled) {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: transparent;
+  color: #1d4ed8;
 }
 
 body.sakai-theme .table-default,
@@ -801,16 +932,107 @@ body.sakai-theme .ranking-table thead th,
 body.sakai-theme .ranking-table .rank-pos,
 body.sakai-theme .ranking-table .total-row td {
   text-transform: none;
-  color: #374151;
-  background: #f8fafc;
-  border-color: #e5e7eb;
+  color: #ffeb3b !important;
+  background: #0b2d6b !important;
+  border-color: #ffffff !important;
+}
+
+body.sakai-theme .ranking-board {
+  border: 2px solid #0b2d6b !important;
+  background: #ffffff !important;
+}
+
+body.sakai-theme .ranking-board-title {
+  background: #0b2d6b !important;
+  color: #ffeb3b !important;
+  border-bottom: 2px solid #ffffff !important;
+}
+
+body.sakai-theme .ranking-select {
+  background: #0b2d6b !important;
+  color: #ffeb3b !important;
+  border-color: #ffeb3b !important;
+}
+
+body.sakai-theme .ranking-summary .summary-label {
+  background: #facc15 !important;
+  color: #0b2d6b !important;
+  border-right: 2px solid #ffffff !important;
+  border-bottom: 2px solid #ffffff !important;
+}
+
+body.sakai-theme .ranking-summary .summary-value {
+  background: #0b2d6b !important;
+  color: #ffffff !important;
+  border-right: 2px solid #ffffff !important;
+  border-bottom: 2px solid #ffffff !important;
+}
+
+body.sakai-theme .ranking-table {
+  border-collapse: collapse !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+body.sakai-theme .ranking-table thead th {
+  color: #ffeb3b !important;
+  background: #0b2d6b !important;
+  border: 1px solid #ffffff !important;
+  text-transform: uppercase !important;
+  font-size: 0.75rem !important;
+  font-weight: 800 !important;
+  padding: 6px 6px !important;
+}
+
+body.sakai-theme .ranking-table tbody td {
+  color: #0f172a !important;
+  border: 1px solid #ffffff !important;
+  border-bottom-color: #ffffff !important;
+  font-weight: 700 !important;
+  padding: 6px 6px !important;
 }
 
 body.sakai-theme .ranking-table tbody tr,
 body.sakai-theme .ranking-table tbody tr.ranking-row-hit,
 body.sakai-theme .ranking-table tbody tr.ranking-row-miss,
 body.sakai-theme .ranking-table tbody tr.ranking-row-gestor {
-  background: #ffffff;
+  background: #fef08a !important;
+}
+
+body.sakai-theme .ranking-table tbody tr.ranking-row-hit {
+  background: #8fd14f !important;
+}
+
+body.sakai-theme .ranking-table tbody tr.ranking-row-miss {
+  background: #fef08a !important;
+}
+
+body.sakai-theme .ranking-table tbody tr.ranking-row-gestor {
+  background: #fdba74 !important;
+}
+
+body.sakai-theme .ranking-table .total-row td {
+  color: #0b2d6b !important;
+  background: #fde047 !important;
+}
+
+body.sakai-theme .ranking-table tbody tr:hover,
+body.sakai-theme .ranking-table tbody tr.ranking-row-miss:hover {
+  background: #fef08a !important;
+}
+
+body.sakai-theme .ranking-table tbody tr.ranking-row-hit:hover {
+  background: #8fd14f !important;
+}
+
+body.sakai-theme .ranking-table tbody tr.ranking-row-gestor:hover {
+  background: #fdba74 !important;
+}
+
+body.sakai-theme .ranking-vendas-page .ranking-table.table-mobile-cards {
+  --table-card-border: #ffffff !important;
+  --table-card-divider: #ffffff !important;
 }
 
 body.sakai-theme .th-actions .action-buttons {
@@ -880,6 +1102,23 @@ body.sakai-theme td.th-actions :is(button, .vtur-app-button, .p-button) {
 body.sakai-theme td.th-actions :is(button, .vtur-app-button, .p-button) :is(i, svg, .pi, [aria-hidden="true"]) {
   font-size: 1rem !important;
   line-height: 1 !important;
+}
+
+body.sakai-theme td.th-actions :is(.pi, i) {
+  color: #334155;
+}
+
+/* Ícones Prime (tabelas): padrão SGTUR por intenção de ação */
+body.sakai-theme td.th-actions :is(.pi-pencil, .pi-file-edit, .pi-eye, .pi-search, .pi-info-circle) {
+  color: #2563eb !important;
+}
+
+body.sakai-theme td.th-actions :is(.pi-whatsapp, .pi-comment, .pi-comments) {
+  color: #16a34a !important;
+}
+
+body.sakai-theme td.th-actions :is(.pi-trash, .pi-times, .pi-times-circle) {
+  color: #dc2626 !important;
 }
 
 body.sakai-theme td.th-actions .sr-only {
@@ -1022,7 +1261,22 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
 
   body.sakai-theme .app-main {
     margin-left: 0 !important;
-    padding: calc(5.4rem + env(safe-area-inset-top)) 1rem calc(1.2rem + env(safe-area-inset-bottom));
+    /* Reserva espaço para o menu inferior fixo em qualquer tela mobile/tablet. */
+    padding:
+      var(--vtur-mobile-content-top)
+      1rem
+      calc(var(--vtur-mobile-bottom-clearance, calc(132px + env(safe-area-inset-bottom))) + 16px)
+      1rem !important;
+  }
+
+  body.sakai-theme .list-toolbar-sticky {
+    position: static;
+    top: auto;
+    z-index: auto;
+  }
+
+  body.sakai-theme .page-content-wrap {
+    padding-bottom: calc(var(--vtur-mobile-bottom-clearance, calc(132px + env(safe-area-inset-bottom))) + 12px);
   }
 
   body.sakai-theme .sidebar-mobile-trigger {
@@ -1043,7 +1297,7 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
   }
 
   body.sakai-theme .mobile-bottom-nav-item.active {
-    color: #38bdf8;
+    color: #e2e8f0;
     background: rgba(56, 189, 248, 0.12);
   }
 }
@@ -1207,11 +1461,17 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
   }
 
   body.sakai-theme .table-mobile-cards td {
-    grid-template-columns: minmax(84px, 96px) minmax(0, 1fr);
+    grid-template-columns: minmax(88px, 104px) minmax(0, 1fr);
+    gap: 8px;
+    padding: 9px 11px;
     align-items: start;
     background: #ffffff !important;
     overflow-wrap: anywhere;
     word-break: break-word;
+  }
+
+  body.sakai-theme .table-mobile-cards tbody td:first-child {
+    padding-left: 11px !important;
   }
 
   body.sakai-theme .table-mobile-cards td > * {
@@ -1245,14 +1505,14 @@ body.sakai-theme .vtur-dashboard-shell .recharts-tooltip-wrapper .recharts-defau
 
   body.sakai-theme .table-mobile-cards td.th-actions > :is(.action-buttons, .vtur-table-actions, .action-buttons-quote, .action-buttons-center, .viagens-action-buttons) {
     width: 100% !important;
-    min-height: 4rem;
+    min-height: 3rem;
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
     flex-wrap: wrap !important;
     overflow-x: visible !important;
     gap: 0.5rem !important;
-    padding: 0.85rem 1rem !important;
+    padding: 0.6rem 0.75rem !important;
     margin: 0 !important;
     background: #ffffff !important;
   }

@@ -6,7 +6,6 @@ import EmptyState from "../ui/EmptyState";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { formatDateBR } from "../../lib/format";
 
@@ -353,10 +352,10 @@ const EmpresasAdminIsland: React.FC = () => {
   }
 
   return (
-    <div className="mt-6 admin-page admin-empresas-page">
-      <AppToolbar
+    <div className="mt-6 admin-page admin-empresas-page page-content-wrap">
+      <AppCard
         tone="info"
-        className="list-toolbar-sticky"
+        className="mb-3 list-toolbar-sticky"
         title="Empresas cadastradas"
         subtitle="Gestao de contas e status de cobranca."
         actions={
@@ -380,7 +379,7 @@ const EmpresasAdminIsland: React.FC = () => {
             <EmptyState title="Nenhuma empresa cadastrada" />
           ) : (
             <DataTable
-              className="table-mobile-cards min-w-[960px]"
+              className="table-header-blue table-mobile-cards min-w-[960px]"
               headers={
                 <tr>
                   <th>Nome Fantasia</th>
@@ -541,7 +540,7 @@ const EmpresasAdminIsland: React.FC = () => {
               <EmptyState title="Nenhum vinculo cadastrado" />
             ) : (
               <DataTable
-                className="table-mobile-cards min-w-[980px]"
+                className="table-header-blue table-mobile-cards min-w-[980px]"
                 headers={
                   <tr>
                     <th>Empresa</th>
@@ -639,96 +638,84 @@ const EmpresasAdminIsland: React.FC = () => {
               )}
 
               <div className="form-row">
-                <div className="form-group flex-1">
-                  <label className="form-label">Nome da empresa</label>
-                  <input
-                    className="form-input"
-                    value={novoCadastro.nome_empresa}
-                    onChange={(e) => {
-                      setNovoCadastro((prev) => ({ ...prev, nome_empresa: e.target.value }));
-                      setErroCadastro(null);
-                    }}
-                    placeholder="Razão social"
-                    disabled={salvandoEmpresa}
-                    required
-                  />
-                </div>
-                <div className="form-group flex-1">
-                  <label className="form-label">Nome fantasia</label>
-                  <input
-                    className="form-input"
-                    value={novoCadastro.nome_fantasia}
-                    onChange={(e) => {
-                      setNovoCadastro((prev) => ({ ...prev, nome_fantasia: e.target.value }));
-                      setErroCadastro(null);
-                    }}
-                    placeholder="Nome fantasia"
-                    disabled={salvandoEmpresa}
-                  />
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group flex-1">
-                  <label className="form-label">CNPJ</label>
-                  <input
-                    className="form-input"
-                    value={formatCnpj(novoCadastro.cnpj)}
-                    onChange={(e) => {
-                      setNovoCadastro((prev) => ({ ...prev, cnpj: formatCnpj(e.target.value) }));
-                      setErroCadastro(null);
-                    }}
-                    placeholder="00.000.000/0000-00"
-                    disabled={salvandoEmpresa}
-                    required
-                  />
-                </div>
-                <div className="form-group flex-1">
-                  <label className="form-label">Telefone</label>
-                  <input
-                    className="form-input"
-                    value={novoCadastro.telefone}
-                    onChange={(e) => {
-                      setNovoCadastro((prev) => ({ ...prev, telefone: e.target.value }));
-                      setErroCadastro(null);
-                    }}
-                    placeholder="(00) 00000-0000"
-                    disabled={salvandoEmpresa}
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Endereço</label>
-                <input
-                  className="form-input"
-                  value={novoCadastro.endereco}
+                <AppField
+                  wrapperClassName="form-group flex-1"
+                  label="Nome da empresa"
+                  value={novoCadastro.nome_empresa}
                   onChange={(e) => {
-                    setNovoCadastro((prev) => ({ ...prev, endereco: e.target.value }));
+                    setNovoCadastro((prev) => ({ ...prev, nome_empresa: e.target.value }));
                     setErroCadastro(null);
                   }}
-                  placeholder="Rua, número, complemento"
+                  placeholder="Razão social"
+                  disabled={salvandoEmpresa}
+                  required
+                />
+                <AppField
+                  wrapperClassName="form-group flex-1"
+                  label="Nome fantasia"
+                  value={novoCadastro.nome_fantasia}
+                  onChange={(e) => {
+                    setNovoCadastro((prev) => ({ ...prev, nome_fantasia: e.target.value }));
+                    setErroCadastro(null);
+                  }}
+                  placeholder="Nome fantasia"
                   disabled={salvandoEmpresa}
                 />
               </div>
 
               <div className="form-row">
-                <div className="form-group flex-1">
-                  <label className="form-label">Cidade</label>
-                  <input
-                    className="form-input"
-                    value={novoCadastro.cidade}
-                    onChange={(e) => {
-                      setNovoCadastro((prev) => ({ ...prev, cidade: e.target.value }));
-                      setErroCadastro(null);
-                    }}
-                    disabled={salvandoEmpresa}
-                  />
-                </div>
-                <div className="form-group" style={{ maxWidth: 120 }}>
-                  <label className="form-label">Estado</label>
-                  <input
-                    className="form-input"
+                <AppField
+                  wrapperClassName="form-group flex-1"
+                  label="CNPJ"
+                  value={formatCnpj(novoCadastro.cnpj)}
+                  onChange={(e) => {
+                    setNovoCadastro((prev) => ({ ...prev, cnpj: formatCnpj(e.target.value) }));
+                    setErroCadastro(null);
+                  }}
+                  placeholder="00.000.000/0000-00"
+                  disabled={salvandoEmpresa}
+                  required
+                />
+                <AppField
+                  wrapperClassName="form-group flex-1"
+                  label="Telefone"
+                  value={novoCadastro.telefone}
+                  onChange={(e) => {
+                    setNovoCadastro((prev) => ({ ...prev, telefone: e.target.value }));
+                    setErroCadastro(null);
+                  }}
+                  placeholder="(00) 00000-0000"
+                  disabled={salvandoEmpresa}
+                />
+              </div>
+
+              <AppField
+                wrapperClassName="form-group"
+                label="Endereço"
+                value={novoCadastro.endereco}
+                onChange={(e) => {
+                  setNovoCadastro((prev) => ({ ...prev, endereco: e.target.value }));
+                  setErroCadastro(null);
+                }}
+                placeholder="Rua, número, complemento"
+                disabled={salvandoEmpresa}
+              />
+
+              <div className="form-row">
+                <AppField
+                  wrapperClassName="form-group flex-1"
+                  label="Cidade"
+                  value={novoCadastro.cidade}
+                  onChange={(e) => {
+                    setNovoCadastro((prev) => ({ ...prev, cidade: e.target.value }));
+                    setErroCadastro(null);
+                  }}
+                  disabled={salvandoEmpresa}
+                />
+                <div style={{ maxWidth: 120 }}>
+                  <AppField
+                    wrapperClassName="form-group"
+                    label="Estado"
                     value={novoCadastro.estado}
                     onChange={(e) => {
                       setNovoCadastro((prev) => ({ ...prev, estado: e.target.value }));

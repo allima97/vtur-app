@@ -69,6 +69,19 @@ const CLIENTES_RLS_IMPORT_MESSAGE =
 
 const CLIENTE_SELECT = "id, cpf, nome, nascimento, endereco, numero, cidade, estado, cep, rg";
 
+function isMissingResolveImportRpc(error: any) {
+  const code = String(error?.code || "").trim().toUpperCase();
+  const message = String(error?.message || "").toLowerCase();
+  return (
+    code === "42883" ||
+    code === "PGRST202" ||
+    (message.includes("clientes_resolve_import") &&
+      (message.includes("does not exist") ||
+        message.includes("could not find the function") ||
+        message.includes("schema cache")))
+  );
+}
+
 async function getCompanyId(client: any, userId: string) {
   try {
     const { data, error } = await client.rpc("current_company_id");
@@ -111,6 +124,22 @@ export async function POST({ request }: { request: Request }) {
     const companyId = await getCompanyId(authClient, user.id);
     if (!companyId) return new Response("Usuario sem company_id.", { status: 403 });
 
+    const basePayload: any = {
+      nome: titleCaseWithExceptions(String(body?.nome || "")),
+      cpf,
+      nascimento: body?.nascimento || null,
+      endereco: body?.endereco ? titleCaseWithExceptions(body.endereco) : null,
+      numero: body?.numero || null,
+      complemento: null,
+      cidade: body?.cidade ? titleCaseWithExceptions(body.cidade) : null,
+      estado: body?.estado || null,
+      cep: body?.cep || null,
+      rg: body?.rg || null,
+      tipo_cliente: "passageiro",
+      ativo: true,
+      active: true,
+    };
+
     const linkByCpfAndRead = async () => {
       const { data: linkedId, error: linkErr } = await authClient.rpc("clientes_link_by_cpf", { p_cpf: cpf });
       if (linkErr) throw linkErr;
@@ -136,6 +165,30 @@ export async function POST({ request }: { request: Request }) {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
+    }
+
+    try {
+      const { data: resolvedByRpc, error: rpcErr } = await authClient.rpc("clientes_resolve_import", {
+        p_cpf: cpf,
+        p_nome: basePayload.nome || null,
+        p_nascimento: basePayload.nascimento || null,
+        p_endereco: basePayload.endereco || null,
+        p_numero: basePayload.numero || null,
+        p_cidade: basePayload.cidade || null,
+        p_estado: basePayload.estado || null,
+        p_cep: basePayload.cep || null,
+        p_rg: basePayload.rg || null,
+      });
+      if (rpcErr) {
+        if (!isMissingResolveImportRpc(rpcErr)) throw rpcErr;
+      } else if (resolvedByRpc) {
+        return new Response(JSON.stringify({ cliente: resolvedByRpc }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+    } catch (rpcError) {
+      if (!isMissingResolveImportRpc(rpcError)) throw rpcError;
     }
 
     let existingId = "";
@@ -170,22 +223,6 @@ export async function POST({ request }: { request: Request }) {
         });
       }
     }
-
-    const basePayload: any = {
-      nome: titleCaseWithExceptions(String(body?.nome || "")),
-      cpf,
-      nascimento: body?.nascimento || null,
-      endereco: body?.endereco ? titleCaseWithExceptions(body.endereco) : null,
-      numero: body?.numero || null,
-      complemento: null,
-      cidade: body?.cidade ? titleCaseWithExceptions(body.cidade) : null,
-      estado: body?.estado || null,
-      cep: body?.cep || null,
-      rg: body?.rg || null,
-      tipo_cliente: "passageiro",
-      ativo: true,
-      active: true,
-    };
     const compatPayloads: any[] = [
       { ...basePayload, created_by: user.id, company_id: companyId },
       { ...basePayload, created_by: null, company_id: companyId },

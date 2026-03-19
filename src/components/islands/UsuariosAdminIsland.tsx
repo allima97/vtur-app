@@ -10,7 +10,7 @@ import EmptyState from "../ui/EmptyState";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
+import FileUploadField from "../ui/primer/FileUploadField";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { DEFAULT_FROM_EMAILS } from "../../lib/systemName";
@@ -30,6 +30,15 @@ type UserRow = {
     nome_fantasia: string;
   } | null;
 };
+
+type MfaStatusMap = Record<
+  string,
+  {
+    enabled: boolean;
+    verified_count: number;
+    factor_count: number;
+  }
+>;
 
 type UserType = {
   id: string;
@@ -97,6 +106,9 @@ const UsuariosAdminIsland: React.FC = () => {
   const [senhaConfirmarEmail, setSenhaConfirmarEmail] = useState(true);
   const [senhaErro, setSenhaErro] = useState<string | null>(null);
   const [salvandoSenha, setSalvandoSenha] = useState(false);
+  const [resetandoMfaId, setResetandoMfaId] = useState<string | null>(null);
+  const [mfaStatuses, setMfaStatuses] = useState<MfaStatusMap>({});
+  const [mfaLoading, setMfaLoading] = useState(false);
   const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
   const tipoSelecionado = userTypes.find((t) => t.id === novoTipoUsuarioId) || null;
@@ -108,6 +120,10 @@ const UsuariosAdminIsland: React.FC = () => {
     carregarEmpresas();
     carregarAvisosTemplates();
   }, []);
+
+  useEffect(() => {
+    carregarMfaStatuses(usuarios.map((u) => u.id));
+  }, [usuarios]);
 
   useEffect(() => {
     if (isMasterSelecionado && novoUsoIndividual) {
@@ -198,6 +214,34 @@ const UsuariosAdminIsland: React.FC = () => {
       setErro("Erro ao carregar usuários.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function carregarMfaStatuses(userIds: string[]) {
+    const ids = Array.from(new Set(userIds.filter(Boolean)));
+    if (ids.length === 0) {
+      setMfaStatuses({});
+      return;
+    }
+    try {
+      setMfaLoading(true);
+      const resp = await fetch("/api/admin/auth/mfa-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ user_ids: ids }),
+      });
+      const rawText = await resp.text();
+      const payload = rawText ? JSON.parse(rawText) : {};
+      if (!resp.ok) {
+        throw new Error(payload?.error || rawText || "Falha ao carregar status do 2FA.");
+      }
+      setMfaStatuses((payload?.statuses || {}) as MfaStatusMap);
+    } catch (e) {
+      console.error(e);
+      setMfaStatuses({});
+    } finally {
+      setMfaLoading(false);
     }
   }
 
@@ -421,6 +465,66 @@ const UsuariosAdminIsland: React.FC = () => {
     }
   };
 
+  const resetarMfa = async (usuario: UserRow) => {
+    const nome = usuario.nome_completo || "Usuario";
+    const email = usuario.email || "sem e-mail";
+    const confirmed =
+      typeof window === "undefined"
+        ? true
+        : window.confirm(
+            `Resetar o 2FA de ${nome} (${email})?\n\nEssa acao remove todos os fatores MFA e encerra as sessoes ativas do usuario.`
+          );
+    if (!confirmed) return;
+
+    setResetandoMfaId(usuario.id);
+    try {
+      const resp = await fetch("/api/admin/auth/reset-mfa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          user_id: usuario.id,
+          email: usuario.email || undefined,
+        }),
+      });
+
+      const rawText = await resp.text();
+      let payload: any = {};
+      try {
+        payload = rawText ? JSON.parse(rawText) : {};
+      } catch {
+        payload = {};
+      }
+
+      if (!resp.ok) {
+        const msg =
+          payload?.error?.message ||
+          payload?.error ||
+          payload?.message ||
+          rawText ||
+          "Falha ao resetar 2FA.";
+        throw new Error(String(msg));
+      }
+
+      const deletedCount = Number(payload?.deleted_count || 0);
+      setMfaStatuses((prev) => ({
+        ...prev,
+        [usuario.id]: { enabled: false, verified_count: 0, factor_count: 0 },
+      }));
+      showToast(
+        deletedCount > 0
+          ? `2FA resetado com sucesso. ${deletedCount} fator(es) removido(s).`
+          : "O usuario nao possuia fatores 2FA cadastrados.",
+        "success"
+      );
+    } catch (err: any) {
+      console.error(err);
+      showToast(String(err?.message || "Erro ao resetar 2FA."), "error");
+    } finally {
+      setResetandoMfaId(null);
+    }
+  };
+
   async function uploadMasterDocs(masterId: string) {
     const uploads: Array<{ docType: string; file: File }> = [];
     if (docContrato) uploads.push({ docType: "contrato_social", file: docContrato });
@@ -536,10 +640,10 @@ const UsuariosAdminIsland: React.FC = () => {
   }
 
   return (
-    <div className="mt-6 admin-page admin-usuarios-page">
-      <AppToolbar
+    <div className="mt-6 admin-page admin-usuarios-page page-content-wrap">
+      <AppCard
         tone="config"
-        className="list-toolbar-sticky"
+        className="mb-3 list-toolbar-sticky"
         title="Usuarios do sistema"
         subtitle="Gerencie cargos, empresas e status de acesso."
         actions={
@@ -563,7 +667,7 @@ const UsuariosAdminIsland: React.FC = () => {
             <EmptyState title="Nenhum usuario encontrado" />
           ) : (
             <DataTable
-              className="table-mobile-cards min-w-[980px]"
+              className="table-header-blue table-mobile-cards min-w-[980px]"
               headers={
                 <tr>
                   <th>Nome</th>
@@ -571,12 +675,13 @@ const UsuariosAdminIsland: React.FC = () => {
                   <th>Cargo</th>
                   <th>Empresa</th>
                   <th>Uso</th>
+                  <th>2FA</th>
                   <th>Status</th>
                   <th className="th-actions">Aviso</th>
                   <th className="th-actions">Ações</th>
                 </tr>
               }
-              colSpan={8}
+              colSpan={9}
             >
               {usuarios.map((u) => (
                 <tr key={u.id}>
@@ -627,6 +732,21 @@ const UsuariosAdminIsland: React.FC = () => {
                     </select>
                   </td>
 
+                  <td data-label="2FA">
+                    {mfaLoading && !mfaStatuses[u.id] ? (
+                      <span className="text-slate-500">Carregando...</span>
+                    ) : mfaStatuses[u.id]?.enabled ? (
+                      <span className="text-emerald-600 font-bold">
+                        Ativo
+                        {mfaStatuses[u.id]?.verified_count > 1
+                          ? ` (${mfaStatuses[u.id]?.verified_count})`
+                          : ""}
+                      </span>
+                    ) : (
+                      <span className="text-slate-500">Inativo</span>
+                    )}
+                  </td>
+
                   <td data-label="Status">
                     <span className={u.active ? "text-emerald-500 font-bold" : "text-rose-500 font-bold"}>
                       {u.active ? "Ativo" : "Inativo"}
@@ -664,6 +784,16 @@ const UsuariosAdminIsland: React.FC = () => {
                         aria-label="Redefinir senha"
                       >
                         <i className="pi pi-key" aria-hidden="true" />
+                      </AppButton>
+                      <AppButton
+                        type="button"
+                        variant="secondary"
+                        onClick={() => resetarMfa(u)}
+                        title="Resetar 2FA"
+                        aria-label="Resetar 2FA"
+                        disabled={resetandoMfaId === u.id}
+                      >
+                        <i className="pi pi-shield" aria-hidden="true" />
                       </AppButton>
                       <AppButton
                         type="button"
@@ -980,55 +1110,41 @@ const UsuariosAdminIsland: React.FC = () => {
                   </div>
                 )}
                 <div className="perfil-grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div className="form-group">
-                    <label className="form-label">Contrato social</label>
-                    <input
-                      className="form-input"
-                      type="file"
-                      accept=".pdf,image/*"
-                      onChange={(e) => setDocContrato(e.target.files?.[0] || null)}
-                      disabled={registerForm.loading || enviandoDocs}
-                    />
-                    <small>{docContrato?.name || "Nenhum arquivo selecionado."}</small>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">RG</label>
-                    <input
-                      className="form-input"
-                      type="file"
-                      accept=".pdf,image/*"
-                      onChange={(e) => setDocRg(e.target.files?.[0] || null)}
-                      disabled={registerForm.loading || enviandoDocs}
-                    />
-                    <small>{docRg?.name || "Nenhum arquivo selecionado."}</small>
-                  </div>
+                  <FileUploadField
+                    wrapperClassName="form-group"
+                    label="Contrato social"
+                    accept=".pdf,image/*"
+                    onChange={(e) => setDocContrato(e.currentTarget.files?.[0] || null)}
+                    disabled={registerForm.loading || enviandoDocs}
+                    fileName={docContrato?.name || "Nenhum arquivo escolhido"}
+                  />
+                  <FileUploadField
+                    wrapperClassName="form-group"
+                    label="RG"
+                    accept=".pdf,image/*"
+                    onChange={(e) => setDocRg(e.currentTarget.files?.[0] || null)}
+                    disabled={registerForm.loading || enviandoDocs}
+                    fileName={docRg?.name || "Nenhum arquivo escolhido"}
+                  />
                 </div>
                 <div className="perfil-grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div className="form-group">
-                    <label className="form-label">CPF</label>
-                    <input
-                      className="form-input"
-                      type="file"
-                      accept=".pdf,image/*"
-                      onChange={(e) => setDocCpf(e.target.files?.[0] || null)}
-                      disabled={registerForm.loading || enviandoDocs}
-                    />
-                    <small>{docCpf?.name || "Nenhum arquivo selecionado."}</small>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Outros documentos</label>
-                    <input
-                      className="form-input"
-                      type="file"
-                      multiple
-                      accept=".pdf,image/*"
-                      onChange={(e) => setDocOutros(Array.from(e.target.files || []))}
-                      disabled={registerForm.loading || enviandoDocs}
-                    />
-                    <small>
-                      {docOutros.length ? `${docOutros.length} arquivo(s) selecionado(s).` : "Nenhum arquivo selecionado."}
-                    </small>
-                  </div>
+                  <FileUploadField
+                    wrapperClassName="form-group"
+                    label="CPF"
+                    accept=".pdf,image/*"
+                    onChange={(e) => setDocCpf(e.currentTarget.files?.[0] || null)}
+                    disabled={registerForm.loading || enviandoDocs}
+                    fileName={docCpf?.name || "Nenhum arquivo escolhido"}
+                  />
+                  <FileUploadField
+                    wrapperClassName="form-group"
+                    label="Outros documentos"
+                    multiple
+                    accept=".pdf,image/*"
+                    onChange={(e) => setDocOutros(Array.from(e.currentTarget.files || []))}
+                    disabled={registerForm.loading || enviandoDocs}
+                    fileName={docOutros.length ? `${docOutros.length} arquivo(s) selecionado(s)` : "Nenhum arquivo escolhido"}
+                  />
                 </div>
               </AppCard>
             )}

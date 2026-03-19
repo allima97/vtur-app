@@ -5,7 +5,6 @@ import { usePermissoesStore } from "../../lib/permissoesStore";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 export default function DocumentationPortalIsland() {
   const [raw, setRaw] = useState("Carregando documentação...");
@@ -359,7 +358,7 @@ export default function DocumentationPortalIsland() {
 
   return (
     <section className="documentation-portal-page">
-      <AppToolbar
+      <AppCard
         tone="info"
         title="Portal de Documentacao"
         subtitle="Documentacao viva com sumario, busca e historico de versoes."
@@ -368,7 +367,7 @@ export default function DocumentationPortalIsland() {
         <AppCard
           tone="info"
           title="Sumario"
-          className="h-auto lg:h-[calc(100vh-200px)] overflow-y-auto lg:sticky lg:top-[110px]"
+          className="h-auto lg:h-[calc(100vh-200px)] overflow-y-auto"
         >
           <AppField
             as="input"

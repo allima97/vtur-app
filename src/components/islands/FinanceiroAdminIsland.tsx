@@ -8,7 +8,6 @@ import EmptyState from "../ui/EmptyState";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { formatDateBR } from "../../lib/format";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
@@ -349,8 +348,8 @@ const FinanceiroAdminIsland: React.FC = () => {
   }
 
   return (
-    <div className="mt-6 admin-page admin-financeiro-page">
-      <AppToolbar
+    <div className="mt-6 admin-page admin-financeiro-page page-content-wrap">
+      <AppCard
         tone="config"
         className="list-toolbar-sticky"
         title="Controle financeiro"
@@ -367,7 +366,7 @@ const FinanceiroAdminIsland: React.FC = () => {
             <EmptyState title="Nenhuma cobranca encontrada" />
           ) : (
             <DataTable
-              className="table-mobile-cards min-w-[860px]"
+              className="table-header-blue table-mobile-cards min-w-[860px]"
               headers={
                 <tr>
                   <th>Empresa</th>

@@ -13,7 +13,6 @@ import EmptyState from "../ui/EmptyState";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type EventItem = {
   id: string;
@@ -606,18 +605,19 @@ export default function AgendaCalendar() {
   return (
     <div className="agenda-page" style={{ display: "grid", gap: 16 }}>
       {viewportReady && isMobile && (
-        <AppCard tone="info" className="agenda-month-card">
+        <div className="agenda-month-card" aria-label={`Mês atual: ${currentMonthTitle}`}>
           <div className="agenda-month-title">{currentMonthTitle}</div>
-        </AppCard>
+        </div>
       )}
 
-      <AppCard tone="info" className="agenda-calendar-shell">
+      <div className="agenda-calendar-shell">
         {viewportReady && !isMobile && (
-          <AppToolbar
+          <AppCard
+            className="agenda-top-card"
             tone="info"
             title="Agenda (Eventos)"
             actions={
-              <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+              <div className="mobile-stack-buttons vtur-actions-end">
                 <AppButton
                   type="button"
                   variant="primary"
@@ -763,7 +763,7 @@ export default function AgendaCalendar() {
               eventClick={handleEventClick}
             />
           ) : (
-            <AppCard tone="config">Carregando agenda...</AppCard>
+            <div>Carregando agenda...</div>
           )}
         </div>
         {error && <AlertMessage variant="error">{error}</AlertMessage>}
@@ -800,7 +800,7 @@ export default function AgendaCalendar() {
             ))}
           </div>
         )}
-      </AppCard>
+      </div>
 
       {viewportReady && isMobile && !createModalOpen && !modalEvent && (
         <AppButton
@@ -918,7 +918,7 @@ export default function AgendaCalendar() {
                 />
                 {error && <AlertMessage variant="error">{error}</AlertMessage>}
               </div>
-              <div className="modal-footer mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+              <div className="modal-footer mobile-stack-buttons vtur-actions-end">
                 <AppButton type="submit" variant="primary">
                   Salvar
                 </AppButton>
@@ -1056,7 +1056,7 @@ export default function AgendaCalendar() {
                 </>
               )}
             </div>
-            <div className="modal-footer mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+            <div className="modal-footer mobile-stack-buttons vtur-actions-end">
               {!editForm ? (
                 <>
                   <AppButton

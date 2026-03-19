@@ -17,7 +17,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type Usuario = {
   id: string;
@@ -971,7 +970,7 @@ export default function MetasVendedorIsland() {
   return (
     <AppPrimerProvider>
       <div className="page-content-wrap metas-page">
-        <AppToolbar
+        <AppCard
           tone="info"
           title="Metas de vendas"
           subtitle="Defina metas por vendedor e metas de equipe por período."
@@ -1415,7 +1414,7 @@ export default function MetasVendedorIsland() {
                   loading={carregandoResumoEquipe}
                   empty={!carregandoResumoEquipe && metasEquipePeriodo.length === 0}
                   emptyMessage="Nenhuma meta cadastrada para este período."
-                  containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+                  containerClassName="vtur-scroll-y-65"
                 >
                   {metasEquipePeriodo.map((m) => {
                     const nomeVendedor =
@@ -1457,7 +1456,7 @@ export default function MetasVendedorIsland() {
               colSpan={usuarioPodeEditar ? 6 : 5}
               empty={metasExibidas.length === 0}
               emptyMessage="Nenhuma meta cadastrada."
-              containerStyle={{ maxHeight: "65vh", overflowY: "auto", marginTop: 12 }}
+              containerClassName="vtur-scroll-y-65" containerStyle={{ marginTop: 12 }}
             >
               {metasExibidas.map((m) => (
                 <tr key={m.id}>

@@ -15,7 +15,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type ClienteOption = {
   id: string;
@@ -631,8 +630,7 @@ export default function QuoteImportIsland() {
   return (
     <AppPrimerProvider>
       <div className="page-content-wrap">
-        <AppToolbar
-          sticky
+        <AppCard
           tone="info"
           className="mb-3 list-toolbar-sticky"
           title="Importacao de orcamentos CVC"
@@ -672,7 +670,7 @@ export default function QuoteImportIsland() {
               <strong>{itensPendentesRevisao}</strong>
             </div>
           </div>
-        </AppToolbar>
+        </AppCard>
 
         {status && (
           <AlertMessage variant="info" className="mb-3">
@@ -808,7 +806,7 @@ export default function QuoteImportIsland() {
             </div>
 
             <div className="table-container overflow-x-auto" style={{ marginTop: 16 }}>
-              <table className="table-default table-compact table-mobile-cards quote-items-table">
+              <table className="table-default table-compact table-header-blue table-mobile-cards quote-items-table">
                 <thead>
                   <tr>
                     <th className="order-cell">Ordem</th>

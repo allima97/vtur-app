@@ -28,7 +28,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 function titleCaseAllWords(valor: string) {
   const trimmed = (valor || "").trim();
@@ -145,6 +144,19 @@ const initialForm = {
   ativo: true,
   active: true,
 };
+
+function validarCamposObrigatoriosCliente(form: typeof initialForm) {
+  if (!String(form.nome || "").trim()) return "Informe o nome completo do cliente.";
+  if (!String(form.cpf || "").trim()) {
+    return form.tipo_pessoa === "PJ"
+      ? "Informe o CNPJ do cliente."
+      : "Informe o CPF do cliente.";
+  }
+  const telefoneDigits = onlyDigits(form.telefone || "");
+  if (!telefoneDigits) return "Informe o telefone do cliente.";
+  if (telefoneDigits.length < 10) return "Telefone inválido. Informe DDD e número.";
+  return null;
+}
 
 export default function ClientesIsland() {
   // =====================================
@@ -624,6 +636,7 @@ export default function ClientesIsland() {
     if (!podeCriar) return;
     setEditId(null);
     setForm(initialForm);
+    setErro(null);
     setAcompanhantes([]);
     setAcompErro(null);
     setAcompEditId(null);
@@ -634,6 +647,7 @@ export default function ClientesIsland() {
   }
 
   function fecharFormularioCliente() {
+    setErro(null);
     setMostrarFormCliente(false);
     setModoVisualizacao(false);
     setForm(initialForm);
@@ -1385,6 +1399,7 @@ export default function ClientesIsland() {
 
     const tipoPessoa = c.tipo_pessoa || ((c.cpf || "").replace(/\D/g, "").length > 11 ? "PJ" : "PF");
     setEditId(c.id);
+    setErro(null);
     setForm({
       nome: c.nome,
       nascimento: c.nascimento || "",
@@ -1462,6 +1477,13 @@ export default function ClientesIsland() {
       setSalvando(true);
       setErro(null);
       setMsg(null);
+
+      const erroCamposObrigatorios = validarCamposObrigatoriosCliente(form);
+      if (erroCamposObrigatorios) {
+        setErro(erroCamposObrigatorios);
+        setSalvando(false);
+        return;
+      }
 
       const tipoPessoa = form.tipo_pessoa || "PF";
       const documentoDigits = onlyDigits(form.cpf || "");
@@ -1918,7 +1940,7 @@ export default function ClientesIsland() {
           loadingMessage="Carregando acompanhantes..."
           empty={false}
           colSpan={!modoVisualizacao && (podeEditar || podeExcluir) ? 6 : 5}
-          className="table-mobile-cards"
+          className="table-header-blue table-mobile-cards"
         >
           {acompanhantes.map((a) => (
             <tr key={a.id}>
@@ -1960,7 +1982,7 @@ export default function ClientesIsland() {
       {!modoVisualizacao && podeCriar && (mostrarFormAcomp || acompEditId) && (
         <AppCard
           title={acompEditId ? "Editar acompanhante" : "Novo acompanhante"}
-          tone="config"
+          tone="info"
           style={{ marginTop: 16 }}
         >
           <div className="vtur-form-grid vtur-form-grid-4">
@@ -2029,7 +2051,7 @@ export default function ClientesIsland() {
             </AppButton>
             <AppButton
               type="button"
-              variant="ghost"
+              variant="secondary"
               onClick={() => resetAcompForm(true)}
               disabled={acompSalvando}
             >
@@ -2059,14 +2081,14 @@ export default function ClientesIsland() {
               <div className="vtur-form-actions" style={{ marginTop: 0 }}>
                 <AppButton
                   type="button"
-                  variant={abaFormCliente === "dados" ? "primary" : "ghost"}
+                  variant={abaFormCliente === "dados" ? "primary" : "secondary"}
                   onClick={() => setAbaFormCliente("dados")}
                 >
                   Dados do cliente
                 </AppButton>
                 <AppButton
                   type="button"
-                  variant={abaFormCliente === "acompanhantes" ? "primary" : "ghost"}
+                  variant={abaFormCliente === "acompanhantes" ? "primary" : "secondary"}
                   onClick={() => setAbaFormCliente("acompanhantes")}
                 >
                   Acompanhantes
@@ -2075,6 +2097,16 @@ export default function ClientesIsland() {
             ) : undefined
           }
         >
+          {erro && (
+            <AlertMessage variant="error" className="mb-3">
+              <strong>{erro}</strong>
+            </AlertMessage>
+          )}
+          {msg && (
+            <AlertMessage variant="success" className="mb-3">
+              <strong>{msg}</strong>
+            </AlertMessage>
+          )}
           {(!editId || abaFormCliente === "dados") && (
           <form onSubmit={salvar}>
             <fieldset disabled={modoVisualizacao} style={{ border: "none", padding: 0, margin: 0 }}>
@@ -2112,11 +2144,13 @@ export default function ClientesIsland() {
                 onChange={(e) => handleChange("cpf", formatDocumento(e.target.value, form.tipo_pessoa || "PF"))}
                 required
               />
-              <AppField
-                label={form.tipo_pessoa === "PJ" ? "Inscricao Estadual" : "RG"}
-                value={form.rg || ""}
-                onChange={(e) => handleChange("rg", e.target.value)}
-              />
+              {form.tipo_pessoa === "PJ" && (
+                <AppField
+                  label="Inscricao Estadual"
+                  value={form.rg || ""}
+                  onChange={(e) => handleChange("rg", e.target.value)}
+                />
+              )}
               <AppField
                 type="date"
                 label={form.tipo_pessoa === "PJ" ? "Data de Fundacao" : "Nascimento"}
@@ -2260,7 +2294,7 @@ export default function ClientesIsland() {
                   <AppButton
                     key="btn-view-fechar"
                     type="button"
-                    variant="ghost"
+                    variant="secondary"
                     onClick={fecharFormularioCliente}
                   >
                     Fechar
@@ -2279,7 +2313,7 @@ export default function ClientesIsland() {
                   <AppButton
                     key="btn-edit-cancelar"
                     type="button"
-                    variant="ghost"
+                    variant="secondary"
                     onClick={fecharFormularioCliente}
                     disabled={salvando}
                   >
@@ -2307,11 +2341,10 @@ export default function ClientesIsland() {
       {!mostrarFormCliente && (
         <>
           {/* BUSCA */}
-          <AppToolbar
+          <AppCard
             title="Clientes"
             subtitle="Consulte, edite e acione contatos com uma visao centralizada da carteira."
             tone="info"
-            sticky
             actions={
               podeCriar ? (
                 <AppButton
@@ -2334,7 +2367,7 @@ export default function ClientesIsland() {
                 caption="Digite para consultar toda a carteira."
               />
             </div>
-          </AppToolbar>
+          </AppCard>
 
           {/* ERRO */}
           {erro && (
@@ -2385,7 +2418,7 @@ export default function ClientesIsland() {
             />
           ) : (
             <DataTable
-              containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+              containerClassName="vtur-scroll-y-65"
               headers={
                 <tr>
                   <th>Nome</th>
@@ -2403,7 +2436,7 @@ export default function ClientesIsland() {
               loadingMessage="Carregando clientes..."
               empty={false}
               colSpan={exibeColunaAcoes ? 5 : 4}
-              className="clientes-table table-mobile-cards min-w-[820px]"
+              className="clientes-table table-header-blue table-mobile-cards min-w-[820px]"
             >
               {clientesExibidos.map((c) => (
                 <tr key={c.id}>
@@ -2682,7 +2715,7 @@ export default function ClientesIsland() {
                   empty={historicoVendas.length === 0}
                   emptyMessage="Nenhuma venda encontrada."
                   colSpan={7}
-                  className="table-mobile-cards min-w-[820px]"
+                  className="table-header-blue table-mobile-cards min-w-[820px]"
                 >
                   {historicoVendas.map((v) => (
                     <tr key={v.id}>
@@ -2725,7 +2758,7 @@ export default function ClientesIsland() {
                   empty={historicoOrcamentos.length === 0}
                   emptyMessage="Nenhum orcamento encontrado."
                   colSpan={7}
-                  className="table-mobile-cards min-w-[760px]"
+                  className="table-header-blue table-mobile-cards min-w-[760px]"
                 >
                   {historicoOrcamentos.map((o) => (
                     <tr key={o.id}>
@@ -2802,7 +2835,7 @@ export default function ClientesIsland() {
                 empty={detalheRecibos.length === 0}
                 emptyMessage="Nenhum recibo encontrado."
                 colSpan={6}
-                className="table-mobile-cards"
+                className="table-header-blue table-mobile-cards"
               >
                 {detalheRecibos.map((r, idx) => {
                   const formatarData = (value: string | null | undefined) => (value ? formatDateBR(value) : "-");

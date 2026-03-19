@@ -20,7 +20,6 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import AppToolbar from "../ui/primer/AppToolbar";
 
 type Produto = {
   id: string;
@@ -106,6 +105,7 @@ async function fetchRelatorioProdutos(params: {
   status?: string;
   busca?: string;
   cidadeId?: string;
+  companyId?: string;
   vendedorIds?: string[] | null;
   ordem: string;
   ordemDesc: boolean;
@@ -119,6 +119,7 @@ async function fetchRelatorioProdutos(params: {
   if (params.status && params.status !== "todos") qs.set("status", params.status);
   if (params.busca) qs.set("busca", params.busca);
   if (params.cidadeId) qs.set("cidade_id", params.cidadeId);
+  if (params.companyId) qs.set("company_id", params.companyId);
   if (params.vendedorIds && params.vendedorIds.length > 0) {
     qs.set("vendedor_ids", params.vendedorIds.join(","));
   }
@@ -148,6 +149,7 @@ async function fetchRelatorioProdutosRecibos(params: {
   dataInicio?: string;
   dataFim?: string;
   status?: string;
+  companyId?: string;
   vendedorIds?: string[] | null;
   noCache?: boolean;
 }) {
@@ -155,6 +157,7 @@ async function fetchRelatorioProdutosRecibos(params: {
   if (params.dataInicio) qs.set("inicio", params.dataInicio);
   if (params.dataFim) qs.set("fim", params.dataFim);
   if (params.status && params.status !== "todos") qs.set("status", params.status);
+  if (params.companyId) qs.set("company_id", params.companyId);
   if (params.vendedorIds && params.vendedorIds.length > 0) {
     qs.set("vendedor_ids", params.vendedorIds.join(","));
   }
@@ -447,7 +450,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
 
         const { data: usuarioDb } = await supabase
           .from("users")
-          .select("id, user_types(name)")
+          .select("id, company_id, user_types(name)")
           .eq("id", userId)
           .maybeSingle();
 
@@ -671,12 +674,15 @@ export default function RelatorioAgrupadoProdutoIsland() {
       }
 
       const paginaAtual = Math.max(1, pageOverride ?? page);
+      const companyIdFiltro =
+        userCtx.papel === "MASTER" ? masterScope.empresaSelecionada : undefined;
       const rows = (await fetchRelatorioProdutos({
         dataInicio: dataInicio || "",
         dataFim: dataFim || "",
         status: statusFiltro,
         busca: buscaProduto,
         cidadeId: cidadeFiltro || "",
+        companyId: companyIdFiltro,
         vendedorIds: vendedorIdsFiltro && vendedorIdsFiltro.length > 0 ? vendedorIdsFiltro : null,
         ordem: ordenacao,
         ordemDesc,
@@ -732,12 +738,15 @@ export default function RelatorioAgrupadoProdutoIsland() {
     }
 
     while (true) {
+      const companyIdFiltro =
+        userCtx.papel === "MASTER" ? masterScope.empresaSelecionada : undefined;
       const rows = (await fetchRelatorioProdutos({
         dataInicio: dataInicio || "",
         dataFim: dataFim || "",
         status: statusFiltro,
         busca: buscaProduto,
         cidadeId: cidadeFiltro || "",
+        companyId: companyIdFiltro,
         vendedorIds: vendedorIdsFiltro && vendedorIdsFiltro.length > 0 ? vendedorIdsFiltro : null,
         ordem: ordenacao,
         ordemDesc,
@@ -784,6 +793,8 @@ export default function RelatorioAgrupadoProdutoIsland() {
         dataInicio: dataInicio || "",
         dataFim: dataFim || "",
         status: statusFiltro,
+        companyId:
+          userCtx.papel === "MASTER" ? masterScope.empresaSelecionada : undefined,
         vendedorIds: vendedorIdsFiltro && vendedorIdsFiltro.length > 0 ? vendedorIdsFiltro : null,
         noCache: opts?.noCache,
       })) as any[];
@@ -1384,15 +1395,14 @@ export default function RelatorioAgrupadoProdutoIsland() {
 
   return (
     <AppPrimerProvider>
-      <div className="relatorio-vendas-produto-page">
+      <div className="relatorio-vendas-produto-page page-content-wrap">
         <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
-        <AppToolbar
-          sticky
+        <AppCard
           tone="config"
           className="mb-3 list-toolbar-sticky"
-          title="Relatório agrupado por produto"
-          subtitle={`Período: ${periodoResumo}. ${activeTab === "recibos" ? "Visão por recibo." : "Resumo consolidado por tipo de produto."}`}
+          title="Vendas por Produto"
+          subtitle={`Gerencie indicadores por produto com visao de CRM. Periodo: ${periodoResumo}. ${activeTab === "recibos" ? "Visao por recibo." : "Resumo consolidado por tipo de produto."}`}
           actions={
             <div className="vtur-quote-top-actions">
               <AppButton type="button" variant="secondary" className="sm:hidden" onClick={() => setShowFilters(true)}>
@@ -1408,7 +1418,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
           }
         >
           <div className="hidden sm:block">{renderFiltersGrid()}</div>
-        </AppToolbar>
+        </AppCard>
 
         <AppCard className="mb-3" title="Modo de leitura" subtitle="Alterne entre a consolidação por tipo e a visão analítica por recibo.">
           <div className="vtur-quote-top-actions">

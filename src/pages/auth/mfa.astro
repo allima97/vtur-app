@@ -1,0 +1,22 @@
+---
+import "../../styles/global.css";
+import "../../styles/auth-extra.css";
+import "../../styles/sakai-alignment.css";
+import BrandHead from "../../components/BrandHead.astro";
+import AuthMfaIsland from "../../components/islands/AuthMfaIsland";
+import { SYSTEM_NAME } from "../../lib/systemName";
+
+const pageTitle = `Verificacao em duas etapas - ${SYSTEM_NAME}`;
+---
+
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <BrandHead title={pageTitle} canonicalPath={Astro.url.pathname} noindex={true} />
+    <title>{pageTitle}</title>
+  </head>
+  <body class="auth-body">
+    <AuthMfaIsland client:visible />
+  </body>
+</html>

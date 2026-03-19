@@ -7,10 +7,9 @@ export default defineConfig({
   adapter: cloudflare({
     // Sharp não roda no runtime do Cloudflare; servir imagens sem processamento.
     imageService: "passthrough",
-    // Envolve o handler do Astro com try/catch para evitar Error 1101 (uncaught exception no Worker).
-    workerEntryPoint: {
-      path: "src/worker.ts",
-    },
+    // Mantem o prerender em Node na fase inicial do upgrade para reduzir risco
+    // enquanto o SSR continua rodando em workerd no runtime final.
+    prerenderEnvironment: "node",
   }),
   // Middleware + Supabase SSR precisam de modo server/híbrido para evitar redirecionos durante o build.
   output: 'server',

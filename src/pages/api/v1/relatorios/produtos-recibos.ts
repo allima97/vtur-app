@@ -1,6 +1,12 @@
 import { createServerClient } from "../../../../lib/supabaseServer";
 import { kvCache } from "../../../../lib/kvCache";
 import { MODULO_ALIASES } from "../../../../config/modulos";
+import {
+  applyConciliacaoOverridesToSales,
+  fetchConciliacaoOverrideFlag,
+  getReciboValorBruto,
+  getReciboValorTaxas,
+} from "../../../../lib/relatorios/conciliacaoGrouped";
 
 import { getSupabaseEnv } from "../../users";
 const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv();
@@ -163,6 +169,7 @@ export async function GET({ request }: { request: Request }) {
     const inicio = String(url.searchParams.get("inicio") || "").trim();
     const fim = String(url.searchParams.get("fim") || "").trim();
     const status = String(url.searchParams.get("status") || "").trim();
+    const requestedCompanyId = String(url.searchParams.get("company_id") || "").trim();
     const vendedorIdsRaw = String(url.searchParams.get("vendedor_ids") || "").trim();
     const noCache = String(url.searchParams.get("no_cache") || "").trim() === "1";
 
@@ -180,7 +187,7 @@ export async function GET({ request }: { request: Request }) {
 
     const { data: perfil, error: perfilErr } = await client
       .from("users")
-      .select("id, uso_individual, user_types(name)")
+      .select("id, uso_individual, company_id, user_types(name)")
       .eq("id", user.id)
       .maybeSingle();
     if (perfilErr) throw perfilErr;
@@ -188,6 +195,14 @@ export async function GET({ request }: { request: Request }) {
     const tipoName = String((perfil as any)?.user_types?.name || "");
     const usoIndividual = Boolean((perfil as any)?.uso_individual);
     const papel = resolvePapel(tipoName, usoIndividual);
+    const companyId =
+      papel === "MASTER" || papel === "ADMIN"
+        ? requestedCompanyId === "all"
+          ? null
+          : isUuid(requestedCompanyId)
+            ? requestedCompanyId
+            : ((perfil as any)?.company_id || null)
+        : ((perfil as any)?.company_id || null);
 
     if (papel !== "ADMIN") {
       const denied = await requireModuloView(
@@ -232,6 +247,7 @@ export async function GET({ request }: { request: Request }) {
       fim || "-",
       statusParam || "-",
       vendorParam ? vendorParam.join(";") : "-",
+      companyId || "-",
     ].join("|");
 
     if (!noCache) {
@@ -279,6 +295,7 @@ export async function GET({ request }: { request: Request }) {
           destino_cidade:destino_cidade_id (nome),
           destinos:produtos!destino_id (nome, cidade_id),
           vendas_recibos${hasPeriodo ? "!inner" : ""} (
+            id,
             numero_recibo,
             produto_id,
             data_venda,
@@ -294,6 +311,9 @@ export async function GET({ request }: { request: Request }) {
     if (vendorParam) {
       query = query.in("vendedor_id", vendorParam);
     }
+    if (companyId) {
+      query = query.eq("company_id", companyId);
+    }
     // Competência por recibo
     if (inicio) query = query.gte("vendas_recibos.data_venda", inicio);
     if (fim) query = query.lte("vendas_recibos.data_venda", fim);
@@ -304,11 +324,31 @@ export async function GET({ request }: { request: Request }) {
     const { data, error } = await query;
     if (error) throw error;
 
-    const rows = data || [];
-    writeCache(cacheKey, rows);
-    await kvCache.set(cacheKey, rows, 15);
+    const usarConciliacao = await fetchConciliacaoOverrideFlag(client, companyId);
+    const rowsBase = (data || []) as any[];
+    const rows = usarConciliacao
+      ? await applyConciliacaoOverridesToSales(client, rowsBase, {
+          companyId,
+          inicio: inicio || null,
+          fim: fim || null,
+          vendedorIds: vendorParam,
+        })
+      : rowsBase;
 
-    return new Response(JSON.stringify(rows), {
+    const normalizedRows = rows.map((sale: any) => ({
+      ...sale,
+      vendas_recibos: Array.isArray(sale?.vendas_recibos)
+        ? sale.vendas_recibos.map((recibo: any) => ({
+            ...recibo,
+            valor_total: getReciboValorBruto(recibo),
+            valor_taxas: getReciboValorTaxas(recibo),
+          }))
+        : [],
+    }));
+    writeCache(cacheKey, normalizedRows);
+    await kvCache.set(cacheKey, normalizedRows, 15);
+
+    return new Response(JSON.stringify(normalizedRows), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
