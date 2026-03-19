@@ -533,6 +533,7 @@ export async function saveContratoImport(params: {
   principalIndex: number;
   file?: File | null;
   contratoFiles?: (File | null)[];
+  vendedorId?: string | null;
   destinoCidadeId?: string | null;
   destinoCidadeNome?: string | null;
   destinoProdutoId?: string | null;
@@ -547,6 +548,7 @@ export async function saveContratoImport(params: {
     principalIndex,
     file,
     contratoFiles,
+    vendedorId: vendedorIdParam,
     destinoCidadeId: destinoCidadeIdParam,
     destinoCidadeNome: destinoCidadeNomeParam,
     destinoProdutoId: destinoProdutoIdParam,
@@ -574,6 +576,22 @@ export async function saveContratoImport(params: {
   if (!userId) throw new Error("Usuário não autenticado.");
   const companyId = await getCompanyId(userId);
   if (!companyId) throw new Error("Usuário sem company_id para salvar venda.");
+  const vendedorId = String(vendedorIdParam || userId).trim() || userId;
+  if (vendedorId !== userId) {
+    const { data: vendedorData, error: vendedorError } = await supabaseBrowser
+      .from("users")
+      .select("id, company_id, user_types(name)")
+      .eq("id", vendedorId)
+      .maybeSingle();
+    if (vendedorError) throw vendedorError;
+    const tipoNome = String((vendedorData as any)?.user_types?.name || "").toUpperCase();
+    const vendedorCompanyId = String((vendedorData as any)?.company_id || "").trim();
+    const tipoPermitido =
+      tipoNome.includes("VENDEDOR") || tipoNome.includes("GESTOR") || tipoNome.includes("MASTER");
+    if (!vendedorData?.id || vendedorCompanyId !== companyId || !tipoPermitido) {
+      throw new Error("O vendedor selecionado não pertence à empresa ativa.");
+    }
+  }
   const termosNaoComissionaveis = await carregarTermosNaoComissionaveis();
 
   const principal = contratos[principalIndex] || contratos[0];
@@ -721,7 +739,7 @@ export async function saveContratoImport(params: {
   const totalPagoFinal = totalPago > 0 ? totalPago : totalPagoFallback;
 
   const vendaPayload: any = {
-    vendedor_id: userId,
+    vendedor_id: vendedorId,
     cliente_id: cliente.id,
     destino_id: produtoPrincipal.id,
     destino_cidade_id: destinoCidadeId,

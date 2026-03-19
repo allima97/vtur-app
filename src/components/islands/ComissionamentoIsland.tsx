@@ -8,10 +8,11 @@ import CalculatorModal from "../ui/CalculatorModal";
 import AlertMessage from "../ui/AlertMessage";
 import { formatCurrencyBRL, formatNumberBR } from "../../lib/format";
 import {
-  calcularPctConciliacao,
   calcularPctFixoProduto,
   hasConciliacaoCommissionRule,
   regraProdutoTemFixo,
+  resolveConciliacaoCommissionSelection,
+  type ConciliacaoCommissionBandRule,
 } from "../../lib/comissaoUtils";
 import { carregarTermosNaoComissionaveis, calcularNaoComissionavelPorVenda } from "../../lib/pagamentoUtils";
 import { normalizeText } from "../../lib/normalizeText";
@@ -32,9 +33,12 @@ type Parametros = {
   foco_faturamento: "bruto" | "liquido";
   conciliacao_sobrepoe_vendas: boolean;
   conciliacao_regra_ativa: boolean;
+  conciliacao_tipo?: "GERAL" | "ESCALONAVEL";
   conciliacao_meta_nao_atingida: number | null;
   conciliacao_meta_atingida: number | null;
   conciliacao_super_meta: number | null;
+  conciliacao_tiers?: Tier[];
+  conciliacao_faixas_loja?: ConciliacaoCommissionBandRule[];
 };
 
 type UserCtx = {
@@ -99,6 +103,9 @@ type Recibo = {
   valor_bruto_override?: number | null;
   valor_meta_override?: number | null;
   valor_liquido_override?: number | null;
+  valor_comissao_loja?: number | null;
+  percentual_comissao_loja?: number | null;
+  faixa_comissao?: string | null;
   tipo_produtos?: Produto | null;
   regra_produto?: RegraProduto | null;
 };
@@ -462,7 +469,7 @@ export default function ComissionamentoIsland() {
         : userCtx.companyId;
 
       const paramsCols =
-        "usar_taxas_na_meta, foco_valor, foco_faturamento, conciliacao_sobrepoe_vendas, conciliacao_regra_ativa, conciliacao_meta_nao_atingida, conciliacao_meta_atingida, conciliacao_super_meta";
+        "usar_taxas_na_meta, foco_valor, foco_faturamento, conciliacao_sobrepoe_vendas, conciliacao_regra_ativa, conciliacao_tipo, conciliacao_meta_nao_atingida, conciliacao_meta_atingida, conciliacao_super_meta, conciliacao_tiers, conciliacao_faixas_loja";
       let paramsData: any = null;
       if (companyIdFiltro) {
         const { data } = await supabase
@@ -712,6 +719,8 @@ export default function ComissionamentoIsland() {
                 paramsData.foco_faturamento === "liquido" ? "liquido" : "bruto",
               conciliacao_sobrepoe_vendas: Boolean(paramsData.conciliacao_sobrepoe_vendas),
               conciliacao_regra_ativa: Boolean(paramsData.conciliacao_regra_ativa),
+              conciliacao_tipo:
+                paramsData.conciliacao_tipo === "ESCALONAVEL" ? "ESCALONAVEL" : "GERAL",
               conciliacao_meta_nao_atingida:
                 paramsData.conciliacao_meta_nao_atingida != null
                   ? Number(paramsData.conciliacao_meta_nao_atingida)
@@ -724,6 +733,12 @@ export default function ComissionamentoIsland() {
                 paramsData.conciliacao_super_meta != null
                   ? Number(paramsData.conciliacao_super_meta)
                   : null,
+              conciliacao_tiers: Array.isArray(paramsData.conciliacao_tiers)
+                ? (paramsData.conciliacao_tiers as Tier[])
+                : [],
+              conciliacao_faixas_loja: Array.isArray((paramsData as any).conciliacao_faixas_loja)
+                ? ((paramsData as any).conciliacao_faixas_loja as ConciliacaoCommissionBandRule[])
+                : [],
             } as Parametros)
           : {
               usar_taxas_na_meta: true,
@@ -731,9 +746,12 @@ export default function ComissionamentoIsland() {
               foco_faturamento: "bruto",
               conciliacao_sobrepoe_vendas: false,
               conciliacao_regra_ativa: false,
+              conciliacao_tipo: "GERAL",
               conciliacao_meta_nao_atingida: null,
               conciliacao_meta_atingida: null,
               conciliacao_super_meta: null,
+              conciliacao_tiers: [],
+              conciliacao_faixas_loja: [],
             }
       );
       setMetasProduto((metasProdData || []) as MetaProduto[]);
@@ -834,6 +852,9 @@ export default function ComissionamentoIsland() {
         baseCom: number;
         valorLiquido: number;
         isConciliacao: boolean;
+        percentualComissaoLoja: number | null;
+        faixaComissao: string | null;
+        isSeguroViagem: boolean;
       }
     > = {};
 
@@ -887,7 +908,19 @@ export default function ComissionamentoIsland() {
         const baseCom = liquido;
         const tipoPacoteKey = normalizeText(r.tipo_pacote || "", { trim: true, collapseWhitespace: true });
         const isConciliacao = hasConciliacaoOverride(r);
-        const bucketKey = `${prodId}::${tipoPacoteKey || "default"}::${isConciliacao ? "conciliacao" : "base"}`;
+        const percentualComissaoLoja =
+          r.percentual_comissao_loja != null ? Number(r.percentual_comissao_loja) : null;
+        const faixaComissao = r.faixa_comissao || null;
+        const isSeguroViagem = isSeguroProduto(prod);
+        const bucketKey = [
+          prodId,
+          tipoPacoteKey || "default",
+          isConciliacao ? "conciliacao" : "base",
+          isConciliacao ? faixaComissao || "sem-faixa" : "sem-faixa",
+          isConciliacao && percentualComissaoLoja != null
+            ? String(percentualComissaoLoja)
+            : "sem-pct-loja",
+        ].join("::");
 
         brutoPorProduto[prodId] = (brutoPorProduto[prodId] || 0) + brutoTotal;
         liquidoPorProduto[prodId] = (liquidoPorProduto[prodId] || 0) + liquido;
@@ -900,6 +933,9 @@ export default function ComissionamentoIsland() {
           baseCom: 0,
           valorLiquido: 0,
           isConciliacao,
+          percentualComissaoLoja,
+          faixaComissao,
+          isSeguroViagem,
         };
         bucket.baseCom += baseCom;
         bucket.valorLiquido += liquido;
@@ -937,24 +973,31 @@ export default function ComissionamentoIsland() {
       let regProd = regProdPacote || regProdBase;
 
       if (bucket.isConciliacao && hasConciliacaoCommissionRule(parametros)) {
-        const pctCom = calcularPctConciliacao(parametros, pctMetaGeral);
-        const val = baseComBucket * (pctCom / 100);
-        if (pctCom > 0) {
-          if (isPassagemFacial) {
-            pctPassagemFacialSet.add(pctCom);
-          } else {
-            pctComissaoGeralSet.add(pctCom);
+        const conciliacaoSelection = resolveConciliacaoCommissionSelection(parametros, {
+          faixa_comissao: bucket.faixaComissao,
+          percentual_comissao_loja: bucket.percentualComissaoLoja,
+          is_seguro_viagem: bucket.isSeguroViagem,
+        });
+        if (conciliacaoSelection.kind === "CONCILIACAO" && conciliacaoSelection.rule) {
+          const pctCom = calcularPctPorRegra(conciliacaoSelection.rule, pctMetaGeral);
+          const val = baseComBucket * (pctCom / 100);
+          if (pctCom > 0) {
+            if (isPassagemFacial) {
+              pctPassagemFacialSet.add(pctCom);
+            } else {
+              pctComissaoGeralSet.add(pctCom);
+            }
           }
+          if (isPassagemFacial) {
+            comissaoPassagemFacial += val;
+          } else {
+            comissaoGeral += val;
+          }
+          if (isSeguro) {
+            comissaoSeguroViagem += val;
+          }
+          return;
         }
-        if (isPassagemFacial) {
-          comissaoPassagemFacial += val;
-        } else {
-          comissaoGeral += val;
-        }
-        if (isSeguro) {
-          comissaoSeguroViagem += val;
-        }
-        return;
       }
 
       if (prod.regra_comissionamento === "diferenciado") {

@@ -827,28 +827,28 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
 
       {!loadingDados && equipeFiltroIds.length > 0 && (
         <>
-          {effectiveViewOnly && (
-            <AppCard tone="config" className="card-config mb-3">
-              <div className="form-group" style={{ marginBottom: 8 }}>
-                <label className="form-label">Mes</label>
-                <select
-                  className="form-select"
-                  value={mesSelecionado}
-                  onChange={(e) => setMesSelecionado(e.target.value)}
-                  style={{ width: "100%" }}
-                >
-                  {mesOpcoes.map((mes) => (
-                    <option key={mes} value={mes}>
-                      {monthLabel(mes)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ color: "#64748b", fontSize: "0.9rem" }}>
-                Utilize o abaixo filtro para navegar em outros meses.
-              </div>
-            </AppCard>
-          )}
+          <AppCard
+            tone="config"
+            className="card-config mb-3"
+            title="Período do ranking"
+            subtitle="Escolha o mês de competência para navegar no histórico do ranking de vendas."
+          >
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Mês</label>
+              <select
+                className="form-select"
+                value={mesSelecionado}
+                onChange={(e) => setMesSelecionado(e.target.value)}
+                style={{ width: "100%" }}
+              >
+                {mesOpcoes.map((mes) => (
+                  <option key={mes} value={mes}>
+                    {monthLabel(mes)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </AppCard>
 
           <div className="ranking-layout">
             <section className="ranking-main">

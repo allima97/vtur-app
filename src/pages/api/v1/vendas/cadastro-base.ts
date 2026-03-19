@@ -45,6 +45,11 @@ function resolvePapel(tipoNome: string, usoIndividual: boolean): Papel {
   return "OUTRO";
 }
 
+function isAllowedSellerTipo(tipoNome?: string | null) {
+  const tipo = String(tipoNome || "").toUpperCase();
+  return tipo.includes("VENDEDOR") || tipo.includes("GESTOR") || tipo.includes("MASTER");
+}
+
 function parseCookies(request: Request): Map<string, string> {
   const header = request.headers.get("cookie") ?? "";
   const map = new Map<string, string>();
@@ -199,17 +204,30 @@ export async function GET({ request }: { request: Request }) {
       }
     }
 
-    const isGestor = String(tipoName || "").toUpperCase().includes("GESTOR");
+    const canAssignVendedor = !usoIndividual && (papel === "GESTOR" || papel === "MASTER");
     let vendedoresEquipe: { id: string; nome_completo: string | null }[] = [];
-    if (isGestor) {
+    if (papel === "GESTOR") {
       const ids = await fetchGestorEquipeIdsComGestor(client, user.id);
       const { data: vendedoresData, error: vendErr } = await client
         .from("users")
-        .select("id, nome_completo")
+        .select("id, nome_completo, user_types(name)")
         .in("id", ids)
         .order("nome_completo");
       if (vendErr) throw vendErr;
-      vendedoresEquipe = (vendedoresData || []) as any[];
+      vendedoresEquipe = ((vendedoresData || []) as any[]).filter((row) =>
+        isAllowedSellerTipo(row?.user_types?.name)
+      );
+    } else if (papel === "MASTER" && companyId) {
+      const { data: vendedoresData, error: vendErr } = await client
+        .from("users")
+        .select("id, nome_completo, user_types(name)")
+        .eq("company_id", companyId)
+        .eq("uso_individual", false)
+        .order("nome_completo");
+      if (vendErr) throw vendErr;
+      vendedoresEquipe = ((vendedoresData || []) as any[]).filter((row) =>
+        isAllowedSellerTipo(row?.user_types?.name)
+      );
     } else {
       vendedoresEquipe = [
         {
@@ -247,7 +265,8 @@ export async function GET({ request }: { request: Request }) {
         papel,
         company_id: companyId,
         uso_individual: usoIndividual,
-        is_gestor: isGestor,
+        is_gestor: papel === "GESTOR",
+        can_assign_vendedor: canAssignVendedor,
       },
       vendedoresEquipe,
       clientes: c.data || [],

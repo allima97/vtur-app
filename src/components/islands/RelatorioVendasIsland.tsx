@@ -10,12 +10,12 @@ import {
   ParametrosComissao,
   Regra,
   RegraProduto,
-  calcularPctConciliacao,
   calcularPctFixoProduto,
   calcularPctPorRegra,
   calcularDescontoAplicado,
   hasConciliacaoCommissionRule,
   regraProdutoTemFixo,
+  resolveConciliacaoCommissionSelection,
 } from "../../lib/comissaoUtils";
 import { carregarTermosNaoComissionaveis, calcularNaoComissionavelPorVenda } from "../../lib/pagamentoUtils";
 import AlertMessage from "../ui/AlertMessage";
@@ -112,6 +112,7 @@ type Venda = {
     valor_liquido_override?: number | null;
     valor_comissao_loja?: number | null;
     percentual_comissao_loja?: number | null;
+    faixa_comissao?: string | null;
     produto_resolvido_id?: string | null;
     tipo_produtos?: { id: string; nome: string | null; tipo: string | null } | null;
     produto_resolvido?: { id: string; nome: string | null; tipo: string | null } | null;
@@ -149,6 +150,7 @@ type ReciboEnriquecido = {
   valor_liquido_override?: number | null;
   valor_comissao_loja?: number | null;
   percentual_comissao_loja?: number | null;
+  faixa_comissao?: string | null;
   tipo_pacote?: string | null;
   status: string | null;
 };
@@ -545,15 +547,18 @@ export default function RelatorioVendasIsland() {
           foco_faturamento: "bruto",
           conciliacao_sobrepoe_vendas: false,
           conciliacao_regra_ativa: false,
+          conciliacao_tipo: "GERAL",
           conciliacao_meta_nao_atingida: null,
           conciliacao_meta_atingida: null,
           conciliacao_super_meta: null,
+          conciliacao_tiers: [],
+          conciliacao_faixas_loja: [],
         };
         if (companyId) {
           const { data: params } = await supabase
             .from("parametros_comissao")
             .select(
-              "exportacao_pdf, exportacao_excel, usar_taxas_na_meta, foco_valor, foco_faturamento, conciliacao_sobrepoe_vendas, conciliacao_regra_ativa, conciliacao_meta_nao_atingida, conciliacao_meta_atingida, conciliacao_super_meta"
+              "exportacao_pdf, exportacao_excel, usar_taxas_na_meta, foco_valor, foco_faturamento, conciliacao_sobrepoe_vendas, conciliacao_regra_ativa, conciliacao_tipo, conciliacao_meta_nao_atingida, conciliacao_meta_atingida, conciliacao_super_meta, conciliacao_tiers, conciliacao_faixas_loja"
             )
             .eq("company_id", companyId)
             .maybeSingle();
@@ -569,6 +574,8 @@ export default function RelatorioVendasIsland() {
                 params.foco_faturamento === "liquido" ? "liquido" : "bruto",
               conciliacao_sobrepoe_vendas: Boolean(params.conciliacao_sobrepoe_vendas),
               conciliacao_regra_ativa: Boolean(params.conciliacao_regra_ativa),
+              conciliacao_tipo:
+                params.conciliacao_tipo === "ESCALONAVEL" ? "ESCALONAVEL" : "GERAL",
               conciliacao_meta_nao_atingida:
                 params.conciliacao_meta_nao_atingida != null
                   ? Number(params.conciliacao_meta_nao_atingida)
@@ -581,6 +588,12 @@ export default function RelatorioVendasIsland() {
                 params.conciliacao_super_meta != null
                   ? Number(params.conciliacao_super_meta)
                   : null,
+              conciliacao_tiers: Array.isArray((params as any).conciliacao_tiers)
+                ? ((params as any).conciliacao_tiers as ParametrosComissao["conciliacao_tiers"])
+                : [],
+              conciliacao_faixas_loja: Array.isArray((params as any).conciliacao_faixas_loja)
+                ? ((params as any).conciliacao_faixas_loja as ParametrosComissao["conciliacao_faixas_loja"])
+                : [],
             });
           } else {
             setExportFlags({ pdf: true, excel: true });
@@ -987,6 +1000,7 @@ export default function RelatorioVendasIsland() {
             valor_liquido_override: recibo.valor_liquido_override ?? null,
             valor_comissao_loja: recibo.valor_comissao_loja ?? null,
             percentual_comissao_loja: recibo.percentual_comissao_loja ?? null,
+            faixa_comissao: recibo.faixa_comissao ?? null,
 	          tipo_pacote: recibo.tipo_pacote || null,
 	          status: v.status,
 	        };
@@ -1293,9 +1307,12 @@ export default function RelatorioVendasIsland() {
         foco_valor: "bruto",
         foco_faturamento: "bruto",
         conciliacao_regra_ativa: false,
+        conciliacao_tipo: "GERAL",
         conciliacao_meta_nao_atingida: null,
         conciliacao_meta_atingida: null,
         conciliacao_super_meta: null,
+        conciliacao_tiers: [],
+        conciliacao_faixas_loja: [],
       };
       const prodId = recibo.produto_tipo_id || recibo.produto_id || "";
       if (!prodId) return 0;
@@ -1303,9 +1320,20 @@ export default function RelatorioVendasIsland() {
       const liquido = getLiquidoComissionavel(recibo);
       const baseCom = params.foco_faturamento === "liquido" ? liquido : brutoSemRav;
       if (baseCom <= 0) return 0;
-      const pct =
+      const conciliacaoSelection =
         hasConciliacaoOverride(recibo) && hasConciliacaoCommissionRule(params)
-          ? calcularPctConciliacao(params, aggregates.pctMetaGeral)
+          ? resolveConciliacaoCommissionSelection(params, {
+              faixa_comissao: recibo.faixa_comissao || null,
+              percentual_comissao_loja:
+                recibo.percentual_comissao_loja != null
+                  ? Number(recibo.percentual_comissao_loja)
+                  : null,
+              is_seguro_viagem: isSeguroRecibo(recibo),
+            })
+          : null;
+      const pct =
+        conciliacaoSelection?.kind === "CONCILIACAO"
+          ? calcularPctPorRegra(conciliacaoSelection.rule, aggregates.pctMetaGeral)
           : calcularPctParaProduto(prodId, isSeguroRecibo(recibo), recibo.tipo_pacote || null);
       return baseCom * (pct / 100);
     },

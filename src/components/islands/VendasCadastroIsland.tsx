@@ -51,6 +51,7 @@ async function fetchVendasCadastroBase(params?: { noCache?: boolean }) {
       company_id: string | null;
       uso_individual: boolean;
       is_gestor: boolean;
+      can_assign_vendedor?: boolean;
     };
     vendedoresEquipe: VendedorOption[];
     clientes: Cliente[];
@@ -261,7 +262,7 @@ export default function VendasCadastroIsland() {
   >([]);
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [vendedoresEquipe, setVendedoresEquipe] = useState<VendedorOption[]>([]);
-  const [isGestorUser, setIsGestorUser] = useState(false);
+  const [canAssignVendedor, setCanAssignVendedor] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [usoIndividual, setUsoIndividual] = useState<boolean>(false);
@@ -315,7 +316,7 @@ export default function VendasCadastroIsland() {
       setCurrentUserId(user.id || null);
       setCompanyId(user.company_id || null);
       setUsoIndividual(Boolean(user.uso_individual));
-      setIsGestorUser(Boolean(user.is_gestor));
+      setCanAssignVendedor(Boolean(user.can_assign_vendedor));
       setVendedoresEquipe(payload.vendedoresEquipe || []);
 
       if (user.id) {
@@ -1114,7 +1115,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
         return;
       }
       const vendedorResponsavel = formVenda.vendedor_id || userId;
-      if (isGestorUser && !formVenda.vendedor_id) {
+      if (canAssignVendedor && !formVenda.vendedor_id) {
         setErro("Selecione o vendedor responsável pela venda.");
         showToast("Selecione o vendedor responsável pela venda.", "error");
         setSalvando(false);
@@ -1560,7 +1561,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
             className="mb-3"
           >
             <div className="vtur-form-grid vtur-form-grid-4">
-              {isGestorUser && (
+              {canAssignVendedor && (
                 <AppField
                   as="select"
                   label="Vendedor *"

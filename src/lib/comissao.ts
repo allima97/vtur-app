@@ -23,9 +23,33 @@ export type ParametrosComissao = {
   foco_valor?: "bruto" | "liquido";
   conciliacao_sobrepoe_vendas?: boolean;
   conciliacao_regra_ativa?: boolean;
+  conciliacao_tipo?: "GERAL" | "ESCALONAVEL";
   conciliacao_meta_nao_atingida?: number | null;
   conciliacao_meta_atingida?: number | null;
   conciliacao_super_meta?: number | null;
+  conciliacao_tiers?: Array<{
+    faixa: "PRE" | "POS";
+    de_pct: number;
+    ate_pct: number;
+    inc_pct_meta: number;
+    inc_pct_comissao: number;
+  }> | null;
+  conciliacao_faixas_loja?: Array<{
+    faixa_loja: "MENOR_10" | "MAIOR_OU_IGUAL_10" | "SEGURO_32_35";
+    ativo: boolean;
+    tipo_calculo: "CONCILIACAO" | "PRODUTO_DIFERENCIADO";
+    tipo: "GERAL" | "ESCALONAVEL";
+    meta_nao_atingida: number | null;
+    meta_atingida: number | null;
+    super_meta: number | null;
+    tiers: Array<{
+      faixa: "PRE" | "POS";
+      de_pct: number;
+      ate_pct: number;
+      inc_pct_meta: number;
+      inc_pct_comissao: number;
+    }>;
+  }> | null;
 };
 
 export type ResumoPeriodo = {

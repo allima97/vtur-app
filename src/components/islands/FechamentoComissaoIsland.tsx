@@ -13,8 +13,9 @@ import {
 import { buildMonthOptionsYYYYMM, formatCurrencyBRL, formatDateBR, formatMonthYearBR } from "../../lib/format";
 import {
   calcularDescontoAplicado,
-  calcularPctConciliacao,
   hasConciliacaoCommissionRule,
+  resolveConciliacaoCommissionSelection,
+  type ConciliacaoCommissionBandRule,
 } from "../../lib/comissaoUtils";
 import { carregarTermosNaoComissionaveis, calcularNaoComissionavelPorVenda } from "../../lib/pagamentoUtils";
 import { normalizeText } from "../../lib/normalizeText";
@@ -73,6 +74,9 @@ type VendaRecibo = {
   valor_bruto_override?: number | null;
   valor_meta_override?: number | null;
   valor_liquido_override?: number | null;
+  valor_comissao_loja?: number | null;
+  percentual_comissao_loja?: number | null;
+  faixa_comissao?: string | null;
 };
 
 type Venda = {
@@ -106,9 +110,18 @@ type ParametrosComissao = {
   foco_valor?: "bruto" | "liquido";
   conciliacao_sobrepoe_vendas?: boolean;
   conciliacao_regra_ativa?: boolean;
+  conciliacao_tipo?: "GERAL" | "ESCALONAVEL";
   conciliacao_meta_nao_atingida?: number | null;
   conciliacao_meta_atingida?: number | null;
   conciliacao_super_meta?: number | null;
+  conciliacao_tiers?: {
+    faixa: "PRE" | "POS";
+    de_pct: number;
+    ate_pct: number;
+    inc_pct_meta: number;
+    inc_pct_comissao: number;
+  }[];
+  conciliacao_faixas_loja?: ConciliacaoCommissionBandRule[];
 };
 
 function getPeriodoAtualYYYYMM() {
@@ -430,9 +443,12 @@ export default function FechamentoComissaoIsland() {
         foco_valor: "bruto",
         conciliacao_sobrepoe_vendas: false,
         conciliacao_regra_ativa: false,
+        conciliacao_tipo: "GERAL",
         conciliacao_meta_nao_atingida: null,
         conciliacao_meta_atingida: null,
         conciliacao_super_meta: null,
+        conciliacao_tiers: [],
+        conciliacao_faixas_loja: [],
       } as ParametrosComissao;
     }
 
@@ -441,7 +457,7 @@ export default function FechamentoComissaoIsland() {
       const { data } = await supabase
         .from("parametros_comissao")
         .select(
-          "usar_taxas_na_meta, foco_valor, conciliacao_sobrepoe_vendas, conciliacao_regra_ativa, conciliacao_meta_nao_atingida, conciliacao_meta_atingida, conciliacao_super_meta"
+          "usar_taxas_na_meta, foco_valor, conciliacao_sobrepoe_vendas, conciliacao_regra_ativa, conciliacao_tipo, conciliacao_meta_nao_atingida, conciliacao_meta_atingida, conciliacao_super_meta, conciliacao_tiers, conciliacao_faixas_loja"
         )
         .eq("owner_user_id", user.id)
         .maybeSingle();
@@ -452,6 +468,7 @@ export default function FechamentoComissaoIsland() {
           foco_valor: data.foco_valor === "liquido" ? "liquido" : "bruto",
           conciliacao_sobrepoe_vendas: Boolean(data.conciliacao_sobrepoe_vendas),
           conciliacao_regra_ativa: Boolean(data.conciliacao_regra_ativa),
+          conciliacao_tipo: data.conciliacao_tipo === "ESCALONAVEL" ? "ESCALONAVEL" : "GERAL",
           conciliacao_meta_nao_atingida:
             data.conciliacao_meta_nao_atingida != null
               ? Number(data.conciliacao_meta_nao_atingida)
@@ -462,6 +479,12 @@ export default function FechamentoComissaoIsland() {
               : null,
           conciliacao_super_meta:
             data.conciliacao_super_meta != null ? Number(data.conciliacao_super_meta) : null,
+          conciliacao_tiers: Array.isArray((data as any).conciliacao_tiers)
+            ? ((data as any).conciliacao_tiers as ParametrosComissao["conciliacao_tiers"])
+            : [],
+          conciliacao_faixas_loja: Array.isArray((data as any).conciliacao_faixas_loja)
+            ? ((data as any).conciliacao_faixas_loja as ConciliacaoCommissionBandRule[])
+            : [],
         };
       }
     }
@@ -471,7 +494,7 @@ export default function FechamentoComissaoIsland() {
       const { data } = await supabase
         .from("parametros_comissao")
         .select(
-          "usar_taxas_na_meta, foco_valor, conciliacao_sobrepoe_vendas, conciliacao_regra_ativa, conciliacao_meta_nao_atingida, conciliacao_meta_atingida, conciliacao_super_meta"
+          "usar_taxas_na_meta, foco_valor, conciliacao_sobrepoe_vendas, conciliacao_regra_ativa, conciliacao_tipo, conciliacao_meta_nao_atingida, conciliacao_meta_atingida, conciliacao_super_meta, conciliacao_tiers, conciliacao_faixas_loja"
         )
         .eq("company_id", user.company_id)
         .maybeSingle();
@@ -482,6 +505,7 @@ export default function FechamentoComissaoIsland() {
           foco_valor: data.foco_valor === "liquido" ? "liquido" : "bruto",
           conciliacao_sobrepoe_vendas: Boolean(data.conciliacao_sobrepoe_vendas),
           conciliacao_regra_ativa: Boolean(data.conciliacao_regra_ativa),
+          conciliacao_tipo: data.conciliacao_tipo === "ESCALONAVEL" ? "ESCALONAVEL" : "GERAL",
           conciliacao_meta_nao_atingida:
             data.conciliacao_meta_nao_atingida != null
               ? Number(data.conciliacao_meta_nao_atingida)
@@ -492,6 +516,12 @@ export default function FechamentoComissaoIsland() {
               : null,
           conciliacao_super_meta:
             data.conciliacao_super_meta != null ? Number(data.conciliacao_super_meta) : null,
+          conciliacao_tiers: Array.isArray((data as any).conciliacao_tiers)
+            ? ((data as any).conciliacao_tiers as ParametrosComissao["conciliacao_tiers"])
+            : [],
+          conciliacao_faixas_loja: Array.isArray((data as any).conciliacao_faixas_loja)
+            ? ((data as any).conciliacao_faixas_loja as ConciliacaoCommissionBandRule[])
+            : [],
         };
       }
     }
@@ -502,9 +532,12 @@ export default function FechamentoComissaoIsland() {
       foco_valor: "bruto",
       conciliacao_sobrepoe_vendas: false,
       conciliacao_regra_ativa: false,
+      conciliacao_tipo: "GERAL",
       conciliacao_meta_nao_atingida: null,
       conciliacao_meta_atingida: null,
       conciliacao_super_meta: null,
+      conciliacao_tiers: [],
+      conciliacao_faixas_loja: [],
     } as ParametrosComissao;
   }
 
@@ -805,8 +838,19 @@ export default function FechamentoComissaoIsland() {
             if (liquidoRecibo <= 0) return;
 
             let pct = pctBase;
-            if (hasConciliacaoOverride(r) && hasConciliacaoCommissionRule(parametros)) {
-              pct = calcularPctConciliacao(parametros, porcentagemMeta);
+            const conciliacaoSelection =
+              hasConciliacaoOverride(r) && hasConciliacaoCommissionRule(parametros)
+                ? resolveConciliacaoCommissionSelection(parametros, {
+                    faixa_comissao: r.faixa_comissao || null,
+                    percentual_comissao_loja:
+                      r.percentual_comissao_loja != null
+                        ? Number(r.percentual_comissao_loja)
+                        : null,
+                  })
+                : null;
+
+            if (conciliacaoSelection?.kind === "CONCILIACAO") {
+              pct = calcularPctPorRegra(conciliacaoSelection.rule, porcentagemMeta);
             } else if (regra) {
               pct = calcularPctPorRegra(regra, porcentagemMeta);
             }

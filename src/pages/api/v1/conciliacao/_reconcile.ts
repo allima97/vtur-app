@@ -96,6 +96,7 @@ function matches(a: number, b: number) {
 type ReciboMatchRow = {
   id: string;
   venda_id: string;
+  vendedor_id: string | null;
   numero_recibo: string | null;
   valor_total: number | null;
   valor_taxas: number | null;
@@ -165,6 +166,7 @@ async function fetchReciboCandidates(params: {
       candidatesById.set(id, {
         id,
         venda_id: String((row as any)?.venda_id || "").trim(),
+        vendedor_id: null,
         numero_recibo: (row as any)?.numero_recibo ?? null,
         valor_total: (row as any)?.valor_total ?? null,
         valor_taxas: (row as any)?.valor_taxas ?? null,
@@ -191,6 +193,7 @@ async function fetchReciboCandidates(params: {
       candidatesById.set(id, {
         id,
         venda_id: String((row as any)?.venda_id || "").trim(),
+        vendedor_id: null,
         numero_recibo: (row as any)?.numero_recibo ?? null,
         valor_total: (row as any)?.valor_total ?? null,
         valor_taxas: (row as any)?.valor_taxas ?? null,
@@ -205,22 +208,30 @@ async function fetchReciboCandidates(params: {
   const vendaIds = Array.from(new Set(candidates.map((row) => row.venda_id).filter(Boolean)));
   const { data: vendas, error: vendasErr } = await client
     .from("vendas")
-    .select("id, company_id")
+    .select("id, company_id, vendedor_id")
     .in("id", vendaIds);
 
   if (vendasErr) throw vendasErr;
 
-  const allowedVendaIds = new Set(
-    (vendas || [])
-      .filter((row: any) => String(row?.company_id || "").trim() === companyId)
-      .map((row: any) => String(row?.id || "").trim())
-      .filter(Boolean)
-  );
+  const vendasMap = new Map<string, { company_id: string | null; vendedor_id: string | null }>();
+  for (const row of vendas || []) {
+    const id = String((row as any)?.id || "").trim();
+    if (!id) continue;
+    vendasMap.set(id, {
+      company_id: String((row as any)?.company_id || "").trim() || null,
+      vendedor_id: String((row as any)?.vendedor_id || "").trim() || null,
+    });
+  }
 
-  return candidates.filter((row) => allowedVendaIds.has(row.venda_id));
+  return candidates
+    .filter((row) => vendasMap.get(row.venda_id)?.company_id === companyId)
+    .map((row) => ({
+      ...row,
+      vendedor_id: vendasMap.get(row.venda_id)?.vendedor_id || null,
+    }));
 }
 
-async function findReciboByNumero(params: {
+export async function findReciboByNumero(params: {
   numero: string;
   companyId: string;
   valorLancamento?: number | null;
@@ -231,6 +242,7 @@ async function findReciboByNumero(params: {
       recibo: {
         id: string;
         venda_id: string;
+        vendedor_id: string | null;
         numero_recibo: string | null;
         valor_total: number | null;
         valor_taxas: number | null;
@@ -250,6 +262,7 @@ async function findReciboByNumero(params: {
       recibo: {
         id: reciboExato.id,
         venda_id: reciboExato.venda_id,
+        vendedor_id: reciboExato.vendedor_id,
         numero_recibo: reciboExato.numero_recibo,
         valor_total: reciboExato.valor_total,
         valor_taxas: reciboExato.valor_taxas,
@@ -284,6 +297,7 @@ async function findReciboByNumero(params: {
     recibo: {
       id: String((escolhido as any).id),
       venda_id: String((escolhido as any).venda_id),
+      vendedor_id: String((escolhido as any).vendedor_id || "").trim() || null,
       numero_recibo: (escolhido as any).numero_recibo ?? null,
       valor_total: (escolhido as any).valor_total ?? null,
       valor_taxas: (escolhido as any).valor_taxas ?? null,
@@ -309,7 +323,7 @@ async function reconcilePendentesCompany(params: {
   let query = dbClient
     .from("conciliacao_recibos")
     .select(
-      "id, company_id, documento, movimento_data, status, valor_lancamentos, valor_taxas, conciliado"
+      "id, company_id, documento, movimento_data, status, valor_lancamentos, valor_taxas, valor_descontos, valor_abatimentos, valor_venda_real, ranking_vendedor_id, conciliado"
     )
     .eq("conciliado", false)
     .in("status", ["BAIXA", "OPFAX"] as any)
@@ -332,6 +346,11 @@ async function reconcilePendentesCompany(params: {
     const movimentoData = String((row as any).movimento_data || "").trim() || null;
     const valorLanc = Number((row as any).valor_lancamentos || 0);
     const valorTaxas = Number((row as any).valor_taxas || 0);
+    const valorDescontos = Number((row as any).valor_descontos || 0);
+    const valorAbatimentos = Number((row as any).valor_abatimentos || 0);
+    const valorVendaRealRaw = Number((row as any).valor_venda_real || 0);
+    const valorComparacao =
+      valorVendaRealRaw > 0 ? valorVendaRealRaw : Math.max(0, valorLanc - valorTaxas - valorDescontos - valorAbatimentos);
 
     if (!documento) {
       await dbClient
@@ -344,7 +363,7 @@ async function reconcilePendentesCompany(params: {
     const found = await findReciboByNumero({
       numero: documento,
       companyId: cid,
-      valorLancamento: valorLanc,
+      valorLancamento: valorComparacao,
       valorTaxas,
       client: dbClient,
     });
@@ -361,11 +380,13 @@ async function reconcilePendentesCompany(params: {
     const sistemaTaxas = Number(found.recibo.valor_taxas || 0);
     const sistemaDataVenda = String(found.recibo.data_venda || "").trim() || null;
 
-    const matchTotal = matches(valorLanc, sistemaTotal);
+    const matchTotal = matches(valorComparacao, sistemaTotal);
     const matchTaxas = matches(valorTaxas, sistemaTaxas);
-    const diffTotal = diff(valorLanc, sistemaTotal);
+    const diffTotal = diff(valorComparacao, sistemaTotal);
     const diffTaxas = diff(valorTaxas, sistemaTaxas);
     const shouldUpdateDataVenda = Boolean(movimentoData && movimentoData !== sistemaDataVenda);
+    const rankingVendedorAtual = String((row as any).ranking_vendedor_id || "").trim() || null;
+    const rankingVendedorResolvido = rankingVendedorAtual || found.recibo.vendedor_id || null;
 
     // Atualiza taxas do recibo no sistema quando o total bate, mas taxas divergem.
     // (isso é o que viabiliza comissionamento com taxas reais)
@@ -422,21 +443,27 @@ async function reconcilePendentesCompany(params: {
 
     if (conciliado) reconciled += 1;
 
+    const updatePayload: Record<string, any> = {
+      venda_id: found.recibo.venda_id,
+      venda_recibo_id: found.recibo.id,
+      sistema_valor_total: sistemaTotal,
+      sistema_valor_taxas: matchTotal && !matchTaxas ? valorTaxas : sistemaTaxas,
+      match_total: matchTotal,
+      match_taxas: matchTaxas,
+      diff_total: diffTotal,
+      diff_taxas: diffTaxas,
+      ranking_vendedor_id: rankingVendedorResolvido,
+      conciliado,
+      conciliado_em: conciliado ? new Date().toISOString() : null,
+      last_checked_at: new Date().toISOString(),
+    };
+    if (!rankingVendedorAtual && rankingVendedorResolvido) {
+      updatePayload.ranking_assigned_at = new Date().toISOString();
+    }
+
     await dbClient
       .from("conciliacao_recibos")
-      .update({
-        venda_id: found.recibo.venda_id,
-        venda_recibo_id: found.recibo.id,
-        sistema_valor_total: sistemaTotal,
-        sistema_valor_taxas: matchTotal && !matchTaxas ? valorTaxas : sistemaTaxas,
-        match_total: matchTotal,
-        match_taxas: matchTaxas,
-        diff_total: diffTotal,
-        diff_taxas: diffTaxas,
-        conciliado,
-        conciliado_em: conciliado ? new Date().toISOString() : null,
-        last_checked_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq("id", id);
   }
 

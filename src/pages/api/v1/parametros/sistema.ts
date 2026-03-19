@@ -1,10 +1,60 @@
 import { kvCache } from "../../../../lib/kvCache";
+import {
+  createDefaultConciliacaoBandRules,
+  sanitizeConciliacaoBandRules,
+  type ConciliacaoCommissionBandRule,
+} from "../../../../lib/comissaoUtils";
 import { buildAuthClient, getUserScope, requireModuloLevel } from "../vendas/_utils";
 
 const CACHE_TTL_SECONDS = 600;
 
 function buildCacheKey(companyId: string | null) {
   return ["v1", "parametrosSistema", companyId || "sem-company"].join("|");
+}
+
+function extractMissingColumn(error: any) {
+  const message = String(error?.message || "");
+  const match =
+    message.match(/column ["']?([a-zA-Z0-9_]+)["']? does not exist/i) ||
+    message.match(/Could not find the ['"]([a-zA-Z0-9_]+)['"] column/i);
+  return match?.[1] || null;
+}
+
+async function upsertParametrosComFallback(client: any, initialPayload: Record<string, any>) {
+  let payload = { ...initialPayload };
+  const removableKeys = new Set([
+    "conciliacao_sobrepoe_vendas",
+    "conciliacao_regra_ativa",
+    "conciliacao_tipo",
+    "conciliacao_meta_nao_atingida",
+    "conciliacao_meta_atingida",
+    "conciliacao_super_meta",
+    "conciliacao_tiers",
+    "conciliacao_faixas_loja",
+    "mfa_obrigatorio",
+    "exportacao_pdf",
+    "exportacao_excel",
+    "modo_corporativo",
+    "politica_cancelamento",
+    "foco_faturamento",
+  ]);
+
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const { data, error } = await client
+      .from("parametros_comissao")
+      .upsert(payload, { onConflict: "company_id" })
+      .select("id")
+      .single();
+    if (!error) return { data, payload };
+
+    const missingColumn = extractMissingColumn(error);
+    if (!missingColumn || !removableKeys.has(missingColumn) || !(missingColumn in payload)) {
+      throw error;
+    }
+    delete payload[missingColumn];
+  }
+
+  throw new Error("Não foi possível salvar os parâmetros com fallback de schema.");
 }
 
 type ParametrosPayload = {
@@ -19,9 +69,18 @@ type ParametrosPayload = {
   foco_faturamento: "bruto" | "liquido";
   conciliacao_sobrepoe_vendas: boolean;
   conciliacao_regra_ativa: boolean;
+  conciliacao_tipo: "GERAL" | "ESCALONAVEL";
   conciliacao_meta_nao_atingida: number | null;
   conciliacao_meta_atingida: number | null;
   conciliacao_super_meta: number | null;
+  conciliacao_tiers: Array<{
+    faixa: "PRE" | "POS";
+    de_pct: number;
+    ate_pct: number;
+    inc_pct_meta: number;
+    inc_pct_comissao: number;
+  }>;
+  conciliacao_faixas_loja: ConciliacaoCommissionBandRule[];
   mfa_obrigatorio: boolean;
   exportacao_pdf: boolean;
   exportacao_excel: boolean;
@@ -37,13 +96,50 @@ const DEFAULT_PARAMS: ParametrosPayload = {
   foco_faturamento: "bruto",
   conciliacao_sobrepoe_vendas: false,
   conciliacao_regra_ativa: false,
+  conciliacao_tipo: "GERAL",
   conciliacao_meta_nao_atingida: null,
   conciliacao_meta_atingida: null,
   conciliacao_super_meta: null,
+  conciliacao_tiers: [],
+  conciliacao_faixas_loja: createDefaultConciliacaoBandRules({
+    usar_taxas_na_meta: false,
+    conciliacao_regra_ativa: false,
+    conciliacao_tipo: "GERAL",
+    conciliacao_meta_nao_atingida: null,
+    conciliacao_meta_atingida: null,
+    conciliacao_super_meta: null,
+    conciliacao_tiers: [],
+  }),
   mfa_obrigatorio: false,
   exportacao_pdf: false,
   exportacao_excel: false,
 };
+
+function normalizeConciliacaoTipo(value?: string | null): "GERAL" | "ESCALONAVEL" {
+  return String(value || "").trim().toUpperCase() === "ESCALONAVEL" ? "ESCALONAVEL" : "GERAL";
+}
+
+function sanitizeConciliacaoTiers(value: unknown) {
+  if (!Array.isArray(value)) return [] as ParametrosPayload["conciliacao_tiers"];
+  return value
+    .map((tier: any) => {
+      const faixa = String(tier?.faixa || "").trim().toUpperCase();
+      if (faixa !== "PRE" && faixa !== "POS") return null;
+      const dePct = Number(tier?.de_pct ?? 0);
+      const atePct = Number(tier?.ate_pct ?? 0);
+      const incMeta = Number(tier?.inc_pct_meta ?? 0);
+      const incCom = Number(tier?.inc_pct_comissao ?? 0);
+      if (![dePct, atePct, incMeta, incCom].every(Number.isFinite)) return null;
+      return {
+        faixa,
+        de_pct: dePct,
+        ate_pct: atePct,
+        inc_pct_meta: incMeta,
+        inc_pct_comissao: incCom,
+      } as ParametrosPayload["conciliacao_tiers"][number];
+    })
+    .filter((item): item is ParametrosPayload["conciliacao_tiers"][number] => Boolean(item));
+}
 
 export async function GET({ request }: { request: Request }) {
   try {
@@ -85,12 +181,23 @@ export async function GET({ request }: { request: Request }) {
 
     const { data, error } = await client
       .from("parametros_comissao")
-      .select(
-        "id, company_id, owner_user_id, usar_taxas_na_meta, foco_valor, modo_corporativo, politica_cancelamento, foco_faturamento, conciliacao_sobrepoe_vendas, conciliacao_regra_ativa, conciliacao_meta_nao_atingida, conciliacao_meta_atingida, conciliacao_super_meta, mfa_obrigatorio, exportacao_pdf, exportacao_excel, updated_at, created_at, owner_user:owner_user_id (nome_completo)"
-      )
+      .select("*")
       .eq("company_id", companyId)
       .maybeSingle();
     if (error) throw error;
+
+    let ownerNomeDb = usuarioNome;
+    const ownerUserId = String((data as any)?.owner_user_id || "").trim();
+    if (ownerUserId) {
+      const { data: ownerRow, error: ownerErr } = await client
+        .from("users")
+        .select("nome_completo")
+        .eq("id", ownerUserId)
+        .maybeSingle();
+      if (!ownerErr) {
+        ownerNomeDb = ownerRow?.nome_completo || ownerNomeDb;
+      }
+    }
 
     let payload: any = {
       params: {
@@ -110,7 +217,7 @@ export async function GET({ request }: { request: Request }) {
           id: data.id,
           company_id: companyId,
           owner_user_id: data.owner_user_id || user.id,
-          owner_user_nome: (data as any)?.owner_user?.nome_completo || usuarioNome,
+          owner_user_nome: ownerNomeDb,
           usar_taxas_na_meta: !!data.usar_taxas_na_meta,
           foco_valor: data.foco_valor === "liquido" ? "liquido" : "bruto",
           modo_corporativo: !!data.modo_corporativo,
@@ -121,6 +228,7 @@ export async function GET({ request }: { request: Request }) {
           foco_faturamento: data.foco_faturamento === "liquido" ? "liquido" : "bruto",
           conciliacao_sobrepoe_vendas: !!data.conciliacao_sobrepoe_vendas,
           conciliacao_regra_ativa: !!data.conciliacao_regra_ativa,
+          conciliacao_tipo: normalizeConciliacaoTipo((data as any).conciliacao_tipo),
           conciliacao_meta_nao_atingida:
             data.conciliacao_meta_nao_atingida != null
               ? Number(data.conciliacao_meta_nao_atingida)
@@ -131,13 +239,38 @@ export async function GET({ request }: { request: Request }) {
               : null,
           conciliacao_super_meta:
             data.conciliacao_super_meta != null ? Number(data.conciliacao_super_meta) : null,
+          conciliacao_tiers: sanitizeConciliacaoTiers((data as any).conciliacao_tiers),
+          conciliacao_faixas_loja: sanitizeConciliacaoBandRules(
+            (data as any).conciliacao_faixas_loja,
+            {
+              usar_taxas_na_meta: !!data.usar_taxas_na_meta,
+              foco_valor: data.foco_valor === "liquido" ? "liquido" : "bruto",
+              foco_faturamento: data.foco_faturamento === "liquido" ? "liquido" : "bruto",
+              conciliacao_sobrepoe_vendas: !!data.conciliacao_sobrepoe_vendas,
+              conciliacao_regra_ativa: !!data.conciliacao_regra_ativa,
+              conciliacao_tipo: normalizeConciliacaoTipo((data as any).conciliacao_tipo),
+              conciliacao_meta_nao_atingida:
+                data.conciliacao_meta_nao_atingida != null
+                  ? Number(data.conciliacao_meta_nao_atingida)
+                  : null,
+              conciliacao_meta_atingida:
+                data.conciliacao_meta_atingida != null
+                  ? Number(data.conciliacao_meta_atingida)
+                  : null,
+              conciliacao_super_meta:
+                data.conciliacao_super_meta != null
+                  ? Number(data.conciliacao_super_meta)
+                  : null,
+              conciliacao_tiers: sanitizeConciliacaoTiers((data as any).conciliacao_tiers),
+            }
+          ),
           mfa_obrigatorio: !!data.mfa_obrigatorio,
           exportacao_pdf: !!data.exportacao_pdf,
           exportacao_excel: !!data.exportacao_excel,
         },
         ultima_atualizacao: data.updated_at || data.created_at || null,
         origem: "banco",
-        owner_nome: (data as any)?.owner_user?.nome_completo || usuarioNome,
+        owner_nome: ownerNomeDb,
       };
     }
 
@@ -192,6 +325,7 @@ export async function POST({ request }: { request: Request }) {
       foco_faturamento: body.foco_faturamento === "liquido" ? "liquido" : "bruto",
       conciliacao_sobrepoe_vendas: Boolean(body.conciliacao_sobrepoe_vendas),
       conciliacao_regra_ativa: Boolean(body.conciliacao_regra_ativa),
+      conciliacao_tipo: normalizeConciliacaoTipo(body.conciliacao_tipo),
       conciliacao_meta_nao_atingida:
         body.conciliacao_meta_nao_atingida != null
           ? Number(body.conciliacao_meta_nao_atingida)
@@ -200,17 +334,34 @@ export async function POST({ request }: { request: Request }) {
         body.conciliacao_meta_atingida != null ? Number(body.conciliacao_meta_atingida) : null,
       conciliacao_super_meta:
         body.conciliacao_super_meta != null ? Number(body.conciliacao_super_meta) : null,
+      conciliacao_tiers: sanitizeConciliacaoTiers(body.conciliacao_tiers),
+      conciliacao_faixas_loja: sanitizeConciliacaoBandRules(body.conciliacao_faixas_loja, {
+        usar_taxas_na_meta: Boolean(body.usar_taxas_na_meta),
+        foco_valor: body.foco_valor === "liquido" ? "liquido" : "bruto",
+        foco_faturamento: body.foco_faturamento === "liquido" ? "liquido" : "bruto",
+        conciliacao_sobrepoe_vendas: Boolean(body.conciliacao_sobrepoe_vendas),
+        conciliacao_regra_ativa: Boolean(body.conciliacao_regra_ativa),
+        conciliacao_tipo: normalizeConciliacaoTipo(body.conciliacao_tipo),
+        conciliacao_meta_nao_atingida:
+          body.conciliacao_meta_nao_atingida != null
+            ? Number(body.conciliacao_meta_nao_atingida)
+            : null,
+        conciliacao_meta_atingida:
+          body.conciliacao_meta_atingida != null
+            ? Number(body.conciliacao_meta_atingida)
+            : null,
+        conciliacao_super_meta:
+          body.conciliacao_super_meta != null
+            ? Number(body.conciliacao_super_meta)
+            : null,
+        conciliacao_tiers: sanitizeConciliacaoTiers(body.conciliacao_tiers),
+      }),
       mfa_obrigatorio: Boolean(body.mfa_obrigatorio),
       exportacao_pdf: Boolean(body.exportacao_pdf),
       exportacao_excel: Boolean(body.exportacao_excel),
     };
 
-    const { data, error } = await client
-      .from("parametros_comissao")
-      .upsert(payload, { onConflict: "company_id" })
-      .select("id")
-      .single();
-    if (error) throw error;
+    const { data } = await upsertParametrosComFallback(client, payload);
 
     await kvCache.delete(buildCacheKey(payload.company_id || null));
 

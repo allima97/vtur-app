@@ -49,6 +49,26 @@ type TipoPacote = {
   ativo?: boolean | null;
 };
 
+type VendedorOption = {
+  id: string;
+  nome_completo: string | null;
+};
+
+async function fetchVendasCadastroBase() {
+  const resp = await fetch("/api/v1/vendas/cadastro-base");
+  if (!resp.ok) {
+    throw new Error(await resp.text());
+  }
+  return resp.json() as Promise<{
+    user: {
+      id: string;
+      papel: string;
+      can_assign_vendedor?: boolean;
+    };
+    vendedoresEquipe: VendedorOption[];
+  }>;
+}
+
 const IMPORT_CLIENTE_RLS_MESSAGE =
   "Não foi possível criar o cliente automaticamente devido à política de segurança (RLS). " +
   "Cadastre o cliente em Clientes e tente importar novamente.";
@@ -418,6 +438,10 @@ export default function VendaContratoImportIsland() {
   const [loadingProdutos, setLoadingProdutos] = useState(false);
   const [errorProdutos, setErrorProdutos] = useState<string | null>(null);
   const [tiposPacote, setTiposPacote] = useState<TipoPacote[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [canAssignVendedor, setCanAssignVendedor] = useState(false);
+  const [vendedorId, setVendedorId] = useState("");
+  const [vendedoresEquipe, setVendedoresEquipe] = useState<VendedorOption[]>([]);
 
   const [buscaCidade, setBuscaCidade] = useState("");
   const [cidadeId, setCidadeId] = useState("");
@@ -514,6 +538,29 @@ export default function VendaContratoImportIsland() {
       ? produtos.filter((p) => p.todas_as_cidades || p.cidade_id === cidadeId)
       : produtos.filter((p) => p.todas_as_cidades);
   }, [produtos, cidadeId]);
+
+  useEffect(() => {
+    if (loadPerm || !podeVer) return;
+    let active = true;
+    fetchVendasCadastroBase()
+      .then((payload) => {
+        if (!active) return;
+        const user = payload?.user;
+        setCurrentUserId(user?.id || null);
+        setCanAssignVendedor(Boolean(user?.can_assign_vendedor));
+        setVendedoresEquipe(Array.isArray(payload?.vendedoresEquipe) ? payload.vendedoresEquipe : []);
+        if (user?.id) {
+          setVendedorId((prev) => prev || user.id);
+        }
+      })
+      .catch((baseError) => {
+        if (!active) return;
+        console.error(baseError);
+      });
+    return () => {
+      active = false;
+    };
+  }, [loadPerm, podeVer]);
 
   useEffect(() => {
     if (loadPerm || !podeVer) return;
@@ -860,6 +907,12 @@ export default function VendaContratoImportIsland() {
       showToast(msg, "error");
       return;
     }
+    if (canAssignVendedor && !vendedorId) {
+      const msg = "Selecione o vendedor responsável pela venda.";
+      setError(msg);
+      showToast(msg, "error");
+      return;
+    }
     const contratoSemTipoPacote = contratos.findIndex((contrato) => !normalizeText(contrato.tipo_pacote || ""));
     if (contratoSemTipoPacote >= 0) {
       setTipoPacoteModal({
@@ -895,6 +948,7 @@ export default function VendaContratoImportIsland() {
         principalIndex,
         file,
         contratoFiles,
+        vendedorId: vendedorId || currentUserId || null,
         destinoCidadeId: cidadeId,
         destinoCidadeNome: cidadeNome || null,
         destinoProdutoId: destinoId || null,
@@ -1742,6 +1796,20 @@ export default function VendaContratoImportIsland() {
                   onFocus={selectAllInputOnFocus}
                   onChange={(e) => setDataVenda(e.target.value)}
                 />
+
+                {canAssignVendedor ? (
+                  <AppField
+                    as="select"
+                    label="Vendedor *"
+                    value={vendedorId}
+                    onChange={(e) => setVendedorId(e.target.value)}
+                    required
+                    options={vendedoresEquipe.map((item) => ({
+                      value: item.id,
+                      label: item.nome_completo || "Usuário",
+                    }))}
+                  />
+                ) : null}
               </div>
             </AppCard>
 

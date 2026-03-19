@@ -16,6 +16,9 @@ type ReportRecibo = {
   valor_du?: number | null;
   valor_bruto_override?: number | null;
   valor_liquido_override?: number | null;
+  valor_comissao_loja?: number | null;
+  percentual_comissao_loja?: number | null;
+  faixa_comissao?: string | null;
   produtos?: ReportProduto | null;
 };
 
@@ -136,6 +139,9 @@ export async function applyConciliacaoOverridesToSales<T extends ReportSale>(
       valor_du: 0,
       valor_bruto_override: item.valor_bruto,
       valor_liquido_override: item.valor_liquido_override,
+      valor_comissao_loja: item.valor_comissao_loja,
+      percentual_comissao_loja: item.percentual_comissao_loja,
+      faixa_comissao: item.faixa_comissao,
       produtos: item.produto
         ? {
             id: item.produto.id,

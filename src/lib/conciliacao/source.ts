@@ -12,6 +12,7 @@ export type EffectiveConciliacaoReceipt = {
   valor_liquido_override: number | null;
   valor_comissao_loja: number | null;
   percentual_comissao_loja: number | null;
+  faixa_comissao: string | null;
   is_seguro_viagem: boolean;
   produto: { id: string; nome: string | null } | null;
 };
@@ -19,6 +20,7 @@ export type EffectiveConciliacaoReceipt = {
 export type ConciliacaoSyntheticVenda = {
   id: string;
   data_venda: string;
+  vendedor_id: string | null;
   cancelada: boolean | null;
   valor_nao_comissionado: number | null;
   valor_total_bruto: number | null;
@@ -38,6 +40,9 @@ export type ConciliacaoSyntheticVenda = {
     valor_bruto_override: number | null;
     valor_meta_override: number | null;
     valor_liquido_override: number | null;
+    valor_comissao_loja: number | null;
+    percentual_comissao_loja: number | null;
+    faixa_comissao: string | null;
     tipo_produtos: { id: string; nome: string | null } | null;
   }>;
 };
@@ -101,7 +106,7 @@ export async function fetchEffectiveConciliacaoReceipts(params: {
       const { data, error } = await client
         .from("conciliacao_recibos")
         .select(
-          "id, documento, descricao, movimento_data, status, conciliado, valor_lancamentos, valor_taxas, valor_descontos, valor_abatimentos, valor_venda_real, valor_comissao_loja, percentual_comissao_loja, is_seguro_viagem, venda_id, venda_recibo_id, ranking_vendedor_id, ranking_produto_id"
+          "id, documento, descricao, movimento_data, status, conciliado, valor_lancamentos, valor_taxas, valor_descontos, valor_abatimentos, valor_venda_real, valor_comissao_loja, percentual_comissao_loja, faixa_comissao, is_seguro_viagem, venda_id, venda_recibo_id, ranking_vendedor_id, ranking_produto_id"
         )
         .eq("company_id", companyId)
         .in("status", ["BAIXA", "OPFAX"] as any)
@@ -216,12 +221,11 @@ export async function fetchEffectiveConciliacaoReceipts(params: {
       );
       const sourceRow =
         valuedBaixa ||
-        (confirmed ? valuedOpfax : null) ||
+        valuedOpfax ||
         (confirmed ? baixaRows[0] : null) ||
         null;
 
       if (!sourceRow) return null;
-      if (!confirmed && toStr(sourceRow?.status).toUpperCase() === "OPFAX") return null;
 
       const effectiveDate = toStr(sourceRow?.movimento_data);
       if (!effectiveDate || effectiveDate < inicio || effectiveDate > fim) return null;
@@ -265,6 +269,7 @@ export async function fetchEffectiveConciliacaoReceipts(params: {
         valor_liquido_override: valorMeta || null,
         valor_comissao_loja: sourceRow?.valor_comissao_loja ?? null,
         percentual_comissao_loja: sourceRow?.percentual_comissao_loja ?? null,
+        faixa_comissao: toStr(sourceRow?.faixa_comissao) || null,
         is_seguro_viagem: isSeguro,
         produto,
       } satisfies EffectiveConciliacaoReceipt;
@@ -276,6 +281,7 @@ export function buildConciliacaoSyntheticVendas(items: EffectiveConciliacaoRecei
   return items.map((item) => ({
     id: item.id,
     data_venda: item.data_venda,
+    vendedor_id: item.vendedor_id,
     cancelada: false,
     valor_nao_comissionado: 0,
     valor_total_bruto: item.valor_bruto,
@@ -296,6 +302,9 @@ export function buildConciliacaoSyntheticVendas(items: EffectiveConciliacaoRecei
         valor_bruto_override: item.valor_bruto,
         valor_meta_override: item.valor_meta_override,
         valor_liquido_override: item.valor_liquido_override,
+        valor_comissao_loja: item.valor_comissao_loja,
+        percentual_comissao_loja: item.percentual_comissao_loja,
+        faixa_comissao: item.faixa_comissao,
         tipo_produtos: item.produto,
       },
     ],
@@ -306,6 +315,9 @@ export function hasConciliacaoOverride(recibo: {
   valor_bruto_override?: number | null;
   valor_meta_override?: number | null;
   valor_liquido_override?: number | null;
+  valor_comissao_loja?: number | null;
+  percentual_comissao_loja?: number | null;
+  faixa_comissao?: string | null;
 }) {
   return (
     recibo.valor_bruto_override != null ||

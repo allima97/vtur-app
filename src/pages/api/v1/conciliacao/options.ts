@@ -5,6 +5,7 @@ import {
   requireModuloLevel,
   resolveCompanyId,
 } from "../vendas/_utils";
+import { fetchConciliacaoRankingOptions } from "./_ranking";
 
 export const GET: APIRoute = async ({ request }) => {
   try {
@@ -38,56 +39,11 @@ export const GET: APIRoute = async ({ request }) => {
       });
     }
 
-    const { data: usersData, error: usersErr } = await client
-      .from("users")
-      .select("id, nome_completo, user_types(name)")
-      .eq("company_id", companyId);
-    if (usersErr) throw usersErr;
-
-    const vendedores = (usersData || [])
-      .filter((row: any) => {
-        const tipoNome = String(row?.user_types?.name || "").toUpperCase();
-        return tipoNome.includes("VENDEDOR") || tipoNome.includes("GESTOR") || tipoNome.includes("MASTER");
-      })
-      .map((row: any) => ({
-        id: String(row?.id || "").trim(),
-        nome_completo: String(row?.nome_completo || "").trim() || "Usuario",
-        tipo: String(row?.user_types?.name || "").trim() || null,
-      }))
-      .filter((row) => Boolean(row.id))
-      .sort((a, b) => a.nome_completo.localeCompare(b.nome_completo, "pt-BR"));
-
-    const vendedorIds = vendedores.map((row) => row.id);
-
-    let produtosMeta: { id: string; nome: string }[] = [];
-    if (vendedorIds.length > 0) {
-      const { data: metasData, error: metasErr } = await client
-        .from("metas_vendedor")
-        .select("id")
-        .eq("ativo", true)
-        .in("vendedor_id", vendedorIds);
-      if (metasErr) throw metasErr;
-
-      const metaIds = (metasData || []).map((row: any) => String(row?.id || "").trim()).filter(Boolean);
-      if (metaIds.length > 0) {
-        const { data: metasProdutoData, error: metasProdutoErr } = await client
-          .from("metas_vendedor_produto")
-          .select("produto_id, tipo_produtos(id, nome)")
-          .in("meta_vendedor_id", metaIds);
-        if (metasProdutoErr) throw metasProdutoErr;
-
-        const byId = new Map<string, { id: string; nome: string }>();
-        (metasProdutoData || []).forEach((row: any) => {
-          const produtoId = String(row?.produto_id || row?.tipo_produtos?.id || "").trim();
-          if (!produtoId || byId.has(produtoId)) return;
-          byId.set(produtoId, {
-            id: produtoId,
-            nome: String(row?.tipo_produtos?.nome || "").trim() || "Produto",
-          });
-        });
-        produtosMeta = Array.from(byId.values()).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-      }
-    }
+    const { vendedores, produtosMeta } = await fetchConciliacaoRankingOptions({
+      client,
+      scope,
+      companyId,
+    });
 
     return new Response(JSON.stringify({ vendedores, produtosMeta }), {
       status: 200,

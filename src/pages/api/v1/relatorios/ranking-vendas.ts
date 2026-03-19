@@ -3,6 +3,10 @@ import { buildAuthClient } from "../vendas/_utils";
 import { supabaseServer } from "../../../../lib/supabaseServer";
 import { kvCache } from "../../../../lib/kvCache";
 import { MODULO_ALIASES } from "../../../../config/modulos";
+import {
+  buildConciliacaoSyntheticVendas,
+  fetchEffectiveConciliacaoReceipts,
+} from "../../../../lib/conciliacao/source";
 
 
 
@@ -490,46 +494,66 @@ export async function GET({ request }: { request: Request }) {
       }
     }
 
-    let vendasData: any[] = [];
-    const concVendas = await fetchConciliacaoRankingVendas({
-      dataClient,
+    let vendasQuery = dataClient
+      .from("vendas")
+      .select(
+        `
+        id,
+        data_venda,
+        vendedor_id,
+        vendas_recibos!inner (
+          id,
+          numero_recibo,
+          valor_total,
+          valor_taxas,
+          valor_du,
+          data_venda,
+          produto_id,
+          tipo_produtos:tipo_produtos!produto_id (id, nome)
+        )
+      `
+      )
+      .eq("cancelada", false)
+      .in("vendedor_id", vendorIdsParam);
+    if (companyId) vendasQuery = vendasQuery.eq("company_id", companyId);
+
+    vendasQuery = vendasQuery
+      .gte("vendas_recibos.data_venda", inicio)
+      .lte("vendas_recibos.data_venda", fim);
+
+    const { data, error: vendasErr } = await vendasQuery;
+    if (vendasErr) throw vendasErr;
+
+    let vendasData: any[] = Array.isArray(data) ? data : [];
+    const concReceipts = await fetchEffectiveConciliacaoReceipts({
+      client: dataClient,
       companyId,
       inicio,
       fim,
       vendedorIds: vendorIdsParam,
     });
 
-    if (concVendas && concVendas.length > 0) {
-      vendasData = concVendas;
-    } else {
-      let vendasQuery = dataClient
-        .from("vendas")
-        .select(
-          `
-          id,
-          data_venda,
-          vendedor_id,
-          vendas_recibos!inner (
-            valor_total,
-            valor_taxas,
-            valor_du,
-            data_venda,
-            produto_id,
-            tipo_produtos:tipo_produtos!produto_id (id, nome)
-          )
-        `
-        )
-        .eq("cancelada", false)
-        .in("vendedor_id", vendorIdsParam);
-      if (companyId) vendasQuery = vendasQuery.eq("company_id", companyId);
+    if (concReceipts.length > 0) {
+      const syntheticSales = buildConciliacaoSyntheticVendas(concReceipts);
+      const overriddenReceiptIds = new Set(
+        concReceipts.map((item) => String(item.linked_recibo_id || "").trim()).filter(Boolean)
+      );
 
-      vendasQuery = vendasQuery
-        .gte("vendas_recibos.data_venda", inicio)
-        .lte("vendas_recibos.data_venda", fim);
+      const baseSales = vendasData
+        .map((sale: any) => {
+          const recibos = Array.isArray(sale?.vendas_recibos)
+            ? sale.vendas_recibos.filter(
+                (recibo: any) => !overriddenReceiptIds.has(String(recibo?.id || "").trim())
+              )
+            : [];
+          return {
+            ...sale,
+            vendas_recibos: recibos,
+          };
+        })
+        .filter((sale: any) => Array.isArray(sale?.vendas_recibos) && sale.vendas_recibos.length > 0);
 
-      const { data, error: vendasErr } = await vendasQuery;
-      if (vendasErr) throw vendasErr;
-      vendasData = data || [];
+      vendasData = [...baseSales, ...syntheticSales];
     }
 
     let metasQuery = dataClient

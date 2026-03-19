@@ -43,6 +43,28 @@ function isRankingPending(row: any) {
   return !vendaId && !rankingVendedorId;
 }
 
+async function fetchResumoRows(client: any, companyId: string, historyStart: string) {
+  const pageSize = 1000;
+  const rows: any[] = [];
+
+  for (let offset = 0; offset < 50000; offset += pageSize) {
+    const { data, error } = await client
+      .from("conciliacao_recibos")
+      .select("id, movimento_data, status, conciliado, venda_id, ranking_vendedor_id")
+      .eq("company_id", companyId)
+      .gte("movimento_data", historyStart)
+      .order("movimento_data", { ascending: false })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw error;
+
+    const chunk = Array.isArray(data) ? data : [];
+    rows.push(...chunk);
+    if (chunk.length < pageSize) break;
+  }
+
+  return rows;
+}
+
 export const GET: APIRoute = async ({ request }) => {
   try {
     const client = buildAuthClient(request);
@@ -82,16 +104,7 @@ export const GET: APIRoute = async ({ request }) => {
     const historyStart = new Date(now.getFullYear(), now.getMonth() - 11, 1).toISOString().slice(0, 10);
     const today = now.toISOString().slice(0, 10);
 
-    const { data, error } = await client
-      .from("conciliacao_recibos")
-      .select("id, movimento_data, status, conciliado, venda_id, ranking_vendedor_id")
-      .eq("company_id", companyId)
-      .gte("movimento_data", historyStart)
-      .order("movimento_data", { ascending: false })
-      .limit(5000);
-    if (error) throw error;
-
-    const rows = Array.isArray(data) ? data : [];
+    const rows = await fetchResumoRows(client, companyId, historyStart);
     const totals = {
       importados: rows.length,
       conciliadosSistema: rows.filter((row: any) => Boolean(row?.conciliado)).length,

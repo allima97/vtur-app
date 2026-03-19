@@ -283,7 +283,7 @@ async function applyConciliacaoOverridesToVendas(client: any, companyId: string 
     const { data, error } = await client
       .from("conciliacao_recibos")
       .select(
-        "documento, movimento_data, status, valor_lancamentos, valor_taxas, valor_venda_real, valor_comissao_loja, percentual_comissao_loja, venda_recibo_id"
+        "documento, movimento_data, status, valor_lancamentos, valor_taxas, valor_venda_real, valor_comissao_loja, percentual_comissao_loja, faixa_comissao, venda_recibo_id"
       )
       .eq("company_id", companyId)
       .in("status", ["BAIXA", "OPFAX"] as any)
@@ -314,6 +314,7 @@ async function applyConciliacaoOverridesToVendas(client: any, companyId: string 
       valor_taxas: number | null;
       valor_comissao_loja: number | null;
       percentual_comissao_loja: number | null;
+      faixa_comissao: string | null;
     }
   >();
 
@@ -360,6 +361,7 @@ async function applyConciliacaoOverridesToVendas(client: any, companyId: string 
       valor_taxas: valorTaxas || null,
       valor_comissao_loja: sourceRow?.valor_comissao_loja ?? null,
       percentual_comissao_loja: sourceRow?.percentual_comissao_loja ?? null,
+      faixa_comissao: toStr(sourceRow?.faixa_comissao) || null,
     });
   });
 
@@ -379,6 +381,7 @@ async function applyConciliacaoOverridesToVendas(client: any, companyId: string 
         valor_liquido_override: override.valor_liquido_override,
         valor_comissao_loja: override.valor_comissao_loja,
         percentual_comissao_loja: override.percentual_comissao_loja,
+        faixa_comissao: override.faixa_comissao,
       };
     }),
   }));
@@ -509,6 +512,7 @@ function buildSyntheticRelatorioRows(params: {
           valor_liquido_override: item.valor_liquido_override,
           valor_comissao_loja: item.valor_comissao_loja,
           percentual_comissao_loja: item.percentual_comissao_loja,
+          faixa_comissao: item.faixa_comissao,
           produto_resolvido_id: item.produto_id,
           produto_resolvido: item.produto
             ? {

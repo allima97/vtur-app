@@ -628,11 +628,27 @@ a.vtur-app-button:visited {
   width: 100%;
 }
 
-.vtur-alert-inline .p-message-wrapper {
+.vtur-alert .p-message-wrapper {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: nowrap;
   gap: 0.5rem;
+}
+
+.vtur-alert .p-message-icon {
+  flex: 0 0 auto;
+  margin-top: 0.1rem;
+}
+
+.vtur-alert .p-message-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.vtur-alert-inline .p-message-wrapper {
+  align-items: flex-start;
 }
 
 .vtur-alert-inline .p-message-icon {
@@ -640,8 +656,8 @@ a.vtur-app-button:visited {
 }
 
 .vtur-alert-inline .p-message-text {
-  white-space: nowrap;
-  overflow-wrap: normal;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .sakai-theme .vtur-alert .p-message.p-message-warn {
@@ -1281,12 +1297,304 @@ a.vtur-app-button:visited {
   letter-spacing: -0.02em;
 }
 
+.vtur-conciliacao-nav-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.vtur-conciliacao-nav-card {
+  appearance: none;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  text-align: center;
+  align-content: center;
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.vtur-conciliacao-nav-card strong {
+  color: var(--vtur-primer-ink);
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.vtur-conciliacao-nav-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.vtur-conciliacao-nav-card.active {
+  border-color: rgba(37, 99, 235, 0.45);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(239, 246, 255, 0.96) 100%);
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.16);
+}
+
+.vtur-conciliacao-nav-hint {
+  color: var(--vtur-primer-muted);
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
 .vtur-quote-summary-label {
   color: var(--vtur-primer-muted);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.vtur-conciliacao-overview {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.9fr);
+}
+
+.vtur-conciliacao-month-banner {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  text-align: center;
+  padding: 14px 18px;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(239, 246, 255, 0.92) 0%, rgba(255, 255, 255, 0.92) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.vtur-conciliacao-month-banner strong {
+  color: var(--vtur-primer-ink);
+  font-size: 1.12rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.vtur-conciliacao-calendar-card,
+.vtur-conciliacao-pending-card {
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  padding: 16px;
+}
+
+.vtur-conciliacao-calendar-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.vtur-conciliacao-calendar-head h4,
+.vtur-conciliacao-pending-card h4 {
+  margin: 0 0 4px;
+  color: var(--vtur-primer-ink);
+  font-size: 1rem;
+}
+
+.vtur-conciliacao-calendar-head p,
+.vtur-conciliacao-pending-card p {
+  margin: 0;
+  color: var(--vtur-primer-muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.vtur-conciliacao-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  justify-content: flex-end;
+}
+
+.vtur-conciliacao-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.84rem;
+  color: var(--vtur-primer-muted);
+}
+
+.vtur-conciliacao-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.vtur-conciliacao-dot.ok { background: #16a34a; }
+.vtur-conciliacao-dot.conciliacao { background: #f59e0b; }
+.vtur-conciliacao-dot.importacao { background: #ef4444; }
+.vtur-conciliacao-dot.ranking { background: #2563eb; }
+
+.vtur-conciliacao-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.vtur-conciliacao-calendar-weekday {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--vtur-primer-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.vtur-conciliacao-calendar-day {
+  appearance: none;
+  min-height: 72px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: #f8fafc;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  text-align: left;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+
+.vtur-conciliacao-calendar-day:not(:disabled) {
+  cursor: pointer;
+}
+
+.vtur-conciliacao-calendar-day:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+}
+
+.vtur-conciliacao-calendar-day:disabled {
+  opacity: 0.45;
+}
+
+.vtur-conciliacao-calendar-day.empty {
+  background: transparent;
+  border-style: dashed;
+}
+
+.vtur-conciliacao-calendar-day.ok {
+  background: rgba(22, 163, 74, 0.08);
+  border-color: rgba(22, 163, 74, 0.22);
+}
+
+.vtur-conciliacao-calendar-day.conciliacao {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.28);
+}
+
+.vtur-conciliacao-calendar-day.importacao {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.24);
+}
+
+.vtur-conciliacao-calendar-day.ranking {
+  background: rgba(37, 99, 235, 0.1);
+  border-color: rgba(37, 99, 235, 0.24);
+}
+
+.vtur-conciliacao-calendar-day-number {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--vtur-primer-ink);
+}
+
+.vtur-conciliacao-calendar-day-meta {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--vtur-primer-muted);
+}
+
+.vtur-conciliacao-pending-chips {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.vtur-conciliacao-pending-chip {
+  appearance: none;
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  background: #fff;
+  cursor: pointer;
+}
+
+.vtur-conciliacao-pending-chip strong {
+  color: var(--vtur-primer-ink);
+  font-size: 0.92rem;
+}
+
+.vtur-conciliacao-pending-chip span {
+  color: var(--vtur-primer-muted);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.vtur-conciliacao-pending-chip.importacao {
+  background: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.18);
+}
+
+.vtur-conciliacao-pending-chip.conciliacao {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+.vtur-conciliacao-pending-chip.ranking {
+  background: rgba(37, 99, 235, 0.06);
+  border-color: rgba(37, 99, 235, 0.18);
+}
+
+.vtur-conciliacao-pending-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+@media (max-width: 960px) {
+  .vtur-conciliacao-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .vtur-conciliacao-calendar-head {
+    flex-direction: column;
+  }
+
+  .vtur-conciliacao-legend {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .vtur-conciliacao-calendar-grid {
+    gap: 6px;
+  }
+
+  .vtur-conciliacao-calendar-day {
+    min-height: 60px;
+    padding: 8px 6px;
+  }
+
+  .vtur-conciliacao-calendar-day-meta {
+    font-size: 0.7rem;
+  }
 }
 
 .vtur-quote-inline-card {
