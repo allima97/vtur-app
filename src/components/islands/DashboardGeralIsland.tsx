@@ -1360,24 +1360,63 @@ function toLineChartConfig(
 
   // A API já entrega agrupado por venda (min data_inicio, max data_fim, todos os serviços).
   const proximasViagensAgrupadas = useMemo(() => {
-    return viagens
+    const grupos = new Map<string, {
+      key: string;
+      viagemId: string;
+      clienteId: string | null;
+      clienteNome: string | null;
+      origem: string | null;
+      destino: string | null;
+      status: string | null;
+      dataInicio: string | null;
+      dataFim: string | null;
+      produtos: string[];
+    }>();
+
+    viagens
       .filter((v) => (v.status || "").toLowerCase() !== "cancelada")
-      .map((v) => ({
-        key: v.venda_id || v.id,
-        viagemId: v.id,
-        clienteId: v.clientes?.id || null,
-        clienteNome: v.clientes?.nome || null,
-        origem: v.origem || null,
-        destino: v.destino || null,
-        status: v.status || null,
-        dataInicio: v.data_inicio || null,
-        dataFim: v.data_fim || null,
-        produtos: v.produtos_tipos?.length
+      .forEach((v) => {
+        const key = v.venda_id || v.id;
+        const produtos = v.produtos_tipos?.length
           ? v.produtos_tipos
           : v.recibo?.tipo_produtos?.nome
             ? [v.recibo.tipo_produtos.nome]
-            : [],
-      }))
+            : [];
+        const existente = grupos.get(key);
+        if (!existente) {
+          grupos.set(key, {
+            key,
+            viagemId: v.id,
+            clienteId: v.clientes?.id || null,
+            clienteNome: v.clientes?.nome || null,
+            origem: v.origem || null,
+            destino: v.destino || null,
+            status: v.status || null,
+            dataInicio: v.data_inicio || null,
+            dataFim: v.data_fim || null,
+            produtos: [...produtos],
+          });
+          return;
+        }
+        if (v.data_inicio && (!existente.dataInicio || v.data_inicio < existente.dataInicio)) {
+          existente.dataInicio = v.data_inicio;
+          existente.destino = existente.destino || v.destino || null;
+          existente.origem = existente.origem || v.origem || null;
+          existente.status = existente.status || v.status || null;
+          existente.clienteId = existente.clienteId || v.clientes?.id || null;
+          existente.clienteNome = existente.clienteNome || v.clientes?.nome || null;
+        }
+        if (v.data_fim && (!existente.dataFim || v.data_fim > existente.dataFim)) {
+          existente.dataFim = v.data_fim;
+        }
+        produtos.forEach((produto) => {
+          if (produto && !existente.produtos.includes(produto)) {
+            existente.produtos.push(produto);
+          }
+        });
+      });
+
+    return Array.from(grupos.values())
       .sort((a, b) => {
         if (!a.dataInicio && !b.dataInicio) return 0;
         if (!a.dataInicio) return 1;
@@ -1389,7 +1428,27 @@ function toLineChartConfig(
 
   // A API já entrega agrupado por venda (data_fim = retorno real do cliente).
   const followUpsRecentes = useMemo(() => {
-    return followUps
+    const grupos = new Map<string, FollowUpVenda>();
+    followUps.forEach((item) => {
+      const key = item.venda_id || item.venda?.id || item.id;
+      const existente = grupos.get(key);
+      if (!existente) {
+        grupos.set(key, { ...item });
+        return;
+      }
+      if (item.data_inicio && (!existente.data_inicio || item.data_inicio < existente.data_inicio)) {
+        existente.data_inicio = item.data_inicio;
+      }
+      if (item.data_fim && (!existente.data_fim || item.data_fim > existente.data_fim)) {
+        const dataInicio = existente.data_inicio;
+        Object.assign(existente, item);
+        existente.data_inicio = dataInicio;
+      }
+      existente.follow_up_fechado =
+        existente.follow_up_fechado === true && item.follow_up_fechado === true;
+    });
+
+    return Array.from(grupos.values())
       .filter((item) => item.follow_up_fechado !== true)
       .filter((item) => {
         const cliente = String(item.venda?.clientes?.nome || "").trim();

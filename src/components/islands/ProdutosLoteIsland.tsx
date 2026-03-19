@@ -520,13 +520,11 @@ export default function ProdutosLoteIsland() {
                       <AppButton
                         key={cidade.id}
                         type="button"
-                        variant="secondary"
+                        variant={common.cidade_id === cidade.id ? "primary" : "secondary"}
                         style={{
                           width: "100%",
                           justifyContent: "flex-start",
                           marginBottom: 4,
-                          background: common.cidade_id === cidade.id ? "#e0f2fe" : "#fff",
-                          borderColor: common.cidade_id === cidade.id ? "#38bdf8" : "#e5e7eb",
                         }}
                         onMouseDown={(e) => {
                           e.preventDefault();

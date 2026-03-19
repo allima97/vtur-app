@@ -109,6 +109,28 @@ function getFornecedorProdutoNome(fornecedor: any) {
   return fornecedor?.nome || null;
 }
 
+function compareRecibosForDisplay(a: Recibo, b: Recibo) {
+  const inicioA = String(a.data_inicio || "");
+  const inicioB = String(b.data_inicio || "");
+  if (inicioA !== inicioB) {
+    if (!inicioA) return 1;
+    if (!inicioB) return -1;
+    return inicioA < inicioB ? -1 : 1;
+  }
+
+  const fimA = String(a.data_fim || "");
+  const fimB = String(b.data_fim || "");
+  if (fimA !== fimB) {
+    if (!fimA) return 1;
+    if (!fimB) return -1;
+    return fimA > fimB ? -1 : 1;
+  }
+
+  const numeroA = String(a.numero_recibo || "");
+  const numeroB = String(b.numero_recibo || "");
+  return numeroA.localeCompare(numeroB);
+}
+
 type PagamentoVenda = {
   id: string;
   venda_id: string;
@@ -143,6 +165,8 @@ type Venda = {
   cliente_nome?: string;
   destino_nome?: string;
   destino_cidade_nome?: string;
+  numero_recibo_principal?: string | null;
+  numeros_recibo?: string[];
   clientes?: { whatsapp?: string | null } | null;
 };
 
@@ -179,6 +203,11 @@ type UserCtx = {
   usoIndividual?: boolean | null;
 };
 
+type VendedorFiltroOption = {
+  id: string;
+  nome_completo: string;
+};
+
 type CampoBusca =
   | "todos"
   | "cliente"
@@ -204,6 +233,8 @@ export default function VendasConsultaIsland() {
   // ESTADOS
   // ================================
   const [userCtx, setUserCtx] = useState<UserCtx | null>(null);
+  const [gestorVendedores, setGestorVendedores] = useState<VendedorFiltroOption[]>([]);
+  const [gestorVendedorSelecionado, setGestorVendedorSelecionado] = useState("all");
   const isMaster = /MASTER/i.test(String(userType || ""));
   const masterScope = useMasterScope(Boolean(isMaster && ready));
   const [loadingUser, setLoadingUser] = useState(true);
@@ -232,6 +263,7 @@ export default function VendasConsultaIsland() {
   const [mergeSelecionadas, setMergeSelecionadas] = useState<string[]>([]);
   const [mergeLoading, setMergeLoading] = useState(false);
   const [mergeExecutando, setMergeExecutando] = useState(false);
+  const [reciboPrincipalSavingId, setReciboPrincipalSavingId] = useState<string | null>(null);
   const [confirmMerge, setConfirmMerge] = useState<{
     vendaId: string;
     mergeIds: string[];
@@ -417,6 +449,70 @@ export default function VendasConsultaIsland() {
     return String(userCtx.companyId || "");
   }
 
+  const scopedVendedorIds = useMemo(() => {
+    if (!userCtx) return [];
+    if (userCtx.papel === "ADMIN") return [];
+    if (userCtx.papel === "MASTER") return masterScope.vendedorIds;
+    if (userCtx.papel === "GESTOR") {
+      if (gestorVendedorSelecionado !== "all") return [gestorVendedorSelecionado];
+      return userCtx.vendedorIds;
+    }
+    return userCtx.vendedorIds;
+  }, [userCtx, masterScope.vendedorIds, gestorVendedorSelecionado]);
+
+  useEffect(() => {
+    if (userCtx?.papel !== "GESTOR") {
+      setGestorVendedores([]);
+      setGestorVendedorSelecionado("all");
+      return;
+    }
+
+    let active = true;
+    async function carregarVendedoresGestor() {
+      try {
+        const ids = userCtx.vendedorIds.filter(Boolean);
+        if (ids.length === 0) {
+          if (!active) return;
+          setGestorVendedores([]);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("users")
+          .select("id, nome_completo")
+          .in("id", ids)
+          .order("nome_completo", { ascending: true });
+        if (error) throw error;
+
+        if (!active) return;
+        setGestorVendedores(
+          (data || [])
+            .map((row: any) => ({
+              id: String(row?.id || "").trim(),
+              nome_completo: String(row?.nome_completo || "").trim() || "Vendedor",
+            }))
+            .filter((row) => row.id)
+        );
+      } catch (error) {
+        console.error(error);
+        if (!active) return;
+        setGestorVendedores([]);
+      }
+    }
+
+    carregarVendedoresGestor();
+    return () => {
+      active = false;
+    };
+  }, [userCtx]);
+
+  useEffect(() => {
+    if (userCtx?.papel !== "GESTOR") return;
+    if (gestorVendedorSelecionado === "all") return;
+    if (gestorVendedores.some((vendedor) => vendedor.id === gestorVendedorSelecionado)) return;
+    setGestorVendedorSelecionado("all");
+  }, [gestorVendedores, gestorVendedorSelecionado, userCtx?.papel]);
+
   // ================================
   // CARREGAR LISTA
   // ================================
@@ -434,7 +530,7 @@ export default function VendasConsultaIsland() {
       const wantKpis = !openId && paginaAtual === 1;
       const kpisParams = new URLSearchParams();
 
-      if (!openId && userCtx.papel !== "ADMIN" && userCtx.vendedorIds.length === 0) {
+      if (!openId && userCtx.papel !== "ADMIN" && scopedVendedorIds.length === 0) {
         setVendas([]);
         setTotalVendasDb(0);
         setKpiMesAtual({ totalVendas: 0, totalTaxas: 0, totalLiquido: 0, totalSeguro: 0 });
@@ -464,9 +560,9 @@ export default function VendasConsultaIsland() {
           kpisParams.set("company_id", companyIdParam);
         }
 
-        if (userCtx.vendedorIds.length > 0) {
-          params.set("vendedor_ids", userCtx.vendedorIds.join(","));
-          kpisParams.set("vendedor_ids", userCtx.vendedorIds.join(","));
+        if (scopedVendedorIds.length > 0) {
+          params.set("vendedor_ids", scopedVendedorIds.join(","));
+          kpisParams.set("vendedor_ids", scopedVendedorIds.join(","));
         }
 
         if (wantKpis) {
@@ -580,7 +676,7 @@ export default function VendasConsultaIsland() {
             totalLiquido: Number((payloadKpis as any)?.totalLiquido || 0),
             totalSeguro: Number((payloadKpis as any)?.totalSeguro || 0),
           });
-        } else if (userCtx.papel !== "ADMIN" && userCtx.vendedorIds.length === 0) {
+        } else if (userCtx.papel !== "ADMIN" && scopedVendedorIds.length === 0) {
           setKpiMesAtual({ totalVendas: 0, totalTaxas: 0, totalLiquido: 0, totalSeguro: 0 });
         } else {
           const shouldCacheKpis = !forceFresh;
@@ -636,7 +732,7 @@ export default function VendasConsultaIsland() {
       return;
     }
     carregar();
-  }, [loadPerm, podeVer, userCtx, page, pageSize, busca, periodoFiltroKey]);
+  }, [loadPerm, podeVer, userCtx, page, pageSize, busca, periodoFiltroKey, scopedVendedorIds.join(",")]);
 
   useEffect(() => {
     setBuscaReciboComplementar("");
@@ -829,6 +925,8 @@ export default function VendasConsultaIsland() {
     return mergeVendas.filter((v) => {
       const texto = [
         v.id,
+        v.numero_recibo_principal,
+        ...(v.numeros_recibo || []),
         v.destino_nome,
         v.destino_cidade_nome,
         v.vendedor_nome,
@@ -849,14 +947,7 @@ export default function VendasConsultaIsland() {
   function recibosDaVenda(id: string) {
     return recibos
       .filter((r) => r.venda_id === id)
-      .sort((a, b) => {
-        const da = a.data_inicio || "";
-        const db = b.data_inicio || "";
-        if (da === db) return 0;
-        if (!da) return 1;
-        if (!db) return -1;
-        return da < db ? -1 : 1;
-      });
+      .sort(compareRecibosForDisplay);
   }
 
   function complementaresDaVenda(id: string) {
@@ -872,6 +963,11 @@ export default function VendasConsultaIsland() {
       if (principal) return principal;
     }
     return lista[0];
+  }
+
+  function isReciboPrincipal(venda: Venda | null | undefined, recibo: Recibo) {
+    if (!venda) return false;
+    return Boolean(venda.destino_id && recibo.produto_resolvido_id === venda.destino_id);
   }
 
   const textoPeriodoKpi = useMemo(() => {
@@ -982,6 +1078,66 @@ export default function VendasConsultaIsland() {
   function solicitarExclusaoRecibo(id: string, vendaId: string) {
     if (!podeExcluir) return;
     setConfirmReciboExclusao({ id, vendaId });
+  }
+
+  async function definirReciboPrincipal(venda: Venda, recibo: Recibo) {
+    if (!podeEditar) return;
+    if (!recibo.produto_resolvido_id) {
+      showToast("Este recibo não possui produto válido para ser o principal.", "error");
+      return;
+    }
+    if (isReciboPrincipal(venda, recibo)) return;
+
+    try {
+      setReciboPrincipalSavingId(recibo.id);
+      const resp = await fetch("/api/v1/vendas/recibo-principal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          venda_id: venda.id,
+          recibo_id: recibo.id,
+          company_id: getCompanyIdParam(),
+        }),
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+
+      await registrarLog({
+        acao: "recibo_principal_atualizado",
+        modulo: "Vendas",
+        detalhes: {
+          venda_id: venda.id,
+          recibo_id: recibo.id,
+          produto_resolvido_id: recibo.produto_resolvido_id,
+        },
+      });
+
+      setVendas((prev) =>
+        prev.map((item) =>
+          item.id === venda.id
+            ? {
+                ...item,
+                destino_id: recibo.produto_resolvido_id || item.destino_id,
+                destino_nome: recibo.produto_nome || item.destino_nome,
+              }
+            : item
+        )
+      );
+      setModalVenda((prev) =>
+        prev && prev.id === venda.id
+          ? {
+              ...prev,
+              destino_id: recibo.produto_resolvido_id || prev.destino_id,
+              destino_nome: recibo.produto_nome || prev.destino_nome,
+            }
+          : prev
+      );
+      showToast("Recibo principal atualizado.", "success");
+    } catch (error) {
+      console.error(error);
+      showToast("Erro ao atualizar recibo principal.", "error");
+    } finally {
+      setReciboPrincipalSavingId(null);
+    }
   }
 
   // ================================
@@ -1140,8 +1296,8 @@ export default function VendasConsultaIsland() {
       });
       const companyIdParam = getCompanyIdParam();
       if (companyIdParam) params.set("company_id", companyIdParam);
-      if (userCtx.vendedorIds.length > 0) {
-        params.set("vendedor_ids", userCtx.vendedorIds.join(","));
+      if (scopedVendedorIds.length > 0) {
+        params.set("vendedor_ids", scopedVendedorIds.join(","));
       }
       const resp = await fetch(`/api/v1/vendas/merge-candidates?${params.toString()}`);
       if (!resp.ok) throw new Error(await resp.text());
@@ -1192,7 +1348,7 @@ export default function VendasConsultaIsland() {
           venda_id: vendaPrincipalId,
           merge_ids: vendasFilhas,
           company_id: getCompanyIdParam(),
-          vendedor_ids: userCtx.vendedorIds,
+          vendedor_ids: scopedVendedorIds,
         }),
       });
       if (!resp.ok) throw new Error(await resp.text());
@@ -1344,6 +1500,24 @@ export default function VendasConsultaIsland() {
               </>
             )}
           </div>
+
+          {userCtx?.papel === "GESTOR" && (
+            <div className="vtur-form-grid vtur-form-grid-3" style={{ marginTop: 12 }}>
+              <AppField
+                as="select"
+                label="Vendedor"
+                value={gestorVendedorSelecionado}
+                onChange={(e) => setGestorVendedorSelecionado(e.target.value)}
+                options={[
+                  { value: "all", label: "Todos" },
+                  ...gestorVendedores.map((vendedor) => ({
+                    value: vendedor.id,
+                    label: vendedor.nome_completo,
+                  })),
+                ]}
+              />
+            </div>
+          )}
 
           {userCtx?.papel === "MASTER" && (
             <div className="vtur-form-grid vtur-form-grid-3" style={{ marginTop: 12 }}>
@@ -1797,6 +1971,7 @@ export default function VendasConsultaIsland() {
                       const valorFmt = formatCurrencyBRL(r.valor_total || 0);
                       const taxasNum = r.valor_taxas || 0;
                       const taxasFmt = taxasNum === 0 ? "-" : formatCurrencyBRL(taxasNum);
+                      const principal = isReciboPrincipal(modalVenda, r);
 
                       const formatarData = (value: string | null | undefined) =>
                         formatarDataCorretamente(value);
@@ -1805,7 +1980,29 @@ export default function VendasConsultaIsland() {
                         <tr key={r.id}>
                           <td data-label="Número">{r.numero_recibo || "-"}</td>
                           <td data-label="Reserva">{r.numero_reserva || "-"}</td>
-                          <td data-label="Produto">{r.produto_nome || "-"}</td>
+                          <td data-label="Produto">
+                            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                              <span>{r.produto_nome || "-"}</span>
+                              {principal && (
+                                <span
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                    width: "fit-content",
+                                    padding: "2px 8px",
+                                    borderRadius: 999,
+                                    background: "#dcfce7",
+                                    color: "#166534",
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  Principal
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td data-label="Data Início" style={{ textAlign: "center" }}>
                             {formatarData(r.data_inicio)}
                           </td>
@@ -1852,8 +2049,37 @@ export default function VendasConsultaIsland() {
                                       },
                                     ]
                                   : []),
+                                ...(podeEditar
+                                  ? [
+                                      principal
+                                        ? {
+                                            key: `primary-${r.id}`,
+                                            label: "Principal",
+                                            title: "Recibo principal",
+                                            onClick: () => undefined,
+                                            icon: "pi pi-star-fill",
+                                            variant: "light" as const,
+                                            disabled: true,
+                                          }
+                                        : {
+                                            key: `set-primary-${r.id}`,
+                                            label:
+                                              reciboPrincipalSavingId === r.id
+                                                ? "Salvando..."
+                                                : "Definir principal",
+                                            title: "Definir como recibo principal",
+                                            onClick: () => definirReciboPrincipal(modalVenda, r),
+                                            icon:
+                                              reciboPrincipalSavingId === r.id
+                                                ? "pi pi-spin pi-spinner"
+                                                : "pi pi-star",
+                                            variant: "light" as const,
+                                            disabled: reciboPrincipalSavingId === r.id,
+                                          },
+                                    ]
+                                  : []),
                               ]}
-                              show={Boolean(recibosNotas[r.id] || podeExcluir)}
+                              show={Boolean(recibosNotas[r.id] || podeExcluir || podeEditar)}
                             />
                           </td>
                         </tr>
@@ -1994,10 +2220,13 @@ export default function VendasConsultaIsland() {
                     <div className="vtur-modal-list">
                       {vendasParaMesclar.map((v) => {
                         const selecionada = mergeSelecionadasSet.has(v.id);
-                        const valorInfo =
-                          typeof v.valor_total === "number"
-                            ? `- ${formatCurrencyBRL(v.valor_total)}`
-                            : "";
+                        const detalhesMescla = [
+                          v.destino_nome || "-",
+                          typeof v.valor_total === "number" ? formatCurrencyBRL(v.valor_total) : "",
+                          v.numero_recibo_principal ? `Recibo ${v.numero_recibo_principal}` : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" - ");
                         return (
                           <label key={v.id} className={`vtur-modal-checkbox-card${selecionada ? " is-selected" : ""}`}>
                             <input
@@ -2011,7 +2240,7 @@ export default function VendasConsultaIsland() {
                                 {formatarDataCorretamente(v.data_venda)}
                               </span>
                               <span className="vtur-choice-button-caption">
-                                {v.destino_nome || "-"} {valorInfo} - ID: {v.id}
+                                {detalhesMescla}
                               </span>
                             </div>
                           </label>

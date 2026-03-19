@@ -252,9 +252,6 @@ export async function GET({ request }: { request: Request }) {
     limiteData.setDate(limiteData.getDate() + 14);
     const limiteIso = limiteData.toISOString().slice(0, 10);
 
-    // Agrupa viagens pelo venda_id: min(data_inicio) = partida real, max(data_fim) = retorno real.
-    // O limit é aplicado APÓS o agrupamento para que "20 próximas viagens" signifique 20 viagens
-    // de clientes distintos, não 20 recibos/serviços de uma mesma viagem.
     function agruparPorVenda(rawData: any[]): any[] {
       const grupos = new Map<string, any>();
       for (const v of rawData) {
@@ -283,7 +280,15 @@ export async function GET({ request }: { request: Request }) {
           (existing.produtos_tipos as string[]).push(produtoNome);
         }
       }
-      return Array.from(grupos.values())
+      return Array.from(grupos.values());
+    }
+
+    function filtrarProximasViagens(grupos: any[]) {
+      return grupos
+        .filter((item) => {
+          const dataInicio = String(item?.data_inicio || "");
+          return Boolean(dataInicio) && dataInicio >= hojeIso && dataInicio <= limiteIso;
+        })
         .sort((a, b) => (a.data_inicio || "").localeCompare(b.data_inicio || ""))
         .slice(0, 20);
     }
@@ -291,7 +296,7 @@ export async function GET({ request }: { request: Request }) {
     let data: unknown[] = [];
 
     if (mode === "gestor") {
-      let viagensQuery = client
+      let candidatasQuery = client
         .from("viagens")
         .select(
           `
@@ -312,18 +317,65 @@ export async function GET({ request }: { request: Request }) {
         .limit(500);
 
       if (companyId) {
-        viagensQuery = viagensQuery.eq("company_id", companyId);
+        candidatasQuery = candidatasQuery.eq("company_id", companyId);
       }
 
       if (vendedorIds.length > 0) {
-        viagensQuery = viagensQuery.in("responsavel_user_id", vendedorIds);
+        candidatasQuery = candidatasQuery.in("responsavel_user_id", vendedorIds);
       }
 
-      const { data: viagensData, error } = await viagensQuery;
-      if (error) throw error;
-      data = agruparPorVenda(viagensData || []);
+      const { data: candidatasData, error: candidatasError } = await candidatasQuery;
+      if (candidatasError) throw candidatasError;
+
+      const vendaIds = Array.from(
+        new Set(
+          (candidatasData || [])
+            .map((row: any) => String(row?.venda_id || row?.recibo?.venda_id || "").trim())
+            .filter(Boolean)
+        )
+      );
+      const avulsas = (candidatasData || []).filter((row: any) => !row?.venda_id);
+
+      let detalhadas: any[] = [];
+      if (vendaIds.length > 0) {
+        let detalhadasQuery = client
+          .from("viagens")
+          .select(
+            `
+              id,
+              venda_id,
+              data_inicio,
+              data_fim,
+              status,
+              destino,
+              responsavel_user_id,
+              clientes:clientes (id, nome),
+              recibo:vendas_recibos (venda_id)
+            `
+          )
+          .in("venda_id", vendaIds)
+          .order("data_inicio", { ascending: true })
+          .limit(5000);
+
+        if (companyId) {
+          detalhadasQuery = detalhadasQuery.eq("company_id", companyId);
+        }
+
+        if (vendedorIds.length > 0) {
+          detalhadasQuery = detalhadasQuery.in("responsavel_user_id", vendedorIds);
+        }
+
+        const { data: detalhadasData, error: detalhadasError } = await detalhadasQuery;
+        if (detalhadasError) throw detalhadasError;
+        detalhadas = detalhadasData || [];
+      }
+
+      data = filtrarProximasViagens([
+        ...agruparPorVenda(detalhadas),
+        ...agruparPorVenda(avulsas),
+      ]);
     } else {
-      let viagensQuery = client
+      let candidatasQuery = client
         .from("viagens")
         .select(
           `
@@ -354,17 +406,75 @@ export async function GET({ request }: { request: Request }) {
         .limit(500);
 
       if (companyId) {
-        viagensQuery = viagensQuery.eq("company_id", companyId);
+        candidatasQuery = candidatasQuery.eq("company_id", companyId);
       }
 
       if (vendedorIds.length > 0) {
-        viagensQuery = viagensQuery.in("venda.vendedor_id", vendedorIds);
+        candidatasQuery = candidatasQuery.in("venda.vendedor_id", vendedorIds);
       }
-      viagensQuery = viagensQuery.eq("venda.cancelada", false);
+      candidatasQuery = candidatasQuery.eq("venda.cancelada", false);
 
-      const { data: viagensData, error } = await viagensQuery;
-      if (error) throw error;
-      data = agruparPorVenda(viagensData || []);
+      const { data: candidatasData, error: candidatasError } = await candidatasQuery;
+      if (candidatasError) throw candidatasError;
+
+      const vendaIds = Array.from(
+        new Set(
+          (candidatasData || [])
+            .map((row: any) => String(row?.venda_id || row?.recibo?.venda_id || "").trim())
+            .filter(Boolean)
+        )
+      );
+      const avulsas = (candidatasData || []).filter((row: any) => !row?.venda_id);
+
+      let detalhadas: any[] = [];
+      if (vendaIds.length > 0) {
+        let detalhadasQuery = client
+          .from("viagens")
+          .select(
+            `
+              id,
+              venda_id,
+              data_inicio,
+              data_fim,
+              status,
+              origem,
+              destino,
+              responsavel_user_id,
+              venda:vendas (
+                vendedor_id,
+                cancelada
+              ),
+              clientes:clientes (id, nome),
+              recibo:vendas_recibos (
+                id,
+                venda_id,
+                produto_id,
+                tipo_produtos (id, nome, tipo)
+              )
+            `
+          )
+          .in("venda_id", vendaIds)
+          .order("data_inicio", { ascending: true })
+          .limit(5000);
+
+        if (companyId) {
+          detalhadasQuery = detalhadasQuery.eq("company_id", companyId);
+        }
+
+        if (vendedorIds.length > 0) {
+          detalhadasQuery = detalhadasQuery.in("venda.vendedor_id", vendedorIds);
+        }
+        detalhadasQuery = detalhadasQuery.eq("venda.cancelada", false);
+
+        const { data: detalhadasData, error: detalhadasError } = await detalhadasQuery;
+        if (detalhadasError) throw detalhadasError;
+        detalhadas = detalhadasData || [];
+      }
+
+      data = filtrarProximasViagens([
+        ...agruparPorVenda(detalhadas),
+        ...agruparPorVenda(avulsas),
+      ]);
     }
 
     const payload = { items: data };

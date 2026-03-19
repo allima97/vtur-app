@@ -46,6 +46,9 @@ export default function AppDialog({
           </span>
         }
         visible={open}
+        modal
+        appendTo="self"
+        baseZIndex={2600}
         style={{ width: "min(42rem, 95vw)" }}
         onHide={onCancel}
         footer={

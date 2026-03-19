@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { createClient } from "@supabase/supabase-js";
 import { registrarLog } from "../../lib/logs";
 import { SUPPORT_EMAIL } from "../../lib/systemName";
 import { clearPermissoesCache } from "../../lib/permissoesCache";
@@ -28,19 +29,55 @@ export default function AuthLoginIsland() {
     setTimeout(() => setMensagem(null), 5000);
   }
 
-  async function ensureUserProfile(userId: string, email: string) {
+  async function ensureUserProfile(userId: string, email: string, accessToken?: string | null) {
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`;
+      }
       const resp = await fetch("/api/users", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ id: userId, email }),
       });
       if (!resp.ok) {
         throw new Error(await resp.text());
       }
+      return true;
     } catch (err) {
       console.error("Falha ao criar perfil mínimo", err);
+      return false;
     }
+  }
+
+  async function fetchProfileAfterLogin(userId: string, accessToken?: string | null) {
+    const supabaseUrl = String(import.meta.env.PUBLIC_SUPABASE_URL || "").trim();
+    const supabaseAnonKey = String(import.meta.env.PUBLIC_SUPABASE_ANON_KEY || "").trim();
+    const token = String(accessToken || "").trim();
+
+    if (!supabaseUrl || !supabaseAnonKey || !token) {
+      return { data: null as any, error: null as any };
+    }
+
+    const authQueryClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
+
+    return authQueryClient
+      .from("users")
+      .select(
+        "nome_completo, active, company_id, cpf, telefone, cidade, estado, uso_individual, must_change_password, user_types(name)"
+      )
+      .eq("id", userId)
+      .maybeSingle();
   }
 
   useEffect(() => {
@@ -151,13 +188,10 @@ export default function AuthLoginIsland() {
       await registrarLog({ user_id: userId, acao: "login_sucesso", modulo: "login", detalhes: { email: emailLimpo, userId, userAgent } });
       const authedEmail = user?.email || emailLimpo;
       // Buscar dados do usuário
-      const { data: perfil, error: userError } = await supabase
-        .from("users")
-        .select(
-          "nome_completo, active, company_id, cpf, telefone, cidade, estado, uso_individual, must_change_password, user_types(name)"
-        )
-        .eq("id", userId)
-        .maybeSingle();
+      const { data: perfil, error: userError } = await fetchProfileAfterLogin(
+        userId,
+        data.session?.access_token || null
+      );
       // Fallback para bancos sem coluna active
       let perfilFinal = perfil;
       const missingActiveColumn = userError && (userError.code === "42703" || userError.message?.toLowerCase().includes("active"));
@@ -178,7 +212,16 @@ export default function AuthLoginIsland() {
       }
 
       if (!perfilFinal && !hasFatalProfileError) {
-        await ensureUserProfile(userId, authedEmail);
+        const profileCreated = await ensureUserProfile(
+          userId,
+          authedEmail,
+          data.session?.access_token || null
+        );
+        if (!profileCreated) {
+          mostrarMensagem("Nao foi possivel preparar seu perfil de acesso. Tente novamente em alguns segundos.");
+          setLoading(false);
+          return;
+        }
         mostrarMensagem("Criando seu perfil de acesso. Complete os dados abaixo.");
         window.location.replace("/perfil/onboarding");
         return;

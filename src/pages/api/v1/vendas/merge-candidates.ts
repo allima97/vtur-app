@@ -89,9 +89,31 @@ export async function GET({ request }: { request: Request }) {
     const { data: vendasData, error } = await query;
     if (error) throw error;
 
+    const vendaIds = (vendasData || []).map((row: any) => String(row?.id || "").trim()).filter(Boolean);
+
+    const recibosPorVenda = new Map<string, string[]>();
+    if (vendaIds.length > 0) {
+      const { data: recibosData, error: recibosError } = await client
+        .from("vendas_recibos")
+        .select("venda_id, numero_recibo")
+        .in("venda_id", vendaIds)
+        .order("numero_recibo", { ascending: true });
+      if (recibosError) throw recibosError;
+
+      (recibosData || []).forEach((row: any) => {
+        const vendaIdRef = String(row?.venda_id || "").trim();
+        const numeroRecibo = String(row?.numero_recibo || "").trim();
+        if (!vendaIdRef || !numeroRecibo) return;
+        const lista = recibosPorVenda.get(vendaIdRef) || [];
+        lista.push(numeroRecibo);
+        recibosPorVenda.set(vendaIdRef, lista);
+      });
+    }
+
     const mapped = (vendasData || []).map((row: any) => {
       const cidadeId = row.destino_cidade_id || row.destinos?.cidade_id || "";
       const cidadeNome = row.destino_cidade?.nome || "";
+      const numerosRecibo = Array.from(new Set(recibosPorVenda.get(row.id) || []));
       return {
         id: row.id,
         vendedor_id: row.vendedor_id,
@@ -108,6 +130,8 @@ export async function GET({ request }: { request: Request }) {
         cliente_nome: row.clientes?.nome || "",
         destino_nome: row.destinos?.nome || "",
         destino_cidade_nome: cidadeId ? cidadeNome || "" : "",
+        numero_recibo_principal: numerosRecibo[0] || null,
+        numeros_recibo: numerosRecibo,
       };
     });
 

@@ -1486,7 +1486,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro }: Props) {
                 type="button"
                 variant="primary"
                 onClick={() => setShowDiasBusca(true)}
-                style={{ fontSize: 12, fontWeight: 500, padding: "6px 12px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}
+                style={{ fontSize: 12, fontWeight: 500, padding: "6px 12px" }}
               >
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                   <i className="pi pi-search" aria-hidden="true" />

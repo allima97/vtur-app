@@ -262,7 +262,7 @@ export async function GET({ request }: { request: Request }) {
       });
     }
 
-    let followUpQuery = client
+    let candidatasQuery = client
       .from("viagens")
       .select(
         `
@@ -292,42 +292,109 @@ export async function GET({ request }: { request: Request }) {
       .limit(500);
 
     if (companyId) {
-      followUpQuery = followUpQuery.eq("company_id", companyId);
+      candidatasQuery = candidatasQuery.eq("company_id", companyId);
     }
 
     if (vendedorIds.length > 0) {
-      followUpQuery = followUpQuery.in("venda.vendedor_id", vendedorIds);
+      candidatasQuery = candidatasQuery.in("venda.vendedor_id", vendedorIds);
     }
 
-    const { data: rawData, error } = await followUpQuery;
-    if (error) throw error;
+    const { data: candidatasData, error: candidatasError } = await candidatasQuery;
+    if (candidatasError) throw candidatasError;
 
-    // Agrupa por venda_id: data_inicio = embarque real (min), data_fim = retorno real (max).
-    // Follow-up deve mostrar quando o cliente REALMENTE voltou — o fim do último serviço.
+    const vendaIds = Array.from(
+      new Set(
+        (candidatasData || [])
+          .map((row: any) => String(row?.venda_id || row?.venda?.id || "").trim())
+          .filter(Boolean)
+      )
+    );
+    const avulsas = (candidatasData || []).filter((row: any) => !row?.venda_id);
+
+    let detalhadas: any[] = [];
+    if (vendaIds.length > 0) {
+      let detalhadasQuery = client
+        .from("viagens")
+        .select(
+          `
+            id,
+            venda_id,
+            data_inicio,
+            data_fim,
+            follow_up_fechado,
+            venda:vendas (
+              id,
+              data_embarque,
+              data_final,
+              vendedor_id,
+              cancelada,
+              clientes:clientes (id, nome, whatsapp, telefone),
+              destino_cidade:cidades!destino_cidade_id (id, nome)
+            )
+          `
+        )
+        .in("venda_id", vendaIds)
+        .not("data_fim", "is", null)
+        .or("status.is.null,status.neq.Fechado")
+        .eq("venda.cancelada", false)
+        .order("data_fim", { ascending: false })
+        .limit(5000);
+
+      if (companyId) {
+        detalhadasQuery = detalhadasQuery.eq("company_id", companyId);
+      }
+
+      if (vendedorIds.length > 0) {
+        detalhadasQuery = detalhadasQuery.in("venda.vendedor_id", vendedorIds);
+      }
+
+      const { data: detalhadasData, error: detalhadasError } = await detalhadasQuery;
+      if (detalhadasError) throw detalhadasError;
+      detalhadas = detalhadasData || [];
+    }
+
     const grupos = new Map<string, any>();
-    for (const item of (rawData || []) as any[]) {
+    for (const item of [...detalhadas, ...avulsas] as any[]) {
       const key = (item.venda_id as string) || (item.venda as any)?.id || item.id;
       const existing = grupos.get(key);
+      const itemFechado = item.follow_up_fechado === true;
       if (!existing) {
-        grupos.set(key, { ...item });
+        grupos.set(key, {
+          ...item,
+          __allClosed: itemFechado,
+        });
         continue;
       }
-      // Menor data_inicio
+      existing.__allClosed = Boolean(existing.__allClosed) && itemFechado;
       if (item.data_inicio && (!existing.data_inicio || item.data_inicio < existing.data_inicio)) {
         existing.data_inicio = item.data_inicio;
       }
-      // Maior data_fim → esse item vira o representativo (tem o cliente/destino correto via venda)
       if (item.data_fim && (!existing.data_fim || item.data_fim > existing.data_fim)) {
         const savedDataInicio = existing.data_inicio;
+        const allClosed = existing.__allClosed;
         Object.assign(existing, item);
         existing.data_inicio = savedDataInicio;
+        existing.__allClosed = allClosed;
       }
     }
+
     const data = Array.from(grupos.values())
+      .filter((item: any) => item.__allClosed !== true)
+      .filter((item: any) => {
+        const retorno = String(item?.data_fim || item?.venda?.data_final || "");
+        return Boolean(retorno) && retorno >= inicio && retorno <= fimFollowUp;
+      })
       .sort((a, b) => {
         const da = a.data_fim || "";
         const db = b.data_fim || "";
         return da > db ? -1 : da < db ? 1 : 0;
+      })
+      .map((item: any) => {
+        const { __allClosed, ...rest } = item;
+        return {
+          ...rest,
+          follow_up_fechado: __allClosed,
+        };
       })
       .slice(0, 20);
 

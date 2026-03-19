@@ -887,17 +887,12 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                         <div className="form-group followup-action-group">
                           <AppButton
                             type="button"
-                            variant="secondary"
+                            variant="primary"
                             className="w-full sm:w-auto"
                             onClick={salvarFollowUp}
                             disabled={followUpDisabled}
-                            style={{
-                              backgroundColor: "#dcfce7",
-                              color: "#166534",
-                              borderColor: "#86efac",
-                            }}
                           >
-                            {savingFollowUp ? "Salvando..." : "Salvar follow-up"}
+                            {savingFollowUp ? "Salvando..." : "Salvar"}
                           </AppButton>
                         </div>
                       )}
@@ -1145,30 +1140,20 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                   </div>
                   <div className="mobile-stack-buttons">
                     <AppButton
-                      variant="secondary"
+                      variant="primary"
                       className="w-full sm:w-auto"
                       type="button"
                       onClick={salvarCadastroAcompanhante}
                       disabled={salvandoCadastroAcomp}
-                      style={{
-                        backgroundColor: "#dcfce7",
-                        color: "#166534",
-                        borderColor: "#86efac",
-                      }}
                     >
                       {salvandoCadastroAcomp ? "Salvando..." : "Salvar acompanhante"}
                     </AppButton>
                     <AppButton
-                      variant="secondary"
+                      variant="danger"
                       className="w-full sm:w-auto"
                       type="button"
                       onClick={() => resetCadastroAcompanhante(true)}
                       disabled={salvandoCadastroAcomp}
-                      style={{
-                        backgroundColor: "#fee2e2",
-                        color: "#b91c1c",
-                        borderColor: "#fecaca",
-                      }}
                     >
                       Cancelar
                     </AppButton>
@@ -1245,21 +1230,16 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                   </div>
                   <div className="mobile-stack-buttons">
                     <AppButton
-                      variant="secondary"
+                      variant="primary"
                       className="w-full sm:w-auto"
                       type="button"
                       onClick={adicionarAcompanhante}
                       disabled={savingAcomp}
-                      style={{
-                        backgroundColor: "#dcfce7",
-                        color: "#166534",
-                        borderColor: "#86efac",
-                      }}
                     >
                       {savingAcomp ? "Salvando..." : "Salvar vínculo"}
                     </AppButton>
                     <AppButton
-                      variant="secondary"
+                      variant="danger"
                       className="w-full sm:w-auto"
                       type="button"
                       onClick={() => {
@@ -1267,11 +1247,6 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                         setMostrarVinculoAcomp(false);
                       }}
                       disabled={savingAcomp}
-                      style={{
-                        backgroundColor: "#fee2e2",
-                        color: "#b91c1c",
-                        borderColor: "#fecaca",
-                      }}
                     >
                       Cancelar
                     </AppButton>
@@ -1533,21 +1508,16 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       </div>
                       <div className="mobile-stack-buttons">
                         <AppButton
-                          variant="secondary"
+                          variant="primary"
                           className="w-full sm:w-auto"
                           type="button"
                           onClick={salvarServico}
                           disabled={savingServico}
-                          style={{
-                            backgroundColor: "#dcfce7",
-                            color: "#166534",
-                            borderColor: "#86efac",
-                          }}
                         >
                           {savingServico ? "Salvando..." : "Salvar serviço"}
                         </AppButton>
                         <AppButton
-                          variant="secondary"
+                          variant="danger"
                           className="w-full sm:w-auto"
                           type="button"
                           onClick={() => {
@@ -1556,11 +1526,6 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                             setEditServicoId(null);
                           }}
                           disabled={savingServico}
-                          style={{
-                            backgroundColor: "#fee2e2",
-                            color: "#b91c1c",
-                            borderColor: "#fecaca",
-                          }}
                         >
                           Cancelar
                         </AppButton>
@@ -1716,21 +1681,16 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       </div>
                       <div className="mobile-stack-buttons">
                         <AppButton
-                          variant="secondary"
+                          variant="primary"
                           className="w-full sm:w-auto"
                           type="button"
                           onClick={salvarDocumento}
                           disabled={savingDoc}
-                          style={{
-                            backgroundColor: "#dcfce7",
-                            color: "#166534",
-                            borderColor: "#86efac",
-                          }}
                         >
                           {savingDoc ? "Enviando..." : "Enviar documento"}
                         </AppButton>
                         <AppButton
-                          variant="secondary"
+                          variant="danger"
                           className="w-full sm:w-auto"
                           type="button"
                           onClick={() => {
@@ -1740,11 +1700,6 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                             setMostrarDocumentoForm(false);
                           }}
                           disabled={savingDoc}
-                          style={{
-                            backgroundColor: "#fee2e2",
-                            color: "#b91c1c",
-                            borderColor: "#fecaca",
-                          }}
                         >
                           Cancelar
                         </AppButton>

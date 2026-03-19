@@ -1,4 +1,5 @@
 import { supabaseServer, createServerClient, hasServiceRoleKey, readEnv } from "../../lib/supabaseServer";
+import { createClient } from "@supabase/supabase-js";
 import { MODULOS_MASTER_PERMISSOES } from "../../config/modulos";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { renderEmailHtml, renderEmailText } from "../../lib/emailMarkdown";
@@ -305,6 +306,25 @@ function buildAuthClient(request: Request) {
       "PUBLIC_SUPABASE_URL/SUPABASE_URL e PUBLIC_SUPABASE_ANON_KEY/SUPABASE_ANON_KEY nao configurados."
     );
   }
+
+  const authHeader = String(request.headers.get("authorization") || "").trim();
+  const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i);
+  const accessToken = bearerMatch?.[1]?.trim() || "";
+
+  if (accessToken) {
+    return createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+  }
+
   const cookies = parseCookies(request);
   return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {

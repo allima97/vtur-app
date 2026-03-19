@@ -240,6 +240,10 @@ function enrichLinha(base: LinhaInput): LinhaInput {
     valorAbatimentos: base.valor_abatimentos,
     valorSaldo: base.valor_saldo,
     valorOpfax: base.valor_opfax,
+    valorCalculadaLoja: base.valor_calculada_loja,
+    valorVisaoMaster: base.valor_visao_master,
+    valorComissaoLoja: base.valor_comissao_loja,
+    percentualComissaoLoja: base.percentual_comissao_loja,
   });
 
   return {
@@ -562,7 +566,11 @@ export default function ConciliacaoIsland() {
   const [conciliando, setConciliando] = useState(false);
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [savingAssignmentId, setSavingAssignmentId] = useState<string | null>(null);
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
   const [comissaoDrafts, setComissaoDrafts] = useState<Record<string, string>>({});
+  const [rankingVendedorDrafts, setRankingVendedorDrafts] = useState<Record<string, string>>({});
+  const [rankingProdutoDrafts, setRankingProdutoDrafts] = useState<Record<string, string>>({});
+  const [editableRows, setEditableRows] = useState<Record<string, boolean>>({});
   const [rankingAssignees, setRankingAssignees] = useState<RankingAssigneeOption[]>([]);
   const [rankingProdutosMeta, setRankingProdutosMeta] = useState<RankingProdutoOption[]>([]);
   const [showPendingDetails, setShowPendingDetails] = useState(false);
@@ -664,6 +672,7 @@ export default function ConciliacaoIsland() {
       const resp = await fetch(`/api/v1/conciliacao/list?${qs.toString()}`, {
         method: "GET",
         credentials: "same-origin",
+        cache: "no-store",
       });
       if (!resp.ok) throw new Error(await resp.text());
       const json = (await resp.json()) as ConciliacaoItem[];
@@ -682,6 +691,32 @@ export default function ConciliacaoIsland() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolvedCompanyId, somentePendentes, monthFilter, dayFilter, rankingStatusFilter]);
 
+  useEffect(() => {
+    setComissaoDrafts((prev) => {
+      const next: Record<string, string> = {};
+      for (const row of itens) {
+        next[row.id] = editableRows[row.id] && prev[row.id] != null ? prev[row.id] : formatMoney(row.valor_comissao_loja);
+      }
+      return next;
+    });
+    setRankingVendedorDrafts((prev) => {
+      const next: Record<string, string> = {};
+      for (const row of itens) {
+        next[row.id] =
+          editableRows[row.id] && prev[row.id] != null ? prev[row.id] : row.ranking_vendedor_id || "";
+      }
+      return next;
+    });
+    setRankingProdutoDrafts((prev) => {
+      const next: Record<string, string> = {};
+      for (const row of itens) {
+        next[row.id] =
+          editableRows[row.id] && prev[row.id] != null ? prev[row.id] : row.ranking_produto_id || "";
+      }
+      return next;
+    });
+  }, [editableRows, itens]);
+
   async function carregarResumo() {
     if (!resolvedCompanyId) {
       setResumo(null);
@@ -694,6 +729,7 @@ export default function ConciliacaoIsland() {
       const resp = await fetch(`/api/v1/conciliacao/summary?${qs.toString()}`, {
         method: "GET",
         credentials: "same-origin",
+        cache: "no-store",
       });
       if (!resp.ok) throw new Error(await resp.text());
       const json = (await resp.json()) as ConciliacaoResumo;
@@ -718,6 +754,7 @@ export default function ConciliacaoIsland() {
       const resp = await fetch(`/api/v1/conciliacao/executions?${qs.toString()}`, {
         method: "GET",
         credentials: "same-origin",
+        cache: "no-store",
       });
       if (!resp.ok) throw new Error(await resp.text());
       const json = (await resp.json()) as ConciliacaoExecucao[];
@@ -782,6 +819,7 @@ export default function ConciliacaoIsland() {
         const resp = await fetch(`/api/v1/conciliacao/options?${qs.toString()}`, {
           method: "GET",
           credentials: "same-origin",
+          cache: "no-store",
         });
         if (!resp.ok) throw new Error(await resp.text());
         const json = (await resp.json()) as {
@@ -908,6 +946,32 @@ export default function ConciliacaoIsland() {
     }));
   }
 
+  function updateRankingVendedorDraft(rowId: string, value: string) {
+    setRankingVendedorDrafts((prev) => ({
+      ...prev,
+      [rowId]: value,
+    }));
+  }
+
+  function updateRankingProdutoDraft(rowId: string, value: string) {
+    setRankingProdutoDrafts((prev) => ({
+      ...prev,
+      [rowId]: value,
+    }));
+  }
+
+  function isRowLocked(row: ConciliacaoItem) {
+    if (!row.conciliado) return false;
+    return !editableRows[row.id];
+  }
+
+  function habilitarEdicaoLinha(rowId: string) {
+    setEditableRows((prev) => ({
+      ...prev,
+      [rowId]: true,
+    }));
+  }
+
   async function confirmarEdicaoComissao(row: ConciliacaoItem) {
     const raw = comissaoDrafts[row.id];
     const parsed = parsePtBrNumber(raw);
@@ -921,6 +985,79 @@ export default function ConciliacaoIsland() {
       return;
     }
     await salvarAtribuicaoRanking(row, { valorComissaoLoja: valorNovo });
+  }
+
+  async function salvarLinha(row: ConciliacaoItem) {
+    const rankingVendedorId = (rankingVendedorDrafts[row.id] || "").trim() || null;
+    const rankingProdutoId = (rankingProdutoDrafts[row.id] || "").trim() || null;
+
+    await salvarAtribuicaoRanking(row, {
+      rankingVendedorId,
+      rankingProdutoId,
+    });
+
+    setEditableRows((prev) => ({
+      ...prev,
+      [row.id]: false,
+    }));
+  }
+
+  async function excluirLinha(row: ConciliacaoItem) {
+    if (!resolvedCompanyId) {
+      showToast("Selecione uma empresa.", "error");
+      return;
+    }
+    if (row.conciliado) {
+      showToast("Nao e permitido excluir um recibo ja conciliado.", "error");
+      return;
+    }
+    const confirmado = window.confirm(`Excluir o recibo ${row.documento || row.id} da conciliacao?`);
+    if (!confirmado) return;
+
+    try {
+      setDeletingItemId(row.id);
+      const resp = await fetch("/api/v1/conciliacao/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          companyId: resolvedCompanyId,
+          conciliacaoId: row.id,
+        }),
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+
+      setItens((prev) => prev.filter((item) => item.id !== row.id));
+      setComissaoDrafts((prev) => {
+        const next = { ...prev };
+        delete next[row.id];
+        return next;
+      });
+      setRankingVendedorDrafts((prev) => {
+        const next = { ...prev };
+        delete next[row.id];
+        return next;
+      });
+      setRankingProdutoDrafts((prev) => {
+        const next = { ...prev };
+        delete next[row.id];
+        return next;
+      });
+      setEditableRows((prev) => {
+        const next = { ...prev };
+        delete next[row.id];
+        return next;
+      });
+
+      await carregarResumo();
+      await carregarAlteracoes();
+      showToast("Recibo excluido da conciliacao.", "success");
+    } catch (e: any) {
+      console.error(e);
+      showToast(e?.message || "Erro ao excluir recibo da conciliacao.", "error");
+    } finally {
+      setDeletingItemId(null);
+    }
   }
 
   async function onPickFile(file: File | null) {
@@ -1059,6 +1196,7 @@ export default function ConciliacaoIsland() {
       const resp = await fetch(`/api/v1/conciliacao/changes?${qs.toString()}`, {
         method: "GET",
         credentials: "same-origin",
+        cache: "no-store",
       });
       if (!resp.ok) throw new Error(await resp.text());
       const json = (await resp.json()) as any[];
@@ -2120,6 +2258,7 @@ export default function ConciliacaoIsland() {
                   <th>Diff total</th>
                   <th>Diff taxas</th>
                   <th>Conciliado</th>
+                  <th className="th-actions">Ações</th>
                 </tr>
               }
               loading={loadingLista}
@@ -2134,11 +2273,16 @@ export default function ConciliacaoIsland() {
                   }
                 />
               }
-              colSpan={18}
+              colSpan={19}
               className="table-header-green table-mobile-cards min-w-[2040px]"
             >
               {itens.map((row) => (
                 <tr key={row.id}>
+                  {(() => {
+                    const rowLocked = isRowLocked(row);
+                    const rowSaving = savingAssignmentId === row.id;
+                    return (
+                      <>
                   <td data-label="Data">{formatDate(row.movimento_data)}</td>
                   <td data-label="Documento">{row.documento}</td>
                   <td data-label="Status">{row.status}</td>
@@ -2146,14 +2290,9 @@ export default function ConciliacaoIsland() {
                   <td data-label="Vendedor ranking">
                     <select
                       className="form-select"
-                      value={row.ranking_vendedor_id || ""}
-                      disabled={loadingOptions || savingAssignmentId === row.id}
-                      onChange={(e) =>
-                        salvarAtribuicaoRanking(row, {
-                          rankingVendedorId: e.target.value || null,
-                          rankingProdutoId: row.ranking_produto_id || null,
-                        })
-                      }
+                      value={rankingVendedorDrafts[row.id] ?? row.ranking_vendedor_id ?? ""}
+                      disabled={loadingOptions || rowSaving || rowLocked}
+                      onChange={(e) => updateRankingVendedorDraft(row.id, e.target.value)}
                     >
                       <option value="">Selecione...</option>
                       {rankingAssignees.map((opt) => (
@@ -2170,13 +2309,9 @@ export default function ConciliacaoIsland() {
                     ) : produtoMetaUnico ? (
                       <select
                         className="form-select"
-                        value={row.ranking_produto_id === produtoMetaUnico.id ? produtoMetaUnico.id : ""}
-                        disabled={loadingOptions || savingAssignmentId === row.id}
-                        onChange={(e) =>
-                          salvarAtribuicaoRanking(row, {
-                            rankingProdutoId: e.target.value || null,
-                          })
-                        }
+                        value={(rankingProdutoDrafts[row.id] ?? row.ranking_produto_id ?? "") === produtoMetaUnico.id ? produtoMetaUnico.id : ""}
+                        disabled={loadingOptions || rowSaving || rowLocked}
+                        onChange={(e) => updateRankingProdutoDraft(row.id, e.target.value)}
                       >
                         <option value="">Nao</option>
                         <option value={produtoMetaUnico.id}>Sim ({produtoMetaUnico.nome})</option>
@@ -2184,13 +2319,9 @@ export default function ConciliacaoIsland() {
                     ) : (
                       <select
                         className="form-select"
-                        value={row.ranking_produto_id || ""}
-                        disabled={loadingOptions || savingAssignmentId === row.id}
-                        onChange={(e) =>
-                          salvarAtribuicaoRanking(row, {
-                            rankingProdutoId: e.target.value || null,
-                          })
-                        }
+                        value={rankingProdutoDrafts[row.id] ?? row.ranking_produto_id ?? ""}
+                        disabled={loadingOptions || rowSaving || rowLocked}
+                        onChange={(e) => updateRankingProdutoDraft(row.id, e.target.value)}
                       >
                         <option value="">Nao</option>
                         {rankingProdutosMeta.map((opt) => (
@@ -2206,22 +2337,7 @@ export default function ConciliacaoIsland() {
                   <td data-label="Descontos">{formatMoney(row.valor_descontos)}</td>
                   <td data-label="Abatimentos">{formatMoney(row.valor_abatimentos)}</td>
                   <td data-label="Venda real">{formatMoney(row.valor_venda_real)}</td>
-                  <td data-label="Comissão loja">
-                    <input
-                      className="form-control"
-                      value={comissaoDrafts[row.id] ?? formatMoney(row.valor_comissao_loja)}
-                      disabled={savingAssignmentId === row.id}
-                      onFocus={(e) => e.currentTarget.select()}
-                      onChange={(e) => updateComissaoDraft(row.id, e.target.value)}
-                      onBlur={() => confirmarEdicaoComissao(row)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          confirmarEdicaoComissao(row);
-                        }
-                      }}
-                    />
-                  </td>
+                  <td data-label="Comissão loja">{formatMoney(row.valor_comissao_loja)}</td>
                   <td data-label="% loja">
                     {row.percentual_comissao_loja != null
                       ? `${Number(row.percentual_comissao_loja).toLocaleString("pt-BR", {
@@ -2235,6 +2351,58 @@ export default function ConciliacaoIsland() {
                   <td data-label="Diff total">{formatMoney(row.diff_total)}</td>
                   <td data-label="Diff taxas">{formatMoney(row.diff_taxas)}</td>
                   <td data-label="Conciliado">{row.conciliado ? "Sim" : "Nao"}</td>
+                  <td className="th-actions" data-label="Ações">
+                    <div className="action-buttons vtur-table-actions">
+                      {rowLocked ? (
+                        <AppButton
+                          type="button"
+                          variant="ghost"
+                          className="btn-icon vtur-table-action"
+                          icon="pi pi-pencil"
+                          title="Editar"
+                          aria-label="Editar"
+                          disabled={rowSaving || deletingItemId === row.id}
+                          onClick={() => habilitarEdicaoLinha(row.id)}
+                        />
+                      ) : (
+                        <AppButton
+                          type="button"
+                          variant="ghost"
+                          className="btn-icon vtur-table-action"
+                          icon={rowSaving ? "pi pi-spin pi-spinner" : "pi pi-save"}
+                          title={rowSaving ? "Salvando" : "Salvar"}
+                          aria-label={rowSaving ? "Salvando" : "Salvar"}
+                          disabled={rowSaving || deletingItemId === row.id}
+                          onClick={() => salvarLinha(row)}
+                        />
+                      )}
+                      <AppButton
+                        type="button"
+                        variant="danger"
+                        className="btn-icon vtur-table-action"
+                        icon={deletingItemId === row.id ? "pi pi-spin pi-spinner" : "pi pi-trash"}
+                        title={
+                          row.conciliado
+                            ? "Excluir desabilitado para recibos conciliados"
+                            : deletingItemId === row.id
+                              ? "Excluindo"
+                              : "Excluir"
+                        }
+                        aria-label={
+                          row.conciliado
+                            ? "Excluir desabilitado para recibos conciliados"
+                            : deletingItemId === row.id
+                              ? "Excluindo"
+                              : "Excluir"
+                        }
+                        disabled={row.conciliado || rowSaving || deletingItemId === row.id}
+                        onClick={() => excluirLinha(row)}
+                      />
+                    </div>
+                  </td>
+                      </>
+                    );
+                  })()}
                 </tr>
               ))}
             </DataTable>

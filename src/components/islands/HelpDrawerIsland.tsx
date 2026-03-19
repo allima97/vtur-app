@@ -221,8 +221,15 @@ export default function HelpDrawerIsland() {
 
   return (
     <>
-      <AppButton type="button" variant="primary" className="help-fab" onClick={() => setOpen(true)}>
-        Precisa de ajuda?
+      <AppButton
+        type="button"
+        variant="primary"
+        className="help-fab"
+        onClick={() => setOpen(true)}
+        aria-label="Abrir ajuda"
+        title="Abrir ajuda"
+      >
+        ?
       </AppButton>
       {open && (
         <div className="help-drawer">

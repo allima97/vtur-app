@@ -984,7 +984,27 @@ function DashboardGestorIslandInner() {
 
   // A API já entrega agrupado por venda (data_fim = retorno real do cliente).
   const followUpsRecentes = useMemo(() => {
-    return followUps
+    const grupos = new Map<string, FollowUpVenda>();
+    followUps.forEach((item) => {
+      const key = item.venda_id || item.venda?.clientes?.id || item.id;
+      const existente = grupos.get(key);
+      if (!existente) {
+        grupos.set(key, { ...item });
+        return;
+      }
+      if (item.data_inicio && (!existente.data_inicio || item.data_inicio < existente.data_inicio)) {
+        existente.data_inicio = item.data_inicio;
+      }
+      if (item.data_fim && (!existente.data_fim || item.data_fim > existente.data_fim)) {
+        const dataInicio = existente.data_inicio;
+        Object.assign(existente, item);
+        existente.data_inicio = dataInicio;
+      }
+      existente.follow_up_fechado =
+        existente.follow_up_fechado === true && item.follow_up_fechado === true;
+    });
+
+    return Array.from(grupos.values())
       .filter((item) => item.follow_up_fechado !== true)
       .filter((item) => {
         const cliente = String(item.venda?.clientes?.nome || "").trim();
@@ -1008,13 +1028,18 @@ function DashboardGestorIslandInner() {
         const key = v.venda_id || v.id;
         const existing = seen.get(key);
         if (!existing) {
-          seen.set(key, v);
+          seen.set(key, { ...v });
           return;
         }
-        // Mantém a viagem com maior data_fim (recibo principal)
-        if ((v.data_fim || "") > (existing.data_fim || "")) {
-          seen.set(key, v);
+        if (v.data_inicio && (!existing.data_inicio || v.data_inicio < existing.data_inicio)) {
+          existing.data_inicio = v.data_inicio;
+          existing.destino = existing.destino || v.destino;
+          existing.clientes = existing.clientes || v.clientes;
         }
+        if ((v.data_fim || "") > (existing.data_fim || "")) {
+          existing.data_fim = v.data_fim;
+        }
+        existing.status = existing.status || v.status;
       });
     return Array.from(seen.values())
       .sort((a, b) => (a.data_inicio || "").localeCompare(b.data_inicio || ""))

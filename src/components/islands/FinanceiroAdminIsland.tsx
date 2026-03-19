@@ -407,10 +407,9 @@ const FinanceiroAdminIsland: React.FC = () => {
                       </AppButton>
                       <AppButton
                         type="button"
-                        variant="secondary"
+                        variant="primary"
                         onClick={() => atualizarStatus(r, "active")}
                         disabled={r.status === "active"}
-                        style={{ color: statusColors.active }}
                         title="Ativar cobrança"
                         aria-label="Ativar cobrança"
                       >
@@ -421,7 +420,6 @@ const FinanceiroAdminIsland: React.FC = () => {
                         variant="secondary"
                         onClick={() => atualizarStatus(r, "past_due")}
                         disabled={r.status === "past_due"}
-                        style={{ color: statusColors.past_due }}
                         title="Marcar cobrança em atraso"
                         aria-label="Marcar cobrança em atraso"
                       >
@@ -429,10 +427,9 @@ const FinanceiroAdminIsland: React.FC = () => {
                       </AppButton>
                       <AppButton
                         type="button"
-                        variant="secondary"
+                        variant="danger"
                         onClick={() => atualizarStatus(r, "suspended")}
                         disabled={r.status === "suspended"}
-                        style={{ color: statusColors.suspended }}
                         title="Suspender cobrança"
                         aria-label="Suspender cobrança"
                       >

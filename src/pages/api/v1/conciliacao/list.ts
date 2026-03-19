@@ -5,6 +5,110 @@ import {
   requireModuloLevel,
   resolveCompanyId,
 } from "../vendas/_utils";
+import { buildConciliacaoMetrics } from "../../../../lib/conciliacao/business";
+
+function normalizeStatus(value?: string | null) {
+  return String(value || "").trim().toUpperCase() || "OUTRO";
+}
+
+function rankDuplicateRow(row: any) {
+  const metrics = buildConciliacaoMetrics({
+    descricao: row?.descricao,
+    valorLancamentos: row?.valor_lancamentos,
+    valorTaxas: row?.valor_taxas,
+    valorDescontos: row?.valor_descontos,
+    valorAbatimentos: row?.valor_abatimentos,
+    valorSaldo: row?.valor_saldo,
+    valorOpfax: row?.valor_opfax,
+    valorCalculadaLoja: row?.valor_calculada_loja,
+    valorVisaoMaster: row?.valor_visao_master,
+    valorComissaoLoja: row?.valor_comissao_loja,
+    percentualComissaoLoja: row?.percentual_comissao_loja,
+  });
+  const percentual = Number(metrics.percentualComissaoLoja ?? 0);
+  const comissao = Number(metrics.valorComissaoLoja ?? 0);
+  const updatedAt = Date.parse(String(row?.updated_at || row?.created_at || ""));
+
+  let score = 0;
+  if (Number.isFinite(percentual) && percentual > 0) score += 4;
+  if (Number.isFinite(comissao) && Math.abs(comissao) > 0.009) score += 3;
+  if (row?.conciliado) score += 2;
+  if (row?.venda_id || row?.venda_recibo_id) score += 1;
+
+  return {
+    score,
+    updatedAt: Number.isFinite(updatedAt) ? updatedAt : 0,
+  };
+}
+
+function dedupeConciliacaoRows(rows: any[]) {
+  const grouped = new Map<string, any[]>();
+
+  for (const row of rows) {
+    const key = [
+      String(row?.company_id || "").trim(),
+      String(row?.movimento_data || "").trim(),
+      String(row?.documento || "").trim(),
+      normalizeStatus(row?.status),
+    ].join("::");
+    const bucket = grouped.get(key) || [];
+    bucket.push(row);
+    grouped.set(key, bucket);
+  }
+
+  return Array.from(grouped.values()).map((bucket) => {
+    if (bucket.length === 1) return bucket[0];
+
+    return [...bucket].sort((left, right) => {
+      const leftRank = rankDuplicateRow(left);
+      const rightRank = rankDuplicateRow(right);
+      if (rightRank.score !== leftRank.score) return rightRank.score - leftRank.score;
+      return rightRank.updatedAt - leftRank.updatedAt;
+    })[0];
+  });
+}
+
+function normalizeComputedFields(row: any) {
+  const metrics = buildConciliacaoMetrics({
+    descricao: row?.descricao,
+    valorLancamentos: row?.valor_lancamentos,
+    valorTaxas: row?.valor_taxas,
+    valorDescontos: row?.valor_descontos,
+    valorAbatimentos: row?.valor_abatimentos,
+    valorSaldo: row?.valor_saldo,
+    valorOpfax: row?.valor_opfax,
+    valorCalculadaLoja: row?.valor_calculada_loja,
+    valorVisaoMaster: row?.valor_visao_master,
+    valorComissaoLoja: row?.valor_comissao_loja,
+    percentualComissaoLoja: row?.percentual_comissao_loja,
+  });
+
+  const percentualAtual = Number(row?.percentual_comissao_loja ?? 0);
+  const comissaoAtual = Number(row?.valor_comissao_loja ?? 0);
+  const precisaRecalcular =
+    (
+      Math.abs(Number(row?.valor_saldo ?? 0)) > 0.009 ||
+      Math.abs(Number(row?.valor_calculada_loja ?? 0)) > 0.009 ||
+      Math.abs(Number(row?.valor_visao_master ?? 0)) > 0.009
+    ) &&
+    (
+      !Number.isFinite(percentualAtual) ||
+      percentualAtual <= 0 ||
+      !Number.isFinite(comissaoAtual) ||
+      Math.abs(comissaoAtual) <= 0.009
+    );
+
+  if (!precisaRecalcular) return row;
+
+  return {
+    ...row,
+    valor_venda_real: metrics.valorVendaReal,
+    valor_comissao_loja: metrics.valorComissaoLoja,
+    percentual_comissao_loja: metrics.percentualComissaoLoja,
+    faixa_comissao: metrics.faixaComissao,
+    is_seguro_viagem: metrics.isSeguroViagem,
+  };
+}
 
 export const GET: APIRoute = async ({ request }) => {
   try {
@@ -63,7 +167,7 @@ export const GET: APIRoute = async ({ request }) => {
     const { data, error } = await query;
     if (error) throw error;
 
-    let rows = Array.isArray(data) ? data : [];
+    let rows = dedupeConciliacaoRows(Array.isArray(data) ? data : []).map(normalizeComputedFields);
     if (rankingStatus === "pending") {
       rows = rows.filter((row: any) => {
         const status = String(row?.status || "").toUpperCase();

@@ -139,6 +139,7 @@ function buildMfaSetupRedirectUrl(url: URL) {
 export const onRequest = defineMiddleware(async (context, next) => {
   const { url } = context;
   const pathname = url.pathname;
+  const isApiRequest = pathname.startsWith("/api/");
 
   const protoHeader = String(context.request.headers.get("x-forwarded-proto") || "").toLowerCase();
   const isHttps = url.protocol === "https:" || protoHeader === "https";
@@ -186,8 +187,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const isPublic = rotasPublicas.some((r) => pathname.startsWith(r));
 
-  // Rotas públicas e assets não precisam de sessão (evita set-cookie após response).
-  if (isPublic) return await nextMutable();
+  // Rotas públicas, assets e APIs seguem direto.
+  // As APIs já fazem sua própria validação de sessão/permissão e devem responder 401/403,
+  // não HTML de redirect, para evitar erros de parse no client.
+  if (isPublic || isApiRequest) return await nextMutable();
 
   if (!supabaseUrl || !supabaseAnonKey) {
     console.error(
