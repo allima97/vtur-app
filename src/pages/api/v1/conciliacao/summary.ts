@@ -5,6 +5,7 @@ import {
   requireModuloLevel,
   resolveCompanyId,
 } from "../vendas/_utils";
+import { isConciliacaoEfetivada } from "../../../../lib/conciliacao/business";
 
 function startOfMonth(value: string) {
   return `${value}-01`;
@@ -27,17 +28,19 @@ function buildDateSeries(inicio: string, fim: string) {
   return out;
 }
 
-function isOperacionalStatus(status?: string | null) {
-  const raw = String(status || "").toUpperCase();
-  return raw === "BAIXA";
+function isOperacionalStatus(row: any) {
+  return isConciliacaoEfetivada({
+    status: row?.status,
+    descricao: row?.descricao,
+  });
 }
 
 function isPendingConciliacao(row: any) {
-  return isOperacionalStatus(row?.status) && !Boolean(row?.conciliado);
+  return isOperacionalStatus(row) && !Boolean(row?.conciliado);
 }
 
 function isRankingPending(row: any) {
-  if (!isOperacionalStatus(row?.status)) return false;
+  if (!isOperacionalStatus(row)) return false;
   const vendaId = String(row?.venda_id || "").trim();
   const rankingVendedorId = String(row?.ranking_vendedor_id || "").trim();
   return !vendaId && !rankingVendedorId;
@@ -50,7 +53,7 @@ async function fetchResumoRows(client: any, companyId: string, historyStart: str
   for (let offset = 0; offset < 50000; offset += pageSize) {
     const { data, error } = await client
       .from("conciliacao_recibos")
-      .select("id, movimento_data, status, conciliado, venda_id, ranking_vendedor_id")
+      .select("id, movimento_data, status, descricao, conciliado, venda_id, ranking_vendedor_id")
       .eq("company_id", companyId)
       .gte("movimento_data", historyStart)
       .order("movimento_data", { ascending: false })
@@ -105,17 +108,6 @@ export const GET: APIRoute = async ({ request }) => {
     const today = now.toISOString().slice(0, 10);
 
     const rows = await fetchResumoRows(client, companyId, historyStart);
-    const totals = {
-      importados: rows.length,
-      conciliadosSistema: rows.filter((row: any) => Boolean(row?.conciliado)).length,
-      pendentesConciliacao: rows.filter((row: any) => isPendingConciliacao(row)).length,
-      pendentesImportacao: 0,
-      pendentesRanking: rows.filter((row: any) => isRankingPending(row)).length,
-      encontradosSistema: rows.filter((row: any) => Boolean(String(row?.venda_id || "").trim())).length,
-      atribuidosRanking: rows.filter(
-        (row: any) => !String(row?.venda_id || "").trim() && Boolean(String(row?.ranking_vendedor_id || "").trim())
-      ).length,
-    };
 
     const byMonthMap = new Map<string, any>();
     const byDayMap = new Map<string, any>();
@@ -132,13 +124,17 @@ export const GET: APIRoute = async ({ request }) => {
         pendentesImportacao: 0,
         pendentesRanking: 0,
         atribuidosRanking: 0,
+        encontradosSistema: 0,
         hasBaixa: false,
       };
       monthBucket.total += 1;
-      if (isOperacionalStatus(row?.status)) monthBucket.hasBaixa = true;
+      if (isOperacionalStatus(row)) monthBucket.hasBaixa = true;
       if (row?.conciliado) monthBucket.conciliadosSistema += 1;
       if (isPendingConciliacao(row)) monthBucket.pendentesConciliacao += 1;
       if (isRankingPending(row)) monthBucket.pendentesRanking += 1;
+      if (String(row?.venda_id || "").trim()) {
+        monthBucket.encontradosSistema += 1;
+      }
       if (!String(row?.venda_id || "").trim() && String(row?.ranking_vendedor_id || "").trim()) {
         monthBucket.atribuidosRanking += 1;
       }
@@ -153,11 +149,12 @@ export const GET: APIRoute = async ({ request }) => {
           pendentesImportacao: 0,
           pendentesRanking: 0,
           atribuidosRanking: 0,
+          encontradosSistema: 0,
           status: "OK",
           hasBaixa: false,
         };
         dayBucket.total += 1;
-        if (isOperacionalStatus(row?.status)) dayBucket.hasBaixa = true;
+        if (isOperacionalStatus(row)) dayBucket.hasBaixa = true;
         if (row?.conciliado) dayBucket.conciliadosSistema += 1;
         if (isPendingConciliacao(row)) dayBucket.pendentesConciliacao += 1;
         if (isRankingPending(row)) dayBucket.pendentesRanking += 1;
@@ -184,7 +181,6 @@ export const GET: APIRoute = async ({ request }) => {
           atribuidosRanking: 0,
           status: "IMPORTACAO_PENDENTE",
         });
-        totals.pendentesImportacao += 1;
         const monthBucket = byMonthMap.get(selectedMonth) || {
           month: selectedMonth,
           total: 0,
@@ -193,6 +189,7 @@ export const GET: APIRoute = async ({ request }) => {
           pendentesImportacao: 0,
           pendentesRanking: 0,
           atribuidosRanking: 0,
+          encontradosSistema: 0,
         };
         monthBucket.pendentesImportacao += 1;
         byMonthMap.set(selectedMonth, monthBucket);
@@ -202,7 +199,6 @@ export const GET: APIRoute = async ({ request }) => {
       if (!existing.hasBaixa) {
         existing.pendentesImportacao = 1;
         existing.status = "IMPORTACAO_PENDENTE";
-        totals.pendentesImportacao += 1;
         const monthBucket = byMonthMap.get(selectedMonth) || {
           month: selectedMonth,
           total: 0,
@@ -211,6 +207,7 @@ export const GET: APIRoute = async ({ request }) => {
           pendentesImportacao: 0,
           pendentesRanking: 0,
           atribuidosRanking: 0,
+          encontradosSistema: 0,
           hasBaixa: false,
         };
         monthBucket.pendentesImportacao += 1;
@@ -221,6 +218,28 @@ export const GET: APIRoute = async ({ request }) => {
       }
       byDayMap.set(date, existing);
     });
+
+    const selectedMonthBucket = byMonthMap.get(selectedMonth) || {
+      month: selectedMonth,
+      total: 0,
+      conciliadosSistema: 0,
+      pendentesConciliacao: 0,
+      pendentesImportacao: 0,
+      pendentesRanking: 0,
+      atribuidosRanking: 0,
+      encontradosSistema: 0,
+      hasBaixa: false,
+    };
+
+    const totals = {
+      importados: selectedMonthBucket.total,
+      conciliadosSistema: selectedMonthBucket.conciliadosSistema,
+      pendentesConciliacao: selectedMonthBucket.pendentesConciliacao,
+      pendentesImportacao: selectedMonthBucket.pendentesImportacao,
+      pendentesRanking: selectedMonthBucket.pendentesRanking,
+      encontradosSistema: selectedMonthBucket.encontradosSistema,
+      atribuidosRanking: selectedMonthBucket.atribuidosRanking,
+    };
 
     const byMonth = Array.from(byMonthMap.values()).sort((a, b) => b.month.localeCompare(a.month));
     const byDay = Array.from(byDayMap.values()).sort((a, b) => b.date.localeCompare(a.date));

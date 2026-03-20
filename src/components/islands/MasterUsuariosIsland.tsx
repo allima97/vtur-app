@@ -83,6 +83,7 @@ export default function MasterUsuariosIsland() {
   const [resetandoMfaId, setResetandoMfaId] = useState<string | null>(null);
   const [mfaStatuses, setMfaStatuses] = useState<MfaStatusMap>({});
   const [mfaLoading, setMfaLoading] = useState(false);
+  const [mfaAvailable, setMfaAvailable] = useState(true);
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [novoNomeCompleto, setNovoNomeCompleto] = useState("");
@@ -232,7 +233,7 @@ export default function MasterUsuariosIsland() {
 
   async function carregarMfaStatuses(userIds: string[]) {
     const ids = Array.from(new Set(userIds.filter(Boolean)));
-    if (ids.length === 0) {
+    if (!mfaAvailable || ids.length === 0) {
       setMfaStatuses({});
       return;
     }
@@ -248,6 +249,12 @@ export default function MasterUsuariosIsland() {
       if (!resp.ok) {
         throw new Error(payload?.error || raw || "Falha ao carregar status do 2FA.");
       }
+      if (payload?.available === false) {
+        setMfaAvailable(false);
+        setMfaStatuses({});
+        return;
+      }
+      setMfaAvailable(true);
       setMfaStatuses((payload?.statuses || {}) as MfaStatusMap);
     } catch (error) {
       console.error(error);
@@ -383,7 +390,11 @@ export default function MasterUsuariosIsland() {
   const gestoresDisponiveis = useMemo(
     () =>
       usuarios.filter(
-        (u) => u.company_id === empresaEquipeId && isType(u, "GESTOR")
+        (u) =>
+          u.company_id === empresaEquipeId &&
+          u.active &&
+          !u.uso_individual &&
+          isType(u, "GESTOR")
       ),
     [usuarios, empresaEquipeId]
   );
@@ -391,7 +402,11 @@ export default function MasterUsuariosIsland() {
   const vendedoresDisponiveis = useMemo(
     () =>
       usuarios.filter(
-        (u) => u.company_id === empresaEquipeId && isType(u, "VENDEDOR")
+        (u) =>
+          u.company_id === empresaEquipeId &&
+          u.active &&
+          !u.uso_individual &&
+          isType(u, "VENDEDOR")
       ),
     [usuarios, empresaEquipeId]
   );
@@ -500,46 +515,46 @@ export default function MasterUsuariosIsland() {
 
   async function toggleEquipe(vendedorId: string) {
     if (!gestorEquipeId) return;
-    if (gestorEquipeBaseId) {
-      showToast(
-        "Este gestor está usando uma equipe compartilhada. Edite a equipe pelo gestor base.",
-        "warning"
-      );
-      return;
-    }
+    const gestorAlvoId = gestorEquipeBaseId || gestorEquipeId;
     setSalvandoId(vendedorId);
     const ativoAtual = Boolean(relacoes[vendedorId]);
 
     try {
-      if (ativoAtual) {
-        const { error } = await supabase
-          .from("gestor_vendedor")
-          .delete()
-          .eq("gestor_id", gestorEquipeId)
-          .eq("vendedor_id", vendedorId);
-        if (error) throw error;
+      const { data, error } = await supabase.rpc("set_gestor_vendedor_relacao", {
+        p_gestor_id: gestorAlvoId,
+        p_vendedor_id: vendedorId,
+        p_ativo: !ativoAtual,
+      });
+      if (error) throw error;
+      if ((data as any)?.ok === false) {
+        throw new Error(String((data as any)?.error || "Erro ao atualizar equipe."));
+      }
+
+      const returnedIds = Array.isArray((data as any)?.equipe_vendedor_ids)
+        ? ((data as any).equipe_vendedor_ids as unknown[])
+            .map((id) => String(id || "").trim())
+            .filter(Boolean)
+        : null;
+
+      if (returnedIds) {
+        const map: Record<string, boolean> = {};
+        returnedIds.forEach((id) => {
+          map[id] = true;
+        });
+        setRelacoes(map);
+      } else if (ativoAtual) {
         setRelacoes((prev) => {
           const next = { ...prev };
           delete next[vendedorId];
           return next;
         });
-        showToast("Vendedor removido da equipe.", "success");
       } else {
-        await supabase
-          .from("gestor_vendedor")
-          .delete()
-          .eq("gestor_id", gestorEquipeId)
-          .eq("vendedor_id", vendedorId);
-        const { error } = await supabase
-          .from("gestor_vendedor")
-          .insert({ gestor_id: gestorEquipeId, vendedor_id: vendedorId, ativo: true });
-        if (error) throw error;
         setRelacoes((prev) => ({ ...prev, [vendedorId]: true }));
-        showToast("Vendedor adicionado à equipe.", "success");
       }
-    } catch (e) {
+      showToast(ativoAtual ? "Vendedor removido da equipe." : "Vendedor adicionado à equipe.", "success");
+    } catch (e: any) {
       console.error(e);
-      showToast("Erro ao atualizar equipe.", "error");
+      showToast(String(e?.message || "Erro ao atualizar equipe."), "error");
     } finally {
       setSalvandoId(null);
     }
@@ -630,7 +645,9 @@ export default function MasterUsuariosIsland() {
                   <td data-label="Cargo">{u.user_types?.name || "-"}</td>
                   <td data-label="Empresa">{u.companies?.nome_fantasia || "—"}</td>
                   <td data-label="2FA">
-                    {mfaLoading && !mfaStatuses[u.id] ? (
+                    {!mfaAvailable ? (
+                      <span className="text-slate-500">Indisponível</span>
+                    ) : mfaLoading && !mfaStatuses[u.id] ? (
                       <span className="text-slate-500">Carregando...</span>
                     ) : mfaStatuses[u.id]?.enabled ? (
                       <span className="text-emerald-600 font-bold">
@@ -654,9 +671,9 @@ export default function MasterUsuariosIsland() {
                         variant="ghost"
                         className="icon-action-btn"
                         onClick={() => resetarMfa(u)}
-                        disabled={resetandoMfaId === u.id}
-                        title="Resetar 2FA"
-                        aria-label="Resetar 2FA"
+                        disabled={!mfaAvailable || resetandoMfaId === u.id}
+                        title={mfaAvailable ? "Resetar 2FA" : "2FA indisponível sem SUPABASE_SERVICE_ROLE_KEY"}
+                        aria-label={mfaAvailable ? "Resetar 2FA" : "2FA indisponível"}
                       >
                         <span aria-hidden="true">
                           <i className="pi pi-shield" />
@@ -724,12 +741,18 @@ export default function MasterUsuariosIsland() {
         </div>
 
         {gestorEquipeBaseId && (
-          <div className="mt-3">
-            <AlertMessage variant="info">
-              Este gestor está usando uma equipe compartilhada. Para editar vendedores, selecione o gestor base.
-            </AlertMessage>
-          </div>
-        )}
+        <div className="mt-3">
+          <AlertMessage variant="info">
+            Este gestor está usando uma equipe compartilhada. As alterações feitas aqui serão aplicadas na equipe base selecionada.
+          </AlertMessage>
+        </div>
+      )}
+
+        <div className="mt-3">
+          <AlertMessage variant="info">
+            Apenas gestores e vendedores ativos da filial selecionada aparecem para montagem da equipe.
+          </AlertMessage>
+        </div>
 
         <div className="table-container overflow-x-auto mt-3">
           <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
@@ -759,7 +782,7 @@ export default function MasterUsuariosIsland() {
                         <AppButton
                           variant={ativo ? "danger" : "secondary"}
                           onClick={() => toggleEquipe(v.id)}
-                          disabled={!gestorEquipeId || salvandoId === v.id || Boolean(gestorEquipeBaseId)}
+                          disabled={!gestorEquipeId || salvandoId === v.id}
                           title={ativo ? "Remover da equipe" : "Adicionar à equipe"}
                           aria-label={ativo ? "Remover da equipe" : "Adicionar à equipe"}
                         >

@@ -1,3 +1,5 @@
+import { isConciliacaoEfetivada } from "./business";
+
 export type EffectiveConciliacaoReceipt = {
   id: string;
   documento: string;
@@ -109,9 +111,9 @@ export async function fetchEffectiveConciliacaoReceipts(params: {
   for (let offset = 0; offset < 10000; offset += pageSize) {
     const { data, error } = await client
       .from("conciliacao_recibos")
-      .select("documento")
+      .select("documento, status, descricao")
       .eq("company_id", companyId)
-      .in("status", ["BAIXA"] as any)
+      .in("status", ["BAIXA", "OPFAX"] as any)
       .gte("movimento_data", inicio)
       .lte("movimento_data", fim)
       .order("movimento_data", { ascending: false })
@@ -121,6 +123,7 @@ export async function fetchEffectiveConciliacaoReceipts(params: {
 
     const chunk = Array.isArray(data) ? data : [];
     chunk.forEach((row: any) => {
+      if (!isConciliacaoEfetivada({ status: row?.status, descricao: row?.descricao })) return;
       const documento = toStr(row?.documento);
       if (documento) relevantDocs.add(documento);
     });
@@ -247,7 +250,9 @@ export async function fetchEffectiveConciliacaoReceipts(params: {
       const sortedRows = [...rows].sort((a, b) =>
         toStr(a?.movimento_data).localeCompare(toStr(b?.movimento_data))
       );
-      const baixaRows = sortedRows.filter((row) => toStr(row?.status).toUpperCase() === "BAIXA");
+      const baixaRows = sortedRows.filter((row) =>
+        isConciliacaoEfetivada({ status: row?.status, descricao: row?.descricao })
+      );
       const estornoRows = sortedRows.filter((row) => toStr(row?.status).toUpperCase() === "ESTORNO");
       const valuedBaixa = baixaRows.find((row) =>
         isPositive(row?.valor_venda_real) || isPositive(row?.valor_lancamentos)

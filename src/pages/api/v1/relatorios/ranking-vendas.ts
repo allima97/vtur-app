@@ -3,6 +3,7 @@ import { buildAuthClient } from "../vendas/_utils";
 import { supabaseServer } from "../../../../lib/supabaseServer";
 import { kvCache } from "../../../../lib/kvCache";
 import { MODULO_ALIASES } from "../../../../config/modulos";
+import { isConciliacaoEfetivada } from "../../../../lib/conciliacao/business";
 import {
   buildConciliacaoSyntheticVendas,
   filterRecibosCanceladosMesmoMes,
@@ -128,7 +129,7 @@ async function fetchConciliacaoRankingVendas(params: {
   for (let offset = 0; offset < 10000; offset += pageSize) {
     const { data, error } = await dataClient
       .from("conciliacao_recibos")
-      .select("documento")
+      .select("documento, status, descricao")
       .eq("company_id", companyId)
       .in("status", ["BAIXA", "OPFAX"] as any)
       .gte("movimento_data", inicio)
@@ -138,6 +139,7 @@ async function fetchConciliacaoRankingVendas(params: {
     if (error) throw error;
     const chunk = Array.isArray(data) ? data : [];
     chunk.forEach((row: any) => {
+      if (!isConciliacaoEfetivada({ status: row?.status, descricao: row?.descricao })) return;
       const documento = String(row?.documento || "").trim();
       if (documento) relevantDocs.add(documento);
     });
@@ -259,11 +261,14 @@ async function fetchConciliacaoRankingVendas(params: {
       const sortedRows = [...rows].sort((a, b) =>
         String(a?.movimento_data || "").localeCompare(String(b?.movimento_data || ""))
       );
-      const baixaRows = sortedRows.filter((row) => String(row?.status || "").toUpperCase() === "BAIXA");
+      const baixaRows = sortedRows.filter((row) =>
+        isConciliacaoEfetivada({ status: row?.status, descricao: row?.descricao })
+      );
       const confirmed = baixaRows.length > 0;
       const valuedBaixa = baixaRows.find((row) => Number(row?.valor_venda_real || row?.valor_lancamentos || 0) > 0);
       const valuedOpfax = sortedRows.find(
         (row) =>
+          !isConciliacaoEfetivada({ status: row?.status, descricao: row?.descricao }) &&
           String(row?.status || "").toUpperCase() === "OPFAX" &&
           Number(row?.valor_venda_real || row?.valor_lancamentos || 0) > 0
       );
@@ -274,7 +279,9 @@ async function fetchConciliacaoRankingVendas(params: {
         null;
 
       if (!sourceRow) return null;
-      if (!confirmed && String(sourceRow?.status || "").toUpperCase() === "OPFAX") return null;
+      if (!confirmed && !isConciliacaoEfetivada({ status: sourceRow?.status, descricao: sourceRow?.descricao })) {
+        return null;
+      }
 
       const effectiveDate = String(sourceRow?.movimento_data || "").trim();
       if (!effectiveDate || effectiveDate < inicio || effectiveDate > fim) return null;

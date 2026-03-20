@@ -43,13 +43,37 @@ export function normalizeConciliacaoStatus(value?: string | null): ConciliacaoSt
   const raw = normalizeText(value);
   if (!raw) return "OUTRO";
   if (raw.includes("ESTORNO")) return "ESTORNO";
-  if (raw.includes("OPFAX")) return "OPFAX";
   if (raw.includes("BAIXA")) return "BAIXA";
+  if (raw.includes("OPFAX")) return "OPFAX";
   return "OUTRO";
 }
 
 export function inferConciliacaoStatus(descricao?: string | null): ConciliacaoStatus {
   return normalizeConciliacaoStatus(descricao);
+}
+
+export function resolveConciliacaoStatus(params: {
+  status?: string | null;
+  descricao?: string | null;
+}): ConciliacaoStatus {
+  const descricaoStatus = normalizeConciliacaoStatus(params.descricao);
+  if (descricaoStatus !== "OUTRO") return descricaoStatus;
+  return normalizeConciliacaoStatus(params.status);
+}
+
+export function isConciliacaoEfetivada(params: {
+  status?: string | null;
+  descricao?: string | null;
+}) {
+  return resolveConciliacaoStatus(params) === "BAIXA";
+}
+
+export function isConciliacaoImportavel(params: {
+  status?: string | null;
+  descricao?: string | null;
+}) {
+  const status = resolveConciliacaoStatus(params);
+  return status === "BAIXA" || status === "OPFAX" || status === "ESTORNO";
 }
 
 export function calcularValorVendaReal(params: {

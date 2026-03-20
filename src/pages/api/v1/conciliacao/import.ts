@@ -9,6 +9,8 @@ import type { ConciliacaoLinhaInput } from "./_types";
 import { findReciboByNumero, reconcilePendentes } from "./_reconcile";
 import {
   buildConciliacaoMetrics,
+  isConciliacaoEfetivada,
+  isConciliacaoImportavel,
   normalizeConciliacaoStatus,
 } from "../../../../lib/conciliacao/business";
 import {
@@ -18,14 +20,12 @@ import {
 } from "../../../../lib/comissaoUtils";
 import { fetchConciliacaoRankingOptions } from "./_ranking";
 
-function isOperacionalStatus(value?: string | null) {
-  const status = String(value || "").trim().toUpperCase();
-  return status === "BAIXA" || status === "OPFAX" || status === "ESTORNO";
+function isOperacionalStatus(params: { status?: string | null; descricao?: string | null }) {
+  return isConciliacaoImportavel(params);
 }
 
-function requiresRankingAssignment(value?: string | null) {
-  const status = String(value || "").trim().toUpperCase();
-  return status === "BAIXA";
+function requiresRankingAssignment(params: { status?: string | null; descricao?: string | null }) {
+  return isConciliacaoEfetivada(params);
 }
 
 function buildImportKey(params: {
@@ -328,6 +328,7 @@ export const POST: APIRoute = async ({ request }) => {
       origem?: string | null;
       movimentoData?: string | null; // ISO
       linhas?: ConciliacaoLinhaInput[] | null;
+      runReconcile?: boolean | null;
     };
 
     const companyId = resolveCompanyId(scope, body?.companyId || null);
@@ -335,8 +336,8 @@ export const POST: APIRoute = async ({ request }) => {
 
     const origem = String(body?.origem || "").trim() || null;
     const movimentoData = String(body?.movimentoData || "").trim() || null;
-
     const linhas = Array.isArray(body?.linhas) ? body.linhas : [];
+    const runReconcile = Boolean(body?.runReconcile);
     const rankingOptions = await fetchConciliacaoRankingOptions({
       client,
       scope,
@@ -468,7 +469,7 @@ export const POST: APIRoute = async ({ request }) => {
           imported_by: user.id,
         };
       })
-      .filter((row) => row.documento && row.movimento_data && isOperacionalStatus(row.status));
+      .filter((row) => row.documento && row.movimento_data && isOperacionalStatus({ status: row.status, descricao: row.descricao }));
 
     const payload = await Promise.all(
       payloadBase.map(async (row) => {
@@ -497,7 +498,7 @@ export const POST: APIRoute = async ({ request }) => {
     const missingAssigneeDocs = payload
       .filter(
         (row) =>
-          requiresRankingAssignment(row.status) &&
+          requiresRankingAssignment({ status: row.status, descricao: row.descricao }) &&
           !String(row.ranking_vendedor_id || "").trim()
       )
       .map((row) => row.documento)
@@ -660,20 +661,28 @@ export const POST: APIRoute = async ({ request }) => {
       if (insertErr) throw insertErr;
     }
 
-    // Tentativa imediata: conciliar pendentes (inclui as recém importadas)
-    const result = await reconcilePendentes({
-      companyId,
-      limit: 200,
-      actor: "user",
-      actorUserId: user.id,
-      client,
-    });
+    let result = {
+      checked: 0,
+      reconciled: 0,
+      updatedTaxes: 0,
+      stillPending: 0,
+    };
 
-    await syncReciboCancelamentoConciliacao({
-      client,
-      companyId,
-      documentos,
-    });
+    if (runReconcile) {
+      result = await reconcilePendentes({
+        companyId,
+        limit: 200,
+        actor: "user",
+        actorUserId: user.id,
+        client,
+      });
+
+      await syncReciboCancelamentoConciliacao({
+        client,
+        companyId,
+        documentos,
+      });
+    }
 
     return new Response(
       JSON.stringify({

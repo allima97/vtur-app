@@ -13,6 +13,8 @@ import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 import {
   buildConciliacaoMetrics,
   inferConciliacaoStatus,
+  isConciliacaoEfetivada,
+  isConciliacaoImportavel,
   normalizeConciliacaoDescricaoKey,
 } from "../../lib/conciliacao/business";
 
@@ -139,6 +141,19 @@ function currentMonthValue() {
 }
 
 type ConciliacaoSection = "registros" | "resumo" | "importacao" | "alteracoes";
+type ConciliacaoShortcut =
+  | "importados"
+  | "pendentes_conciliacao"
+  | "dias_pendentes_importacao"
+  | "pendentes_ranking"
+  | "conciliados_sistema"
+  | "atribuidos_ranking";
+type ConciliacaoListFilters = {
+  somentePendentes: boolean;
+  monthFilter: string;
+  dayFilter: string;
+  rankingStatusFilter: "all" | "pending" | "assigned" | "system";
+};
 
 type ConciliacaoChange = {
   id: string;
@@ -199,6 +214,34 @@ type LinhaInput = {
   origem?: string | null;
   raw?: any;
 };
+
+type LinhaRodapeImportacao = {
+  label: "SUBTOTAL" | "TOTAL";
+  valor_lancamentos: number | null;
+  valor_taxas: number | null;
+  valor_descontos: number | null;
+  valor_abatimentos: number | null;
+  valor_calculada_loja: number | null;
+  valor_visao_master: number | null;
+  valor_opfax: number | null;
+  valor_saldo: number | null;
+  valor_venda_real: number | null;
+  valor_comissao_loja: number | null;
+  percentual_comissao_loja: number | null;
+};
+
+type ConciliacaoParseResult = {
+  movimentoData: string | null;
+  linhas: LinhaInput[];
+  rodape: LinhaRodapeImportacao[];
+};
+
+type PreviewMoneyField =
+  | "valor_lancamentos"
+  | "valor_taxas"
+  | "valor_descontos"
+  | "valor_abatimentos"
+  | "valor_comissao_loja";
 
 function parsePtBrNumber(value: any): number | null {
   if (typeof value === "number") {
@@ -305,7 +348,38 @@ function enrichLinha(base: LinhaInput): LinhaInput {
   };
 }
 
-function parseConciliacaoTxt(text: string, origem: string): { movimentoData: string | null; linhas: LinhaInput[] } {
+function resolveRodapeImportacaoLabel(...values: Array<string | null | undefined>) {
+  for (const value of values) {
+    const normalized = normalizeConciliacaoDescricaoKey(value);
+    if (normalized === "SUBTOTAL" || normalized === "TOTAL") {
+      return normalized as LinhaRodapeImportacao["label"];
+    }
+  }
+  return null;
+}
+
+function buildRodapeImportacao(base: Omit<LinhaRodapeImportacao, "valor_venda_real" | "valor_comissao_loja" | "percentual_comissao_loja">) {
+  const metrics = buildConciliacaoMetrics({
+    descricao: base.label,
+    valorLancamentos: base.valor_lancamentos,
+    valorTaxas: base.valor_taxas,
+    valorDescontos: base.valor_descontos,
+    valorAbatimentos: base.valor_abatimentos,
+    valorSaldo: base.valor_saldo,
+    valorOpfax: base.valor_opfax,
+    valorCalculadaLoja: base.valor_calculada_loja,
+    valorVisaoMaster: base.valor_visao_master,
+  });
+
+  return {
+    ...base,
+    valor_venda_real: metrics.valorVendaReal,
+    valor_comissao_loja: metrics.valorComissaoLoja,
+    percentual_comissao_loja: metrics.percentualComissaoLoja,
+  } satisfies LinhaRodapeImportacao;
+}
+
+function parseConciliacaoTxt(text: string, origem: string): ConciliacaoParseResult {
   const movimentoData = parseMovimentoDateFromTxt(text);
   const lines = String(text || "")
     .replace(/\r\n?/g, "\n")
@@ -313,17 +387,34 @@ function parseConciliacaoTxt(text: string, origem: string): { movimentoData: str
     .map((l) => l.replace(/\t/g, " "));
 
   const linhas: LinhaInput[] = [];
+  const rodape: LinhaRodapeImportacao[] = [];
 
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
-    if (/^(SUBTOTAL|TOTAL)\b/i.test(trimmed)) continue;
     if (/^DOCUMENTO\b/i.test(trimmed)) continue;
     if (/^CALCULADA\s+TOTAL\b/i.test(trimmed)) continue;
 
-    if (!/^\d{4}-\d{10}\b/.test(trimmed)) continue;
-
     const parts = trimmed.split(/\s{2,}/).filter(Boolean);
+    const footerLabel = resolveRodapeImportacaoLabel(parts[0]);
+    if (footerLabel) {
+      rodape.push(
+        buildRodapeImportacao({
+          label: footerLabel,
+          valor_lancamentos: parsePtBrNumber(parts[1]),
+          valor_taxas: parsePtBrNumber(parts[2]),
+          valor_descontos: parsePtBrNumber(parts[3]),
+          valor_abatimentos: parsePtBrNumber(parts[4]),
+          valor_calculada_loja: parsePtBrNumber(parts[5]),
+          valor_visao_master: parsePtBrNumber(parts[7]),
+          valor_opfax: parsePtBrNumber(parts[10]),
+          valor_saldo: parsePtBrNumber(parts[11]),
+        })
+      );
+      continue;
+    }
+
+    if (!/^\d{4}-\d{10}\b/.test(trimmed)) continue;
     if (parts.length < 4) continue;
 
     const documento = String(parts[0] || "").trim();
@@ -356,10 +447,10 @@ function parseConciliacaoTxt(text: string, origem: string): { movimentoData: str
     }));
   }
 
-  return { movimentoData, linhas };
+  return { movimentoData, linhas, rodape };
 }
 
-async function parseConciliacaoXls(file: File, origem: string): Promise<{ movimentoData: string | null; linhas: LinhaInput[] }> {
+async function parseConciliacaoXls(file: File, origem: string): Promise<ConciliacaoParseResult> {
   const module = await import("xlsx");
   const XLSX = (module as any).default ?? module;
   const arrayBuffer = await file.arrayBuffer();
@@ -388,7 +479,7 @@ async function parseConciliacaoXls(file: File, origem: string): Promise<{ movime
 
   const selectedSheet = sheets.find((entry) => entry.headerIdx >= 0) || null;
   if (!selectedSheet) {
-    return { movimentoData: parseMovimentoDateFromFileName(origem), linhas: [] };
+    return { movimentoData: parseMovimentoDateFromFileName(origem), linhas: [], rodape: [] };
   }
 
   const rows = selectedSheet.rows;
@@ -429,17 +520,35 @@ async function parseConciliacaoXls(file: File, origem: string): Promise<{ movime
   const cSaldo = colIndexAny(["SALDO"], 12);
 
   const linhas: LinhaInput[] = [];
+  const rodape: LinhaRodapeImportacao[] = [];
   const pickNumber = (value: any) => (isLegacyXls ? parseLegacyXlsNumber(value) : parsePtBrNumber(value));
 
   for (let i = headerIdx + 1; i < rows.length; i++) {
     const r = rows[i] || [];
     const doc = String(r[cDocumento] || "").trim();
-    if (!doc) continue;
-    if (/^(SUBTOTAL|TOTAL)\b/i.test(doc)) continue;
-
     const descricao = cDescricao >= 0 ? String(r[cDescricao] || "").trim() : "";
-
+    const footerLabel = resolveRodapeImportacaoLabel(doc, descricao);
     const pick = (idx: number) => (idx >= 0 ? pickNumber(r[idx]) : null);
+
+    if (footerLabel) {
+      rodape.push(
+        buildRodapeImportacao({
+          label: footerLabel,
+          valor_lancamentos: pick(cLanc),
+          valor_taxas: pick(cTaxas),
+          valor_descontos: pick(cDesc),
+          valor_abatimentos: pick(cAbat),
+          valor_calculada_loja: pick(cCalc),
+          valor_visao_master: pick(cVisao),
+          valor_opfax: pick(cOpfax),
+          valor_saldo: pick(cSaldo),
+        })
+      );
+      continue;
+    }
+
+    if (!doc) continue;
+
 
     linhas.push(enrichLinha({
       documento: doc,
@@ -459,7 +568,7 @@ async function parseConciliacaoXls(file: File, origem: string): Promise<{ movime
     }));
   }
 
-  return { movimentoData, linhas };
+  return { movimentoData, linhas, rodape };
 }
 
 function formatMoney(value: number | null | undefined) {
@@ -592,17 +701,58 @@ function formatPendingDayList(dates: string[], limit = 6) {
 }
 
 function linhaEhImportavel(value?: string | null) {
-  const status = String(value || "").trim().toUpperCase();
-  return status === "BAIXA" || status === "OPFAX" || status === "ESTORNO";
+  return isConciliacaoImportavel({ status: value });
 }
 
-function isOperacionalLinha(value?: string | null) {
-  const status = String(value || "").trim().toUpperCase();
-  return status === "BAIXA";
+function isOperacionalLinha(params: { status?: string | null; descricao?: string | null }) {
+  return isConciliacaoEfetivada(params);
 }
 
 function linhaExigeAtribuicaoRanking(linha: LinhaInput) {
-  return isOperacionalLinha(linha.status || linha.descricao || null);
+  return isOperacionalLinha({ status: linha.status, descricao: linha.descricao });
+}
+
+function isLinhaPendenteEmOpfax(params: { status?: string | null; descricao?: string | null }) {
+  const descricaoKey = normalizeConciliacaoDescricaoKey(params.descricao);
+  return (
+    !isConciliacaoEfetivada(params) &&
+    descricaoKey.includes("RECIBO LANCADO EM OPFAX")
+  );
+}
+
+function getLinhaStatusLabel(params: { status?: string | null; descricao?: string | null }) {
+  if (isConciliacaoEfetivada(params)) return "Efetivado";
+  if (isLinhaPendenteEmOpfax(params)) return "Pendente em OPFAX";
+
+  const status = String(params.status || "").trim().toUpperCase();
+  if (status === "ESTORNO") return "Estorno";
+  if (status === "OPFAX") return "OPFAX";
+  return status || "OUTRO";
+}
+
+function getLinhaRankingHint(params: { status?: string | null; descricao?: string | null }) {
+  if (isLinhaPendenteEmOpfax(params)) return "Pendente em OPFAX";
+  if (isConciliacaoEfetivada(params)) return "Aguardando atribuição";
+  if (String(params.status || "").trim().toUpperCase() === "ESTORNO") return "Ignorado";
+  return "Ignorado";
+}
+
+function registroExigeAtribuicaoRanking(item: ConciliacaoItem) {
+  return isOperacionalLinha({ status: item.status, descricao: item.descricao });
+}
+
+function registroTemRankingAtribuido(item: ConciliacaoItem) {
+  return Boolean(String(item.ranking_vendedor_id || "").trim());
+}
+
+function getShortcutTitle(shortcut: ConciliacaoShortcut | null) {
+  if (shortcut === "importados") return "Todos os importados do mês";
+  if (shortcut === "pendentes_conciliacao") return "Pendentes de conciliação";
+  if (shortcut === "dias_pendentes_importacao") return "Dias pendentes de importação";
+  if (shortcut === "pendentes_ranking") return "Pendências de ranking";
+  if (shortcut === "conciliados_sistema") return "Conciliados pelo sistema";
+  if (shortcut === "atribuidos_ranking") return "Atribuídos ao ranking";
+  return "Recorte atual";
 }
 
 export default function ConciliacaoIsland() {
@@ -624,8 +774,12 @@ export default function ConciliacaoIsland() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [parsedLinhas, setParsedLinhas] = useState<LinhaInput[]>([]);
+  const [parsedRodape, setParsedRodape] = useState<LinhaRodapeImportacao[]>([]);
+  const [parsedMoneyDrafts, setParsedMoneyDrafts] = useState<
+    Record<string, Partial<Record<PreviewMoneyField, string>>>
+  >({});
   const [parsedMovimentoData, setParsedMovimentoData] = useState<string | null>(null);
-  const [secaoAtiva, setSecaoAtiva] = useState<ConciliacaoSection>("registros");
+  const [secaoAtiva, setSecaoAtiva] = useState<ConciliacaoSection>("importacao");
 
   const [somentePendentes, setSomentePendentes] = useState(true);
   const [rankingStatusFilter, setRankingStatusFilter] = useState<"all" | "pending" | "assigned" | "system">("pending");
@@ -650,6 +804,7 @@ export default function ConciliacaoIsland() {
   const [rankingAssignees, setRankingAssignees] = useState<RankingAssigneeOption[]>([]);
   const [rankingProdutosMeta, setRankingProdutosMeta] = useState<RankingProdutoOption[]>([]);
   const [showPendingDetails, setShowPendingDetails] = useState(false);
+  const [atalhoAtivo, setAtalhoAtivo] = useState<ConciliacaoShortcut | null>(null);
 
   const [somenteAlteracoesPendentes, setSomenteAlteracoesPendentes] = useState(true);
   const [loadingChanges, setLoadingChanges] = useState(false);
@@ -728,8 +883,9 @@ export default function ConciliacaoIsland() {
     else setLoadingUser(false);
   }, [loadingPerm, podeVer]);
 
-  async function carregarLista() {
-    if (!resolvedCompanyId) {
+  async function carregarLista(overrides?: Partial<ConciliacaoListFilters>) {
+    const companyId = resolvedCompanyId;
+    if (!companyId) {
       setItens([]);
       return;
     }
@@ -738,12 +894,20 @@ export default function ConciliacaoIsland() {
       setLoadingLista(true);
       setErro(null);
 
+      const filtros = {
+        somentePendentes,
+        monthFilter,
+        dayFilter,
+        rankingStatusFilter,
+        ...overrides,
+      };
+
       const qs = new URLSearchParams();
-      qs.set("company_id", resolvedCompanyId);
-      if (somentePendentes) qs.set("pending", "1");
-      if (monthFilter) qs.set("month", monthFilter);
-      if (dayFilter) qs.set("day", dayFilter);
-      if (rankingStatusFilter !== "all") qs.set("ranking_status", rankingStatusFilter);
+      qs.set("company_id", companyId);
+      if (filtros.somentePendentes) qs.set("pending", "1");
+      if (filtros.monthFilter) qs.set("month", filtros.monthFilter);
+      if (filtros.dayFilter) qs.set("day", filtros.dayFilter);
+      if (filtros.rankingStatusFilter !== "all") qs.set("ranking_status", filtros.rankingStatusFilter);
 
       const resp = await fetch(`/api/v1/conciliacao/list?${qs.toString()}`, {
         method: "GET",
@@ -859,16 +1023,49 @@ export default function ConciliacaoIsland() {
     setParsedLinhas((prev) =>
       prev.map((linha, currentIndex) => {
         if (currentIndex !== index) return linha;
-        return {
+        return enrichLinha({
           ...linha,
           ...changes,
-        };
+        });
       })
     );
   }
 
+  function updateParsedMoneyDraft(rowKey: string, field: PreviewMoneyField, raw: string) {
+    setParsedMoneyDrafts((prev) => ({
+      ...prev,
+      [rowKey]: {
+        ...(prev[rowKey] || {}),
+        [field]: raw,
+      },
+    }));
+  }
+
+  function commitParsedMoneyDraft(
+    index: number,
+    rowKey: string,
+    field: PreviewMoneyField,
+    raw: string
+  ) {
+    const parsed = parsePtBrNumber(raw);
+    atualizarLinhaImportada(index, {
+      [field]: parsed,
+    } as Partial<LinhaInput>);
+    updateParsedMoneyDraft(rowKey, field, formatMoney(parsed));
+  }
+
+  function limparImportacao() {
+    setArquivo(null);
+    setParsedLinhas([]);
+    setParsedRodape([]);
+    setParsedMoneyDrafts({});
+    setParsedMovimentoData(null);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
   function abrirImportacao() {
     if (precisaEmpresaMaster) return;
+    setAtalhoAtivo(null);
     setSecaoAtiva("importacao");
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -1139,6 +1336,8 @@ export default function ConciliacaoIsland() {
   async function onPickFile(file: File | null) {
     setArquivo(file);
     setParsedLinhas([]);
+    setParsedRodape([]);
+    setParsedMoneyDrafts({});
     setParsedMovimentoData(null);
 
     if (!file) return;
@@ -1152,10 +1351,12 @@ export default function ConciliacaoIsland() {
         const parsed = parseConciliacaoTxt(text, origem);
         setParsedMovimentoData(parsed.movimentoData);
         setParsedLinhas(parsed.linhas);
+        setParsedRodape(parsed.rodape);
       } else if (ext === "xls" || ext === "xlsx") {
         const parsed = await parseConciliacaoXls(file, origem);
         setParsedMovimentoData(parsed.movimentoData);
         setParsedLinhas(parsed.linhas);
+        setParsedRodape(parsed.rodape);
       } else {
         throw new Error("Formato não suportado. Use TXT ou XLS/XLSX.");
       }
@@ -1166,23 +1367,28 @@ export default function ConciliacaoIsland() {
       showToast(e?.message || "Erro ao ler arquivo.", "error");
       setArquivo(null);
       setParsedLinhas([]);
+      setParsedRodape([]);
+      setParsedMoneyDrafts({});
       setParsedMovimentoData(null);
       if (fileRef.current) fileRef.current.value = "";
     }
   }
 
-  async function importar() {
+  async function salvarImportacao(runReconcile = false) {
+    if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
     if (!resolvedCompanyId) {
       showToast("Selecione uma empresa.", "error");
-      return;
+      return false;
     }
     if (!arquivo) {
       showToast("Selecione um arquivo.", "error");
-      return;
+      return false;
     }
     if (parsedLinhas.length === 0) {
       showToast("Nenhuma linha reconhecida no arquivo.", "error");
-      return;
+      return false;
     }
 
     const linhasImportaveis = parsedLinhas.filter((linha) =>
@@ -1190,7 +1396,7 @@ export default function ConciliacaoIsland() {
     );
     if (linhasImportaveis.length === 0) {
       showToast("O arquivo não possui registros válidos para importar.", "error");
-      return;
+      return false;
     }
 
     try {
@@ -1206,23 +1412,36 @@ export default function ConciliacaoIsland() {
           origem: arquivo.name,
           movimentoData: parsedMovimentoData,
           linhas: linhasImportaveis,
+          runReconcile,
         }),
       });
 
       if (!resp.ok) throw new Error(await resp.text());
       const json = (await resp.json()) as any;
 
-      showToast(
-        `Importado: ${json?.imported || 0}. Checados: ${json?.checked || 0}. Conciliados: ${json?.reconciled || 0}.`,
-        "success"
-      );
+      if (parsedMovimentoData) {
+        setMonthFilter(parsedMovimentoData.slice(0, 7));
+        setDayFilter(parsedMovimentoData);
+      }
+
+      setSecaoAtiva("registros");
 
       await carregarLista();
       await carregarResumo();
       await carregarExecucoes();
+      await carregarAlteracoes();
+
+      showToast(
+        runReconcile
+          ? `Salvo e conciliado. Importados: ${json?.imported || 0}. Conciliados: ${json?.reconciled || 0}.`
+          : `Importação salva. Importados: ${json?.imported || 0}. Agora revise em Registros conciliados e clique em Conciliar quando desejar.`,
+        "success"
+      );
+      return true;
     } catch (e: any) {
       console.error(e);
       showToast(e?.message || "Erro ao importar.", "error");
+      return false;
     } finally {
       setImportando(false);
     }
@@ -1511,6 +1730,18 @@ export default function ConciliacaoIsland() {
     () => changeGroups.reduce((total, group) => total + group.count_pendentes, 0),
     [changeGroups]
   );
+  const registrosEmTela = useMemo(() => {
+    if (atalhoAtivo === "conciliados_sistema") {
+      return itens.filter((item) => item.conciliado);
+    }
+    if (atalhoAtivo === "atribuidos_ranking") {
+      return itens.filter((item) => registroExigeAtribuicaoRanking(item) && registroTemRankingAtribuido(item));
+    }
+    if (atalhoAtivo === "pendentes_ranking") {
+      return itens.filter((item) => registroExigeAtribuicaoRanking(item) && !registroTemRankingAtribuido(item));
+    }
+    return itens;
+  }, [atalhoAtivo, itens]);
   const selectedPendingCount = useMemo(
     () =>
       changeGroups.reduce(
@@ -1544,6 +1775,46 @@ export default function ConciliacaoIsland() {
       ).length,
     [linhasImportaveis]
   );
+  const rodapePreviewImportacao = useMemo(() => {
+    if (parsedRodape.length === 0) return [];
+    if (parsedLinhas.length === 0) return parsedRodape;
+
+    const totais = parsedLinhas.reduce(
+      (acc, linha) => {
+        acc.valor_lancamentos += Number(linha.valor_lancamentos || 0);
+        acc.valor_taxas += Number(linha.valor_taxas || 0);
+        acc.valor_descontos += Number(linha.valor_descontos || 0);
+        acc.valor_abatimentos += Number(linha.valor_abatimentos || 0);
+        acc.valor_venda_real += Number(linha.valor_venda_real || 0);
+        acc.valor_comissao_loja += Number(linha.valor_comissao_loja || 0);
+        return acc;
+      },
+      {
+        valor_lancamentos: 0,
+        valor_taxas: 0,
+        valor_descontos: 0,
+        valor_abatimentos: 0,
+        valor_venda_real: 0,
+        valor_comissao_loja: 0,
+      }
+    );
+
+    const percentual =
+      totais.valor_venda_real > 0
+        ? (totais.valor_comissao_loja / totais.valor_venda_real) * 100
+        : null;
+
+    return parsedRodape.map((item) => ({
+      ...item,
+      valor_lancamentos: totais.valor_lancamentos,
+      valor_taxas: totais.valor_taxas,
+      valor_descontos: totais.valor_descontos,
+      valor_abatimentos: totais.valor_abatimentos,
+      valor_venda_real: totais.valor_venda_real,
+      valor_comissao_loja: totais.valor_comissao_loja,
+      percentual_comissao_loja: percentual,
+    }));
+  }, [parsedLinhas, parsedRodape]);
   useEffect(() => {
     if (!produtoMetaUnico?.id) return;
     setParsedLinhas((prev) =>
@@ -1594,12 +1865,104 @@ export default function ConciliacaoIsland() {
   );
   const resumoTotais = resumo?.totals || {};
   const ultimaExecucao = execucoes[0] || null;
+  const filtrosRapidosAtivos =
+    Boolean(atalhoAtivo) || Boolean(dayFilter) || !somentePendentes || rankingStatusFilter !== "pending";
+  const resumoRegistros = [
+    getShortcutTitle(atalhoAtivo),
+    monthFilter ? formatMonthLabel(monthFilter) : null,
+    dayFilter ? formatDate(dayFilter) : null,
+    `${registrosEmTela.length} registro(s) em tela`,
+  ]
+    .filter(Boolean)
+    .join(" • ");
+
+  function limparAtalhosRegistros() {
+    setAtalhoAtivo(null);
+    setDayFilter("");
+    setSomentePendentes(true);
+    setRankingStatusFilter("pending");
+    setSecaoAtiva("registros");
+    void carregarLista({
+      dayFilter: "",
+      somentePendentes: true,
+      rankingStatusFilter: "pending",
+    });
+  }
+
+  async function abrirAtalho(shortcut: ConciliacaoShortcut) {
+    if (precisaEmpresaMaster) return;
+    setAtalhoAtivo(shortcut);
+
+    if (shortcut === "dias_pendentes_importacao") {
+      setSecaoAtiva("resumo");
+      setDayFilter("");
+      setShowPendingDetails(true);
+      return;
+    }
+
+    let nextFilters: ConciliacaoListFilters = {
+      somentePendentes,
+      monthFilter,
+      dayFilter: "",
+      rankingStatusFilter,
+    };
+
+    setSecaoAtiva("registros");
+    setShowPendingDetails(false);
+
+    if (shortcut === "importados") {
+      nextFilters = {
+        ...nextFilters,
+        dayFilter: "",
+        somentePendentes: false,
+        rankingStatusFilter: "all",
+      };
+    }
+    if (shortcut === "pendentes_conciliacao") {
+      nextFilters = {
+        ...nextFilters,
+        dayFilter: "",
+        somentePendentes: true,
+        rankingStatusFilter: "all",
+      };
+    }
+    if (shortcut === "pendentes_ranking") {
+      nextFilters = {
+        ...nextFilters,
+        dayFilter: "",
+        somentePendentes: false,
+        rankingStatusFilter: "pending",
+      };
+    }
+    if (shortcut === "conciliados_sistema") {
+      nextFilters = {
+        ...nextFilters,
+        dayFilter: "",
+        somentePendentes: false,
+        rankingStatusFilter: "all",
+      };
+    }
+    if (shortcut === "atribuidos_ranking") {
+      nextFilters = {
+        ...nextFilters,
+        dayFilter: "",
+        somentePendentes: false,
+        rankingStatusFilter: "assigned",
+      };
+    }
+
+    setDayFilter(nextFilters.dayFilter);
+    setSomentePendentes(nextFilters.somentePendentes);
+    setRankingStatusFilter(nextFilters.rankingStatusFilter);
+    await carregarLista(nextFilters);
+  }
+
   const navSections: Array<{ id: ConciliacaoSection; label: string; value: string | number; hint: string }> = [
     {
-      id: "registros",
-      label: "Registros",
-      value: pendentesCount,
-      hint: `${conciliadosCount} conciliados no recorte atual`,
+      id: "importacao",
+      label: "Importação",
+      value: parsedLinhas.length,
+      hint: "Importe o arquivo e valide o preview",
     },
     {
       id: "resumo",
@@ -1608,10 +1971,10 @@ export default function ConciliacaoIsland() {
       hint: "Mês, dias pendentes e execuções",
     },
     {
-      id: "importacao",
-      label: "Importação",
-      value: parsedLinhas.length,
-      hint: "Importe o arquivo e valide o preview",
+      id: "registros",
+      label: "Registros",
+      value: pendentesCount,
+      hint: `${conciliadosCount} conciliados no recorte atual`,
     },
     {
       id: "alteracoes",
@@ -1651,36 +2014,17 @@ export default function ConciliacaoIsland() {
         <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
         <AppCard
-          tone="info"
+          tone="config"
           className="mb-3 list-toolbar-sticky"
           title="Conciliacao financeira"
           subtitle={resumoToolbar}
-          actions={
-            <div className="vtur-quote-top-actions">
-              <AppButton
-                type="button"
-                variant="primary"
-                disabled={precisaEmpresaMaster}
-                onClick={abrirImportacao}
-              >
-                Importar arquivo
-              </AppButton>
-              <AppButton
-                type="button"
-                variant="secondary"
-                disabled={importando || conciliando || precisaEmpresaMaster}
-                onClick={conciliarPendentes}
-              >
-                {conciliando ? "Conciliando..." : "Conciliar pendentes"}
-              </AppButton>
-            </div>
-          }
         >
-          <div className="vtur-commission-filters-grid">
+          <div className="vtur-commission-filters-grid vtur-conciliacao-filters-grid">
             {isMaster ? (
               <AppField
                 as="select"
                 label="Empresa"
+                wrapperClassName="vtur-conciliacao-filter-card"
                 value={empresaSelecionada}
                 onChange={(e) => setEmpresaSelecionada(e.target.value)}
                 options={[
@@ -1696,8 +2040,10 @@ export default function ConciliacaoIsland() {
             <AppField
               as="select"
               label="Mês"
+              wrapperClassName="vtur-conciliacao-filter-card"
               value={monthFilter}
               onChange={(e) => {
+                setAtalhoAtivo(null);
                 setMonthFilter(e.target.value);
                 setDayFilter("");
               }}
@@ -1708,8 +2054,12 @@ export default function ConciliacaoIsland() {
             <AppField
               as="select"
               label="Dia"
+              wrapperClassName="vtur-conciliacao-filter-card"
               value={dayFilter || "all"}
-              onChange={(e) => setDayFilter(e.target.value === "all" ? "" : e.target.value)}
+              onChange={(e) => {
+                setAtalhoAtivo(null);
+                setDayFilter(e.target.value === "all" ? "" : e.target.value);
+              }}
               disabled={loadingLista || loadingResumo}
               options={[
                 { label: "Todos do mês", value: "all" },
@@ -1720,8 +2070,12 @@ export default function ConciliacaoIsland() {
             <AppField
               as="select"
               label="Pendência ranking"
+              wrapperClassName="vtur-conciliacao-filter-card"
               value={rankingStatusFilter}
-              onChange={(e) => setRankingStatusFilter(e.target.value as any)}
+              onChange={(e) => {
+                setAtalhoAtivo(null);
+                setRankingStatusFilter(e.target.value as any);
+              }}
               disabled={loadingLista}
               options={[
                 { label: "Pendentes de atribuição", value: "pending" },
@@ -1734,8 +2088,12 @@ export default function ConciliacaoIsland() {
             <AppField
               as="select"
               label="Registros"
+              wrapperClassName="vtur-conciliacao-filter-card"
               value={somentePendentes ? "pendentes" : "todas"}
-              onChange={(e) => setSomentePendentes(e.target.value === "pendentes")}
+              onChange={(e) => {
+                setAtalhoAtivo(null);
+                setSomentePendentes(e.target.value === "pendentes");
+              }}
               disabled={loadingLista}
               options={[
                 { label: "Somente pendentes", value: "pendentes" },
@@ -1743,10 +2101,11 @@ export default function ConciliacaoIsland() {
               ]}
             />
 
-            <div className="vtur-form-actions" style={{ alignItems: "flex-end" }}>
+            <div className="vtur-form-actions vtur-conciliacao-filter-card vtur-conciliacao-filter-action">
               <AppButton
                 type="button"
                 variant="secondary"
+                className="vtur-conciliacao-filter-button"
                 disabled={loadingLista || precisaEmpresaMaster}
                 onClick={carregarLista}
               >
@@ -1756,29 +2115,100 @@ export default function ConciliacaoIsland() {
           </div>
 
           <div className="vtur-quote-summary-grid" style={{ marginTop: 16 }}>
-            <div className="vtur-quote-summary-item">
+            <button
+              type="button"
+              className={`vtur-quote-summary-item vtur-quote-summary-action${atalhoAtivo === "importados" ? " active" : ""}`}
+              disabled={loadingResumo || precisaEmpresaMaster}
+              onClick={() => abrirAtalho("importados")}
+            >
               <span className="vtur-quote-summary-label">Importados</span>
               <strong>{loadingResumo ? "..." : resumoTotais.importados || 0}</strong>
-            </div>
-            <div className="vtur-quote-summary-item">
+            </button>
+            <button
+              type="button"
+              className={`vtur-quote-summary-item vtur-quote-summary-action${atalhoAtivo === "pendentes_conciliacao" ? " active" : ""}`}
+              disabled={loadingResumo || precisaEmpresaMaster}
+              onClick={() => abrirAtalho("pendentes_conciliacao")}
+            >
               <span className="vtur-quote-summary-label">Pendentes conciliação</span>
               <strong>{loadingResumo ? "..." : resumoTotais.pendentesConciliacao || 0}</strong>
-            </div>
-            <div className="vtur-quote-summary-item">
+            </button>
+            <button
+              type="button"
+              className={`vtur-quote-summary-item vtur-quote-summary-action${atalhoAtivo === "dias_pendentes_importacao" ? " active" : ""}`}
+              disabled={loadingResumo || precisaEmpresaMaster}
+              onClick={() => abrirAtalho("dias_pendentes_importacao")}
+            >
               <span className="vtur-quote-summary-label">Dias pendentes importação</span>
               <strong>{loadingResumo ? "..." : resumoTotais.pendentesImportacao || 0}</strong>
-            </div>
-            <div className="vtur-quote-summary-item">
+            </button>
+            <button
+              type="button"
+              className={`vtur-quote-summary-item vtur-quote-summary-action${atalhoAtivo === "pendentes_ranking" ? " active" : ""}`}
+              disabled={loadingResumo || precisaEmpresaMaster}
+              onClick={() => abrirAtalho("pendentes_ranking")}
+            >
               <span className="vtur-quote-summary-label">Pendentes ranking</span>
               <strong>{loadingResumo ? "..." : resumoTotais.pendentesRanking || 0}</strong>
-            </div>
-            <div className="vtur-quote-summary-item">
+            </button>
+            <button
+              type="button"
+              className={`vtur-quote-summary-item vtur-quote-summary-action${atalhoAtivo === "conciliados_sistema" ? " active" : ""}`}
+              disabled={loadingResumo || precisaEmpresaMaster}
+              onClick={() => abrirAtalho("conciliados_sistema")}
+            >
               <span className="vtur-quote-summary-label">Conciliados sist.</span>
               <strong>{loadingResumo ? "..." : resumoTotais.conciliadosSistema || 0}</strong>
-            </div>
-            <div className="vtur-quote-summary-item">
+            </button>
+            <button
+              type="button"
+              className={`vtur-quote-summary-item vtur-quote-summary-action${atalhoAtivo === "atribuidos_ranking" ? " active" : ""}`}
+              disabled={loadingResumo || precisaEmpresaMaster}
+              onClick={() => abrirAtalho("atribuidos_ranking")}
+            >
               <span className="vtur-quote-summary-label">Atribuídos ranking</span>
               <strong>{loadingResumo ? "..." : resumoTotais.atribuidosRanking || 0}</strong>
+            </button>
+          </div>
+
+          <div className="vtur-conciliacao-focus-strip" style={{ marginTop: 16 }}>
+            <div className="vtur-conciliacao-focus-copy">
+              <span className="vtur-quote-summary-label">O que falta fazer</span>
+              <strong>
+                {Number(resumoTotais.pendentesImportacao || 0) > 0
+                  ? `${resumoTotais.pendentesImportacao || 0} dia(s) aguardando importação`
+                  : Number(resumoTotais.pendentesConciliacao || 0) > 0
+                    ? `${resumoTotais.pendentesConciliacao || 0} registro(s) aguardando conciliação`
+                    : Number(resumoTotais.pendentesRanking || 0) > 0
+                      ? `${resumoTotais.pendentesRanking || 0} registro(s) aguardando ranking`
+                      : "Mês organizado: sem pendências críticas no momento"}
+              </strong>
+              <span>
+                {Number(resumoTotais.pendentesImportacao || 0) > 0
+                  ? `Dias: ${formatPendingDayList(diasPendentesImportacao)}`
+                  : Number(resumoTotais.pendentesConciliacao || 0) > 0
+                    ? "Abra os pendentes de conciliação para revisar e use o botão de conciliar na listagem."
+                    : Number(resumoTotais.pendentesRanking || 0) > 0
+                      ? "Abra as pendências de ranking para atribuir o vendedor antes do fechamento."
+                      : "Você pode usar os atalhos acima para revisar importados, conciliados e atribuições."}
+              </span>
+            </div>
+            <div className="vtur-conciliacao-focus-actions">
+              {Number(resumoTotais.pendentesImportacao || 0) > 0 ? (
+                <AppButton type="button" variant="secondary" disabled={precisaEmpresaMaster} onClick={() => abrirAtalho("dias_pendentes_importacao")}>
+                  Ver dias pendentes
+                </AppButton>
+              ) : null}
+              {Number(resumoTotais.pendentesConciliacao || 0) > 0 ? (
+                <AppButton type="button" variant="secondary" disabled={precisaEmpresaMaster} onClick={() => abrirAtalho("pendentes_conciliacao")}>
+                  Ir para conciliação
+                </AppButton>
+              ) : null}
+              {Number(resumoTotais.pendentesRanking || 0) > 0 ? (
+                <AppButton type="button" variant="secondary" disabled={precisaEmpresaMaster} onClick={() => abrirAtalho("pendentes_ranking")}>
+                  Ir para ranking
+                </AppButton>
+              ) : null}
             </div>
           </div>
         </AppCard>
@@ -1792,7 +2222,10 @@ export default function ConciliacaoIsland() {
                 type="button"
                 className={`vtur-conciliacao-nav-card${active ? " active" : ""}`}
                 aria-pressed={active}
-                onClick={() => setSecaoAtiva(section.id)}
+                onClick={() => {
+                  setAtalhoAtivo(null);
+                  setSecaoAtiva(section.id);
+                }}
               >
                 <span className="vtur-quote-summary-label">{section.label}</span>
                 <strong>{section.value}</strong>
@@ -1811,6 +2244,7 @@ export default function ConciliacaoIsland() {
         {secaoAtiva === "resumo" ? (
           <>
             <AppCard
+              tone="config"
               className="mb-3"
               title="Resumo operacional"
               subtitle="Acompanhe pendências por mês e por dia sem carregar a listagem completa de recibos."
@@ -1920,6 +2354,7 @@ export default function ConciliacaoIsland() {
                           title={cell.date ? `${formatDate(cell.date)} • ${getResumoDiaLabel(cell.item)}` : ""}
                           onClick={() => {
                             if (!cell.item?.date) return;
+                            setAtalhoAtivo(null);
                             setDayFilter(cell.item.date);
                             setSecaoAtiva("registros");
                           }}
@@ -2027,6 +2462,7 @@ export default function ConciliacaoIsland() {
                                 type="button"
                                 variant="ghost"
                                 onClick={() => {
+                                  setAtalhoAtivo(null);
                                   setDayFilter(item.date);
                                   setSecaoAtiva("registros");
                                 }}
@@ -2123,13 +2559,26 @@ export default function ConciliacaoIsland() {
 
         {secaoAtiva === "importacao" ? (
           <AppCard
+            tone="config"
             className="mb-3"
             id="conciliacao-importacao"
             title="Importar arquivo da conciliacao"
             subtitle="Carregue TXT, XLS ou XLSX, revise todas as linhas operacionais e atribua o vendedor recibo por recibo antes de importar."
             actions={
               <div className="vtur-import-upload-row">
-                <label className="vtur-import-upload-trigger" htmlFor="conciliacao-upload-input">
+                <label
+                  className={[
+                    "p-button",
+                    "p-component",
+                    "vtur-app-button",
+                    "vtur-app-button-default",
+                    "vtur-import-upload-trigger",
+                    importando || conciliando || precisaEmpresaMaster ? "is-disabled p-disabled" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  htmlFor="conciliacao-upload-input"
+                >
                   Escolher arquivo
                 </label>
                 <input
@@ -2195,7 +2644,7 @@ export default function ConciliacaoIsland() {
               <AlertMessage variant="info" className="mt-3 vtur-conciliacao-inline-alert">
                 <span className="vtur-conciliacao-inline-alert-copy">
                   <span>
-                    A atribuição do vendedor/gestor é obrigatória apenas para recibos efetivados em BAIXA antes da importação.
+                    A atribuição do vendedor/gestor é obrigatória para recibos efetivados, incluindo BAIXA DE OPFAX, antes da importação.
                   </span>
                   <strong className="vtur-conciliacao-inline-alert-emphasis">
                     {`Ainda faltam ${pendentesAtribuicaoImportacao}.`}
@@ -2223,6 +2672,31 @@ export default function ConciliacaoIsland() {
                     <th>% loja</th>
                   </tr>
                 }
+                footer={
+                  rodapePreviewImportacao.length > 0 ? (
+                    <>
+                      {rodapePreviewImportacao.map((item) => (
+                        <tr key={`import-footer-${item.label}`} className="vtur-data-table-footer-row">
+                          <td colSpan={6}>{item.label === "SUBTOTAL" ? "Subtotal" : "Total"}</td>
+                          <td>{formatMoney(item.valor_lancamentos)}</td>
+                          <td>{formatMoney(item.valor_taxas)}</td>
+                          <td>{formatMoney(item.valor_descontos)}</td>
+                          <td>{formatMoney(item.valor_abatimentos)}</td>
+                          <td>{formatMoney(item.valor_venda_real)}</td>
+                          <td>{formatMoney(item.valor_comissao_loja)}</td>
+                          <td>
+                            {item.percentual_comissao_loja != null
+                              ? `${Number(item.percentual_comissao_loja).toLocaleString("pt-BR", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}%`
+                              : "-"}
+                          </td>
+                        </tr>
+                      ))}
+                    </>
+                  ) : null
+                }
                 empty={parsedLinhas.length === 0}
                 emptyMessage={
                   <EmptyState
@@ -2240,7 +2714,9 @@ export default function ConciliacaoIsland() {
                     <tr key={linhaKey}>
                       <td data-label="Data">{formatDate(linha.movimento_data)}</td>
                       <td data-label="Documento">{linha.documento}</td>
-                      <td data-label="Status">{linha.status || "OUTRO"}</td>
+                      <td data-label="Status">
+                        {getLinhaStatusLabel({ status: linha.status, descricao: linha.descricao })}
+                      </td>
                       <td data-label="Descricao">{linha.descricao || "-"}</td>
                       <td data-label="Vendedor ranking">
                         {exigeAtribuicao ? (
@@ -2263,7 +2739,7 @@ export default function ConciliacaoIsland() {
                             ))}
                           </select>
                         ) : (
-                          <span>{linha.status === "OPFAX" ? "Standby (OPFAX)" : "Ignorado"}</span>
+                          <span>{getLinhaRankingHint({ status: linha.status, descricao: linha.descricao })}</span>
                         )}
                       </td>
                       <td data-label="Meta dif.">
@@ -2273,7 +2749,7 @@ export default function ConciliacaoIsland() {
                           <span>-</span>
                         ) : produtoMetaUnico ? (
                           linha.is_seguro_viagem ? (
-                            <span>{`Automático (${produtoMetaUnico.nome})`}</span>
+                            <span>Seguro Viagem</span>
                           ) : (
                             <span>Não</span>
                           )
@@ -2297,12 +2773,59 @@ export default function ConciliacaoIsland() {
                           </select>
                         )}
                       </td>
-                      <td data-label="Lançamentos">{formatMoney(linha.valor_lancamentos)}</td>
-                      <td data-label="Taxas">{formatMoney(linha.valor_taxas)}</td>
-                      <td data-label="Descontos">{formatMoney(linha.valor_descontos)}</td>
-                      <td data-label="Abatimentos">{formatMoney(linha.valor_abatimentos)}</td>
+                      <td data-label="Lançamentos">
+                        <input
+                          className="form-input"
+                          inputMode="decimal"
+                          value={parsedMoneyDrafts[linhaKey]?.valor_lancamentos ?? formatMoney(linha.valor_lancamentos)}
+                          disabled={importando || conciliando}
+                          onChange={(e) => updateParsedMoneyDraft(linhaKey, "valor_lancamentos", e.target.value)}
+                          onBlur={(e) => commitParsedMoneyDraft(index, linhaKey, "valor_lancamentos", e.target.value)}
+                        />
+                      </td>
+                      <td data-label="Taxas">
+                        <input
+                          className="form-input"
+                          inputMode="decimal"
+                          value={parsedMoneyDrafts[linhaKey]?.valor_taxas ?? formatMoney(linha.valor_taxas)}
+                          disabled={importando || conciliando}
+                          onChange={(e) => updateParsedMoneyDraft(linhaKey, "valor_taxas", e.target.value)}
+                          onBlur={(e) => commitParsedMoneyDraft(index, linhaKey, "valor_taxas", e.target.value)}
+                        />
+                      </td>
+                      <td data-label="Descontos">
+                        <input
+                          className="form-input"
+                          inputMode="decimal"
+                          value={parsedMoneyDrafts[linhaKey]?.valor_descontos ?? formatMoney(linha.valor_descontos)}
+                          disabled={importando || conciliando}
+                          onChange={(e) => updateParsedMoneyDraft(linhaKey, "valor_descontos", e.target.value)}
+                          onBlur={(e) => commitParsedMoneyDraft(index, linhaKey, "valor_descontos", e.target.value)}
+                        />
+                      </td>
+                      <td data-label="Abatimentos">
+                        <input
+                          className="form-input"
+                          inputMode="decimal"
+                          value={parsedMoneyDrafts[linhaKey]?.valor_abatimentos ?? formatMoney(linha.valor_abatimentos)}
+                          disabled={importando || conciliando}
+                          onChange={(e) => updateParsedMoneyDraft(linhaKey, "valor_abatimentos", e.target.value)}
+                          onBlur={(e) => commitParsedMoneyDraft(index, linhaKey, "valor_abatimentos", e.target.value)}
+                        />
+                      </td>
                       <td data-label="Venda real">{formatMoney(linha.valor_venda_real)}</td>
-                      <td data-label="Comissão loja">{formatMoney(linha.valor_comissao_loja)}</td>
+                      <td data-label="Comissão loja">
+                        <input
+                          className="form-input"
+                          inputMode="decimal"
+                          value={
+                            parsedMoneyDrafts[linhaKey]?.valor_comissao_loja ?? formatMoney(linha.valor_comissao_loja)
+                          }
+                          disabled={importando || conciliando}
+                          onChange={(e) => updateParsedMoneyDraft(linhaKey, "valor_comissao_loja", e.target.value)}
+                          onBlur={(e) => commitParsedMoneyDraft(index, linhaKey, "valor_comissao_loja", e.target.value)}
+                        />
+                      </td>
                       <td data-label="% loja">
                         {linha.percentual_comissao_loja != null
                           ? `${Number(linha.percentual_comissao_loja).toLocaleString("pt-BR", {
@@ -2316,15 +2839,93 @@ export default function ConciliacaoIsland() {
                 })}
               </DataTable>
             </div>
+
+            <div className="vtur-quote-top-actions mt-3">
+              <AppButton
+                type="button"
+                variant="primary"
+                disabled={importando || conciliando || precisaEmpresaMaster || parsedLinhas.length === 0}
+                onClick={() => {
+                  void salvarImportacao(false);
+                }}
+              >
+                {importando ? "Salvando..." : "Salvar"}
+              </AppButton>
+              <AppButton
+                type="button"
+                variant="secondary"
+                disabled={importando || conciliando || precisaEmpresaMaster || parsedLinhas.length === 0}
+                onClick={() => {
+                  void salvarImportacao(true);
+                }}
+              >
+                {conciliando ? "Conciliando..." : importando ? "Salvando..." : "Conciliar"}
+              </AppButton>
+              <AppButton
+                type="button"
+                variant="secondary"
+                disabled={importando || conciliando || (!arquivo && parsedLinhas.length === 0)}
+                onClick={limparImportacao}
+              >
+                Limpar
+              </AppButton>
+            </div>
+
+            <p className="mt-3 text-sm text-slate-600">
+              Fluxo sugerido: revise os valores, clique em <strong>Salvar</strong> para gravar a importação no sistema
+              sem conciliar, ou em <strong>Conciliar</strong> para salvar e iniciar a conciliação em seguida.
+            </p>
           </AppCard>
         ) : null}
 
         {secaoAtiva === "registros" ? (
           <AppCard
+            tone="config"
             className="mb-3"
             title="Registros conciliados"
             subtitle="Comparativo entre o arquivo importado e os dados do sistema, com atribuição do ranking feita recibo por recibo."
+            actions={
+              <div className="vtur-quote-top-actions">
+                {filtrosRapidosAtivos ? (
+                  <AppButton type="button" variant="secondary" disabled={loadingLista} onClick={limparAtalhosRegistros}>
+                    Limpar filtros
+                  </AppButton>
+                ) : null}
+                <AppButton
+                  type="button"
+                  variant="primary"
+                  disabled={conciliando || precisaEmpresaMaster || Number(resumoTotais.pendentesConciliacao || 0) === 0}
+                  onClick={conciliarPendentes}
+                >
+                  {conciliando ? "Conciliando..." : "Conciliar pendentes"}
+                </AppButton>
+              </div>
+            }
           >
+            <div className="vtur-conciliacao-focus-strip mb-3">
+              <div className="vtur-conciliacao-focus-copy">
+                <span className="vtur-quote-summary-label">Mostrando agora</span>
+                <strong>{resumoRegistros}</strong>
+                <span>
+                  {Number(resumoTotais.pendentesConciliacao || 0) > 0
+                    ? `${resumoTotais.pendentesConciliacao || 0} registro(s) do mês ainda aguardam conciliação.`
+                    : "Nenhuma pendência de conciliação no recorte atual."}
+                </span>
+              </div>
+              <div className="vtur-conciliacao-focus-actions">
+                {dayFilter ? (
+                  <AppButton type="button" variant="ghost" onClick={() => {
+                    setAtalhoAtivo(null);
+                    setDayFilter("");
+                  }}>
+                    Limpar dia
+                  </AppButton>
+                ) : null}
+                <AppButton type="button" variant="secondary" disabled={loadingLista || precisaEmpresaMaster} onClick={carregarLista}>
+                  {loadingLista ? "Atualizando..." : "Atualizar lista"}
+                </AppButton>
+              </div>
+            </div>
             <DataTable
               headers={
                 <tr>
@@ -2350,21 +2951,21 @@ export default function ConciliacaoIsland() {
                 </tr>
               }
               loading={loadingLista}
-              empty={!loadingLista && itens.length === 0}
+              empty={!loadingLista && registrosEmTela.length === 0}
               emptyMessage={
                 <EmptyState
                   title={precisaEmpresaMaster ? "Selecione uma empresa" : "Nenhum registro encontrado"}
                   description={
                     precisaEmpresaMaster
                       ? "Escolha a empresa para liberar a listagem e as acoes da conciliacao."
-                      : "Nao ha registros para o recorte atual. Ajuste os filtros ou importe um novo arquivo."
+                      : "Nao ha registros para o recorte atual. Ajuste os filtros, use os atalhos acima ou importe um novo arquivo."
                   }
                 />
               }
               colSpan={19}
               className="table-header-green table-mobile-cards min-w-[2040px]"
             >
-              {itens.map((row) => (
+              {registrosEmTela.map((row) => (
                 <tr key={row.id}>
                   {(() => {
                     const rowLocked = isRowLocked(row);
@@ -2373,7 +2974,9 @@ export default function ConciliacaoIsland() {
                       <>
                   <td data-label="Data">{formatDate(row.movimento_data)}</td>
                   <td data-label="Documento">{row.documento}</td>
-                  <td data-label="Status">{row.status}</td>
+                  <td data-label="Status">
+                    {getLinhaStatusLabel({ status: row.status, descricao: row.descricao })}
+                  </td>
                   <td data-label="Recibo encontrado">{row.venda_recibo_id ? "Sim" : "Nao"}</td>
                   <td data-label="Vendedor ranking">
                     <select
@@ -2499,6 +3102,7 @@ export default function ConciliacaoIsland() {
 
         {secaoAtiva === "alteracoes" ? (
           <AppCard
+            tone="config"
             className="mb-3"
             title="Historico de alteracoes"
             subtitle="Controle alteracoes de taxas, identifique o autor e reverta ajustes pendentes quando necessario."

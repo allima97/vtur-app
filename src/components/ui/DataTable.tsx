@@ -7,6 +7,7 @@ type DataTableProps = {
   containerStyle?: React.CSSProperties;
   shellClassName?: string;
   headers: React.ReactNode;
+  footer?: React.ReactNode;
   children?: React.ReactNode;
   loading?: boolean;
   loadingMessage?: React.ReactNode;
@@ -21,6 +22,7 @@ export default function DataTable({
   containerStyle,
   shellClassName,
   headers,
+  footer,
   children,
   loading = false,
   loadingMessage = "Carregando...",
@@ -65,6 +67,7 @@ export default function DataTable({
             )}
             {showRows && children}
           </tbody>
+          {showRows && footer ? <tfoot>{footer}</tfoot> : null}
         </table>
       </div>
     </section>

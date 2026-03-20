@@ -1,4 +1,5 @@
 import { supabaseServer, hasServiceRoleKey } from "../../../../lib/supabaseServer";
+import { isConciliacaoEfetivada } from "../../../../lib/conciliacao/business";
 
 const EPS = 0.01;
 
@@ -323,10 +324,10 @@ async function reconcilePendentesCompany(params: {
   let query = dbClient
     .from("conciliacao_recibos")
     .select(
-      "id, company_id, documento, movimento_data, status, valor_lancamentos, valor_taxas, valor_descontos, valor_abatimentos, valor_venda_real, ranking_vendedor_id, conciliado"
+      "id, company_id, documento, movimento_data, status, descricao, valor_lancamentos, valor_taxas, valor_descontos, valor_abatimentos, valor_venda_real, ranking_vendedor_id, conciliado"
     )
     .eq("conciliado", false)
-    .in("status", ["BAIXA"] as any)
+    .in("status", ["BAIXA", "OPFAX"] as any)
     .eq("company_id", companyId)
     .order("movimento_data", { ascending: false })
     .limit(limit);
@@ -338,7 +339,9 @@ async function reconcilePendentesCompany(params: {
   let reconciled = 0;
   let updatedTaxes = 0;
 
-  for (const row of pendentes || []) {
+  for (const row of (pendentes || []).filter((item: any) =>
+    isConciliacaoEfetivada({ status: item?.status, descricao: item?.descricao })
+  )) {
     checked += 1;
     const id = String((row as any).id);
     const cid = String((row as any).company_id);

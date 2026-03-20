@@ -131,8 +131,12 @@ export async function POST({ request }: { request: Request }) {
 
     if (!hasServiceRoleKey) {
       return new Response(
-        JSON.stringify({ error: "SUPABASE_SERVICE_ROLE_KEY ausente no servidor." }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({
+          available: false,
+          reason: "service_role_missing",
+          statuses: {},
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
       );
     }
 
@@ -197,7 +201,7 @@ export async function POST({ request }: { request: Request }) {
       };
     }
 
-    return new Response(JSON.stringify({ statuses }), {
+    return new Response(JSON.stringify({ available: true, statuses }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });

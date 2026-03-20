@@ -5,14 +5,21 @@ import {
   requireModuloLevel,
   resolveCompanyId,
 } from "../vendas/_utils";
-import { buildConciliacaoMetrics } from "../../../../lib/conciliacao/business";
+import {
+  buildConciliacaoMetrics,
+  isConciliacaoEfetivada,
+  resolveConciliacaoStatus,
+} from "../../../../lib/conciliacao/business";
 
 function normalizeStatus(value?: string | null) {
   return String(value || "").trim().toUpperCase() || "OUTRO";
 }
 
-function isRankingEligibleStatus(value?: string | null) {
-  return normalizeStatus(value) === "BAIXA";
+function isRankingEligibleStatus(row: any) {
+  return isConciliacaoEfetivada({
+    status: row?.status,
+    descricao: row?.descricao,
+  });
 }
 
 function rankDuplicateRow(row: any) {
@@ -73,6 +80,10 @@ function dedupeConciliacaoRows(rows: any[]) {
 }
 
 function normalizeComputedFields(row: any) {
+  const statusResolvido = resolveConciliacaoStatus({
+    status: row?.status,
+    descricao: row?.descricao,
+  });
   const metrics = buildConciliacaoMetrics({
     descricao: row?.descricao,
     valorLancamentos: row?.valor_lancamentos,
@@ -102,10 +113,16 @@ function normalizeComputedFields(row: any) {
       Math.abs(comissaoAtual) <= 0.009
     );
 
-  if (!precisaRecalcular) return row;
+  if (!precisaRecalcular) {
+    return {
+      ...row,
+      status: statusResolvido,
+    };
+  }
 
   return {
     ...row,
+    status: statusResolvido,
     valor_venda_real: metrics.valorVendaReal,
     valor_comissao_loja: metrics.valorComissaoLoja,
     percentual_comissao_loja: metrics.percentualComissaoLoja,
@@ -176,11 +193,11 @@ export const GET: APIRoute = async ({ request }) => {
       rows = rows.filter((row: any) => {
         const vendaId = String(row?.venda_id || "").trim();
         const rankingVendedorId = String(row?.ranking_vendedor_id || "").trim();
-        return isRankingEligibleStatus(row?.status) && !vendaId && !rankingVendedorId;
+        return isRankingEligibleStatus(row) && !vendaId && !rankingVendedorId;
       });
     } else if (rankingStatus === "assigned") {
       rows = rows.filter((row: any) => {
-        if (!isRankingEligibleStatus(row?.status)) return false;
+        if (!isRankingEligibleStatus(row)) return false;
         const vendaId = String(row?.venda_id || "").trim();
         const rankingVendedorId = String(row?.ranking_vendedor_id || "").trim();
         return !vendaId && Boolean(rankingVendedorId);
@@ -188,7 +205,7 @@ export const GET: APIRoute = async ({ request }) => {
     } else if (rankingStatus === "system") {
       rows = rows.filter(
         (row: any) =>
-          isRankingEligibleStatus(row?.status) && Boolean(String(row?.venda_id || "").trim())
+          isRankingEligibleStatus(row) && Boolean(String(row?.venda_id || "").trim())
       );
     }
 

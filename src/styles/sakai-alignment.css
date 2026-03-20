@@ -710,6 +710,18 @@ body.sakai-theme .ranking-table tbody td {
   font-weight: 400;
 }
 
+body.sakai-theme .table-default tfoot td,
+body.sakai-theme .vtur-data-table tfoot td,
+body.sakai-theme .ranking-table tfoot td {
+  border-top: 1px solid #e2e8f0;
+  padding: 1rem 1.25rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: #334155;
+  font-weight: 700;
+  background: #f8fafc;
+}
+
 body.sakai-theme :is(.table-default, .vtur-data-table, .ranking-table) tbody td:not(.th-actions):not([colspan]) {
   text-align: left !important;
 }
@@ -744,11 +756,11 @@ body.sakai-theme table:not(.vtur-data-table):not(.table-default):not(.ranking-ta
   }
 }
 
-body.sakai-theme :is(.table-default, .vtur-data-table, .ranking-table) :is(thead th:first-child, tbody td:first-child) {
+body.sakai-theme :is(.table-default, .vtur-data-table, .ranking-table) :is(thead th:first-child, tbody td:first-child, tfoot td:first-child) {
   padding-left: 1.25rem !important;
 }
 
-body.sakai-theme :is(.table-default, .vtur-data-table, .ranking-table) :is(thead th:last-child, tbody td:last-child) {
+body.sakai-theme :is(.table-default, .vtur-data-table, .ranking-table) :is(thead th:last-child, tbody td:last-child, tfoot td:last-child) {
   padding-right: 1.25rem !important;
 }
 

@@ -15,6 +15,7 @@ type UsuarioRow = {
   id: string;
   nome_completo: string | null;
   email: string | null;
+  active?: boolean | null;
   uso_individual: boolean;
   company_id: string | null;
   user_types?: { name: string | null } | null;
@@ -170,7 +171,7 @@ export default function EquipeGestorIsland() {
 
       const { data: userRow, error: userErr } = await supabase
         .from("users")
-        .select("id, nome_completo, email, uso_individual, company_id, user_types(name)")
+        .select("id, nome_completo, email, active, uso_individual, company_id, user_types(name)")
         .eq("id", userId)
         .maybeSingle();
       if (userErr) throw userErr;
@@ -225,7 +226,7 @@ export default function EquipeGestorIsland() {
 
       const { data: usersData, error: usersErr } = await supabase
         .from("users")
-        .select("id, nome_completo, email, uso_individual, company_id, user_types(name)")
+        .select("id, nome_completo, email, active, uso_individual, company_id, user_types(name)")
         .eq("company_id", userData.company_id)
         .order("nome_completo", { ascending: true });
       if (usersErr) throw usersErr;
@@ -233,14 +234,14 @@ export default function EquipeGestorIsland() {
       const usuariosFiltrados = (usersData || [])
         .filter((u: any) => {
           const tipo = u?.user_types?.name || "";
-          return String(tipo).toUpperCase().includes("VENDEDOR");
+          return String(tipo).toUpperCase().includes("VENDEDOR") && u?.active !== false;
         })
-        .filter((u: any) => u.id !== userId) as UsuarioRow[];
+        .filter((u: any) => u.id !== userId && u?.uso_individual !== true) as UsuarioRow[];
 
       const gestoresFiltrados = (usersData || [])
         .filter((u: any) => {
           const tipo = u?.user_types?.name || "";
-          return String(tipo).toUpperCase().includes("GESTOR");
+          return String(tipo).toUpperCase().includes("GESTOR") && u?.active !== false;
         })
         .filter((u: any) => !u?.uso_individual) as UsuarioRow[];
 
@@ -437,46 +438,46 @@ export default function EquipeGestorIsland() {
       return;
     }
     if (!usuario?.id) return;
-    if (equipeCompartilhadaBase) {
-      showToast(
-        "Sua equipe está compartilhada. Edite a equipe pelo gestor base ou pelo Master.",
-        "warning"
-      );
-      return;
-    }
+    const gestorEquipeId = equipeCompartilhadaBase?.id || usuario.id;
     setSalvandoId(userId);
     const ativoAtual = Boolean(relacoes[userId]);
 
     try {
-      if (ativoAtual) {
-        const { error } = await supabase
-          .from("gestor_vendedor")
-          .delete()
-          .eq("gestor_id", usuario.id)
-          .eq("vendedor_id", userId);
-        if (error) throw error;
+      const { data, error } = await supabase.rpc("set_gestor_vendedor_relacao", {
+        p_gestor_id: gestorEquipeId,
+        p_vendedor_id: userId,
+        p_ativo: !ativoAtual,
+      });
+      if (error) throw error;
+      if ((data as any)?.ok === false) {
+        throw new Error(String((data as any)?.error || "Erro ao atualizar equipe."));
+      }
+
+      const returnedIds = Array.isArray((data as any)?.equipe_vendedor_ids)
+        ? ((data as any).equipe_vendedor_ids as unknown[])
+            .map((id) => String(id || "").trim())
+            .filter(Boolean)
+        : null;
+
+      if (returnedIds) {
+        const map: Record<string, boolean> = {};
+        returnedIds.forEach((id) => {
+          map[id] = true;
+        });
+        setRelacoes(map);
+      } else if (ativoAtual) {
         setRelacoes((prev) => {
           const next = { ...prev };
           delete next[userId];
           return next;
         });
-        showToast("Vendedor removido da equipe.", "success");
       } else {
-        await supabase
-          .from("gestor_vendedor")
-          .delete()
-          .eq("gestor_id", usuario.id)
-          .eq("vendedor_id", userId);
-        const { error } = await supabase
-          .from("gestor_vendedor")
-          .insert({ gestor_id: usuario.id, vendedor_id: userId, ativo: true });
-        if (error) throw error;
         setRelacoes((prev) => ({ ...prev, [userId]: true }));
-        showToast("Vendedor adicionado à equipe.", "success");
       }
-    } catch (e) {
+      showToast(ativoAtual ? "Vendedor removido da equipe." : "Vendedor adicionado à equipe.", "success");
+    } catch (e: any) {
       console.error(e);
-      showToast("Erro ao atualizar equipe.", "error");
+      showToast(String(e?.message || "Erro ao atualizar equipe."), "error");
     } finally {
       setSalvandoId(null);
     }
@@ -748,8 +749,8 @@ export default function EquipeGestorIsland() {
         <div className="mb-3 mt-3">
           <AlertMessage variant="info" className="vtur-alert-inline">
             Sua equipe está compartilhada com{" "}
-            <strong>{equipeCompartilhadaBase.nome || "outro gestor"}</strong>. Para evitar
-            duplicidade, a edição da equipe fica concentrada no gestor base / Master.
+            <strong>{equipeCompartilhadaBase.nome || "outro gestor"}</strong>. As alterações feitas aqui
+            serão aplicadas na equipe base compartilhada.
           </AlertMessage>
         </div>
       )}
@@ -849,7 +850,7 @@ export default function EquipeGestorIsland() {
               placeholder="Nome ou e-mail..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              caption="Apenas usuários corporativos da sua empresa aparecem aqui."
+              caption="Apenas usuários corporativos ativos da sua empresa aparecem aqui."
             />
           </AppCard>
 
@@ -903,7 +904,7 @@ export default function EquipeGestorIsland() {
                               variant={ativo ? "danger" : "ghost"}
                               className={`icon-action-btn${ativo ? " danger" : ""}`}
                               onClick={() => toggleEquipe(u.id)}
-                              disabled={salvando || Boolean(equipeCompartilhadaBase)}
+                              disabled={salvando}
                               title={labelAcao}
                               aria-label={labelAcao}
                             >

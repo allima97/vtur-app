@@ -2,6 +2,7 @@ import { createServerClient } from "../../../../lib/supabaseServer";
 import { kvCache } from "../../../../lib/kvCache";
 import { MODULO_ALIASES } from "../../../../config/modulos";
 import { normalizeText } from "../../../../lib/normalizeText";
+import { isConciliacaoEfetivada } from "../../../../lib/conciliacao/business";
 import { fetchEffectiveConciliacaoReceipts } from "../../../../lib/conciliacao/source";
 
 import { getSupabaseEnv } from "../../users";
@@ -283,7 +284,7 @@ async function applyConciliacaoOverridesToVendas(client: any, companyId: string 
     const { data, error } = await client
       .from("conciliacao_recibos")
       .select(
-        "documento, movimento_data, status, valor_lancamentos, valor_taxas, valor_venda_real, valor_comissao_loja, percentual_comissao_loja, faixa_comissao, venda_recibo_id"
+        "documento, movimento_data, status, descricao, valor_lancamentos, valor_taxas, valor_venda_real, valor_comissao_loja, percentual_comissao_loja, faixa_comissao, venda_recibo_id"
       )
       .eq("company_id", companyId)
       .in("status", ["BAIXA", "OPFAX"] as any)
@@ -322,13 +323,16 @@ async function applyConciliacaoOverridesToVendas(client: any, companyId: string 
     const sortedRows = [...rows].sort((a, b) =>
       toStr(a?.movimento_data).localeCompare(toStr(b?.movimento_data))
     );
-    const baixaRows = sortedRows.filter((row) => toStr(row?.status).toUpperCase() === "BAIXA");
+    const baixaRows = sortedRows.filter((row) =>
+      isConciliacaoEfetivada({ status: row?.status, descricao: row?.descricao })
+    );
     const confirmed = baixaRows.length > 0;
     const valuedBaixa = baixaRows.find(
       (row) => isPositive(row?.valor_venda_real) || isPositive(row?.valor_lancamentos)
     );
     const valuedOpfax = sortedRows.find(
       (row) =>
+        !isConciliacaoEfetivada({ status: row?.status, descricao: row?.descricao }) &&
         toStr(row?.status).toUpperCase() === "OPFAX" &&
         (isPositive(row?.valor_venda_real) || isPositive(row?.valor_lancamentos))
     );
@@ -339,7 +343,9 @@ async function applyConciliacaoOverridesToVendas(client: any, companyId: string 
       null;
 
     if (!sourceRow) return;
-    if (!confirmed && toStr(sourceRow?.status).toUpperCase() === "OPFAX") return;
+    if (!confirmed && !isConciliacaoEfetivada({ status: sourceRow?.status, descricao: sourceRow?.descricao })) {
+      return;
+    }
 
     const linkedReciboId = sortedRows.map((row) => toStr(row?.venda_recibo_id)).find(Boolean);
     const effectiveDate = toStr(sourceRow?.movimento_data);
