@@ -1,9 +1,5 @@
 export type ConciliacaoStatus = "BAIXA" | "OPFAX" | "ESTORNO" | "OUTRO";
-export type ConciliacaoFaixaComissao =
-  | "MENOR_10"
-  | "MAIOR_OU_IGUAL_10"
-  | "SEGURO_32_35"
-  | "SEM_COMISSAO";
+export type ConciliacaoFaixaComissao = string | "SEM_COMISSAO";
 
 export type ConciliacaoLinhaInput = {
   documento: string;

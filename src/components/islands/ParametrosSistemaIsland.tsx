@@ -7,7 +7,6 @@ import { registrarLog } from "../../lib/logs";
 import { formatDateTimeBR } from "../../lib/format";
 import {
   createDefaultConciliacaoBandRules,
-  type ConciliacaoCommissionBandKey,
   type ConciliacaoCommissionBandRule,
 } from "../../lib/comissaoUtils";
 import AppButton from "../ui/primer/AppButton";
@@ -41,24 +40,6 @@ type ParametrosSistema = {
   mfa_obrigatorio: boolean;
   exportacao_pdf: boolean;
   exportacao_excel: boolean;
-};
-
-const CONCILIACAO_BAND_META: Record<
-  ConciliacaoCommissionBandKey,
-  { title: string; subtitle: string }
-> = {
-  MENOR_10: {
-    title: "Menor que 10%",
-    subtitle: "Usa esta regra quando a comissão da loja do recibo ficar abaixo de 10%.",
-  },
-  MAIOR_OU_IGUAL_10: {
-    title: "Igual ou maior que 10%",
-    subtitle: "Usa esta regra para produtos com comissão de loja de 10% ou mais, fora da faixa de seguro.",
-  },
-  SEGURO_32_35: {
-    title: "Igual ou maior que 32%",
-    subtitle: "Faixa normalmente usada para seguro e outros produtos diferenciados com comissão alta.",
-  },
 };
 
 const DEFAULT_PARAMS: ParametrosSistema = {
@@ -108,6 +89,30 @@ function createEmptyBandTier(faixa: "PRE" | "POS") {
   return createEmptyTier(faixa);
 }
 
+function createBandId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID().replace(/-/g, "_").toUpperCase();
+  }
+  return `FAIXA_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`.toUpperCase();
+}
+
+function createManualBandRule(order: number): ConciliacaoCommissionBandRule {
+  return {
+    faixa_loja: createBandId(),
+    nome: `Nova faixa ${order}`,
+    percentual_min: null,
+    percentual_max: null,
+    ordem: order * 10,
+    ativo: true,
+    tipo_calculo: "CONCILIACAO",
+    tipo: "GERAL",
+    meta_nao_atingida: null,
+    meta_atingida: null,
+    super_meta: null,
+    tiers: [],
+  };
+}
+
 export default function ParametrosSistemaIsland() {
   const { can, loading: loadingPerms, ready } = usePermissoesStore();
   const loadingPerm = loadingPerms || !ready;
@@ -122,6 +127,8 @@ export default function ParametrosSistemaIsland() {
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<string | null>(null);
   const [origemDados, setOrigemDados] = useState<"default" | "banco">("default");
   const [ownerNome, setOwnerNome] = useState<string | null>(null);
+  const [editableConciliacaoTiers, setEditableConciliacaoTiers] = useState<Record<string, boolean>>({});
+  const [editableBandTiers, setEditableBandTiers] = useState<Record<string, boolean>>({});
   const bloqueado = !podeVer || !podeAdministrar;
   const resumoConfiguracao = [
     {
@@ -147,6 +154,14 @@ export default function ParametrosSistemaIsland() {
     [params.foco_valor],
   );
 
+  function getConciliacaoTierKey(index: number) {
+    return `conciliacao-tier-${index}`;
+  }
+
+  function getBandTierKey(faixaLoja: string, index: number) {
+    return `band-tier-${faixaLoja}-${index}`;
+  }
+
   async function carregar() {
     try {
       setLoading(true);
@@ -166,6 +181,8 @@ export default function ParametrosSistemaIsland() {
       setUltimaAtualizacao(payload.ultima_atualizacao || null);
       setOrigemDados(payload.origem || "default");
       setOwnerNome(payload.owner_nome || null);
+      setEditableConciliacaoTiers({});
+      setEditableBandTiers({});
     } catch (e) {
       console.error(e);
       setErro("Erro ao carregar parâmetros.");
@@ -224,6 +241,8 @@ export default function ParametrosSistemaIsland() {
       setUltimaAtualizacao(new Date().toISOString());
       setOrigemDados("banco");
       setOwnerNome(params.owner_user_nome || null);
+      setEditableConciliacaoTiers({});
+      setEditableBandTiers({});
     } catch (e) {
       console.error(e);
       setErro("Erro ao salvar parâmetros.");
@@ -236,6 +255,10 @@ export default function ParametrosSistemaIsland() {
     setParams((prev) => ({
       ...prev,
       conciliacao_tiers: [...prev.conciliacao_tiers, createEmptyTier(faixa)],
+    }));
+    setEditableConciliacaoTiers((prev) => ({
+      ...prev,
+      [getConciliacaoTierKey(params.conciliacao_tiers.length)]: true,
     }));
   }
 
@@ -266,10 +289,15 @@ export default function ParametrosSistemaIsland() {
       ...prev,
       conciliacao_tiers: prev.conciliacao_tiers.filter((_, currentIndex) => currentIndex !== index),
     }));
+    setEditableConciliacaoTiers((prev) => {
+      const next = { ...prev };
+      delete next[getConciliacaoTierKey(index)];
+      return next;
+    });
   }
 
   function updateConciliacaoBand(
-    faixaLoja: ConciliacaoCommissionBandKey,
+    faixaLoja: string,
     changes: Partial<ConciliacaoCommissionBandRule>
   ) {
     setParams((prev) => ({
@@ -280,10 +308,21 @@ export default function ParametrosSistemaIsland() {
     }));
   }
 
+  function addConciliacaoBand() {
+    setParams((prev) => ({
+      ...prev,
+      conciliacao_faixas_loja: [
+        ...prev.conciliacao_faixas_loja,
+        createManualBandRule(prev.conciliacao_faixas_loja.length + 1),
+      ],
+    }));
+  }
+
   function addConciliacaoBandTier(
-    faixaLoja: ConciliacaoCommissionBandKey,
+    faixaLoja: string,
     faixa: "PRE" | "POS"
   ) {
+    const targetBand = params.conciliacao_faixas_loja.find((band) => band.faixa_loja === faixaLoja);
     setParams((prev) => ({
       ...prev,
       conciliacao_faixas_loja: prev.conciliacao_faixas_loja.map((band) =>
@@ -295,10 +334,14 @@ export default function ParametrosSistemaIsland() {
           : band
       ),
     }));
+    setEditableBandTiers((prev) => ({
+      ...prev,
+      [getBandTierKey(faixaLoja, targetBand?.tiers.length ?? 0)]: true,
+    }));
   }
 
   function updateConciliacaoBandTier(
-    faixaLoja: ConciliacaoCommissionBandKey,
+    faixaLoja: string,
     index: number,
     field: "faixa" | "de_pct" | "ate_pct" | "inc_pct_meta" | "inc_pct_comissao",
     value: string | number
@@ -327,7 +370,7 @@ export default function ParametrosSistemaIsland() {
   }
 
   function removeConciliacaoBandTier(
-    faixaLoja: ConciliacaoCommissionBandKey,
+    faixaLoja: string,
     index: number
   ) {
     setParams((prev) => ({
@@ -339,6 +382,20 @@ export default function ParametrosSistemaIsland() {
               tiers: band.tiers.filter((_, currentIndex) => currentIndex !== index),
             }
           : band
+      ),
+    }));
+    setEditableBandTiers((prev) => {
+      const next = { ...prev };
+      delete next[getBandTierKey(faixaLoja, index)];
+      return next;
+    });
+  }
+
+  function removeConciliacaoBand(faixaLoja: string) {
+    setParams((prev) => ({
+      ...prev,
+      conciliacao_faixas_loja: prev.conciliacao_faixas_loja.filter(
+        (band) => band.faixa_loja !== faixaLoja
       ),
     }));
   }
@@ -582,6 +639,7 @@ export default function ParametrosSistemaIsland() {
         </AppCard>
 
         <AppCard
+          className="parametros-sistema-card-wide"
           tone="config"
           title="Conciliação e comissionamento"
           subtitle="Configure quando a conciliação prevalece sobre as vendas e como a regra própria de comissão deve ser aplicada."
@@ -744,13 +802,16 @@ export default function ParametrosSistemaIsland() {
                           <td colSpan={6}>Nenhuma faixa cadastrada.</td>
                         </tr>
                       ) : (
-                        params.conciliacao_tiers.map((tier, index) => (
+                        params.conciliacao_tiers.map((tier, index) => {
+                          const tierKey = getConciliacaoTierKey(index);
+                          const rowEditable = Boolean(editableConciliacaoTiers[tierKey]);
+                          return (
                           <tr key={`${tier.faixa}-${index}`}>
                             <td data-label="Faixa">
                               <select
                                 className="form-select"
                                 value={tier.faixa}
-                                disabled={bloqueado}
+                                disabled={bloqueado || !rowEditable}
                                 onChange={(e) =>
                                   updateConciliacaoTier(index, "faixa", e.target.value === "POS" ? "POS" : "PRE")
                                 }
@@ -765,7 +826,7 @@ export default function ParametrosSistemaIsland() {
                                 type="number"
                                 step="0.01"
                                 value={tier.de_pct}
-                                disabled={bloqueado}
+                                disabled={bloqueado || !rowEditable}
                                 onChange={(e) => updateConciliacaoTier(index, "de_pct", e.target.value)}
                               />
                             </td>
@@ -775,7 +836,7 @@ export default function ParametrosSistemaIsland() {
                                 type="number"
                                 step="0.01"
                                 value={tier.ate_pct}
-                                disabled={bloqueado}
+                                disabled={bloqueado || !rowEditable}
                                 onChange={(e) => updateConciliacaoTier(index, "ate_pct", e.target.value)}
                               />
                             </td>
@@ -785,7 +846,7 @@ export default function ParametrosSistemaIsland() {
                                 type="number"
                                 step="0.01"
                                 value={tier.inc_pct_meta}
-                                disabled={bloqueado}
+                                disabled={bloqueado || !rowEditable}
                                 onChange={(e) => updateConciliacaoTier(index, "inc_pct_meta", e.target.value)}
                               />
                             </td>
@@ -795,22 +856,41 @@ export default function ParametrosSistemaIsland() {
                                 type="number"
                                 step="0.01"
                                 value={tier.inc_pct_comissao}
-                                disabled={bloqueado}
+                                disabled={bloqueado || !rowEditable}
                                 onChange={(e) => updateConciliacaoTier(index, "inc_pct_comissao", e.target.value)}
                               />
                             </td>
                             <td data-label="Ações">
-                              <AppButton
-                                type="button"
-                                variant="danger"
-                                onClick={() => removeConciliacaoTier(index)}
-                                disabled={bloqueado}
-                              >
-                                Excluir
-                              </AppButton>
+                              <div className="action-buttons vtur-table-actions">
+                                <AppButton
+                                  type="button"
+                                  variant="ghost"
+                                  className="btn-icon vtur-table-action"
+                                  onClick={() =>
+                                    setEditableConciliacaoTiers((prev) => ({
+                                      ...prev,
+                                      [tierKey]: true,
+                                    }))
+                                  }
+                                  disabled={bloqueado}
+                                  icon="pi pi-pencil"
+                                  title="Editar faixa"
+                                  aria-label="Editar faixa"
+                                />
+                                <AppButton
+                                  type="button"
+                                  variant="danger"
+                                  className="btn-icon vtur-table-action"
+                                  onClick={() => removeConciliacaoTier(index)}
+                                  disabled={bloqueado}
+                                  icon="pi pi-trash"
+                                  title="Excluir faixa"
+                                  aria-label="Excluir faixa"
+                                />
+                              </div>
                             </td>
                           </tr>
-                        ))
+                        )})
                       )}
                     </tbody>
                   </table>
@@ -823,21 +903,87 @@ export default function ParametrosSistemaIsland() {
               tone="config"
               title="Faixas de comissionamento da loja"
               subtitle="Defina como a comissão da conciliação deve ser calculada de acordo com a faixa da comissão da loja em cada recibo."
+              actions={
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  onClick={addConciliacaoBand}
+                  disabled={bloqueado}
+                >
+                  + Nova faixa
+                </AppButton>
+              }
             >
               <div className="parametros-sistema-band-grid">
                 {params.conciliacao_faixas_loja.map((band) => {
-                  const meta = CONCILIACAO_BAND_META[band.faixa_loja];
                   const usaRegraConciliacao = band.tipo_calculo === "CONCILIACAO";
+                  const faixaResumo = [
+                    band.percentual_min != null ? `de ${band.percentual_min}%` : "sem mínimo",
+                    band.percentual_max != null ? `até ${band.percentual_max}%` : "sem máximo",
+                  ].join(" • ");
                   return (
                     <AppCard
                       key={band.faixa_loja}
                       className="vtur-sales-embedded-card"
                       tone="config"
-                      title={meta.title}
-                      subtitle={meta.subtitle}
+                      title={band.nome || "Faixa sem nome"}
+                      subtitle={`Aplica automaticamente quando a % da comissão da loja cair em ${faixaResumo}.`}
+                      actions={
+                        <AppButton
+                          type="button"
+                          variant="danger"
+                          onClick={() => removeConciliacaoBand(band.faixa_loja)}
+                          disabled={bloqueado || params.conciliacao_faixas_loja.length <= 1}
+                        >
+                          Excluir faixa
+                        </AppButton>
+                      }
                     >
                       <div className="parametros-sistema-stack">
-                        <div className="parametros-sistema-option-list parametros-sistema-option-list-2">
+                        <div className="form-row">
+                          <div className="form-group">
+                            <AppField
+                              label="Nome da faixa"
+                              value={band.nome}
+                              onChange={(e) =>
+                                updateConciliacaoBand(band.faixa_loja, { nome: e.target.value })
+                              }
+                              disabled={bloqueado}
+                            />
+                          </div>
+                          <div className="form-group">
+                            <AppField
+                              type="number"
+                              label="% mínimo"
+                              value={band.percentual_min ?? ""}
+                              step="0.01"
+                              onChange={(e) =>
+                                updateConciliacaoBand(band.faixa_loja, {
+                                  percentual_min: parseNumberOrNull(e.target.value),
+                                })
+                              }
+                              disabled={bloqueado}
+                              caption="Deixe vazio para não limitar o início da faixa."
+                            />
+                          </div>
+                          <div className="form-group">
+                            <AppField
+                              type="number"
+                              label="% máximo"
+                              value={band.percentual_max ?? ""}
+                              step="0.01"
+                              onChange={(e) =>
+                                updateConciliacaoBand(band.faixa_loja, {
+                                  percentual_max: parseNumberOrNull(e.target.value),
+                                })
+                              }
+                              disabled={bloqueado}
+                              caption="Deixe vazio para que a faixa não tenha teto."
+                            />
+                          </div>
+                        </div>
+
+                        <div className="parametros-sistema-option-list">
                           <label className="parametros-sistema-option">
                             <span className="parametros-sistema-option-title">
                               <input
@@ -854,7 +1000,9 @@ export default function ParametrosSistemaIsland() {
                               Quando ativa, esta faixa passa a ser considerada no cálculo da comissão dos recibos conciliados.
                             </span>
                           </label>
+                        </div>
 
+                        <div className="form-row parametros-sistema-band-fields-row">
                           <div className="form-group">
                             <AppField
                               as="select"
@@ -874,15 +1022,9 @@ export default function ParametrosSistemaIsland() {
                                 { value: "PRODUTO_DIFERENCIADO", label: "Produto diferenciado" },
                               ]}
                             />
-                            <small className="parametros-sistema-field-hint">
-                              Use produto diferenciado quando a faixa deve obedecer às regras já cadastradas no sistema para seguro ou outro produto especial.
-                            </small>
                           </div>
-                        </div>
-
-                        {usaRegraConciliacao ? (
-                          <>
-                            <div className="form-row">
+                          {usaRegraConciliacao ? (
+                            <>
                               <div className="form-group">
                                 <AppField
                                   as="select"
@@ -900,7 +1042,6 @@ export default function ParametrosSistemaIsland() {
                                   ]}
                                 />
                               </div>
-
                               <div className="form-group">
                                 <AppField
                                   type="number"
@@ -916,7 +1057,6 @@ export default function ParametrosSistemaIsland() {
                                   disabled={bloqueado || !params.conciliacao_regra_ativa || !band.ativo}
                                 />
                               </div>
-
                               <div className="form-group">
                                 <AppField
                                   type="number"
@@ -932,7 +1072,6 @@ export default function ParametrosSistemaIsland() {
                                   disabled={bloqueado || !params.conciliacao_regra_ativa || !band.ativo}
                                 />
                               </div>
-
                               <div className="form-group">
                                 <AppField
                                   type="number"
@@ -948,8 +1087,16 @@ export default function ParametrosSistemaIsland() {
                                   disabled={bloqueado || !params.conciliacao_regra_ativa || !band.ativo}
                                 />
                               </div>
-                            </div>
+                            </>
+                          ) : null}
+                        </div>
 
+                        <small className="parametros-sistema-field-hint">
+                          Use produto diferenciado quando a faixa deve obedecer às regras já cadastradas no sistema para seguro ou outro produto especial.
+                        </small>
+
+                        {usaRegraConciliacao ? (
+                          <>
                             {band.tipo === "ESCALONAVEL" ? (
                               <AppCard
                                 className="vtur-sales-embedded-card"
@@ -995,13 +1142,16 @@ export default function ParametrosSistemaIsland() {
                                           <td colSpan={6}>Nenhuma faixa cadastrada.</td>
                                         </tr>
                                       ) : (
-                                        band.tiers.map((tier, index) => (
+                                        band.tiers.map((tier, index) => {
+                                          const tierKey = getBandTierKey(band.faixa_loja, index);
+                                          const rowEditable = Boolean(editableBandTiers[tierKey]);
+                                          return (
                                           <tr key={`${band.faixa_loja}-${tier.faixa}-${index}`}>
                                             <td data-label="Faixa">
                                               <select
                                                 className="form-select"
                                                 value={tier.faixa}
-                                                disabled={bloqueado || !params.conciliacao_regra_ativa || !band.ativo}
+                                                disabled={bloqueado || !params.conciliacao_regra_ativa || !band.ativo || !rowEditable}
                                                 onChange={(e) =>
                                                   updateConciliacaoBandTier(
                                                     band.faixa_loja,
@@ -1021,7 +1171,7 @@ export default function ParametrosSistemaIsland() {
                                                 type="number"
                                                 step="0.01"
                                                 value={tier.de_pct}
-                                                disabled={bloqueado || !params.conciliacao_regra_ativa || !band.ativo}
+                                                disabled={bloqueado || !params.conciliacao_regra_ativa || !band.ativo || !rowEditable}
                                                 onChange={(e) =>
                                                   updateConciliacaoBandTier(
                                                     band.faixa_loja,
@@ -1038,7 +1188,7 @@ export default function ParametrosSistemaIsland() {
                                                 type="number"
                                                 step="0.01"
                                                 value={tier.ate_pct}
-                                                disabled={bloqueado || !params.conciliacao_regra_ativa || !band.ativo}
+                                                disabled={bloqueado || !params.conciliacao_regra_ativa || !band.ativo || !rowEditable}
                                                 onChange={(e) =>
                                                   updateConciliacaoBandTier(
                                                     band.faixa_loja,
@@ -1055,7 +1205,7 @@ export default function ParametrosSistemaIsland() {
                                                 type="number"
                                                 step="0.01"
                                                 value={tier.inc_pct_meta}
-                                                disabled={bloqueado || !params.conciliacao_regra_ativa || !band.ativo}
+                                                disabled={bloqueado || !params.conciliacao_regra_ativa || !band.ativo || !rowEditable}
                                                 onChange={(e) =>
                                                   updateConciliacaoBandTier(
                                                     band.faixa_loja,
@@ -1072,7 +1222,7 @@ export default function ParametrosSistemaIsland() {
                                                 type="number"
                                                 step="0.01"
                                                 value={tier.inc_pct_comissao}
-                                                disabled={bloqueado || !params.conciliacao_regra_ativa || !band.ativo}
+                                                disabled={bloqueado || !params.conciliacao_regra_ativa || !band.ativo || !rowEditable}
                                                 onChange={(e) =>
                                                   updateConciliacaoBandTier(
                                                     band.faixa_loja,
@@ -1084,17 +1234,36 @@ export default function ParametrosSistemaIsland() {
                                               />
                                             </td>
                                             <td data-label="Ações">
-                                              <AppButton
-                                                type="button"
-                                                variant="danger"
-                                                onClick={() => removeConciliacaoBandTier(band.faixa_loja, index)}
-                                                disabled={bloqueado || !params.conciliacao_regra_ativa || !band.ativo}
-                                              >
-                                                Excluir
-                                              </AppButton>
+                                              <div className="action-buttons vtur-table-actions">
+                                                <AppButton
+                                                  type="button"
+                                                  variant="ghost"
+                                                  className="btn-icon vtur-table-action"
+                                                  onClick={() =>
+                                                    setEditableBandTiers((prev) => ({
+                                                      ...prev,
+                                                      [tierKey]: true,
+                                                    }))
+                                                  }
+                                                  disabled={bloqueado || !params.conciliacao_regra_ativa || !band.ativo}
+                                                  icon="pi pi-pencil"
+                                                  title="Editar faixa"
+                                                  aria-label="Editar faixa"
+                                                />
+                                                <AppButton
+                                                  type="button"
+                                                  variant="danger"
+                                                  className="btn-icon vtur-table-action"
+                                                  onClick={() => removeConciliacaoBandTier(band.faixa_loja, index)}
+                                                  disabled={bloqueado || !params.conciliacao_regra_ativa || !band.ativo}
+                                                  icon="pi pi-trash"
+                                                  title="Excluir faixa"
+                                                  aria-label="Excluir faixa"
+                                                />
+                                              </div>
                                             </td>
                                           </tr>
-                                        ))
+                                        )})
                                       )}
                                     </tbody>
                                   </table>

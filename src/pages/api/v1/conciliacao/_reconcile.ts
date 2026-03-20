@@ -326,7 +326,7 @@ async function reconcilePendentesCompany(params: {
       "id, company_id, documento, movimento_data, status, valor_lancamentos, valor_taxas, valor_descontos, valor_abatimentos, valor_venda_real, ranking_vendedor_id, conciliado"
     )
     .eq("conciliado", false)
-    .in("status", ["BAIXA", "OPFAX"] as any)
+    .in("status", ["BAIXA"] as any)
     .eq("company_id", companyId)
     .order("movimento_data", { ascending: false })
     .limit(limit);

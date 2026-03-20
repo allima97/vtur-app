@@ -11,11 +11,21 @@ import {
   buildConciliacaoMetrics,
   normalizeConciliacaoStatus,
 } from "../../../../lib/conciliacao/business";
+import {
+  resolveConciliacaoBandRule,
+  sanitizeConciliacaoBandRules,
+  type ParametrosComissao,
+} from "../../../../lib/comissaoUtils";
 import { fetchConciliacaoRankingOptions } from "./_ranking";
 
 function isOperacionalStatus(value?: string | null) {
   const status = String(value || "").trim().toUpperCase();
-  return status === "BAIXA" || status === "OPFAX";
+  return status === "BAIXA" || status === "OPFAX" || status === "ESTORNO";
+}
+
+function requiresRankingAssignment(value?: string | null) {
+  const status = String(value || "").trim().toUpperCase();
+  return status === "BAIXA";
 }
 
 function buildImportKey(params: {
@@ -77,6 +87,177 @@ function parseImportNumber(value: unknown): number | null {
   const normalized = hasComma ? raw.replace(/\./g, "").replace(/,/g, ".") : raw.replace(/\s+/g, "");
   const num = Number(normalized);
   return Number.isFinite(num) ? num : null;
+}
+
+function formatDateBR(value?: string | null) {
+  const raw = String(value || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const [ano, mes, dia] = raw.split("-");
+  return `${dia}/${mes}/${ano}`;
+}
+
+function toMonthKey(value?: string | null) {
+  const raw = String(value || "").trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw.slice(0, 7) : "";
+}
+
+async function syncReciboCancelamentoConciliacao(params: {
+  client: any;
+  companyId: string;
+  documentos: string[];
+}) {
+  const { client, companyId, documentos } = params;
+  if (!documentos.length) return;
+
+  const { data: rows, error: rowsErr } = await client
+    .from("conciliacao_recibos")
+    .select("documento, movimento_data, status, venda_id, venda_recibo_id")
+    .eq("company_id", companyId)
+    .in("documento", documentos);
+  if (rowsErr) throw rowsErr;
+
+  const grouped = new Map<string, any[]>();
+  for (const row of rows || []) {
+    const documento = String((row as any)?.documento || "").trim();
+    if (!documento) continue;
+    const bucket = grouped.get(documento) || [];
+    bucket.push(row);
+    grouped.set(documento, bucket);
+  }
+
+  const reciboIds = Array.from(
+    new Set(
+      (rows || [])
+        .map((row: any) => String(row?.venda_recibo_id || "").trim())
+        .filter(Boolean)
+    )
+  );
+  if (reciboIds.length === 0) return;
+
+  const { data: recibosData, error: recibosErr } = await client
+    .from("vendas_recibos")
+    .select("id, venda_id, data_venda")
+    .in("id", reciboIds);
+  if (recibosErr) throw recibosErr;
+
+  const reciboMap = new Map<string, { venda_id: string | null; data_venda: string | null }>();
+  for (const recibo of recibosData || []) {
+    const reciboId = String((recibo as any)?.id || "").trim();
+    if (!reciboId) continue;
+    reciboMap.set(reciboId, {
+      venda_id: String((recibo as any)?.venda_id || "").trim() || null,
+      data_venda: String((recibo as any)?.data_venda || "").trim() || null,
+    });
+  }
+
+  const affectedByRecibo = new Map<
+    string,
+    { vendaId: string | null; canceladoEm: string | null; observacao: string | null }
+  >();
+
+  for (const bucket of grouped.values()) {
+    const linkedReciboId =
+      bucket.map((row: any) => String(row?.venda_recibo_id || "").trim()).find(Boolean) || null;
+    if (!linkedReciboId) continue;
+
+    const recibo = reciboMap.get(linkedReciboId);
+    const originalDate = recibo?.data_venda || null;
+    const estornoDates = bucket
+      .filter((row: any) => String(row?.status || "").trim().toUpperCase() === "ESTORNO")
+      .map((row: any) => String(row?.movimento_data || "").trim())
+      .filter(Boolean)
+      .sort();
+
+    if (estornoDates.length === 0) {
+      affectedByRecibo.set(linkedReciboId, {
+        vendaId: recibo?.venda_id || null,
+        canceladoEm: null,
+        observacao: null,
+      });
+      continue;
+    }
+
+    const canceladoEm = estornoDates[0];
+    const mesmoMes = toMonthKey(canceladoEm) === toMonthKey(originalDate);
+    const observacao = mesmoMes
+      ? `Cancelado pela conciliação em ${formatDateBR(canceladoEm)} na mesma competência do recibo original.`
+      : `Cancelado pela conciliação em ${formatDateBR(canceladoEm)} após o fechamento da competência original.`;
+
+    affectedByRecibo.set(linkedReciboId, {
+      vendaId: recibo?.venda_id || null,
+      canceladoEm,
+      observacao,
+    });
+  }
+
+  const existingNotesMap = new Map<string, any>();
+  const vendaReciboPairs = Array.from(affectedByRecibo.entries())
+    .map(([reciboId, meta]) => ({
+      reciboId,
+      vendaId: meta.vendaId,
+    }))
+    .filter((item) => item.vendaId);
+
+  if (vendaReciboPairs.length > 0) {
+    const vendaIds = Array.from(new Set(vendaReciboPairs.map((item) => item.vendaId as string)));
+    const { data: notesData, error: notesErr } = await client
+      .from("vendas_recibos_notas")
+      .select("venda_id, recibo_id, notas")
+      .in("venda_id", vendaIds);
+    if (notesErr) throw notesErr;
+    for (const item of notesData || []) {
+      const key = `${String((item as any)?.venda_id || "").trim()}::${String((item as any)?.recibo_id || "").trim()}`;
+      existingNotesMap.set(key, (item as any)?.notas && typeof (item as any).notas === "object" ? (item as any).notas : {});
+    }
+  }
+
+  for (const [reciboId, meta] of affectedByRecibo.entries()) {
+    const { error: updateReciboErr } = await client
+      .from("vendas_recibos")
+      .update({
+        cancelado_por_conciliacao_em: meta.canceladoEm,
+        cancelado_por_conciliacao_observacao: meta.observacao,
+      })
+      .eq("id", reciboId);
+    if (updateReciboErr) throw updateReciboErr;
+
+    if (!meta.vendaId) continue;
+
+    const noteKey = `${meta.vendaId}::${reciboId}`;
+    const existingNotes = existingNotesMap.get(noteKey) || {};
+    const nextNotes = { ...existingNotes };
+
+    if (meta.canceladoEm) {
+      nextNotes.conciliacao_cancelamento = {
+        origem: "conciliacao",
+        cancelado_em: meta.canceladoEm,
+        observacao: meta.observacao,
+      };
+    } else {
+      delete nextNotes.conciliacao_cancelamento;
+    }
+
+    if (Object.keys(nextNotes).length === 0) {
+      const { error: deleteNoteErr } = await client
+        .from("vendas_recibos_notas")
+        .delete()
+        .eq("venda_id", meta.vendaId)
+        .eq("recibo_id", reciboId);
+      if (deleteNoteErr) throw deleteNoteErr;
+      continue;
+    }
+
+    const { error: upsertNoteErr } = await client.from("vendas_recibos_notas").upsert(
+      {
+        venda_id: meta.vendaId,
+        recibo_id: reciboId,
+        company_id: companyId,
+        notas: nextNotes,
+      },
+      { onConflict: "venda_id,recibo_id" }
+    );
+    if (upsertNoteErr) throw upsertNoteErr;
+  }
 }
 
 type ExistingImportRow = {
@@ -161,6 +342,66 @@ export const POST: APIRoute = async ({ request }) => {
       scope,
       companyId,
     });
+    const { data: paramsData } = await client
+      .from("parametros_comissao")
+      .select(
+        "usar_taxas_na_meta, foco_valor, foco_faturamento, conciliacao_sobrepoe_vendas, conciliacao_regra_ativa, conciliacao_tipo, conciliacao_meta_nao_atingida, conciliacao_meta_atingida, conciliacao_super_meta, conciliacao_tiers, conciliacao_faixas_loja"
+      )
+      .eq("company_id", companyId)
+      .maybeSingle();
+    const parametrosConciliacao: ParametrosComissao | null = paramsData
+      ? {
+          usar_taxas_na_meta: Boolean((paramsData as any).usar_taxas_na_meta),
+          foco_valor: (paramsData as any).foco_valor === "liquido" ? "liquido" : "bruto",
+          foco_faturamento:
+            (paramsData as any).foco_faturamento === "liquido" ? "liquido" : "bruto",
+          conciliacao_sobrepoe_vendas: Boolean((paramsData as any).conciliacao_sobrepoe_vendas),
+          conciliacao_regra_ativa: Boolean((paramsData as any).conciliacao_regra_ativa),
+          conciliacao_tipo:
+            (paramsData as any).conciliacao_tipo === "ESCALONAVEL" ? "ESCALONAVEL" : "GERAL",
+          conciliacao_meta_nao_atingida:
+            (paramsData as any).conciliacao_meta_nao_atingida != null
+              ? Number((paramsData as any).conciliacao_meta_nao_atingida)
+              : null,
+          conciliacao_meta_atingida:
+            (paramsData as any).conciliacao_meta_atingida != null
+              ? Number((paramsData as any).conciliacao_meta_atingida)
+              : null,
+          conciliacao_super_meta:
+            (paramsData as any).conciliacao_super_meta != null
+              ? Number((paramsData as any).conciliacao_super_meta)
+              : null,
+          conciliacao_tiers: Array.isArray((paramsData as any).conciliacao_tiers)
+            ? (paramsData as any).conciliacao_tiers
+            : [],
+          conciliacao_faixas_loja: sanitizeConciliacaoBandRules(
+            (paramsData as any).conciliacao_faixas_loja,
+            {
+              usar_taxas_na_meta: Boolean((paramsData as any).usar_taxas_na_meta),
+              conciliacao_regra_ativa: Boolean((paramsData as any).conciliacao_regra_ativa),
+              conciliacao_tipo:
+                (paramsData as any).conciliacao_tipo === "ESCALONAVEL"
+                  ? "ESCALONAVEL"
+                  : "GERAL",
+              conciliacao_meta_nao_atingida:
+                (paramsData as any).conciliacao_meta_nao_atingida != null
+                  ? Number((paramsData as any).conciliacao_meta_nao_atingida)
+                  : null,
+              conciliacao_meta_atingida:
+                (paramsData as any).conciliacao_meta_atingida != null
+                  ? Number((paramsData as any).conciliacao_meta_atingida)
+                  : null,
+              conciliacao_super_meta:
+                (paramsData as any).conciliacao_super_meta != null
+                  ? Number((paramsData as any).conciliacao_super_meta)
+                  : null,
+              conciliacao_tiers: Array.isArray((paramsData as any).conciliacao_tiers)
+                ? (paramsData as any).conciliacao_tiers
+                : [],
+            }
+          ),
+        }
+      : null;
 
     const payloadBase = linhas
       .map((l) => {
@@ -189,6 +430,16 @@ export const POST: APIRoute = async ({ request }) => {
           valorComissaoLoja: valorComissaoImportada,
           percentualComissaoLoja: percentualComissaoImportado,
         });
+        const matchedBand = resolveConciliacaoBandRule(parametrosConciliacao, {
+          faixa_comissao: typeof l?.faixa_comissao === "string" ? l.faixa_comissao : null,
+          percentual_comissao_loja: metrics.percentualComissaoLoja,
+          is_seguro_viagem: metrics.isSeguroViagem,
+        });
+        const faixaComissao = matchedBand?.faixa_loja || metrics.faixaComissao;
+        const isSeguroViagem =
+          matchedBand?.tipo_calculo === "PRODUTO_DIFERENCIADO"
+            ? true
+            : Boolean(metrics.isSeguroViagem);
 
         return {
           company_id: companyId,
@@ -208,8 +459,8 @@ export const POST: APIRoute = async ({ request }) => {
           valor_venda_real: metrics.valorVendaReal,
           valor_comissao_loja: metrics.valorComissaoLoja,
           percentual_comissao_loja: metrics.percentualComissaoLoja,
-          faixa_comissao: metrics.faixaComissao,
-          is_seguro_viagem: Boolean(metrics.isSeguroViagem),
+          faixa_comissao: faixaComissao,
+          is_seguro_viagem: isSeguroViagem,
           ranking_vendedor_id: l?.ranking_vendedor_id ?? null,
           ranking_produto_id: l?.ranking_produto_id ?? null,
           origem: l?.origem ?? origem,
@@ -237,17 +488,23 @@ export const POST: APIRoute = async ({ request }) => {
         return {
           ...row,
           ranking_vendedor_id: vendedorId,
+          venda_id: found?.recibo?.venda_id || null,
+          venda_recibo_id: found?.recibo?.id || null,
         };
       })
     );
 
     const missingAssigneeDocs = payload
-      .filter((row) => !String(row.ranking_vendedor_id || "").trim())
+      .filter(
+        (row) =>
+          requiresRankingAssignment(row.status) &&
+          !String(row.ranking_vendedor_id || "").trim()
+      )
       .map((row) => row.documento)
       .slice(0, 10);
     if (missingAssigneeDocs.length > 0) {
       return new Response(
-        `Atribua o vendedor/gestor de cada recibo antes da importação. Exemplos pendentes: ${missingAssigneeDocs.join(", ")}.`,
+        `Atribua o vendedor/gestor de cada recibo em BAIXA antes da importação. Exemplos pendentes: ${missingAssigneeDocs.join(", ")}.`,
         { status: 400 }
       );
     }
@@ -373,8 +630,6 @@ export const POST: APIRoute = async ({ request }) => {
         sistema_valor_taxas: null,
         diff_total: null,
         diff_taxas: null,
-        venda_id: null,
-        venda_recibo_id: null,
         last_checked_at: null,
         conciliado_em: null,
       };
@@ -397,8 +652,6 @@ export const POST: APIRoute = async ({ request }) => {
         sistema_valor_taxas: null,
         diff_total: null,
         diff_taxas: null,
-        venda_id: null,
-        venda_recibo_id: null,
         last_checked_at: null,
         conciliado_em: null,
       }));
@@ -414,6 +667,12 @@ export const POST: APIRoute = async ({ request }) => {
       actor: "user",
       actorUserId: user.id,
       client,
+    });
+
+    await syncReciboCancelamentoConciliacao({
+      client,
+      companyId,
+      documentos,
     });
 
     return new Response(

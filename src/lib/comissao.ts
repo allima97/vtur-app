@@ -35,7 +35,11 @@ export type ParametrosComissao = {
     inc_pct_comissao: number;
   }> | null;
   conciliacao_faixas_loja?: Array<{
-    faixa_loja: "MENOR_10" | "MAIOR_OU_IGUAL_10" | "SEGURO_32_35";
+    faixa_loja: string;
+    nome: string;
+    percentual_min: number | null;
+    percentual_max: number | null;
+    ordem: number;
     ativo: boolean;
     tipo_calculo: "CONCILIACAO" | "PRODUTO_DIFERENCIADO";
     tipo: "GERAL" | "ESCALONAVEL";

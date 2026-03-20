@@ -1186,11 +1186,15 @@ body {
 .parametros-sistema-grid {
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: stretch;
 }
 
 .parametros-sistema-span-2 {
+  grid-column: 1 / -1;
+}
+
+.parametros-sistema-card-wide {
   grid-column: 1 / -1;
 }
 
@@ -1242,6 +1246,10 @@ body {
   gap: 16px;
 }
 
+.parametros-sistema-band-fields-row {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .vtur-conciliacao-inline-alert-copy {
   display: inline-flex;
   flex-wrap: wrap;
@@ -1282,12 +1290,19 @@ body {
 @media (max-width: 900px) {
   .parametros-sistema-grid,
   .parametros-sistema-option-list-2,
-  .parametros-sistema-band-grid {
+  .parametros-sistema-band-grid,
+  .parametros-sistema-band-fields-row {
     grid-template-columns: 1fr;
   }
 
   .parametros-avisos-preview-fields-row {
     grid-template-columns: 1fr !important;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1260px) {
+  .parametros-sistema-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

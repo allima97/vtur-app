@@ -29,7 +29,7 @@ function buildDateSeries(inicio: string, fim: string) {
 
 function isOperacionalStatus(status?: string | null) {
   const raw = String(status || "").toUpperCase();
-  return raw === "BAIXA" || raw === "OPFAX";
+  return raw === "BAIXA";
 }
 
 function isPendingConciliacao(row: any) {
@@ -132,8 +132,10 @@ export const GET: APIRoute = async ({ request }) => {
         pendentesImportacao: 0,
         pendentesRanking: 0,
         atribuidosRanking: 0,
+        hasBaixa: false,
       };
       monthBucket.total += 1;
+      if (isOperacionalStatus(row?.status)) monthBucket.hasBaixa = true;
       if (row?.conciliado) monthBucket.conciliadosSistema += 1;
       if (isPendingConciliacao(row)) monthBucket.pendentesConciliacao += 1;
       if (isRankingPending(row)) monthBucket.pendentesRanking += 1;
@@ -152,8 +154,10 @@ export const GET: APIRoute = async ({ request }) => {
           pendentesRanking: 0,
           atribuidosRanking: 0,
           status: "OK",
+          hasBaixa: false,
         };
         dayBucket.total += 1;
+        if (isOperacionalStatus(row?.status)) dayBucket.hasBaixa = true;
         if (row?.conciliado) dayBucket.conciliadosSistema += 1;
         if (isPendingConciliacao(row)) dayBucket.pendentesConciliacao += 1;
         if (isRankingPending(row)) dayBucket.pendentesRanking += 1;
@@ -195,8 +199,26 @@ export const GET: APIRoute = async ({ request }) => {
         return;
       }
 
-      existing.pendentesImportacao = 0;
-      existing.status = existing.pendentesConciliacao > 0 ? "CONCILIACAO_PENDENTE" : "OK";
+      if (!existing.hasBaixa) {
+        existing.pendentesImportacao = 1;
+        existing.status = "IMPORTACAO_PENDENTE";
+        totals.pendentesImportacao += 1;
+        const monthBucket = byMonthMap.get(selectedMonth) || {
+          month: selectedMonth,
+          total: 0,
+          conciliadosSistema: 0,
+          pendentesConciliacao: 0,
+          pendentesImportacao: 0,
+          pendentesRanking: 0,
+          atribuidosRanking: 0,
+          hasBaixa: false,
+        };
+        monthBucket.pendentesImportacao += 1;
+        byMonthMap.set(selectedMonth, monthBucket);
+      } else {
+        existing.pendentesImportacao = 0;
+        existing.status = existing.pendentesConciliacao > 0 ? "CONCILIACAO_PENDENTE" : "OK";
+      }
       byDayMap.set(date, existing);
     });
 

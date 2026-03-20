@@ -23,21 +23,27 @@ export type RegraProduto = {
   fix_super_meta: number | null;
 };
 
-export const CONCILIACAO_COMMISSION_BAND_KEYS = [
+export const LEGACY_CONCILIACAO_COMMISSION_BAND_KEYS = [
   "MENOR_10",
   "MAIOR_OU_IGUAL_10",
   "SEGURO_32_35",
 ] as const;
 
 export type ConciliacaoCommissionBandKey =
-  (typeof CONCILIACAO_COMMISSION_BAND_KEYS)[number];
+  (typeof LEGACY_CONCILIACAO_COMMISSION_BAND_KEYS)[number];
+
+export type ConciliacaoCommissionBandId = string;
 
 export type ConciliacaoCommissionBandMode =
   | "CONCILIACAO"
   | "PRODUTO_DIFERENCIADO";
 
 export type ConciliacaoCommissionBandRule = {
-  faixa_loja: ConciliacaoCommissionBandKey;
+  faixa_loja: ConciliacaoCommissionBandId;
+  nome: string;
+  percentual_min: number | null;
+  percentual_max: number | null;
+  ordem: number;
   ativo: boolean;
   tipo_calculo: ConciliacaoCommissionBandMode;
   tipo: "GERAL" | "ESCALONAVEL";
@@ -64,19 +70,84 @@ export type ParametrosComissao = {
 export type ConciliacaoCommissionSelection =
   | {
       kind: "CONCILIACAO";
-      bandKey: ConciliacaoCommissionBandKey;
+      bandKey: ConciliacaoCommissionBandId;
       rule: Regra;
     }
   | {
       kind: "PRODUTO_DIFERENCIADO";
-      bandKey: ConciliacaoCommissionBandKey;
+      bandKey: ConciliacaoCommissionBandId;
       rule: null;
     }
   | {
       kind: "NONE";
-      bandKey: ConciliacaoCommissionBandKey;
+      bandKey: ConciliacaoCommissionBandId;
       rule: null;
     };
+
+type DefaultBandDefinition = {
+  faixa_loja: ConciliacaoCommissionBandKey;
+  nome: string;
+  percentual_min: number | null;
+  percentual_max: number | null;
+  ordem: number;
+  tipo_calculo: ConciliacaoCommissionBandMode;
+};
+
+const DEFAULT_BAND_DEFINITIONS: DefaultBandDefinition[] = [
+  {
+    faixa_loja: "MENOR_10",
+    nome: "Menor que 10%",
+    percentual_min: null,
+    percentual_max: 9.9999,
+    ordem: 10,
+    tipo_calculo: "CONCILIACAO",
+  },
+  {
+    faixa_loja: "MAIOR_OU_IGUAL_10",
+    nome: "Igual ou maior que 10%",
+    percentual_min: 10,
+    percentual_max: 31.9999,
+    ordem: 20,
+    tipo_calculo: "CONCILIACAO",
+  },
+  {
+    faixa_loja: "SEGURO_32_35",
+    nome: "Igual ou maior que 32%",
+    percentual_min: 32,
+    percentual_max: null,
+    ordem: 30,
+    tipo_calculo: "PRODUTO_DIFERENCIADO",
+  },
+];
+
+function normalizeBandId(value: unknown) {
+  return String(value ?? "")
+    .trim()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toUpperCase();
+}
+
+function normalizeBandName(value: unknown) {
+  const text = String(value ?? "").trim();
+  return text || "Nova faixa";
+}
+
+function parseNullableNumber(value: unknown): number | null {
+  if (value == null || value === "") return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function getDefaultBandDefinition(
+  key?: string | null
+): DefaultBandDefinition | null {
+  const normalized = normalizeBandKey(key);
+  if (!normalized) return null;
+  return DEFAULT_BAND_DEFINITIONS.find((item) => item.faixa_loja === normalized) || null;
+}
 
 function sanitizeTier(tier: any): Tier | null {
   const faixa = String(tier?.faixa || "").trim().toUpperCase();
@@ -170,42 +241,33 @@ export function createDefaultConciliacaoBandRules(
     ? params.conciliacao_tiers.map(sanitizeTier).filter((item): item is Tier => Boolean(item))
     : [];
 
-  return [
-    {
-      faixa_loja: "MENOR_10",
-      ativo: Boolean(legacyRule),
-      tipo_calculo: "CONCILIACAO",
-      tipo: legacyTipo,
-      meta_nao_atingida: params?.conciliacao_meta_nao_atingida ?? null,
-      meta_atingida: params?.conciliacao_meta_atingida ?? null,
-      super_meta: params?.conciliacao_super_meta ?? null,
-      tiers: legacyTiers,
-    },
-    {
-      faixa_loja: "MAIOR_OU_IGUAL_10",
-      ativo: Boolean(legacyRule),
-      tipo_calculo: "CONCILIACAO",
-      tipo: legacyTipo,
-      meta_nao_atingida: params?.conciliacao_meta_nao_atingida ?? null,
-      meta_atingida: params?.conciliacao_meta_atingida ?? null,
-      super_meta: params?.conciliacao_super_meta ?? null,
-      tiers: legacyTiers,
-    },
-    {
-      faixa_loja: "SEGURO_32_35",
-      ativo: true,
-      tipo_calculo: "PRODUTO_DIFERENCIADO",
-      tipo: "GERAL",
-      meta_nao_atingida: null,
-      meta_atingida: null,
-      super_meta: null,
-      tiers: [],
-    },
-  ];
+  return DEFAULT_BAND_DEFINITIONS.map((definition) => ({
+    faixa_loja: definition.faixa_loja,
+    nome: definition.nome,
+    percentual_min: definition.percentual_min,
+    percentual_max: definition.percentual_max,
+    ordem: definition.ordem,
+    ativo: definition.tipo_calculo === "PRODUTO_DIFERENCIADO" ? true : Boolean(legacyRule),
+    tipo_calculo: definition.tipo_calculo,
+    tipo: definition.tipo_calculo === "PRODUTO_DIFERENCIADO" ? "GERAL" : legacyTipo,
+    meta_nao_atingida:
+      definition.tipo_calculo === "PRODUTO_DIFERENCIADO"
+        ? null
+        : params?.conciliacao_meta_nao_atingida ?? null,
+    meta_atingida:
+      definition.tipo_calculo === "PRODUTO_DIFERENCIADO"
+        ? null
+        : params?.conciliacao_meta_atingida ?? null,
+    super_meta:
+      definition.tipo_calculo === "PRODUTO_DIFERENCIADO"
+        ? null
+        : params?.conciliacao_super_meta ?? null,
+    tiers: definition.tipo_calculo === "PRODUTO_DIFERENCIADO" ? [] : legacyTiers,
+  }));
 }
 
 function normalizeBandKey(value?: string | null): ConciliacaoCommissionBandKey | null {
-  const normalized = String(value || "").trim().toUpperCase();
+  const normalized = normalizeBandId(value);
   if (!normalized) return null;
   if (normalized === "MENOR_10") return "MENOR_10";
   if (normalized === "MAIOR_OU_IGUAL_10") return "MAIOR_OU_IGUAL_10";
@@ -219,21 +281,50 @@ function normalizeBandKey(value?: string | null): ConciliacaoCommissionBandKey |
   return null;
 }
 
+function isBandRangeMatch(
+  rule: Pick<ConciliacaoCommissionBandRule, "percentual_min" | "percentual_max">,
+  percentual?: number | null
+) {
+  const pct = Number(percentual ?? 0);
+  if (!Number.isFinite(pct) || pct <= 0) return false;
+  const min = rule.percentual_min;
+  const max = rule.percentual_max;
+  if (min != null && pct < min) return false;
+  if (max != null && pct > max) return false;
+  return true;
+}
+
+function sortBandRules(rules: ConciliacaoCommissionBandRule[]) {
+  return [...rules].sort((left, right) => {
+    if (left.ordem !== right.ordem) return left.ordem - right.ordem;
+    const leftMin = left.percentual_min ?? Number.NEGATIVE_INFINITY;
+    const rightMin = right.percentual_min ?? Number.NEGATIVE_INFINITY;
+    if (leftMin !== rightMin) return leftMin - rightMin;
+    return left.nome.localeCompare(right.nome, "pt-BR");
+  });
+}
+
 export function sanitizeConciliacaoBandRules(
   value: unknown,
   params?: ParametrosComissao | null
 ): ConciliacaoCommissionBandRule[] {
   const defaults = createDefaultConciliacaoBandRules(params);
-  const merged = new Map<
-    ConciliacaoCommissionBandKey,
-    ConciliacaoCommissionBandRule
-  >(defaults.map((item) => [item.faixa_loja, item]));
+  if (!Array.isArray(value) || value.length === 0) {
+    return sortBandRules(defaults);
+  }
 
-  if (Array.isArray(value)) {
-    value.forEach((item: any) => {
-      const faixaLoja = normalizeBandKey(item?.faixa_loja);
-      if (!faixaLoja) return;
-      const base = merged.get(faixaLoja) || defaults.find((entry) => entry.faixa_loja === faixaLoja)!;
+  const sanitized = value
+    .map((item: any, index) => {
+      const legacyDefinition = getDefaultBandDefinition(item?.faixa_loja);
+      const normalizedId =
+        normalizeBandId(item?.faixa_loja) ||
+        normalizeBandId(item?.id) ||
+        `FAIXA_${index + 1}`;
+      const base =
+        defaults.find((entry) => normalizeBandId(entry.faixa_loja) === normalizedId) ||
+        (legacyDefinition
+          ? defaults.find((entry) => entry.faixa_loja === legacyDefinition.faixa_loja)
+          : null);
       const tipoCalculo =
         String(item?.tipo_calculo || "").trim().toUpperCase() === "PRODUTO_DIFERENCIADO"
           ? "PRODUTO_DIFERENCIADO"
@@ -243,28 +334,45 @@ export function sanitizeConciliacaoBandRules(
         : "GERAL";
       const tiers = Array.isArray(item?.tiers)
         ? item.tiers.map(sanitizeTier).filter((tier): tier is Tier => Boolean(tier))
-        : base.tiers;
+        : base?.tiers || [];
 
-      merged.set(faixaLoja, {
-        ...base,
-        faixa_loja: faixaLoja,
-        ativo: item?.ativo == null ? base.ativo : Boolean(item.ativo),
+      return {
+        faixa_loja: normalizedId,
+        nome: normalizeBandName(item?.nome ?? legacyDefinition?.nome ?? base?.nome ?? item?.faixa_loja),
+        percentual_min:
+          parseNullableNumber(item?.percentual_min) ??
+          legacyDefinition?.percentual_min ??
+          base?.percentual_min ??
+          null,
+        percentual_max:
+          parseNullableNumber(item?.percentual_max) ??
+          legacyDefinition?.percentual_max ??
+          base?.percentual_max ??
+          null,
+        ordem: Number.isFinite(Number(item?.ordem))
+          ? Number(item.ordem)
+          : base?.ordem ?? (index + 1) * 10,
+        ativo: item?.ativo == null ? base?.ativo ?? true : Boolean(item.ativo),
         tipo_calculo: tipoCalculo,
         tipo,
         meta_nao_atingida:
-          item?.meta_nao_atingida != null ? Number(item.meta_nao_atingida) : base.meta_nao_atingida,
+          item?.meta_nao_atingida != null
+            ? Number(item.meta_nao_atingida)
+            : base?.meta_nao_atingida ?? null,
         meta_atingida:
-          item?.meta_atingida != null ? Number(item.meta_atingida) : base.meta_atingida,
+          item?.meta_atingida != null
+            ? Number(item.meta_atingida)
+            : base?.meta_atingida ?? null,
         super_meta:
-          item?.super_meta != null ? Number(item.super_meta) : base.super_meta,
+          item?.super_meta != null
+            ? Number(item.super_meta)
+            : base?.super_meta ?? null,
         tiers,
-      });
-    });
-  }
+      } satisfies ConciliacaoCommissionBandRule;
+    })
+    .filter((item) => item.nome);
 
-  return CONCILIACAO_COMMISSION_BAND_KEYS.map(
-    (key) => merged.get(key) || defaults.find((item) => item.faixa_loja === key)!
-  );
+  return sortBandRules(sanitized);
 }
 
 export function hasConciliacaoBandRules(params?: ParametrosComissao | null) {
@@ -278,12 +386,30 @@ export function hasConciliacaoBandRules(params?: ParametrosComissao | null) {
 }
 
 export function resolveConciliacaoBandKey(params: {
+  conciliacao_faixas_loja?: ConciliacaoCommissionBandRule[] | null;
   faixa_comissao?: string | null;
   percentual_comissao_loja?: number | null;
   is_seguro_viagem?: boolean | null;
-}): ConciliacaoCommissionBandKey {
-  const explicitKey = normalizeBandKey(params.faixa_comissao);
-  if (explicitKey) return explicitKey;
+}): ConciliacaoCommissionBandId {
+  const customRules = Array.isArray(params.conciliacao_faixas_loja)
+    ? sortBandRules(sanitizeConciliacaoBandRules(params.conciliacao_faixas_loja))
+    : [];
+
+  if (customRules.length > 0) {
+    const matched = customRules.find(
+      (item) => item.ativo && isBandRangeMatch(item, params.percentual_comissao_loja)
+    );
+    if (matched) return matched.faixa_loja;
+  }
+
+  const explicitId = normalizeBandId(params.faixa_comissao);
+  if (explicitId) {
+    const exact = customRules.find((item) => normalizeBandId(item.faixa_loja) === explicitId);
+    if (exact) return exact.faixa_loja;
+
+    const legacy = normalizeBandKey(params.faixa_comissao);
+    if (legacy) return legacy;
+  }
 
   const percentual = Number(params.percentual_comissao_loja || 0);
   if (params.is_seguro_viagem || percentual >= 32) {
@@ -295,6 +421,30 @@ export function resolveConciliacaoBandKey(params: {
   return "MENOR_10";
 }
 
+export function resolveConciliacaoBandRule(
+  params: ParametrosComissao | null | undefined,
+  options?: {
+    faixa_comissao?: string | null;
+    percentual_comissao_loja?: number | null;
+    is_seguro_viagem?: boolean | null;
+  }
+): ConciliacaoCommissionBandRule | null {
+  if (!params) return null;
+  const rules = sanitizeConciliacaoBandRules(params.conciliacao_faixas_loja, params);
+  if (rules.length === 0) return null;
+
+  const bandKey = resolveConciliacaoBandKey({
+    conciliacao_faixas_loja: params.conciliacao_faixas_loja,
+    faixa_comissao: options?.faixa_comissao ?? null,
+    percentual_comissao_loja: options?.percentual_comissao_loja ?? null,
+    is_seguro_viagem: options?.is_seguro_viagem ?? null,
+  });
+
+  return (
+    rules.find((item) => normalizeBandId(item.faixa_loja) === normalizeBandId(bandKey)) || null
+  );
+}
+
 export function resolveConciliacaoCommissionSelection(
   params: ParametrosComissao | null | undefined,
   options?: {
@@ -304,6 +454,7 @@ export function resolveConciliacaoCommissionSelection(
   }
 ): ConciliacaoCommissionSelection {
   const bandKey = resolveConciliacaoBandKey({
+    conciliacao_faixas_loja: params?.conciliacao_faixas_loja ?? null,
     faixa_comissao: options?.faixa_comissao ?? null,
     percentual_comissao_loja: options?.percentual_comissao_loja ?? null,
     is_seguro_viagem: options?.is_seguro_viagem ?? null,
@@ -318,9 +469,7 @@ export function resolveConciliacaoCommissionSelection(
     params.conciliacao_faixas_loja.length > 0;
 
   if (hasCustomBands) {
-    const band = sanitizeConciliacaoBandRules(params.conciliacao_faixas_loja, params).find(
-      (item) => item.faixa_loja === bandKey
-    );
+    const band = resolveConciliacaoBandRule(params, options);
     if (!band || !band.ativo) {
       return { kind: "NONE", bandKey, rule: null };
     }

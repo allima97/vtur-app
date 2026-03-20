@@ -19,6 +19,7 @@ import { normalizeText } from "../../lib/normalizeText";
 import { fetchGestorEquipeIdsComGestor } from "../../lib/gestorEquipe";
 import {
   buildConciliacaoSyntheticVendas,
+  filterRecibosCanceladosMesmoMes,
   fetchEffectiveConciliacaoReceipts,
   hasConciliacaoOverride,
 } from "../../lib/conciliacao/source";
@@ -94,6 +95,7 @@ type Produto = {
 
 type Recibo = {
   id?: string | null;
+  data_venda?: string | null;
   valor_total: number | null;
   valor_taxas: number | null;
   valor_du?: number | null;
@@ -106,6 +108,8 @@ type Recibo = {
   valor_comissao_loja?: number | null;
   percentual_comissao_loja?: number | null;
   faixa_comissao?: string | null;
+  cancelado_por_conciliacao_em?: string | null;
+  cancelado_por_conciliacao_observacao?: string | null;
   tipo_produtos?: Produto | null;
   regra_produto?: RegraProduto | null;
 };
@@ -577,6 +581,8 @@ export default function ComissionamentoIsland() {
               valor_rav,
 	            produto_id,
 	            tipo_pacote,
+              cancelado_por_conciliacao_em,
+              cancelado_por_conciliacao_observacao,
 	            tipo_produtos (
 	              ${nestedTipoProdCols}
 	            )
@@ -611,6 +617,8 @@ export default function ComissionamentoIsland() {
               valor_rav,
 	            produto_id,
 	            tipo_pacote,
+              cancelado_por_conciliacao_em,
+              cancelado_por_conciliacao_observacao,
 	            tipo_produtos (
 	              ${tipoProdBaseCols}
 	            )
@@ -759,7 +767,14 @@ export default function ComissionamentoIsland() {
       setRegraProdutoMap(regProdMap);
       setRegraProdutoPacoteMap(regProdPacoteMap);
       setProdutos(prodMap);
-      const vendasList = (vendasData || []) as Venda[];
+      const vendasList = ((vendasData || []) as Venda[])
+        .map((sale) => ({
+          ...sale,
+          vendas_recibos: filterRecibosCanceladosMesmoMes(
+            Array.isArray(sale.vendas_recibos) ? sale.vendas_recibos : []
+          ),
+        }))
+        .filter((sale) => Array.isArray(sale.vendas_recibos) && sale.vendas_recibos.length > 0);
       const pagamentosMap = await carregarPagamentosNaoComissionaveis(
         vendasList.map((v) => v.id)
       );

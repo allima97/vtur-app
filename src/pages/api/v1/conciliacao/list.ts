@@ -11,6 +11,10 @@ function normalizeStatus(value?: string | null) {
   return String(value || "").trim().toUpperCase() || "OUTRO";
 }
 
+function isRankingEligibleStatus(value?: string | null) {
+  return normalizeStatus(value) === "BAIXA";
+}
+
 function rankDuplicateRow(row: any) {
   const metrics = buildConciliacaoMetrics({
     descricao: row?.descricao,
@@ -170,19 +174,22 @@ export const GET: APIRoute = async ({ request }) => {
     let rows = dedupeConciliacaoRows(Array.isArray(data) ? data : []).map(normalizeComputedFields);
     if (rankingStatus === "pending") {
       rows = rows.filter((row: any) => {
-        const status = String(row?.status || "").toUpperCase();
         const vendaId = String(row?.venda_id || "").trim();
         const rankingVendedorId = String(row?.ranking_vendedor_id || "").trim();
-        return (status === "BAIXA" || status === "OPFAX") && !vendaId && !rankingVendedorId;
+        return isRankingEligibleStatus(row?.status) && !vendaId && !rankingVendedorId;
       });
     } else if (rankingStatus === "assigned") {
       rows = rows.filter((row: any) => {
+        if (!isRankingEligibleStatus(row?.status)) return false;
         const vendaId = String(row?.venda_id || "").trim();
         const rankingVendedorId = String(row?.ranking_vendedor_id || "").trim();
         return !vendaId && Boolean(rankingVendedorId);
       });
     } else if (rankingStatus === "system") {
-      rows = rows.filter((row: any) => Boolean(String(row?.venda_id || "").trim()));
+      rows = rows.filter(
+        (row: any) =>
+          isRankingEligibleStatus(row?.status) && Boolean(String(row?.venda_id || "").trim())
+      );
     }
 
     return new Response(JSON.stringify(rows), {

@@ -5,6 +5,7 @@ import { kvCache } from "../../../../lib/kvCache";
 import { MODULO_ALIASES } from "../../../../config/modulos";
 import {
   buildConciliacaoSyntheticVendas,
+  filterRecibosCanceladosMesmoMes,
   fetchEffectiveConciliacaoReceipts,
 } from "../../../../lib/conciliacao/source";
 
@@ -96,6 +97,8 @@ type RankingVendaRecibo = {
   valor_du?: number | null;
   data_venda?: string | null;
   produto_id: string | null;
+  cancelado_por_conciliacao_em?: string | null;
+  cancelado_por_conciliacao_observacao?: string | null;
   valor_meta_override?: number | null;
   valor_liquido_override?: number | null;
   valor_comissao_loja?: number | null;
@@ -509,6 +512,8 @@ export async function GET({ request }: { request: Request }) {
           valor_du,
           data_venda,
           produto_id,
+          cancelado_por_conciliacao_em,
+          cancelado_por_conciliacao_observacao,
           tipo_produtos:tipo_produtos!produto_id (id, nome)
         )
       `
@@ -542,8 +547,10 @@ export async function GET({ request }: { request: Request }) {
       const baseSales = vendasData
         .map((sale: any) => {
           const recibos = Array.isArray(sale?.vendas_recibos)
-            ? sale.vendas_recibos.filter(
-                (recibo: any) => !overriddenReceiptIds.has(String(recibo?.id || "").trim())
+            ? filterRecibosCanceladosMesmoMes(
+                sale.vendas_recibos.filter(
+                  (recibo: any) => !overriddenReceiptIds.has(String(recibo?.id || "").trim())
+                )
               )
             : [];
           return {
@@ -554,6 +561,15 @@ export async function GET({ request }: { request: Request }) {
         .filter((sale: any) => Array.isArray(sale?.vendas_recibos) && sale.vendas_recibos.length > 0);
 
       vendasData = [...baseSales, ...syntheticSales];
+    } else {
+      vendasData = vendasData
+        .map((sale: any) => ({
+          ...sale,
+          vendas_recibos: filterRecibosCanceladosMesmoMes(
+            Array.isArray(sale?.vendas_recibos) ? sale.vendas_recibos : []
+          ),
+        }))
+        .filter((sale: any) => Array.isArray(sale?.vendas_recibos) && sale.vendas_recibos.length > 0);
     }
 
     let metasQuery = dataClient

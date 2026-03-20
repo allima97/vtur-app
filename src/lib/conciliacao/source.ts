@@ -14,6 +14,8 @@ export type EffectiveConciliacaoReceipt = {
   percentual_comissao_loja: number | null;
   faixa_comissao: string | null;
   is_seguro_viagem: boolean;
+  cancelado_por_conciliacao_em: string | null;
+  cancelado_por_conciliacao_observacao: string | null;
   produto: { id: string; nome: string | null } | null;
 };
 
@@ -43,6 +45,8 @@ export type ConciliacaoSyntheticVenda = {
     valor_comissao_loja: number | null;
     percentual_comissao_loja: number | null;
     faixa_comissao: string | null;
+    cancelado_por_conciliacao_em: string | null;
+    cancelado_por_conciliacao_observacao: string | null;
     tipo_produtos: { id: string; nome: string | null } | null;
   }>;
 };
@@ -58,6 +62,35 @@ function toNumber(value: unknown) {
 
 function isPositive(value: unknown) {
   return toNumber(value) > 0;
+}
+
+function toMonthKey(value?: string | null) {
+  const raw = toStr(value);
+  return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw.slice(0, 7) : "";
+}
+
+export function isReciboCanceladoMesmoMes(params: {
+  data_venda?: string | null;
+  cancelado_por_conciliacao_em?: string | null;
+}) {
+  const vendaMonth = toMonthKey(params.data_venda);
+  const cancelMonth = toMonthKey(params.cancelado_por_conciliacao_em);
+  return Boolean(vendaMonth && cancelMonth && vendaMonth === cancelMonth);
+}
+
+export function filterRecibosCanceladosMesmoMes<
+  T extends {
+    data_venda?: string | null;
+    cancelado_por_conciliacao_em?: string | null;
+  },
+>(recibos: T[]) {
+  return recibos.filter(
+    (recibo) =>
+      !isReciboCanceladoMesmoMes({
+        data_venda: recibo.data_venda,
+        cancelado_por_conciliacao_em: recibo.cancelado_por_conciliacao_em,
+      })
+  );
 }
 
 export async function fetchEffectiveConciliacaoReceipts(params: {
@@ -78,7 +111,7 @@ export async function fetchEffectiveConciliacaoReceipts(params: {
       .from("conciliacao_recibos")
       .select("documento")
       .eq("company_id", companyId)
-      .in("status", ["BAIXA", "OPFAX"] as any)
+      .in("status", ["BAIXA"] as any)
       .gte("movimento_data", inicio)
       .lte("movimento_data", fim)
       .order("movimento_data", { ascending: false })
@@ -109,7 +142,6 @@ export async function fetchEffectiveConciliacaoReceipts(params: {
           "id, documento, descricao, movimento_data, status, conciliado, valor_lancamentos, valor_taxas, valor_descontos, valor_abatimentos, valor_venda_real, valor_comissao_loja, percentual_comissao_loja, faixa_comissao, is_seguro_viagem, venda_id, venda_recibo_id, ranking_vendedor_id, ranking_produto_id"
         )
         .eq("company_id", companyId)
-        .in("status", ["BAIXA", "OPFAX"] as any)
         .in("documento", batch)
         .order("movimento_data", { ascending: true })
         .range(offset, offset + pageSize - 1);
@@ -146,13 +178,19 @@ export async function fetchEffectiveConciliacaoReceipts(params: {
   if (reciboIds.length > 0) {
     const { data, error } = await client
       .from("vendas_recibos")
-      .select("id, produto_id")
+      .select("id, produto_id, data_venda, cancelado_por_conciliacao_em, cancelado_por_conciliacao_observacao")
       .in("id", reciboIds);
     if (error) throw error;
     (data || []).forEach((row: any) => {
       const id = toStr(row?.id);
       if (!id) return;
-      recibosMap.set(id, { produto_id: toStr(row?.produto_id) || null });
+      recibosMap.set(id, {
+        produto_id: toStr(row?.produto_id) || null,
+        data_venda: toStr(row?.data_venda) || null,
+        cancelado_por_conciliacao_em: toStr(row?.cancelado_por_conciliacao_em) || null,
+        cancelado_por_conciliacao_observacao:
+          toStr(row?.cancelado_por_conciliacao_observacao) || null,
+      } as any);
     });
   }
 
@@ -210,20 +248,11 @@ export async function fetchEffectiveConciliacaoReceipts(params: {
         toStr(a?.movimento_data).localeCompare(toStr(b?.movimento_data))
       );
       const baixaRows = sortedRows.filter((row) => toStr(row?.status).toUpperCase() === "BAIXA");
-      const confirmed = baixaRows.length > 0;
+      const estornoRows = sortedRows.filter((row) => toStr(row?.status).toUpperCase() === "ESTORNO");
       const valuedBaixa = baixaRows.find((row) =>
         isPositive(row?.valor_venda_real) || isPositive(row?.valor_lancamentos)
       );
-      const valuedOpfax = sortedRows.find(
-        (row) =>
-          toStr(row?.status).toUpperCase() === "OPFAX" &&
-          (isPositive(row?.valor_venda_real) || isPositive(row?.valor_lancamentos))
-      );
-      const sourceRow =
-        valuedBaixa ||
-        valuedOpfax ||
-        (confirmed ? baixaRows[0] : null) ||
-        null;
+      const sourceRow = valuedBaixa || baixaRows[0] || null;
 
       if (!sourceRow) return null;
 
@@ -242,6 +271,14 @@ export async function fetchEffectiveConciliacaoReceipts(params: {
       }
 
       const linkedProdutoId = linkedReciboId ? recibosMap.get(linkedReciboId)?.produto_id || null : null;
+      const linkedReciboMeta = linkedReciboId ? (recibosMap.get(linkedReciboId) as any) || null : null;
+      const canceladoMesmoMes =
+        estornoRows.some((row) => toMonthKey(row?.movimento_data) === toMonthKey(effectiveDate)) ||
+        isReciboCanceladoMesmoMes({
+          data_venda: linkedReciboMeta?.data_venda || effectiveDate,
+          cancelado_por_conciliacao_em: linkedReciboMeta?.cancelado_por_conciliacao_em || null,
+        });
+      if (canceladoMesmoMes) return null;
       const manualProdutoId = sortedRows.map((row) => toStr(row?.ranking_produto_id)).find(Boolean) || null;
       const isSeguro = sortedRows.some((row) => Boolean(row?.is_seguro_viagem));
       const produtoId = linkedProdutoId || manualProdutoId || (isSeguro ? seguroFallbackId : null);
@@ -271,6 +308,9 @@ export async function fetchEffectiveConciliacaoReceipts(params: {
         percentual_comissao_loja: sourceRow?.percentual_comissao_loja ?? null,
         faixa_comissao: toStr(sourceRow?.faixa_comissao) || null,
         is_seguro_viagem: isSeguro,
+        cancelado_por_conciliacao_em: linkedReciboMeta?.cancelado_por_conciliacao_em || null,
+        cancelado_por_conciliacao_observacao:
+          linkedReciboMeta?.cancelado_por_conciliacao_observacao || null,
         produto,
       } satisfies EffectiveConciliacaoReceipt;
     })
@@ -305,6 +345,8 @@ export function buildConciliacaoSyntheticVendas(items: EffectiveConciliacaoRecei
         valor_comissao_loja: item.valor_comissao_loja,
         percentual_comissao_loja: item.percentual_comissao_loja,
         faixa_comissao: item.faixa_comissao,
+        cancelado_por_conciliacao_em: item.cancelado_por_conciliacao_em,
+        cancelado_por_conciliacao_observacao: item.cancelado_por_conciliacao_observacao,
         tipo_produtos: item.produto,
       },
     ],

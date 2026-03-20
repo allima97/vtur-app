@@ -211,15 +211,49 @@ function parsePtBrNumber(value: any): number | null {
   const hasComma = raw.includes(",");
   const hasDot = raw.includes(".");
 
-  let cleaned = raw;
-  if (hasComma) {
-    cleaned = raw.replace(/\./g, "").replace(/,/g, ".");
-  } else if (hasDot) {
-    cleaned = raw.replace(/\s+/g, "");
+  let cleaned = raw.replace(/\s+/g, "");
+  if (hasComma && hasDot) {
+    if (cleaned.lastIndexOf(",") > cleaned.lastIndexOf(".")) {
+      cleaned = cleaned.replace(/\./g, "").replace(/,/g, ".");
+    } else {
+      cleaned = cleaned.replace(/,/g, "");
+    }
+  } else if (hasComma) {
+    cleaned = cleaned.replace(/\./g, "").replace(/,/g, ".");
   }
 
   const num = Number(cleaned);
   return Number.isFinite(num) ? num : null;
+}
+
+function parseLegacyXlsNumber(value: any): number | null {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return null;
+    return parseLegacyXlsNumber(String(value));
+  }
+
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+
+  if (raw.includes(",") || /[A-Za-z]/.test(raw)) {
+    return parsePtBrNumber(raw);
+  }
+
+  const sign = raw.startsWith("-") ? -1 : 1;
+  const unsigned = raw.replace(/^-/, "");
+  const parts = unsigned.split(".");
+  const digits = parts.join("");
+  if (!digits || /\D/.test(digits)) return parsePtBrNumber(raw);
+
+  let scaledDigits = digits;
+  if (parts.length > 1) {
+    const fracLength = parts[parts.length - 1]?.length ?? 0;
+    if (fracLength === 4) scaledDigits = `${digits}0`;
+  }
+
+  const num = Number(scaledDigits);
+  if (!Number.isFinite(num)) return null;
+  return (sign * num) / 100;
 }
 
 function parseMovimentoDateFromTxt(text: string): string | null {
@@ -228,6 +262,19 @@ function parseMovimentoDateFromTxt(text: string): string | null {
   const dd = m[1];
   const mm = m[2];
   const yyyy = m[3];
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function parseMovimentoDateFromFileName(fileName: string): string | null {
+  const raw = String(fileName || "");
+  const match = raw.match(/(\d{2})-(\d{2})-(\d{2,4})/);
+  if (!match) return null;
+
+  const dd = match[1];
+  const mm = match[2];
+  const yy = match[3];
+  const yyyy = yy.length === 2 ? `20${yy}` : yy;
+  if (!dd || !mm || !yyyy) return null;
   return `${yyyy}-${mm}-${dd}`;
 }
 
@@ -317,26 +364,48 @@ async function parseConciliacaoXls(file: File, origem: string): Promise<{ movime
   const XLSX = (module as any).default ?? module;
   const arrayBuffer = await file.arrayBuffer();
   const wb = XLSX.read(arrayBuffer, { type: "array" });
-  const sheetName = wb.SheetNames?.[0];
-  if (!sheetName) return { movimentoData: null, linhas: [] };
-  const ws = wb.Sheets[sheetName];
+  const isLegacyXls = /\.xls$/i.test(origem) && !/\.xlsx$/i.test(origem);
+  const sheets = (wb.SheetNames || [])
+    .map((sheetName) => {
+      const ws = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, {
+        header: 1,
+        defval: "",
+        raw: !isLegacyXls,
+      }) as any[][];
+      const headerIdx = rows.findIndex((r) =>
+        r.some((cell) =>
+          String(cell || "")
+            .toUpperCase()
+            .normalize("NFD")
+            .replace(/\p{Diacritic}/gu, "")
+            .includes("DOCUMENTO")
+        )
+      );
+      return { sheetName, rows, headerIdx };
+    })
+    .filter((entry) => Array.isArray(entry.rows) && entry.rows.length > 0);
 
-  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" }) as any[][];
-  if (!rows || rows.length === 0) return { movimentoData: null, linhas: [] };
+  const selectedSheet = sheets.find((entry) => entry.headerIdx >= 0) || null;
+  if (!selectedSheet) {
+    return { movimentoData: parseMovimentoDateFromFileName(origem), linhas: [] };
+  }
 
-  const movimentoDateCell = rows
+  const rows = selectedSheet.rows;
+
+  const movimentoDateCell = sheets
+    .flatMap((entry) => entry.rows)
     .flat()
     .map((cell) => String(cell || "").trim())
     .find((cell) => /Movimenta[cç][aã]o\s+do\s+Dia:/i.test(cell));
-  const movimentoData = movimentoDateCell ? parseMovimentoDateFromTxt(movimentoDateCell) : null;
+  const movimentoData =
+    (movimentoDateCell ? parseMovimentoDateFromTxt(movimentoDateCell) : null) ||
+    parseMovimentoDateFromFileName(origem);
 
-  const headerIdx = rows.findIndex((r) => r.some((cell) => String(cell || "").toUpperCase().includes("DOCUMENTO")));
-  if (headerIdx < 0) {
-    return { movimentoData: null, linhas: [] };
-  }
+  const headerIdx = selectedSheet.headerIdx;
 
   const headerRow = rows[headerIdx].map((c) => String(c || "").trim());
-  const colIndexAny = (needles: string[]) => {
+  const colIndexAny = (needles: string[], fallbackIndex = -1) => {
     const norm = (v: any) =>
       String(v || "")
         .toUpperCase()
@@ -344,21 +413,23 @@ async function parseConciliacaoXls(file: File, origem: string): Promise<{ movime
         .replace(/\p{Diacritic}/gu, "");
     const headerNorm = headerRow.map(norm);
     const wanted = needles.map(norm);
-    return headerNorm.findIndex((h) => wanted.some((n) => h.includes(n)));
+    const index = headerNorm.findIndex((h) => wanted.some((n) => h.includes(n)));
+    return index >= 0 ? index : fallbackIndex;
   };
 
-  const cDocumento = colIndexAny(["DOCUMENTO"]);
-  const cDescricao = colIndexAny(["DESCRICAO", "DESCRI"]);
-  const cLanc = colIndexAny(["LANCAMENTOS", "LANC"]);
-  const cTaxas = colIndexAny(["TAXAS"]);
-  const cDesc = colIndexAny(["DESCONTOS", "DESCONT"]);
-  const cAbat = colIndexAny(["ABATIMENTOS", "ABAT"]);
-  const cCalc = colIndexAny(["CALCULADA LOJA", "CALCUL"]);
-  const cVisao = colIndexAny(["VISAO MASTER", "VISAO", "VIS"]);
-  const cOpfax = colIndexAny(["OPFAX"]);
-  const cSaldo = colIndexAny(["SALDO"]);
+  const cDocumento = colIndexAny(["DOCUMENTO"], 0);
+  const cDescricao = colIndexAny(["DESCRICAO", "DESCRI"], 1);
+  const cLanc = colIndexAny(["LANCAMENTOS", "LANC"], 2);
+  const cTaxas = colIndexAny(["TAXAS"], 3);
+  const cDesc = colIndexAny(["DESCONTOS", "DESCONT"], 4);
+  const cAbat = colIndexAny(["ABATIMENTOS", "ABAT"], 5);
+  const cCalc = colIndexAny(["CALCULADA LOJA", "CALCUL"], 6);
+  const cVisao = colIndexAny(["VISAO MASTER", "VISAO", "VIS"], 8);
+  const cOpfax = colIndexAny(["OPFAX"], 11);
+  const cSaldo = colIndexAny(["SALDO"], 12);
 
   const linhas: LinhaInput[] = [];
+  const pickNumber = (value: any) => (isLegacyXls ? parseLegacyXlsNumber(value) : parsePtBrNumber(value));
 
   for (let i = headerIdx + 1; i < rows.length; i++) {
     const r = rows[i] || [];
@@ -368,7 +439,7 @@ async function parseConciliacaoXls(file: File, origem: string): Promise<{ movime
 
     const descricao = cDescricao >= 0 ? String(r[cDescricao] || "").trim() : "";
 
-    const pick = (idx: number) => (idx >= 0 ? parsePtBrNumber(r[idx]) : null);
+    const pick = (idx: number) => (idx >= 0 ? pickNumber(r[idx]) : null);
 
     linhas.push(enrichLinha({
       documento: doc,
@@ -520,9 +591,14 @@ function formatPendingDayList(dates: string[], limit = 6) {
   return rest > 0 ? `${visible.join(", ")} +${rest}` : visible.join(", ");
 }
 
+function linhaEhImportavel(value?: string | null) {
+  const status = String(value || "").trim().toUpperCase();
+  return status === "BAIXA" || status === "OPFAX" || status === "ESTORNO";
+}
+
 function isOperacionalLinha(value?: string | null) {
   const status = String(value || "").trim().toUpperCase();
-  return status === "BAIXA" || status === "OPFAX";
+  return status === "BAIXA";
 }
 
 function linhaExigeAtribuicaoRanking(linha: LinhaInput) {
@@ -1109,9 +1185,11 @@ export default function ConciliacaoIsland() {
       return;
     }
 
-    const linhasImportaveis = parsedLinhas.filter((linha) => linhaExigeAtribuicaoRanking(linha));
+    const linhasImportaveis = parsedLinhas.filter((linha) =>
+      linhaEhImportavel(linha.status || linha.descricao || null)
+    );
     if (linhasImportaveis.length === 0) {
-      showToast("O arquivo não possui recibos operacionais para importar.", "error");
+      showToast("O arquivo não possui registros válidos para importar.", "error");
       return;
     }
 
@@ -1444,16 +1522,26 @@ export default function ConciliacaoIsland() {
   );
   const produtoMetaUnico = rankingProdutosMeta.length === 1 ? rankingProdutosMeta[0] : null;
   const linhasImportaveis = useMemo(
-    () => parsedLinhas.filter((linha) => linhaExigeAtribuicaoRanking(linha)),
+    () =>
+      parsedLinhas.filter((linha) =>
+        linhaEhImportavel(linha.status || linha.descricao || null)
+      ),
     [parsedLinhas]
   );
   const linhasIgnoradasImportacao = useMemo(
-    () => parsedLinhas.filter((linha) => !linhaExigeAtribuicaoRanking(linha)),
+    () =>
+      parsedLinhas.filter(
+        (linha) => !linhaEhImportavel(linha.status || linha.descricao || null)
+      ),
     [parsedLinhas]
   );
   const pendentesAtribuicaoImportacao = useMemo(
     () =>
-      linhasImportaveis.filter((linha) => !String(linha.ranking_vendedor_id || "").trim()).length,
+      linhasImportaveis.filter(
+        (linha) =>
+          linhaExigeAtribuicaoRanking(linha) &&
+          !String(linha.ranking_vendedor_id || "").trim()
+      ).length,
     [linhasImportaveis]
   );
   useEffect(() => {
@@ -2097,7 +2185,7 @@ export default function ConciliacaoIsland() {
               <AlertMessage variant="warning" className="mt-3 vtur-conciliacao-inline-alert">
                 <span className="vtur-conciliacao-inline-alert-copy">
                   <span>
-                    {`${linhasIgnoradasImportacao.length} linha(s) com status diferente de BAIXA/OPFAX serão ignoradas na importação.`}
+                    {`${linhasIgnoradasImportacao.length} linha(s) com status diferente de BAIXA, OPFAX ou ESTORNO serão ignoradas na importação.`}
                   </span>
                 </span>
               </AlertMessage>
@@ -2107,7 +2195,7 @@ export default function ConciliacaoIsland() {
               <AlertMessage variant="info" className="mt-3 vtur-conciliacao-inline-alert">
                 <span className="vtur-conciliacao-inline-alert-copy">
                   <span>
-                    A atribuição do vendedor/gestor é obrigatória em cada recibo operacional antes da importação.
+                    A atribuição do vendedor/gestor é obrigatória apenas para recibos efetivados em BAIXA antes da importação.
                   </span>
                   <strong className="vtur-conciliacao-inline-alert-emphasis">
                     {`Ainda faltam ${pendentesAtribuicaoImportacao}.`}
@@ -2175,7 +2263,7 @@ export default function ConciliacaoIsland() {
                             ))}
                           </select>
                         ) : (
-                          <span>Ignorado</span>
+                          <span>{linha.status === "OPFAX" ? "Standby (OPFAX)" : "Ignorado"}</span>
                         )}
                       </td>
                       <td data-label="Meta dif.">

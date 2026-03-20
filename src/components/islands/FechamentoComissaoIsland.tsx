@@ -22,6 +22,7 @@ import { normalizeText } from "../../lib/normalizeText";
 import { fetchGestorEquipeIdsComGestor } from "../../lib/gestorEquipe";
 import {
   buildConciliacaoSyntheticVendas,
+  filterRecibosCanceladosMesmoMes,
   fetchEffectiveConciliacaoReceipts,
   hasConciliacaoOverride,
 } from "../../lib/conciliacao/source";
@@ -65,6 +66,7 @@ type MetaVendedor = {
 
 type VendaRecibo = {
   id?: string | null;
+  data_venda?: string | null;
   valor_total: number | null;
   valor_taxas: number | null;
   valor_du?: number | null;
@@ -77,6 +79,8 @@ type VendaRecibo = {
   valor_comissao_loja?: number | null;
   percentual_comissao_loja?: number | null;
   faixa_comissao?: string | null;
+  cancelado_por_conciliacao_em?: string | null;
+  cancelado_por_conciliacao_observacao?: string | null;
 };
 
 type Venda = {
@@ -626,7 +630,9 @@ export default function FechamentoComissaoIsland() {
 	            valor_taxas,
               valor_du,
               valor_rav,
-	            tipo_pacote
+	            tipo_pacote,
+              cancelado_por_conciliacao_em,
+              cancelado_por_conciliacao_observacao
 	          )
 	        `
 	      )
@@ -642,7 +648,14 @@ export default function FechamentoComissaoIsland() {
       return;
     }
 
-    const vendasData = (data || []) as Venda[];
+    const vendasData = ((data || []) as Venda[])
+      .map((sale) => ({
+        ...sale,
+        vendas_recibos: filterRecibosCanceladosMesmoMes(
+          Array.isArray(sale.vendas_recibos) ? sale.vendas_recibos : []
+        ),
+      }))
+      .filter((sale) => Array.isArray(sale.vendas_recibos) && sale.vendas_recibos.length > 0);
     const pagamentosMap = await carregarPagamentosNaoComissionaveis(vendasData.map((v) => v.id));
     let vendasFinal = vendasData;
 
