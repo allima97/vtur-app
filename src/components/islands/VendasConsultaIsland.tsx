@@ -571,6 +571,8 @@ export default function VendasConsultaIsland() {
 
         if (fetchAll) {
           params.set("all", "1");
+          params.set("q", buscaAtiva);
+          params.set("campo", campoBusca);
           setCarregouTodos(true);
         } else {
           params.set("page", String(paginaAtual));

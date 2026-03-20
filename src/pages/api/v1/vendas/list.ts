@@ -2,6 +2,7 @@ import { createServerClient } from "../../../../lib/supabaseServer";
 import { kvCache } from "../../../../lib/kvCache";
 import { MODULO_ALIASES } from "../../../../config/modulos";
 import { fetchAndComputeVendasAgg } from "./_aggregates";
+import { buildReciboSearchTokens, matchesReciboSearch, onlyDigits } from "../../../../lib/searchNormalization";
 
 import { getSupabaseEnv } from "../../users";
 const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv();
@@ -61,6 +62,75 @@ function parseIntSafe(value: string | null, fallback: number) {
   if (!Number.isFinite(parsed)) return fallback;
   const intVal = Math.trunc(parsed);
   return intVal > 0 ? intVal : fallback;
+}
+
+function normalizeCampoBusca(value?: string | null) {
+  const raw = String(value || "").trim().toLowerCase();
+  return raw === "cliente" || raw === "vendedor" || raw === "destino" || raw === "produto" || raw === "recibo"
+    ? raw
+    : "todos";
+}
+
+function isLikelyReciboQuery(value?: string | null) {
+  const raw = String(value || "").trim();
+  if (!raw) return false;
+  if (!/^[0-9\s-]+$/.test(raw)) return false;
+  return onlyDigits(raw).length >= 8;
+}
+
+function escapeLike(value: string) {
+  return value.replace(/[%_,]/g, (match) => `\\${match}`);
+}
+
+async function resolveSearchVendaIds(client: any, params: {
+  companyId: string;
+  vendedorIds: string[];
+  inicio: string;
+  fim: string;
+  query: string;
+  campo: string;
+}) {
+  const queryRaw = String(params.query || "").trim();
+  if (!queryRaw) return null;
+
+  const campoBusca = normalizeCampoBusca(params.campo);
+  const likelyRecibo = campoBusca === "recibo" || (campoBusca === "todos" && isLikelyReciboQuery(queryRaw));
+  if (!likelyRecibo) return null;
+
+  const reciboTokens = Array.from(
+    new Set([queryRaw, ...buildReciboSearchTokens(queryRaw)].map((item) => String(item || "").trim()).filter(Boolean))
+  ).slice(0, 6);
+
+  if (reciboTokens.length === 0) return [];
+
+  let recibosQuery = client
+    .from("vendas_recibos")
+    .select("venda_id, numero_recibo, vendas!inner(id, company_id, vendedor_id)")
+    .limit(300);
+
+  if (params.companyId) {
+    recibosQuery = recibosQuery.eq("vendas.company_id", params.companyId);
+  }
+  if (params.vendedorIds.length > 0) {
+    recibosQuery = recibosQuery.in("vendas.vendedor_id", params.vendedorIds);
+  }
+
+  const ilikeParts = reciboTokens.map((token) => `numero_recibo.ilike.%${escapeLike(token)}%`);
+  if (ilikeParts.length > 0) {
+    recibosQuery = recibosQuery.or(ilikeParts.join(","));
+  }
+
+  const { data, error } = await recibosQuery;
+  if (error) throw error;
+
+  const saleIds = new Set<string>();
+  for (const row of Array.isArray(data) ? data : []) {
+    if (!matchesReciboSearch((row as any)?.numero_recibo, queryRaw)) continue;
+    const vendaId = String((row as any)?.venda_id || "").trim();
+    if (vendaId) saleIds.add(vendaId);
+  }
+
+  return Array.from(saleIds);
 }
 
 function readCache(key: string) {
@@ -175,6 +245,8 @@ export async function GET({ request }: { request: Request }) {
     const fim = String(url.searchParams.get("fim") || "").trim();
     const requestedCompanyId = String(url.searchParams.get("company_id") || "").trim();
     const vendedorIdsRaw = String(url.searchParams.get("vendedor_ids") || "").trim();
+    const searchQuery = String(url.searchParams.get("q") || "").trim();
+    const campoBusca = normalizeCampoBusca(url.searchParams.get("campo"));
     const includeKpis =
       String(url.searchParams.get("include_kpis") || "").trim() === "1" ||
       String(url.searchParams.get("kpis") || "").trim() === "1";
@@ -260,6 +332,8 @@ export async function GET({ request }: { request: Request }) {
       "vendasList",
       user.id,
       includeKpis ? "k1" : "k0",
+      searchQuery || "-",
+      campoBusca,
       openId || "-",
       inicio || "-",
       fim || "-",
@@ -344,7 +418,17 @@ export async function GET({ request }: { request: Request }) {
     if (openId) {
       query = query.eq("id", openId);
     } else {
-      if (inicio && fim) {
+      const matchedSaleIds = await resolveSearchVendaIds(client, {
+        companyId,
+        vendedorIds,
+        inicio,
+        fim,
+        query: searchQuery,
+        campo: campoBusca,
+      });
+      const ignoringPeriodo = Boolean(searchQuery && matchedSaleIds !== null);
+
+      if (inicio && fim && !ignoringPeriodo) {
         query = query.gte("recibos.data_venda", inicio).lte("recibos.data_venda", fim);
       }
       if (companyId) {
@@ -352,6 +436,28 @@ export async function GET({ request }: { request: Request }) {
       }
       if (vendedorIds.length > 0) {
         query = query.in("vendedor_id", vendedorIds);
+      }
+      if (matchedSaleIds) {
+        if (matchedSaleIds.length === 0) {
+          const emptyPayload = {
+            page,
+            pageSize,
+            total: 0,
+            items: [],
+            ...(includeKpis
+              ? { kpis: { totalVendas: 0, totalTaxas: 0, totalLiquido: 0, totalSeguro: 0 } }
+              : {}),
+          };
+          return new Response(JSON.stringify(emptyPayload), {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json",
+              "Cache-Control": noCache ? "no-store" : "private, max-age=10",
+              Vary: "Cookie",
+            },
+          });
+        }
+        query = query.in("id", matchedSaleIds);
       }
     }
 
