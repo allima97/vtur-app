@@ -720,6 +720,11 @@ function isLinhaPendenteEmOpfax(params: { status?: string | null; descricao?: st
   );
 }
 
+function isLinhaEstornoComissao(params: { status?: string | null; descricao?: string | null }) {
+  const descricaoKey = normalizeConciliacaoDescricaoKey(params.descricao);
+  return String(params.status || "").trim().toUpperCase() === "ESTORNO" && descricaoKey.includes("ESTORNO COMISSAO");
+}
+
 function getLinhaStatusLabel(params: { status?: string | null; descricao?: string | null }) {
   if (isConciliacaoEfetivada(params)) return "Efetivado";
   if (isLinhaPendenteEmOpfax(params)) return "Pendente em OPFAX";
@@ -735,6 +740,13 @@ function getLinhaRankingHint(params: { status?: string | null; descricao?: strin
   if (isConciliacaoEfetivada(params)) return "Aguardando atribuição";
   if (String(params.status || "").trim().toUpperCase() === "ESTORNO") return "Ignorado";
   return "Ignorado";
+}
+
+function getLinhaRankingTooltip(params: { status?: string | null; descricao?: string | null }) {
+  if (isLinhaEstornoComissao(params)) {
+    return "Vendas canceladas dentro do próprio mês, serão retiradas do ranking e canceladas em vendas, caso o contrato tenha sido importado ou lançada manualmente.";
+  }
+  return null;
 }
 
 function registroExigeAtribuicaoRanking(item: ConciliacaoItem) {
@@ -2710,6 +2722,7 @@ export default function ConciliacaoIsland() {
                 {parsedLinhas.map((linha, index) => {
                   const exigeAtribuicao = linhaExigeAtribuicaoRanking(linha);
                   const linhaKey = `${linha.documento}-${linha.descricao_chave || linha.status || "row"}-${index}`;
+                  const rankingTooltip = getLinhaRankingTooltip({ status: linha.status, descricao: linha.descricao });
                   return (
                     <tr key={linhaKey}>
                       <td data-label="Data">{formatDate(linha.movimento_data)}</td>
@@ -2739,7 +2752,13 @@ export default function ConciliacaoIsland() {
                             ))}
                           </select>
                         ) : (
-                          <span>{getLinhaRankingHint({ status: linha.status, descricao: linha.descricao })}</span>
+                          <span
+                            className={rankingTooltip ? "vtur-hint-tooltip" : undefined}
+                            data-tooltip={rankingTooltip || undefined}
+                            tabIndex={rankingTooltip ? 0 : undefined}
+                          >
+                            {getLinhaRankingHint({ status: linha.status, descricao: linha.descricao })}
+                          </span>
                         )}
                       </td>
                       <td data-label="Meta dif.">
@@ -2970,6 +2989,8 @@ export default function ConciliacaoIsland() {
                   {(() => {
                     const rowLocked = isRowLocked(row);
                     const rowSaving = savingAssignmentId === row.id;
+                    const exigeAtribuicaoRanking = registroExigeAtribuicaoRanking(row);
+                    const rankingTooltip = getLinhaRankingTooltip({ status: row.status, descricao: row.descricao });
                     return (
                       <>
                   <td data-label="Data">{formatDate(row.movimento_data)}</td>
@@ -2979,20 +3000,30 @@ export default function ConciliacaoIsland() {
                   </td>
                   <td data-label="Recibo encontrado">{row.venda_recibo_id ? "Sim" : "Nao"}</td>
                   <td data-label="Vendedor ranking">
-                    <select
-                      className="form-select"
-                      value={rankingVendedorDrafts[row.id] ?? row.ranking_vendedor_id ?? ""}
-                      disabled={loadingOptions || rowSaving || rowLocked}
-                      onChange={(e) => updateRankingVendedorDraft(row.id, e.target.value)}
-                    >
-                      <option value="">Selecione...</option>
-                      {rankingAssignees.map((opt) => (
-                        <option key={opt.id} value={opt.id}>
-                          {opt.nome_completo}
-                          {opt.tipo ? ` (${opt.tipo})` : ""}
-                        </option>
-                      ))}
-                    </select>
+                    {exigeAtribuicaoRanking ? (
+                      <select
+                        className="form-select"
+                        value={rankingVendedorDrafts[row.id] ?? row.ranking_vendedor_id ?? ""}
+                        disabled={loadingOptions || rowSaving || rowLocked}
+                        onChange={(e) => updateRankingVendedorDraft(row.id, e.target.value)}
+                      >
+                        <option value="">Selecione...</option>
+                        {rankingAssignees.map((opt) => (
+                          <option key={opt.id} value={opt.id}>
+                            {opt.nome_completo}
+                            {opt.tipo ? ` (${opt.tipo})` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span
+                        className={rankingTooltip ? "vtur-hint-tooltip" : undefined}
+                        data-tooltip={rankingTooltip || undefined}
+                        tabIndex={rankingTooltip ? 0 : undefined}
+                      >
+                        {getLinhaRankingHint({ status: row.status, descricao: row.descricao })}
+                      </span>
+                    )}
                   </td>
                   <td data-label="Meta dif.">
                     {rankingProdutosMeta.length === 0 ? (
