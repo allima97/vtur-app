@@ -8,6 +8,15 @@ import AppCard from "../ui/primer/AppCard";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 import PasswordField from "../ui/primer/PasswordField";
 
+function parseHashTokens(hash: string) {
+  const params = new URLSearchParams((hash || "").replace(/^#/, ""));
+  return {
+    accessToken: params.get("access_token") || "",
+    refreshToken: params.get("refresh_token") || "",
+    type: params.get("type") || "",
+  };
+}
+
 export default function AuthResetIsland() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -15,38 +24,77 @@ export default function AuthResetIsland() {
   const [ok, setOk] = useState(false);
   const [loading, setLoading] = useState(false);
   const [validLink, setValidLink] = useState(false);
+  const [hasRecoveryToken, setHasRecoveryToken] = useState(false);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
     const url = new URL(window.location.href);
     const code = url.searchParams.get("code");
+    const { accessToken, refreshToken, type } = parseHashTokens(url.hash);
+    const hasToken = Boolean(code || (type === "recovery" && accessToken && refreshToken));
 
-    async function exchangeCode() {
-      if (!code) {
+    setHasRecoveryToken(hasToken);
+    if (!hasToken) {
+      void supabase.auth.getUser().then(({ data }) => {
+        if (data?.user?.id) {
+          setValidLink(true);
+          return;
+        }
         setErro("Link de recuperação inválido ou expirado.");
-        return;
-      }
+      });
+    }
+  }, []);
 
-      setLoading(true);
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
+  async function validarLink() {
+    if (typeof window === "undefined") return;
 
-      if (error) {
-        console.error(error);
-        setErro("Link de recuperação inválido ou expirado.");
-        await registrarLog({
-          user_id: null,
-          acao: "reset_link_invalido",
-          modulo: "login",
-          detalhes: { motivo: error.message },
+    const url = new URL(window.location.href);
+    const code = url.searchParams.get("code");
+    const { accessToken, refreshToken, type } = parseHashTokens(url.hash);
+
+    setErro("");
+    setLoading(true);
+
+    try {
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) throw error;
+      } else if (type === "recovery" && accessToken && refreshToken) {
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
         });
+        if (error) throw error;
       } else {
-        setValidLink(true);
+        const { data } = await supabase.auth.getUser();
+        if (!data?.user?.id) {
+          throw new Error("Link de recuperação inválido ou expirado.");
+        }
       }
 
+      try {
+        url.searchParams.delete("code");
+        ["type", "token", "access_token", "refresh_token"].forEach((key) => url.searchParams.delete(key));
+        url.hash = "";
+        window.history.replaceState({}, "", url.pathname);
+      } catch {}
+
+      setValidLink(true);
+      setHasRecoveryToken(false);
+    } catch (error: any) {
+      console.error(error);
+      setErro("Link de recuperação inválido ou expirado.");
+      await registrarLog({
+        user_id: null,
+        acao: "reset_link_invalido",
+        modulo: "login",
+        detalhes: { motivo: error?.message || "token_invalido" },
+      });
+    } finally {
       setLoading(false);
     }
-
-    exchangeCode();
-  }, []);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -128,6 +176,18 @@ export default function AuthResetIsland() {
             Senha alterada com sucesso. Redirecionando...
           </AlertMessage>
         )}
+        {!ok && !validLink && hasRecoveryToken && (
+          <AlertMessage variant="warn" className="mb-3">
+            Para sua segurança, valide o link antes de definir a nova senha.
+          </AlertMessage>
+        )}
+        {!ok && !validLink && hasRecoveryToken ? (
+          <div className="auth-actions mb-3">
+            <AppButton type="button" variant="primary" disabled={loading} onClick={validarLink}>
+              {loading ? "Validando..." : "Validar link de recuperação"}
+            </AppButton>
+          </div>
+        ) : null}
         <form onSubmit={handleSubmit} className="auth-form">
           <PasswordField
             id="senha"
@@ -137,7 +197,7 @@ export default function AuthResetIsland() {
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            disabled={loading}
+            disabled={loading || !validLink}
           />
           <PasswordField
             id="confirmar"
@@ -146,10 +206,10 @@ export default function AuthResetIsland() {
             required
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            disabled={loading}
+            disabled={loading || !validLink}
           />
           <div className="auth-actions">
-            <AppButton type="submit" variant="primary" disabled={loading}>
+            <AppButton type="submit" variant="primary" disabled={loading || !validLink}>
               {loading ? "Salvando..." : "Salvar nova senha"}
             </AppButton>
             <div className="auth-divider">
