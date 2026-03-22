@@ -13,6 +13,7 @@ import {
 import { parentescoOptions } from "../../lib/parentescoOptions";
 import { formatCurrencyBRL, formatDateBR, formatNumberBR } from "../../lib/format";
 import { normalizeText } from "../../lib/normalizeText";
+import { fetchReferenceData } from "../../lib/referenceData";
 import { matchesCpfSearch } from "../../lib/searchNormalization";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import { renderTemplateText } from "../../lib/messageTemplates";
@@ -209,14 +210,15 @@ export default function ClientesIsland() {
 
     async function loadNacionalidades() {
       try {
-        const trySelect = async (select: string, order: string) =>
-          supabase.from("paises").select(select).order(order, { ascending: true }).limit(500);
-
-        // Busca apenas 'nome' da tabela 'paises' e usa como nacionalidade
-        const resp = await supabase.from("paises").select("nome").order("nome", { ascending: true }).limit(500);
-        let values: string[] = [];
-        if (!resp.error) {
-          values = (resp.data || []).map((row: any) => String(row?.nome || "").trim()).filter(Boolean);
+        const payload = await fetchReferenceData({ include: ["paises"] });
+        let values = (payload.paises || [])
+          .map((row: any) => String(row?.nome || "").trim())
+          .filter(Boolean);
+        if (values.length === 0) {
+          const resp = await supabase.from("paises").select("nome").order("nome", { ascending: true }).limit(500);
+          if (!resp.error) {
+            values = (resp.data || []).map((row: any) => String(row?.nome || "").trim()).filter(Boolean);
+          }
         }
         const merged = ["Brasileira", ...values];
         const deduped = Array.from(new Set(merged.map((v) => v.trim()).filter(Boolean)));

@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { fetchApiJsonWithPersistentCache } from "../../lib/apiPersistentCache";
 import { usePermissoesStore } from "../../lib/permissoesStore";
+import { fetchCidadesByApiWithCache } from "../../lib/cidadesSearchApiCache";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import DataTable from "../ui/DataTable";
 import SearchInput from "../ui/SearchInput";
@@ -64,22 +66,17 @@ const initialForm = {
 };
 
 async function fetchCidadesSugestoes(params: { query: string; limite?: number; signal?: AbortSignal }) {
-  const qs = new URLSearchParams();
-  qs.set("q", params.query);
-  qs.set("limite", String(params.limite ?? 10));
-  const resp = await fetch(`/api/v1/preferencias/cidades-busca?${qs.toString()}`, {
-    credentials: "same-origin",
+  return fetchCidadesByApiWithCache({
+    query: params.query,
+    limit: params.limite ?? 10,
     signal: params.signal,
+    cacheNamespace: "minhas-preferencias",
+    endpoints: ["/api/v1/preferencias/cidades-busca"],
   });
-  if (!resp.ok) {
-    throw new Error(await resp.text());
-  }
-  const payload = await resp.json();
-  return Array.isArray(payload) ? payload : [];
 }
 
 export default function MinhasPreferenciasIsland() {
-  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const { can, loading: loadingPerms, ready, userId } = usePermissoesStore();
   const loadPerm = loadingPerms || !ready;
 
   const podeVer = can("Minhas Preferências");
@@ -126,9 +123,15 @@ export default function MinhasPreferenciasIsland() {
   }, [sharePrefId, items]);
 
   async function fetchBase() {
-    const resp = await fetch("/api/v1/preferencias/base", { credentials: "same-origin" });
-    if (!resp.ok) throw new Error(await resp.text());
-    const json = (await resp.json()) as { tipos?: TipoProduto[]; usuarios?: UsuarioEmpresa[] };
+    const cacheIdentity = userId || "anon";
+    const json = await fetchApiJsonWithPersistentCache<{ tipos?: TipoProduto[]; usuarios?: UsuarioEmpresa[] }>({
+      endpoint: "/api/v1/preferencias/base",
+      cacheScope: "preferencias-base",
+      cacheKey: `v1:${cacheIdentity}`,
+      persistentTtlMs: 6 * 60 * 60 * 1000,
+      queryLiteTtlMs: 60_000,
+      credentials: "same-origin",
+    });
     return {
       tipos: json.tipos || [],
       usuarios: json.usuarios || [],
@@ -179,7 +182,7 @@ export default function MinhasPreferenciasIsland() {
   useEffect(() => {
     if (loadPerm) return;
     carregarBase();
-  }, [loadPerm, podeVer]);
+  }, [loadPerm, podeVer, userId]);
 
   useEffect(() => {
     if (loadPerm) return;

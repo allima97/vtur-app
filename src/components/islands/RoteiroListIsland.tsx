@@ -176,6 +176,14 @@ export default function RoteiroListIsland() {
                               },
                             },
                             {
+                              key: "duplicate",
+                              label: "Duplicar",
+                              icon: <i className="pi pi-copy" aria-hidden="true" />,
+                              onClick: () => {
+                                window.location.href = `/orcamentos/personalizados/novo?duplicar=${r.id}`;
+                              },
+                            },
+                            {
                               key: "delete",
                               label: "Excluir",
                               icon: <i className="pi pi-trash" aria-hidden="true" />,

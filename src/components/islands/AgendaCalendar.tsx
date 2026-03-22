@@ -13,6 +13,7 @@ import EmptyState from "../ui/EmptyState";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
+import ConfirmDialog from "../ui/ConfirmDialog";
 
 type EventItem = {
   id: string;
@@ -61,6 +62,7 @@ export default function AgendaCalendar() {
   const [editForm, setEditForm] = useState<EventEditForm | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [holidayEvents, setHolidayEvents] = useState<EventItem[]>([]);
+  const [deleteConfirmEvent, setDeleteConfirmEvent] = useState<EventItem | null>(null);
   const calendarWrapRef = React.useRef<HTMLDivElement | null>(null);
   const fetchedYearsRef = React.useRef<Set<number>>(new Set());
   const weekdayShortFormatter = React.useMemo(
@@ -506,8 +508,13 @@ export default function AgendaCalendar() {
   }
 
   function handleDeleteFromModal(ev: EventItem) {
-    if (!window.confirm("Remover este evento?")) return;
-    void removeEvent(ev.id);
+    setDeleteConfirmEvent(ev);
+  }
+
+  function confirmDeleteEvent() {
+    if (!deleteConfirmEvent) return;
+    void removeEvent(deleteConfirmEvent.id);
+    setDeleteConfirmEvent(null);
     setModalEvent(null);
   }
 
@@ -1091,6 +1098,16 @@ export default function AgendaCalendar() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={Boolean(deleteConfirmEvent)}
+        title="Remover evento"
+        message="Remover este evento?"
+        confirmLabel="Remover"
+        cancelLabel="Cancelar"
+        confirmVariant="danger"
+        onConfirm={confirmDeleteEvent}
+        onCancel={() => setDeleteConfirmEvent(null)}
+      />
     </div>
   );
 }

@@ -1,6 +1,8 @@
 import React, { useMemo, useRef, useState, useCallback, useEffect } from "react";
+import { fetchCidadesByApiWithCache } from "../../lib/cidadesSearchApiCache";
 import { formatNumberBR } from "../../lib/format";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
+import { fetchTipoProdutosOptionsWithCache } from "../../lib/tipoProdutosCache";
 import FlightDetailsModal, { FlightDetails } from "../ui/FlightDetailsModal";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import AlertMessage from "../ui/AlertMessage";
@@ -260,22 +262,11 @@ export default function QuoteDetailIsland(props: {
     let active = true;
     async function carregarTipos() {
       try {
-        const response = await fetch("/api/v1/orcamentos/tipos");
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(text || "Erro ao carregar tipos.");
-        }
-        const data = (await response.json()) as Array<{ id: string; nome?: string | null; tipo?: string | null }>;
+        const data = await fetchTipoProdutosOptionsWithCache({
+          cacheNamespace: "quote-detail",
+        });
         if (!active) return;
-        setTipoOptions(
-          (data || [])
-            .filter((tipo) => tipo && (tipo.nome || tipo.tipo))
-            .map((tipo) => {
-              const label = String(tipo.nome || tipo.tipo || "").trim();
-              return { id: tipo.id, label };
-            })
-            .filter((tipo) => tipo.label)
-        );
+        setTipoOptions(data as QuoteDetailTipoProdutoOption[]);
       } catch (err) {
         if (!active) return;
         console.warn("[QuoteDetail] Erro ao carregar tipos", err);
@@ -329,15 +320,12 @@ export default function QuoteDetailIsland(props: {
   async function loadCidadeSuggestions(rowKey: string, term: string) {
     const search = term.trim();
     try {
-      const params = new URLSearchParams();
-      if (search) params.set("q", search);
-      params.set("limite", "25");
-      const response = await fetch(`/api/v1/orcamentos/cidades-busca?${params.toString()}`);
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(text || "Erro ao carregar cidades.");
-      }
-      const data = (await response.json()) as { id: string; nome: string }[];
+      const data = await fetchCidadesByApiWithCache({
+        query: search,
+        limit: 25,
+        cacheNamespace: "quote-detail",
+        endpoints: ["/api/v1/orcamentos/cidades-busca"],
+      });
       if (!isMountedRef.current) return;
       const cidades = (data || []).filter((cidade) => cidade?.id && cidade.nome);
       if (!isMountedRef.current) return;
@@ -1178,18 +1166,27 @@ export default function QuoteDetailIsland(props: {
               </AppButton>
             </>
           ) : !isFechado ? (
-            <AppButton
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                setIsEditing(true);
-                setSuccess(null);
-                setError(null);
-                setShowSummary(false);
-              }}
-            >
-              Editar orcamento
-            </AppButton>
+            <>
+              <AppButton
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setIsEditing(true);
+                  setSuccess(null);
+                  setError(null);
+                  setShowSummary(false);
+                }}
+              >
+                Editar orcamento
+              </AppButton>
+              <AppButton
+                type="button"
+                variant="secondary"
+                onClick={handleCancelEdit}
+              >
+                Cancelar
+              </AppButton>
+            </>
           ) : null}
         </div>
 

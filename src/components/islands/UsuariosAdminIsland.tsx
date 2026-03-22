@@ -11,6 +11,7 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import FileUploadField from "../ui/primer/FileUploadField";
+import ConfirmDialog from "../ui/ConfirmDialog";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { DEFAULT_FROM_EMAILS } from "../../lib/systemName";
@@ -109,6 +110,7 @@ const UsuariosAdminIsland: React.FC = () => {
   const [resetandoMfaId, setResetandoMfaId] = useState<string | null>(null);
   const [mfaStatuses, setMfaStatuses] = useState<MfaStatusMap>({});
   const [mfaLoading, setMfaLoading] = useState(false);
+  const [mfaResetUsuario, setMfaResetUsuario] = useState<UserRow | null>(null);
   const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
   const tipoSelecionado = userTypes.find((t) => t.id === novoTipoUsuarioId) || null;
@@ -466,16 +468,12 @@ const UsuariosAdminIsland: React.FC = () => {
   };
 
   const resetarMfa = async (usuario: UserRow) => {
-    const nome = usuario.nome_completo || "Usuario";
-    const email = usuario.email || "sem e-mail";
-    const confirmed =
-      typeof window === "undefined"
-        ? true
-        : window.confirm(
-            `Resetar o 2FA de ${nome} (${email})?\n\nEssa acao remove todos os fatores MFA e encerra as sessoes ativas do usuario.`
-          );
-    if (!confirmed) return;
+    setMfaResetUsuario(usuario);
+  };
 
+  const confirmarResetarMfa = async () => {
+    const usuario = mfaResetUsuario;
+    if (!usuario) return;
     setResetandoMfaId(usuario.id);
     try {
       const resp = await fetch("/api/admin/auth/reset-mfa", {
@@ -521,6 +519,7 @@ const UsuariosAdminIsland: React.FC = () => {
       console.error(err);
       showToast(String(err?.message || "Erro ao resetar 2FA."), "error");
     } finally {
+      setMfaResetUsuario(null);
       setResetandoMfaId(null);
     }
   };
@@ -1170,6 +1169,16 @@ const UsuariosAdminIsland: React.FC = () => {
           </form>
         </div>
       )}
+      <ConfirmDialog
+        open={Boolean(mfaResetUsuario)}
+        title="Resetar 2FA"
+        message={`Resetar o 2FA de ${mfaResetUsuario?.nome_completo || "Usuario"} (${mfaResetUsuario?.email || "sem e-mail"})? Essa acao remove todos os fatores MFA e encerra as sessoes ativas do usuario.`}
+        confirmLabel="Resetar"
+        cancelLabel="Cancelar"
+        confirmVariant="danger"
+        onConfirm={() => void confirmarResetarMfa()}
+        onCancel={() => setMfaResetUsuario(null)}
+      />
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );

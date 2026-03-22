@@ -208,6 +208,7 @@ export default function PerfilIsland() {
   const [mfaFriendlyName, setMfaFriendlyName] = useState("Meu autenticador");
   const [mfaCode, setMfaCode] = useState("");
   const [mfaObrigatorio, setMfaObrigatorio] = useState(false);
+  const [mfaRemoverModalOpen, setMfaRemoverModalOpen] = useState(false);
   const bloqueiaEmpresaTipo = Boolean(perfil?.created_by_gestor);
   const usoBloqueado = bloqueiaEmpresaTipo || (Boolean(perfil?.company_id) && usoIndividual === false);
   const searchParams =
@@ -512,11 +513,11 @@ export default function PerfilIsland() {
       setMfaErro("O 2FA esta marcado como obrigatorio para esta empresa e nao pode ser removido.");
       return;
     }
-    const confirmed =
-      typeof window === "undefined"
-        ? true
-        : window.confirm("Deseja remover a verificacao em duas etapas desta conta?");
-    if (!confirmed) return;
+    setMfaRemoverModalOpen(true);
+  }
+
+  async function confirmarRemocaoMfaTotp() {
+    if (!mfaVerifiedFactor) return;
 
     try {
       setMfaBusy(true);
@@ -540,6 +541,7 @@ export default function PerfilIsland() {
       console.error("Erro ao remover MFA", e);
       setMfaErro("Nao foi possivel remover o 2FA desta conta.");
     } finally {
+      setMfaRemoverModalOpen(false);
       setMfaBusy(false);
     }
   }
@@ -890,6 +892,17 @@ function formatCnpj(value: string) {
         cancelLabel="Continuar preenchendo"
         onConfirm={confirmarSairOnboarding}
         onCancel={() => setModalSairOnboarding(false)}
+      />
+      <AppDialog
+        open={mfaRemoverModalOpen}
+        title="Remover 2FA"
+        message="Deseja remover a verificacao em duas etapas desta conta?"
+        confirmLabel="Remover"
+        cancelLabel="Cancelar"
+        confirmVariant="danger"
+        confirmLoading={mfaBusy}
+        onConfirm={() => void confirmarRemocaoMfaTotp()}
+        onCancel={() => setMfaRemoverModalOpen(false)}
       />
 
       <AppCard

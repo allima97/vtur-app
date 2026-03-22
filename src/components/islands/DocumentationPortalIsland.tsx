@@ -5,6 +5,8 @@ import { usePermissoesStore } from "../../lib/permissoesStore";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
+import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
+import ConfirmDialog from "../ui/ConfirmDialog";
 
 export default function DocumentationPortalIsland() {
   const [raw, setRaw] = useState("Carregando documentação...");
@@ -16,6 +18,8 @@ export default function DocumentationPortalIsland() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyItems, setHistoryItems] = useState<any[]>([]);
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [restoreConfirmId, setRestoreConfirmId] = useState<string | null>(null);
+  const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
 
   const contentRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<ToastEditor | null>(null);
@@ -201,10 +205,15 @@ export default function DocumentationPortalIsland() {
 
   async function restoreVersion(versionId: string) {
     if (!versionId || restoringId) return;
-    const confirmar = window.confirm(
-      "Restaurar esta versão substituirá o conteúdo atual da documentação. Deseja continuar?"
-    );
-    if (!confirmar) return;
+    setRestoreConfirmId(versionId);
+  }
+
+  async function confirmRestoreVersion() {
+    const versionId = String(restoreConfirmId || "").trim();
+    if (!versionId || restoringId) {
+      setRestoreConfirmId(null);
+      return;
+    }
     try {
       setRestoringId(versionId);
       const res = await fetch("/api/admin/documentacao/restaurar", {
@@ -231,6 +240,7 @@ export default function DocumentationPortalIsland() {
       setSaveStatus(err?.message || "Erro ao restaurar versão.");
     } finally {
       setRestoringId(null);
+      setRestoreConfirmId(null);
     }
   }
 
@@ -326,7 +336,7 @@ export default function DocumentationPortalIsland() {
                   callback(data.url, data.name || "Imagem");
                 }
               } catch {
-                alert("Não foi possível enviar a imagem.");
+                setNoticeMessage("Não foi possível enviar a imagem.");
               }
             },
           },
@@ -479,6 +489,22 @@ export default function DocumentationPortalIsland() {
           </div>
         </AppCard>
       </div>
+      <ConfirmDialog
+        open={Boolean(restoreConfirmId)}
+        title="Restaurar versão"
+        message="Restaurar esta versão substituirá o conteúdo atual da documentação. Deseja continuar?"
+        confirmLabel="Restaurar"
+        cancelLabel="Cancelar"
+        onConfirm={() => void confirmRestoreVersion()}
+        onCancel={() => setRestoreConfirmId(null)}
+      />
+      <AppNoticeDialog
+        open={Boolean(noticeMessage)}
+        title="Aviso"
+        message={noticeMessage}
+        closeLabel="OK"
+        onClose={() => setNoticeMessage(null)}
+      />
     </section>
   );
 }

@@ -2,6 +2,7 @@
 import "../../../../styles/global.css";
 import DashboardLayout from "../../../../layouts/DashboardLayout.astro";
 import { createAstroServerClient } from "../../../../lib/supabaseAstro";
+import { extractSeguroViagemIncludeLinesFromPasseios } from "../../../../lib/roteiroSeguro";
 
 const supabaseAuth = createAstroServerClient(Astro);
 
@@ -44,6 +45,55 @@ function textValue(value?: string | null) {
   return String(value || "").trim();
 }
 
+function formatBudgetItemText(value?: string | null) {
+  const raw = textValue(value);
+  if (!raw) return "";
+  const lowerWords = new Set([
+    "a",
+    "à",
+    "ao",
+    "aos",
+    "as",
+    "às",
+    "com",
+    "da",
+    "das",
+    "de",
+    "do",
+    "dos",
+    "e",
+    "em",
+    "na",
+    "nas",
+    "no",
+    "nos",
+    "o",
+    "os",
+    "ou",
+    "para",
+    "por",
+    "sem",
+    "um",
+    "uma",
+    "uns",
+    "umas",
+  ]);
+  let seenWord = false;
+  return raw
+    .split(/(\s+|\/|-|\(|\)|,|\+)/)
+    .map((part) => {
+      if (!part || /^(\s+|\/|-|\(|\)|,|\+)$/.test(part)) return part;
+      if (/^[A-Z0-9]{2,4}$/.test(part)) return part;
+      if (/^\d+$/.test(part)) return part;
+      const lower = part.toLowerCase();
+      const shouldLower = seenWord && lowerWords.has(lower);
+      seenWord = true;
+      if (shouldLower) return lower;
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join("");
+}
+
 function normalizeLookup(value?: string | null) {
   return textValue(value).toLocaleLowerCase();
 }
@@ -59,14 +109,62 @@ function formatCurrencyOptional(value?: number | null) {
   return `R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+function splitTrechoCities(trecho?: string | null) {
+  const parts = String(trecho || "")
+    .split("-")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return {
+    origem: parts[0] || "",
+    destino: parts[1] || "",
+  };
+}
+
+function formatFlightPlace(city?: string | null, airport?: string | null) {
+  const cityValue = formatBudgetItemText(city);
+  const airportValue = textValue(airport).toUpperCase();
+  if (cityValue && /^[A-Z]{3}$/.test(airportValue)) return `${cityValue} (${airportValue})`;
+  return cityValue || airportValue;
+}
+
+function groupPasseiosByCidade(items: any[]) {
+  const groups = new Map<string, { cidade: string; items: any[] }>();
+  items.forEach((item) => {
+    const cidade = formatBudgetItemText(item?.cidade) || "Serviços";
+    const key = cidade.toLocaleLowerCase();
+    if (!groups.has(key)) {
+      groups.set(key, { cidade, items: [] });
+    }
+    groups.get(key)!.items.push(item);
+  });
+
+  return Array.from(groups.values()).map((group) => ({
+    ...group,
+    items: group.items
+      .slice()
+      .sort((a, b) => {
+        const dateCompare = String(a?.data_inicio || "").localeCompare(String(b?.data_inicio || ""));
+        if (dateCompare !== 0) return dateCompare;
+        return formatBudgetItemText(a?.passeio).localeCompare(formatBudgetItemText(b?.passeio));
+      }),
+  }));
+}
+
 function hasMeaningfulHotel(h: any) {
   return Boolean(
     textValue(h?.cidade) ||
       textValue(h?.hotel) ||
+      textValue(h?.endereco) ||
       textValue(h?.data_inicio) ||
       textValue(h?.data_fim) ||
+      hasPositiveNumber(h?.qtd_apto) ||
       textValue(h?.apto) ||
       textValue(h?.categoria) ||
+      textValue(h?.tipo_tarifa) ||
+      hasPositiveNumber(h?.qtd_adultos) ||
+      hasPositiveNumber(h?.qtd_criancas) ||
+      hasPositiveNumber(h?.valor_original) ||
+      hasPositiveNumber(h?.valor_final) ||
       textValue(h?.regime) ||
       hasPositiveNumber(h?.noites)
   );
@@ -80,8 +178,13 @@ function hasMeaningfulPasseio(p: any) {
   return Boolean(
     textValue(p?.cidade) ||
       textValue(p?.passeio) ||
+      textValue(p?.fornecedor) ||
       textValue(p?.data_inicio) ||
       textValue(p?.data_fim) ||
+      hasPositiveNumber(p?.qtd_adultos) ||
+      hasPositiveNumber(p?.qtd_criancas) ||
+      hasPositiveNumber(p?.valor_original) ||
+      hasPositiveNumber(p?.valor_final) ||
       (textValue(p?.tipo) && !tipoDefault) ||
       (textValue(p?.ingressos) && !ingressosDefault)
   );
@@ -89,7 +192,23 @@ function hasMeaningfulPasseio(p: any) {
 
 function hasMeaningfulTransporte(t: any) {
   return Boolean(
-    textValue(t?.tipo) ||
+    textValue(t?.trecho) ||
+      textValue(t?.cia_aerea) ||
+      textValue(t?.data_voo) ||
+      textValue(t?.classe_reserva) ||
+      textValue(t?.hora_saida) ||
+      textValue(t?.aeroporto_saida) ||
+      textValue(t?.duracao_voo) ||
+      textValue(t?.tipo_voo) ||
+      textValue(t?.hora_chegada) ||
+      textValue(t?.aeroporto_chegada) ||
+      textValue(t?.tarifa_nome) ||
+      textValue(t?.reembolso_tipo) ||
+      hasPositiveNumber(t?.qtd_adultos) ||
+      hasPositiveNumber(t?.qtd_criancas) ||
+      hasPositiveNumber(t?.taxas) ||
+      hasPositiveNumber(t?.valor_total) ||
+      textValue(t?.tipo) ||
       textValue(t?.fornecedor) ||
       textValue(t?.descricao) ||
       textValue(t?.data_inicio) ||
@@ -174,17 +293,17 @@ const roteiroId = String(id || "").trim();
 if (!roteiroId) return Astro.redirect("/orcamentos/personalizados");
 
 const selectWithPercurso = `id, nome, duracao, inicio_cidade, fim_cidade, inclui_texto, nao_inclui_texto, informacoes_importantes,
-     roteiro_hotel (id, cidade, hotel, data_inicio, data_fim, noites, apto, categoria, regime, ordem),
-     roteiro_passeio (id, cidade, passeio, data_inicio, data_fim, tipo, ingressos, ordem),
-     roteiro_transporte (id, tipo, fornecedor, descricao, data_inicio, data_fim, categoria, observacao, ordem),
+     roteiro_hotel (id, cidade, hotel, endereco, data_inicio, data_fim, noites, qtd_apto, apto, categoria, regime, tipo_tarifa, qtd_adultos, qtd_criancas, valor_original, valor_final, ordem),
+     roteiro_passeio (id, cidade, passeio, fornecedor, data_inicio, data_fim, tipo, ingressos, qtd_adultos, qtd_criancas, valor_original, valor_final, ordem),
+     roteiro_transporte (id, trecho, cia_aerea, data_voo, classe_reserva, hora_saida, aeroporto_saida, duracao_voo, tipo_voo, hora_chegada, aeroporto_chegada, tarifa_nome, reembolso_tipo, qtd_adultos, qtd_criancas, taxas, valor_total, tipo, fornecedor, descricao, data_inicio, data_fim, categoria, observacao, ordem),
      roteiro_dia (id, percurso, cidade, data, descricao, ordem),
      roteiro_investimento (id, tipo, valor_por_pessoa, qtd_apto, valor_por_apto, ordem),
      roteiro_pagamento (id, servico, valor_total_com_taxas, taxas, forma_pagamento, ordem)`;
 
 const selectWithoutPercurso = `id, nome, duracao, inicio_cidade, fim_cidade, inclui_texto, nao_inclui_texto, informacoes_importantes,
-     roteiro_hotel (id, cidade, hotel, data_inicio, data_fim, noites, apto, categoria, regime, ordem),
-     roteiro_passeio (id, cidade, passeio, data_inicio, data_fim, tipo, ingressos, ordem),
-     roteiro_transporte (id, tipo, fornecedor, descricao, data_inicio, data_fim, categoria, observacao, ordem),
+     roteiro_hotel (id, cidade, hotel, endereco, data_inicio, data_fim, noites, qtd_apto, apto, categoria, regime, tipo_tarifa, qtd_adultos, qtd_criancas, valor_original, valor_final, ordem),
+     roteiro_passeio (id, cidade, passeio, fornecedor, data_inicio, data_fim, tipo, ingressos, qtd_adultos, qtd_criancas, valor_original, valor_final, ordem),
+     roteiro_transporte (id, trecho, cia_aerea, data_voo, classe_reserva, hora_saida, aeroporto_saida, duracao_voo, tipo_voo, hora_chegada, aeroporto_chegada, tarifa_nome, reembolso_tipo, qtd_adultos, qtd_criancas, taxas, valor_total, tipo, fornecedor, descricao, data_inicio, data_fim, categoria, observacao, ordem),
      roteiro_dia (id, cidade, data, descricao, ordem),
      roteiro_investimento (id, tipo, valor_por_pessoa, qtd_apto, valor_por_apto, ordem),
      roteiro_pagamento (id, servico, valor_total_com_taxas, taxas, forma_pagamento, ordem)`;
@@ -226,7 +345,15 @@ const pagamentos = (roteiro.roteiro_pagamento || [])
   .sort((a: any, b: any) => (a.ordem ?? 0) - (b.ordem ?? 0))
   .filter((p: any) => hasMeaningfulPagamento(p));
 
-const incluiItems = splitLines(roteiro?.inclui_texto);
+const incluiBaseItems = splitLines(roteiro?.inclui_texto);
+const incluiSeguroItems = extractSeguroViagemIncludeLinesFromPasseios(passeios || []);
+const incluiSeen = new Set<string>();
+const incluiItems = [...incluiBaseItems, ...incluiSeguroItems].filter((item) => {
+  const key = normalizeLookup(item);
+  if (!key || incluiSeen.has(key)) return false;
+  incluiSeen.add(key);
+  return true;
+});
 const naoIncluiItems = splitLines(roteiro?.nao_inclui_texto);
 
 const infoImportanteItems = splitLines(roteiro?.informacoes_importantes || "");
@@ -270,8 +397,8 @@ const periodLabel =
       : "";
 
 const resumoViagem = [
-  { label: "Origem", value: textValue(roteiro?.inicio_cidade) },
-  { label: "Destino", value: textValue(roteiro?.fim_cidade) },
+  { label: "Origem", value: formatBudgetItemText(roteiro?.inicio_cidade) },
+  { label: "Destino", value: formatBudgetItemText(roteiro?.fim_cidade) },
   { label: "Período", value: periodLabel },
 ].filter((item) => Boolean(item.value));
 
@@ -291,6 +418,7 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
       <div class="vtur-app-card-body">
         <div class="mobile-stack-buttons orcamentos-action-bar vtur-actions-end">
           <a class="vtur-app-button vtur-app-button-primary" href={`/orcamentos/personalizados/${roteiroId}`}>Editar</a>
+          <a class="vtur-app-button" href={`/orcamentos/personalizados/novo?duplicar=${roteiroId}`}>Duplicar</a>
           <a class="vtur-app-button" href="/orcamentos/personalizados">Voltar</a>
         </div>
       </div>
@@ -314,30 +442,32 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
 
       {dias.length > 0 ? (
         <div class="bg-white border border-slate-200 rounded-xl p-5">
-          <div class="vtur-quote-circuit-panel" style={{ padding: 0, borderTop: "none" }}>
+          <div class="vtur-quote-circuit-panel roteiro-visual-circuit-panel">
             <div class="vtur-quote-circuit-days-head">
               <div>
                 <div class="text-lg md:text-xl font-extrabold text-blue-title">Itinerário Detalhado</div>
                 <p>Dia a dia no mesmo padrão visual de Circuitos.</p>
               </div>
             </div>
-            <div class="vtur-quote-circuit-days-list">
+            <div class="vtur-quote-circuit-days-list roteiro-visual-circuit-days-list">
               {dias.map((d: any, idx: number) => {
-                const place = textValue(d.percurso) || textValue(d.cidade);
+                const place = formatBudgetItemText(d.percurso) || formatBudgetItemText(d.cidade);
                 const header = `Dia ${idx + 1}${place ? `: ${place}` : ""}`;
                 const dateLabel = formatDate(d.data);
                 const items = splitParagraphs(d.descricao);
                 return (
-                  <div class="vtur-quote-circuit-day">
-                    <div class="text-sm font-semibold text-slate-900">{header}</div>
-                    {dateLabel ? <div class="mt-1 text-xs font-medium text-slate-500">{dateLabel}</div> : null}
-                    {items.length > 0 ? (
-                      <div class="mt-3 text-sm text-slate-700 space-y-1">
-                        {items.map((it) => (
-                          <p>{it}</p>
-                        ))}
-                      </div>
-                    ) : null}
+                  <div class="vtur-quote-circuit-day roteiro-visual-circuit-day">
+                    <div class="roteiro-visual-circuit-day-content">
+                      <div class="text-sm font-semibold text-slate-900">{header}</div>
+                      {dateLabel ? <div class="mt-1 text-xs font-medium text-slate-500">{dateLabel}</div> : null}
+                      {items.length > 0 ? (
+                        <div class="mt-3 text-sm text-slate-700 space-y-1 roteiro-visual-circuit-copy">
+                          {items.map((it) => (
+                            <p class="roteiro-visual-circuit-paragraph">{it}</p>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 );
               })}
@@ -349,100 +479,124 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
       {hoteis.length > 0 ? (
         <div class="bg-white border border-slate-200 rounded-xl p-5">
           <div class="text-lg md:text-xl font-extrabold text-blue-title">Hotéis Sugeridos</div>
-          <div class="mt-4 space-y-3">
-            {hoteis.map((h: any, idx: number) => {
-              const cidade = textValue(h.cidade);
-              const hotel = textValue(h.hotel);
-              const title = [cidade, hotel].filter(Boolean).join(" | ") || `Hospedagem ${idx + 1}`;
-              const range = [formatDate(h.data_inicio), formatDate(h.data_fim)].filter(Boolean).join(" a ");
-              const details = [
-                range ? `Período: ${range}` : "",
-                hasPositiveNumber(h.noites) ? `${Number(h.noites)} noite${Number(h.noites) === 1 ? "" : "s"}` : "",
-                textValue(h.categoria) ? `Categoria: ${textValue(h.categoria)}` : "",
-                textValue(h.regime) ? `Regime: ${textValue(h.regime)}` : "",
-                textValue(h.apto) ? `Apto: ${textValue(h.apto)}` : "",
-              ].filter(Boolean);
-              if (!title && details.length === 0) return null;
-              return (
-                <div class="border border-slate-200 rounded-lg p-4">
-                  {title ? <div class="text-sm font-semibold text-slate-900">{title}</div> : null}
-                  {details.length > 0 ? (
-                    <ul class="mt-2 list-disc pl-5 text-sm text-slate-700 space-y-1">
-                      {details.map((item) => (
-                        <li>{item}</li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </div>
-              );
-            })}
+          <div class="mt-4 overflow-x-auto">
+            <table class="table-default table-header-blue hotel-resumo-table" style="width: 100%; min-width: 980px;">
+              <colgroup>
+                <col style="width: 14%" />
+                <col style="width: 24%" />
+                <col style="width: 11%" />
+                <col style="width: 11%" />
+                <col style="width: 8%" />
+                <col style="width: 20%" />
+                <col style="width: 12%" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>Cidade</th>
+                  <th>Hotel</th>
+                  <th>De</th>
+                  <th>Até</th>
+                  <th>Noites</th>
+                  <th>Acomodação</th>
+                  <th>Regime</th>
+                </tr>
+              </thead>
+              <tbody>
+                {hoteis.map((h: any) => (
+                  <tr>
+                    <td>{formatBudgetItemText(h.cidade) || "-"}</td>
+                    <td>{formatBudgetItemText(h.hotel) || "-"}</td>
+                    <td>{formatDate(h.data_inicio) || "-"}</td>
+                    <td>{formatDate(h.data_fim) || "-"}</td>
+                    <td>{hasPositiveNumber(h.noites) ? String(Number(h.noites)) : "-"}</td>
+                    <td>{formatBudgetItemText(h.apto) || "-"}</td>
+                    <td>{formatBudgetItemText(h.regime) || "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       ) : null}
 
       {passeios.length > 0 ? (
         <div class="bg-white border border-slate-200 rounded-xl p-5">
-          <div class="text-lg md:text-xl font-extrabold text-blue-title">Passeios Principais</div>
-          <div class="mt-4 space-y-3">
-            {passeios.map((p: any, idx: number) => {
-              const cidade = textValue(p.cidade);
-              const passeio = textValue(p.passeio);
-              const title = [cidade, passeio].filter(Boolean).join(" | ") || `Passeio ${idx + 1}`;
-              const di = formatDate(p.data_inicio);
-              const df = formatDate(p.data_fim);
-              const when = di && df ? (di === df ? di : `${di} a ${df}`) : di || df;
-              const details = [
-                when ? `Data: ${when}` : "",
-                textValue(p.tipo) ? `Tipo: ${textValue(p.tipo)}` : "",
-                textValue(p.ingressos) ? `Ingressos: ${textValue(p.ingressos)}` : "",
-              ].filter(Boolean);
-              if (!title && details.length === 0) return null;
-              return (
-                <div class="border border-slate-200 rounded-lg p-4">
-                  {title ? <div class="text-sm font-semibold text-slate-900">{title}</div> : null}
-                  {details.length > 0 ? (
-                    <ul class="mt-2 list-disc pl-5 text-sm text-slate-700 space-y-1">
-                      {details.map((item) => (
-                        <li>{item}</li>
-                      ))}
-                    </ul>
-                  ) : null}
+          <div class="text-lg md:text-xl font-extrabold text-blue-title">Passeios e Serviços</div>
+          <div class="mt-4 space-y-4">
+            {groupPasseiosByCidade(passeios).map((group) => (
+              <div class="border border-slate-200 rounded-lg p-4">
+                <div class="text-sm font-semibold text-slate-900">{group.cidade}</div>
+                <div class="mt-5 overflow-x-auto">
+                  <table class="table-default table-header-blue passeio-resumo-table" style="width: 100%; min-width: 760px;">
+                    <colgroup>
+                      <col style="width: 16%" />
+                      <col style="width: 62%" />
+                      <col style="width: 22%" />
+                    </colgroup>
+                    <thead>
+                      <tr>
+                        <th>Data</th>
+                        <th>Descrição</th>
+                        <th>Ingressos</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.items.map((p: any) => {
+                        const di = formatDate(p.data_inicio);
+                        const df = formatDate(p.data_fim);
+                        const when = di && df ? (di === df ? di : `${di} a ${df}`) : di || df;
+                        return (
+                          <tr>
+                            <td>{when || "-"}</td>
+                            <td>{formatBudgetItemText(p.passeio) || "-"}</td>
+                            <td>{formatBudgetItemText(p.ingressos) || "-"}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </div>
       ) : null}
 
       {transportes.length > 0 ? (
         <div class="bg-white border border-slate-200 rounded-xl p-5">
-          <div class="text-lg md:text-xl font-extrabold text-blue-title">Transporte Incluído</div>
-          <div class="mt-4 space-y-3">
-            {transportes.map((t: any, idx: number) => {
-              const di = formatDate(t.data_inicio);
-              const df = formatDate(t.data_fim);
-              const when = di && df ? (di === df ? di : `${di} a ${df}`) : di || df;
-              const title = [textValue(t.tipo), textValue(t.fornecedor)].filter(Boolean).join(" | ") || `Transporte ${idx + 1}`;
-              const details = [
-                when ? `Período: ${when}` : "",
-                textValue(t.descricao) ? `Descrição: ${textValue(t.descricao)}` : "",
-                textValue(t.categoria) ? `Categoria: ${textValue(t.categoria)}` : "",
-                textValue(t.observacao) ? `Observação: ${textValue(t.observacao)}` : "",
-              ].filter(Boolean);
-              if (!title && details.length === 0) return null;
-              return (
-                <div class="border border-slate-200 rounded-lg p-4">
-                  {title ? <div class="text-sm font-semibold text-slate-900">{title}</div> : null}
-                  {details.length > 0 ? (
-                    <ul class="mt-2 list-disc pl-5 text-sm text-slate-700 space-y-1">
-                      {details.map((item) => (
-                        <li>{item}</li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </div>
-              );
-            })}
+          <div class="text-lg md:text-xl font-extrabold text-blue-title flex items-center gap-2">
+            <i class="pi pi-ticket" aria-hidden="true"></i>
+            <span>Passagem Aérea</span>
+          </div>
+          <div class="mt-4 overflow-x-auto">
+            <div class="roteiro-voos-grid" style="min-width: 1140px;">
+              <div class="roteiro-voos-grid-head">
+                <div>Cia Aérea</div>
+                <div>De</div>
+                <div>Data</div>
+                <div>Para</div>
+                <div>Data</div>
+                <div>Saída/Chegada</div>
+              </div>
+              <div class="roteiro-voos-grid-body">
+                {transportes.map((t: any) => {
+                  const trecho = splitTrechoCities(t.trecho);
+                  const horaSaida = textValue(t.hora_saida);
+                  const horaChegada = textValue(t.hora_chegada);
+                  const horarios = horaSaida && horaChegada ? `${horaSaida} / ${horaChegada}` : horaSaida || horaChegada;
+                  return (
+                    <div class="roteiro-voos-grid-row">
+                      <div>{formatBudgetItemText(t.cia_aerea) || "-"}</div>
+                      <div>{formatFlightPlace(trecho.origem, t.aeroporto_saida) || "-"}</div>
+                      <div>{formatDate(t.data_voo || t.data_inicio) || "-"}</div>
+                      <div>{formatFlightPlace(trecho.destino, t.aeroporto_chegada) || "-"}</div>
+                      <div>{formatDate(t.data_fim || t.data_voo || t.data_inicio) || "-"}</div>
+                      <div>{horarios || "-"}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       ) : null}
@@ -452,7 +606,7 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
           <div class="text-lg md:text-xl font-extrabold text-blue-title">Investimento</div>
           <div class="mt-4 space-y-3">
             {investimentos.map((i: any) => {
-              const tipo = textValue(i.tipo);
+              const tipo = formatBudgetItemText(i.tipo);
               const valorPessoa = formatCurrencyOptional(i.valor_por_pessoa);
               const valorApto = formatCurrencyOptional(i.valor_por_apto);
               const qtd = Number(i.qtd_apto || 0);
@@ -488,10 +642,10 @@ const pageTitle = `Visualizar: ${roteiro?.nome || "Orçamento"}`;
           <div class="text-lg md:text-xl font-extrabold text-blue-title">Formas de Pagamento</div>
           <div class="mt-4 space-y-3">
             {pagamentos.map((p: any) => {
-              const servico = textValue(p.servico);
+              const servico = formatBudgetItemText(p.servico);
               const valorTotal = formatCurrencyOptional(p.valor_total_com_taxas);
               const taxas = formatCurrencyOptional(p.taxas);
-              const formas = splitLines(p.forma_pagamento || "");
+              const formas = splitLines(p.forma_pagamento || "").map((item) => formatBudgetItemText(item));
               const details = [
                 valorTotal ? `Valor total c/ taxas: ${valorTotal}` : "",
                 taxas ? `Taxas: ${taxas}` : "",

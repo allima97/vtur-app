@@ -11,6 +11,7 @@ import AppButton from "../ui/primer/AppButton";
 import AppField from "../ui/primer/AppField";
 import FileUploadField from "../ui/primer/FileUploadField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import ConfirmDialog from "../ui/ConfirmDialog";
 import {
   OFFICIAL_CARD_THEME_DELETE_NAMES,
   OFFICIAL_CARD_THEME_NAMES,
@@ -276,6 +277,8 @@ export default function ParametrosAvisosIsland() {
   const [previewResolvedMime, setPreviewResolvedMime] = useState<"image/png" | "image/svg+xml">("image/svg+xml");
   const [previewResolvedSource, setPreviewResolvedSource] = useState<"server_png" | "browser_png" | "svg">("svg");
   const [gerandoPreviewPng, setGerandoPreviewPng] = useState(false);
+  const [themeDeleteId, setThemeDeleteId] = useState<string | null>(null);
+  const [configDeleteId, setConfigDeleteId] = useState<string | null>(null);
 
   async function carregar() {
     try {
@@ -636,8 +639,13 @@ export default function ParametrosAvisosIsland() {
     setMsg(null);
   }
 
-  async function removerTheme(id: string) {
-    if (!confirm("Excluir esta arte?")) return;
+  function removerTheme(id: string) {
+    setThemeDeleteId(id);
+  }
+
+  async function confirmarRemoverTheme() {
+    const id = String(themeDeleteId || "").trim();
+    if (!id) return;
     try {
       const { data: authData } = await supabase.auth.getUser();
       const userId = authData?.user?.id;
@@ -651,6 +659,8 @@ export default function ParametrosAvisosIsland() {
       await carregar();
     } catch (e: any) {
       setErro(e?.message || "Erro ao excluir arte.");
+    } finally {
+      setThemeDeleteId(null);
     }
   }
 
@@ -743,8 +753,13 @@ export default function ParametrosAvisosIsland() {
     setMsg(null);
   }
 
-  async function removerConfiguracao(id: string) {
-    if (!confirm("Excluir esta configuração?")) return;
+  function removerConfiguracao(id: string) {
+    setConfigDeleteId(id);
+  }
+
+  async function confirmarRemoverConfiguracao() {
+    const id = String(configDeleteId || "").trim();
+    if (!id) return;
     try {
       const { data: authData } = await supabase.auth.getUser();
       const userId = authData?.user?.id;
@@ -758,6 +773,8 @@ export default function ParametrosAvisosIsland() {
       await carregar();
     } catch (e: any) {
       setErro(e?.message || "Erro ao excluir configuração.");
+    } finally {
+      setConfigDeleteId(null);
     }
   }
 
@@ -1527,6 +1544,26 @@ export default function ParametrosAvisosIsland() {
           </small>
         )}
       </AppCard>
+      <ConfirmDialog
+        open={Boolean(themeDeleteId)}
+        title="Excluir arte"
+        message="Excluir esta arte?"
+        confirmLabel="Excluir"
+        cancelLabel="Cancelar"
+        confirmVariant="danger"
+        onConfirm={() => void confirmarRemoverTheme()}
+        onCancel={() => setThemeDeleteId(null)}
+      />
+      <ConfirmDialog
+        open={Boolean(configDeleteId)}
+        title="Excluir configuração"
+        message="Excluir esta configuração?"
+        confirmLabel="Excluir"
+        cancelLabel="Cancelar"
+        confirmVariant="danger"
+        onConfirm={() => void confirmarRemoverConfiguracao()}
+        onCancel={() => setConfigDeleteId(null)}
+      />
     </div>
     </AppPrimerProvider>
   );

@@ -2,6 +2,7 @@ import { Dialog } from "../ui/primer/legacyCompat";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import pdfWorkerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { supabase } from "../../lib/supabase";
+import { buscarCidadesComCache } from "../../lib/cidadesSearchCache";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { useCrudResource } from "../../lib/useCrudResource";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
@@ -382,30 +383,20 @@ export default function CircuitosIsland() {
     const t = setTimeout(async () => {
       try {
         setBuscandoCidade(true);
-        const { data, error } = await supabase.rpc("buscar_cidades", {
-          q: cidadeBusca.trim(),
-          limite: 10,
+        if (controller.signal.aborted) return;
+        const cidades = await buscarCidadesComCache({
+          supabase,
+          query: cidadeBusca.trim(),
+          limit: 10,
         });
         if (controller.signal.aborted) return;
-        if (error) {
-          console.error("Erro ao buscar cidades:", error);
-          setErroCidadeBusca("Erro ao buscar cidades (RPC). Tentando fallback...");
-          const { data: dataFallback, error: errorFallback } = await supabase
-            .from("cidades")
-            .select("id, nome, subdivisao_id")
-            .ilike("nome", `%${cidadeBusca.trim()}%`)
-            .order("nome");
-          if (errorFallback) {
-            console.error("Erro no fallback de cidades:", errorFallback);
-            setErroCidadeBusca("Erro ao buscar cidades.");
-          } else {
-            setResultadosCidade((dataFallback as CidadeBusca[]) || []);
-            setErroCidadeBusca(null);
-          }
-        } else {
-          setResultadosCidade((data as CidadeBusca[]) || []);
-          setErroCidadeBusca(null);
-        }
+        setResultadosCidade((cidades as CidadeBusca[]) || []);
+        setErroCidadeBusca(null);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        console.error("Erro ao buscar cidades:", error);
+        setResultadosCidade([]);
+        setErroCidadeBusca("Erro ao buscar cidades.");
       } finally {
         if (!controller.signal.aborted) setBuscandoCidade(false);
       }
@@ -1037,18 +1028,17 @@ export default function CircuitosIsland() {
     if (cache.has(chave)) return cache.get(chave) || null;
 
     try {
-      const { data, error } = await supabase.rpc("buscar_cidades", { q: nome, limite: 5 });
-      if (!error && data?.length) {
-        const match =
-          (data as CidadeBusca[]).find((c) => normalizeText(c.nome) === chave) ||
-          (data as CidadeBusca[])[0];
+      const cidades = await buscarCidadesComCache({
+        supabase,
+        query: nome,
+        limit: 5,
+      });
+      if (cidades.length > 0) {
+        const match = cidades.find((c) => normalizeText(c.nome) === chave) || cidades[0];
         const label = formatCidadeLabel(match);
         const selecionada = { id: match.id, nome: match.nome, label };
         cache.set(chave, selecionada);
         return selecionada;
-      }
-      if (error) {
-        console.error("Erro ao buscar cidades (RPC):", error);
       }
     } catch (err) {
       console.error("Erro ao buscar cidades:", err);

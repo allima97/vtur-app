@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { usePermissoesStore } from "../../lib/permissoesStore";
+import { fetchCidadesByApiWithCache } from "../../lib/cidadesSearchApiCache";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
 import { formatCurrencyBRL } from "../../lib/format";
@@ -214,17 +215,14 @@ export default function ViagensListaIsland() {
       setErroCidades(null);
       const search = term.trim();
       const limite = search.length === 0 ? 200 : 50;
-      const query = new URLSearchParams();
-      if (search) query.set("q", search);
-      query.set("limite", String(limite));
-      const response = await fetch(`/api/v1/viagens/cidades-busca?${query.toString()}`,
-        { signal: controller.signal }
-      );
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(text || "Erro ao carregar cidades.");
-      }
-      const cidadesData = (await response.json()) as CidadeSugestao[];
+      const cidadesData = (await fetchCidadesByApiWithCache({
+        query: search,
+        limit: limite,
+        signal: controller.signal,
+        cacheNamespace: "viagens-lista",
+        endpoints: ["/api/v1/viagens/cidades-busca"],
+        minQueryLength: 0,
+      })) as CidadeSugestao[];
 
       if (controller.signal.aborted) return;
 

@@ -5,9 +5,19 @@ import { supabaseBrowser } from "../../lib/supabase-browser";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { normalizeText } from "../../lib/normalizeText";
 import { formatNumberBR } from "../../lib/format";
+import { fetchTipoProdutosOptionsWithCache } from "../../lib/tipoProdutosCache";
 import { matchesCpfSearch, onlyDigits } from "../../lib/searchNormalization";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
+import { isDexieCloudSyncEnabled, isPersistentCacheEnabled } from "../../lib/cachePolicy";
+import {
+  readPersistentCache,
+  removePersistentCache,
+  writePersistentCache,
+} from "../../lib/offline/persistentCache";
 import type { ImportResult, QuoteDraft, QuoteItemDraft } from "../../lib/quote/types";
+import type { ImportedRoteiroAereo } from "../../lib/roteiroAereoImport";
+import type { ImportedRoteiroHotel } from "../../lib/roteiroHotelImport";
+import type { ImportedRoteiroPasseio } from "../../lib/roteiroPasseioImport";
 import FlightDetailsModal, { FlightDetails } from "../ui/FlightDetailsModal";
 import AlertMessage from "../ui/AlertMessage";
 import TableActions from "../ui/TableActions";
@@ -105,6 +115,45 @@ function formatCurrency(value: number) {
 }
 
 const IMPORT_TIPO_DATALIST_ID = "quote-import-tipos-list";
+const IMPORT_CACHE_CIDADES_SCOPE = "quote-import-cidades";
+const IMPORT_CACHE_CIDADES_TTL_MS = 6 * 60 * 60 * 1000;
+const IMPORT_CACHE_DRAFT_SCOPE = "quote-import-draft";
+const IMPORT_CACHE_DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+type QuoteImportDraftSnapshot = {
+  textInput: string;
+  importMode: ImportMode;
+  draft: QuoteDraft | null;
+  savedAt: string;
+};
+
+function hydrateDraftFromSnapshot(snapshotDraft: QuoteDraft | null | undefined): QuoteDraft | null {
+  if (!snapshotDraft || !Array.isArray(snapshotDraft.items)) return null;
+  const items = snapshotDraft.items
+    .filter(Boolean)
+    .map((item, index) => ({
+      ...item,
+      order_index: index,
+      taxes_amount: Number(item.taxes_amount || 0),
+      quantity: Math.max(1, Math.round(Number(item.quantity) || 1)),
+      total_amount: Number(item.total_amount || 0),
+      unit_price: Number(item.unit_price || 0),
+      raw: (item.raw || {}) as Record<string, unknown>,
+      segments: Array.isArray(item.segments) ? item.segments : [],
+    }));
+  const subtotal = items.reduce((sum, item) => sum + Number(item.total_amount || 0), 0);
+  const taxesTotal = items.reduce((sum, item) => sum + Number(item.taxes_amount || 0), 0);
+  const total = subtotal + taxesTotal;
+  const avgConf = items.length
+    ? items.reduce((sum, item) => sum + Number(item.confidence || 0), 0) / items.length
+    : 0;
+  return {
+    ...snapshotDraft,
+    items,
+    total,
+    average_confidence: avgConf,
+  };
+}
 
 function validateItem(item: QuoteItemDraft) {
   return Boolean(
@@ -133,6 +182,107 @@ function isFlightItem(item: QuoteItemDraft) {
 function getFlightDetails(item: QuoteItemDraft): FlightDetails | null {
   const raw = (item.raw || {}) as { flight_details?: FlightDetails };
   return raw.flight_details || null;
+}
+
+type AereoImportRaw = Partial<ImportedRoteiroAereo> & {
+  cia_aerea?: string;
+  classe_reserva?: string;
+  segmentos?: Array<{
+    aeroporto_saida?: string;
+    aeroporto_chegada?: string;
+    hora_saida?: string;
+    hora_chegada?: string;
+  }>;
+};
+
+type ItemImportRaw = {
+  hotel_import?: Partial<ImportedRoteiroHotel>;
+  passeio_import?: Partial<ImportedRoteiroPasseio>;
+  aereo_import?: AereoImportRaw;
+};
+
+function safePreviewText(value: unknown) {
+  if (typeof value === "number") {
+    return String(value);
+  }
+  if (typeof value !== "string") return "";
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function normalizePreviewLabel(value: unknown) {
+  const text = safePreviewText(value);
+  if (!text) return "";
+  return titleCaseWithExceptions(text);
+}
+
+function formatAereoSegmentSummary(segment: {
+  aeroporto_saida?: string;
+  aeroporto_chegada?: string;
+  hora_saida?: string;
+  hora_chegada?: string;
+}) {
+  const origem = safePreviewText(segment.aeroporto_saida);
+  const destino = safePreviewText(segment.aeroporto_chegada);
+  if (!origem && !destino) return "";
+  const saida = safePreviewText(segment.hora_saida);
+  const chegada = safePreviewText(segment.hora_chegada);
+  if (!saida && !chegada) {
+    return `${origem || "?"} -> ${destino || "?"}`;
+  }
+  return `${origem || "?"} -> ${destino || "?"} (${saida || "--:--"} / ${chegada || "--:--"})`;
+}
+
+function buildAereoSegmentsPreview(raw?: AereoImportRaw) {
+  if (!raw) return "";
+  const fromSegments = Array.isArray(raw.segmentos)
+    ? raw.segmentos.filter(Boolean)
+    : [];
+  const segments =
+    fromSegments.length > 0
+      ? fromSegments
+      : [
+          {
+            aeroporto_saida: safePreviewText(raw.aeroporto_saida),
+            aeroporto_chegada: safePreviewText(raw.aeroporto_chegada),
+            hora_saida: safePreviewText(raw.hora_saida),
+            hora_chegada: safePreviewText(raw.hora_chegada),
+          },
+        ];
+  const labels = segments.map((segment) => formatAereoSegmentSummary(segment)).filter(Boolean);
+  if (!labels.length) return "";
+  const visible = labels.slice(0, 2);
+  const hidden = Math.max(0, labels.length - visible.length);
+  return hidden > 0 ? `${visible.join(" | ")} +${hidden} trecho(s)` : visible.join(" | ");
+}
+
+function getStructuredImportPreviewLines(item: QuoteItemDraft) {
+  const lines: string[] = [];
+  const raw = (item.raw || {}) as ItemImportRaw;
+  const hotel = raw.hotel_import;
+  const passeio = raw.passeio_import;
+  const aereo = raw.aereo_import;
+
+  const regime = normalizePreviewLabel(hotel?.regime);
+  if (regime) {
+    lines.push(`Regime: ${regime}`);
+  }
+
+  const fornecedor = normalizePreviewLabel(passeio?.fornecedor);
+  if (fornecedor) {
+    lines.push(`Fornecedor: ${fornecedor}`);
+  }
+
+  const ciaAerea = normalizePreviewLabel(aereo?.cia_aerea);
+  if (ciaAerea) {
+    lines.push(`Cia: ${ciaAerea}`);
+  }
+
+  const segmentos = buildAereoSegmentsPreview(aereo);
+  if (segmentos) {
+    lines.push(`Segmentos: ${segmentos}`);
+  }
+
+  return lines;
 }
 
 type ImportMode = "produtos" | "circuitos" | "circuitos_produtos";
@@ -189,13 +339,28 @@ export default function QuoteImportIsland() {
   const [cidadeCache, setCidadeCache] = useState<Record<string, string>>({});
   const [cidadeNameMap, setCidadeNameMap] = useState<Record<string, string>>({});
   const [flightModal, setFlightModal] = useState<{ details: FlightDetails; title?: string } | null>(null);
+  const [draftCacheUserKey, setDraftCacheUserKey] = useState("pending");
   const cidadeFetchTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const localDraftSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const localDraftRestoringRef = useRef(false);
   const isMountedRef = useRef(true);
+  const persistentCacheDisabled = useMemo(() => !isPersistentCacheEnabled(), []);
+  const cloudDraftSyncEnabled = useMemo(() => isDexieCloudSyncEnabled(), []);
+  const draftCacheKey = useMemo(() => {
+    if (!draftCacheUserKey || draftCacheUserKey === "pending") return "";
+    if (typeof window !== "undefined") {
+      return `v2:${draftCacheUserKey}:${window.location.pathname}`;
+    }
+    return `v2:${draftCacheUserKey}:/orcamentos/importar`;
+  }, [draftCacheUserKey]);
 
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
       Object.values(cidadeFetchTimeouts.current).forEach((timeout) => clearTimeout(timeout));
+      if (localDraftSaveTimeoutRef.current) {
+        clearTimeout(localDraftSaveTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -207,27 +372,107 @@ export default function QuoteImportIsland() {
 
   useEffect(() => {
     let active = true;
-    async function carregarTipos() {
+    async function resolveDraftCacheUserKey() {
       try {
-        const { data, error } = await supabaseBrowser
-          .from("tipo_produtos")
-          .select("id, nome, tipo")
-          .order("nome", { ascending: true })
-          .limit(500);
+        const { data } = await supabaseBrowser.auth.getUser();
         if (!active) return;
-        if (error) {
-          console.warn("[QuoteImport] Falha ao carregar tipos", error);
+        const userId = data?.user?.id?.trim();
+        setDraftCacheUserKey(userId ? `uid:${userId}` : "anon");
+      } catch {
+        if (!active) return;
+        setDraftCacheUserKey("anon");
+      }
+    }
+    resolveDraftCacheUserKey();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (persistentCacheDisabled) return;
+    if (!draftCacheKey) return;
+    let active = true;
+    localDraftRestoringRef.current = true;
+    async function restoreLocalDraft() {
+      try {
+        const snapshot = await readPersistentCache<QuoteImportDraftSnapshot>(
+          IMPORT_CACHE_DRAFT_SCOPE,
+          draftCacheKey
+        );
+        if (!active || !snapshot) return;
+        if (snapshot.textInput) setTextInput(snapshot.textInput);
+        if (
+          snapshot.importMode &&
+          IMPORT_MODE_OPTIONS.some((mode) => mode.value === snapshot.importMode)
+        ) {
+          setImportMode(snapshot.importMode);
+        }
+        const restoredDraft = hydrateDraftFromSnapshot(snapshot.draft);
+        if (restoredDraft) setDraft(restoredDraft);
+        if (restoredDraft || snapshot.textInput) {
+          setStatus("Rascunho restaurado.");
+        }
+      } catch (err) {
+        console.warn("[QuoteImport] Nao foi possivel restaurar rascunho local.", err);
+      } finally {
+        localDraftRestoringRef.current = false;
+      }
+    }
+    restoreLocalDraft();
+    return () => {
+      active = false;
+      localDraftRestoringRef.current = false;
+    };
+  }, [persistentCacheDisabled, draftCacheKey]);
+
+  useEffect(() => {
+    if (persistentCacheDisabled) return;
+    if (!draftCacheKey) return;
+    if (localDraftRestoringRef.current) return;
+    if (localDraftSaveTimeoutRef.current) {
+      clearTimeout(localDraftSaveTimeoutRef.current);
+    }
+    localDraftSaveTimeoutRef.current = setTimeout(async () => {
+      try {
+        const hasContent = Boolean(textInput.trim() || draft);
+        if (!hasContent) {
+          await removePersistentCache(IMPORT_CACHE_DRAFT_SCOPE, draftCacheKey);
           return;
         }
-        setTipoOptions(
-          (data || [])
-            .filter((tipo) => tipo && (tipo.nome || tipo.tipo))
-            .map((tipo) => {
-              const label = tipo.nome?.trim() || tipo.tipo?.trim() || "";
-              return { id: tipo.id, label };
-            })
-            .filter((tipo) => tipo.label)
+        const snapshot: QuoteImportDraftSnapshot = {
+          textInput,
+          importMode,
+          draft: draft || null,
+          savedAt: new Date().toISOString(),
+        };
+        await writePersistentCache(
+          IMPORT_CACHE_DRAFT_SCOPE,
+          draftCacheKey,
+          snapshot,
+          IMPORT_CACHE_DRAFT_TTL_MS
         );
+      } catch (err) {
+        console.warn("[QuoteImport] Nao foi possivel salvar rascunho local.", err);
+      }
+    }, 900);
+    return () => {
+      if (localDraftSaveTimeoutRef.current) {
+        clearTimeout(localDraftSaveTimeoutRef.current);
+      }
+    };
+  }, [persistentCacheDisabled, draftCacheKey, textInput, importMode, draft]);
+
+  useEffect(() => {
+    let active = true;
+    async function carregarTipos() {
+      try {
+        const data = await fetchTipoProdutosOptionsWithCache({
+          cacheNamespace: "quote-import",
+          noCache: persistentCacheDisabled,
+        });
+        if (!active) return;
+        setTipoOptions(data as TipoProdutoOption[]);
       } catch (err) {
         if (!active) return;
         console.warn("[QuoteImport] Erro ao carregar tipos", err);
@@ -237,7 +482,7 @@ export default function QuoteImportIsland() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [persistentCacheDisabled]);
 
   useEffect(() => {
     let active = true;
@@ -267,9 +512,44 @@ export default function QuoteImportIsland() {
     };
   }, []);
 
+  function applyCidadeSuggestionsResult(rowKey: string, cidades: CidadeOption[]) {
+    if (!isMountedRef.current) return;
+    setCidadeSuggestions((prev) => ({ ...prev, [rowKey]: cidades }));
+    if (!cidades.length) return;
+    setCidadeCache((prev) => {
+      const next = { ...prev };
+      cidades.forEach((cidade) => {
+        if (cidade.id && cidade.nome) {
+          next[cidade.id] = formatCidadeLabel(cidade);
+        }
+      });
+      return next;
+    });
+    setCidadeNameMap((prev) => {
+      const next = { ...prev };
+      cidades.forEach((cidade) => {
+        if (cidade.id && cidade.nome) {
+          const nomeKey = normalizeCityName(cidade.nome);
+          const labelKey = normalizeCityName(formatCidadeLabel(cidade));
+          if (nomeKey && !next[nomeKey]) next[nomeKey] = cidade.id;
+          if (labelKey && !next[labelKey]) next[labelKey] = cidade.id;
+        }
+      });
+      return next;
+    });
+  }
+
   async function loadCidadeSuggestions(rowKey: string, term: string) {
     const search = term.trim();
     const limit = 25;
+    const cacheKey = normalizeCityName(search || "__all__");
+    if (!persistentCacheDisabled) {
+      const cached = await readPersistentCache<CidadeOption[]>(IMPORT_CACHE_CIDADES_SCOPE, cacheKey);
+      if (Array.isArray(cached) && cached.length > 0) {
+        applyCidadeSuggestionsResult(rowKey, cached);
+        return;
+      }
+    }
     let cidades: CidadeOption[] = [];
     try {
       const { data, error } = await supabaseBrowser.rpc("buscar_cidades", { q: search, limite: limit });
@@ -306,30 +586,14 @@ export default function QuoteImportIsland() {
       }
     }
 
-    if (!isMountedRef.current) return;
-    setCidadeSuggestions((prev) => ({ ...prev, [rowKey]: cidades }));
-    if (cidades.length) {
-      setCidadeCache((prev) => {
-        const next = { ...prev };
-        cidades.forEach((cidade) => {
-          if (cidade.id && cidade.nome) {
-            next[cidade.id] = formatCidadeLabel(cidade);
-          }
-        });
-        return next;
-      });
-      setCidadeNameMap((prev) => {
-        const next = { ...prev };
-        cidades.forEach((cidade) => {
-          if (cidade.id && cidade.nome) {
-            const nomeKey = normalizeCityName(cidade.nome);
-            const labelKey = normalizeCityName(formatCidadeLabel(cidade));
-            if (nomeKey && !next[nomeKey]) next[nomeKey] = cidade.id;
-            if (labelKey && !next[labelKey]) next[labelKey] = cidade.id;
-          }
-        });
-        return next;
-      });
+    applyCidadeSuggestionsResult(rowKey, cidades);
+    if (!persistentCacheDisabled && cidades.length > 0) {
+      await writePersistentCache(
+        IMPORT_CACHE_CIDADES_SCOPE,
+        cacheKey,
+        cidades,
+        IMPORT_CACHE_CIDADES_TTL_MS
+      );
     }
   }
 
@@ -447,6 +711,7 @@ export default function QuoteImportIsland() {
   }
 
   const canExtractInput = Boolean(textInput.trim());
+  const hasDraftContent = Boolean(textInput.trim() || draft || importResult || file);
 
   function updateDraftItems(items: QuoteItemDraft[]) {
     if (!draft) return;
@@ -538,6 +803,28 @@ export default function QuoteImportIsland() {
     }
   }
 
+  async function handleClearDraft() {
+    if (extracting || saving) return;
+    if (localDraftSaveTimeoutRef.current) {
+      clearTimeout(localDraftSaveTimeoutRef.current);
+      localDraftSaveTimeoutRef.current = null;
+    }
+    setTextInput("");
+    setDraft(null);
+    setImportResult(null);
+    setFile(null);
+    setError(null);
+    setSuccessId(null);
+    setStatus("Rascunho limpo.");
+    setCidadeInputValues({});
+    setCidadeSuggestions({});
+    setCidadeCache({});
+    setCidadeNameMap({});
+    if (!persistentCacheDisabled && draftCacheKey) {
+      await removePersistentCache(IMPORT_CACHE_DRAFT_SCOPE, draftCacheKey);
+    }
+  }
+
   async function handleSave() {
     if (!draft || !file) return;
     if (!clienteId) {
@@ -561,6 +848,9 @@ export default function QuoteImportIsland() {
       });
       setSuccessId(result.quote_id);
       setStatus(`Salvo como ${result.status}.`);
+      if (!persistentCacheDisabled && draftCacheKey) {
+        await removePersistentCache(IMPORT_CACHE_DRAFT_SCOPE, draftCacheKey);
+      }
       if (typeof window !== "undefined") {
         window.location.href = "/orcamentos/consulta";
       }
@@ -637,6 +927,15 @@ export default function QuoteImportIsland() {
           subtitle="Cole o texto do orcamento, revise os itens extraidos e confirme antes de salvar no CRM."
           actions={
             <div className="vtur-quote-top-actions orcamentos-action-bar">
+              <AppButton
+                type="button"
+                variant="danger"
+                icon="pi pi-trash"
+                onClick={handleClearDraft}
+                disabled={!hasDraftContent || extracting || saving}
+              >
+                Limpar rascunho
+              </AppButton>
               <AppButton type="button" variant="secondary" onClick={handleCancel} disabled={extracting}>
                 Cancelar
               </AppButton>
@@ -764,11 +1063,24 @@ export default function QuoteImportIsland() {
               placeholder="Cole aqui o texto do orcamento"
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
-              caption="A importacao monta um rascunho revisavel. Voce pode ajustar tipo, cidade, datas, quantidades e valores antes de confirmar."
+              caption={
+                cloudDraftSyncEnabled
+                  ? "A importacao monta um rascunho revisavel. Voce pode ajustar tipo, cidade, datas, quantidades e valores antes de confirmar. Sincronizacao de rascunho entre dispositivos ativa."
+                  : "A importacao monta um rascunho revisavel. Voce pode ajustar tipo, cidade, datas, quantidades e valores antes de confirmar."
+              }
             />
           </div>
 
           <div className="vtur-form-actions">
+            <AppButton
+              type="button"
+              variant="danger"
+              icon="pi pi-trash"
+              onClick={handleClearDraft}
+              disabled={!hasDraftContent || extracting || saving}
+            >
+              Limpar rascunho
+            </AppButton>
             <AppButton
               type="button"
               variant="primary"
@@ -831,6 +1143,7 @@ export default function QuoteImportIsland() {
                       .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
                     const rowKey = item.temp_id || `row-${index}`;
                     const flightDetails = isFlightItem(item) ? getFlightDetails(item) : null;
+                    const structuredPreviewLines = getStructuredImportPreviewLines(item);
 
                     return (
                       <React.Fragment key={item.temp_id}>
@@ -882,6 +1195,13 @@ export default function QuoteImportIsland() {
                                 })
                               }
                             />
+                            {structuredPreviewLines.length > 0 && (
+                              <div className="vtur-quote-item-import-meta">
+                                {structuredPreviewLines.map((line, lineIndex) => (
+                                  <div key={`${rowKey}-meta-${lineIndex}`}>{line}</div>
+                                ))}
+                              </div>
+                            )}
                           </td>
                           <td data-label="Cidade">
                             <input

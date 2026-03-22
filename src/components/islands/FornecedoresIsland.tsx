@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { buscarCidadesComCache } from "../../lib/cidadesSearchCache";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { useCrudResource } from "../../lib/useCrudResource";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
@@ -288,30 +289,20 @@ export default function FornecedoresIsland() {
     const t = setTimeout(async () => {
       try {
         setBuscandoCidade(true);
-        const { data, error } = await supabase.rpc("buscar_cidades", {
-          q: cidadeBusca.trim(),
-          limite: 10,
+        if (controller.signal.aborted) return;
+        const cidades = await buscarCidadesComCache({
+          supabase,
+          query: cidadeBusca.trim(),
+          limit: 10,
         });
         if (controller.signal.aborted) return;
-        if (error) {
-          console.error("Erro ao buscar cidades:", error);
-          setErroCidadeBusca("Erro ao buscar cidades (RPC). Tentando fallback...");
-          const { data: dataFallback, error: errorFallback } = await supabase
-            .from("cidades")
-            .select("id, nome, subdivisao_nome")
-            .ilike("nome", `%${cidadeBusca.trim()}%`)
-            .order("nome");
-          if (errorFallback) {
-            console.error("Erro no fallback de cidades:", errorFallback);
-            setErroCidadeBusca("Erro ao buscar cidades.");
-          } else {
-            setResultadosCidade((dataFallback as CidadeBusca[]) || []);
-            setErroCidadeBusca(null);
-          }
-        } else {
-          setResultadosCidade((data as CidadeBusca[]) || []);
-          setErroCidadeBusca(null);
-        }
+        setResultadosCidade((cidades as CidadeBusca[]) || []);
+        setErroCidadeBusca(null);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        console.error("Erro ao buscar cidades:", error);
+        setResultadosCidade([]);
+        setErroCidadeBusca("Erro ao buscar cidades.");
       } finally {
         if (!controller.signal.aborted) setBuscandoCidade(false);
       }

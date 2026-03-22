@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
+import ConfirmDialog from "../ui/ConfirmDialog";
 
 type Tab = "live" | "historical" | "recommendations";
 
@@ -46,6 +47,7 @@ export default function PerformanceDashboardIsland() {
   const [historicalSummary, setHistoricalSummary] = useState<PerformanceSummary | null>(null);
   const [screenMetrics, setScreenMetrics] = useState<Record<string, PerformanceSummary>>({});
   const [refreshKey, setRefreshKey] = useState(0);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
 
   // Update live metrics every 2 seconds
   useEffect(() => {
@@ -84,12 +86,15 @@ export default function PerformanceDashboardIsland() {
   };
 
   const clearData = () => {
-    if (confirm("Tem certeza que quer limpar todos os dados coletados?")) {
-      performanceMetrics.clearData();
-      setSnapshotCount(0);
-      setHistoricalSummary(null);
-      setScreenMetrics({});
-    }
+    setClearConfirmOpen(true);
+  };
+
+  const confirmClearData = () => {
+    performanceMetrics.clearData();
+    setSnapshotCount(0);
+    setHistoricalSummary(null);
+    setScreenMetrics({});
+    setClearConfirmOpen(false);
   };
 
   const exportData = () => {
@@ -544,6 +549,16 @@ export default function PerformanceDashboardIsland() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={clearConfirmOpen}
+        title="Limpar dados de performance"
+        message="Tem certeza que quer limpar todos os dados coletados?"
+        confirmLabel="Limpar"
+        cancelLabel="Cancelar"
+        confirmVariant="danger"
+        onConfirm={confirmClearData}
+        onCancel={() => setClearConfirmOpen(false)}
+      />
     </div>
   );
 }

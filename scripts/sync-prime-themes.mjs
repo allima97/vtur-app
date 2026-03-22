@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -7,12 +7,7 @@ const projectRoot = resolve(__dirname, "..");
 const sourceThemesRoot = resolve(projectRoot, "node_modules/primereact/resources/themes");
 const targetThemesRoot = resolve(projectRoot, "public/themes");
 const DEFAULT_THEMES = [
-  "lara-light-indigo",
   "lara-light-blue",
-  "lara-light-teal",
-  "lara-light-green",
-  "lara-light-amber",
-  "lara-light-purple",
 ];
 
 const requestedThemes = process.argv.slice(2).filter(Boolean);
@@ -38,11 +33,25 @@ function copyTheme(themeName) {
   }
 }
 
+function removeUnusedThemes(activeThemes) {
+  if (!existsSync(targetThemesRoot)) return;
+  const activeSet = new Set(activeThemes);
+  const entries = readdirSync(targetThemesRoot, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (activeSet.has(entry.name)) continue;
+    const themePath = resolve(targetThemesRoot, entry.name);
+    rmSync(themePath, { recursive: true, force: true });
+    console.log(`[sync-prime-themes] ${entry.name} removido de public/themes/${entry.name}`);
+  }
+}
+
 if (!existsSync(sourceThemesRoot)) {
   throw new Error("Diretório de temas do PrimeReact não encontrado. Execute npm install.");
 }
 
 mkdirSync(targetThemesRoot, { recursive: true });
+removeUnusedThemes(themes);
 
 for (const themeName of themes) {
   copyTheme(themeName);

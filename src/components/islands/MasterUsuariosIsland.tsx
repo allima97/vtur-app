@@ -10,6 +10,7 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import ConfirmDialog from "../ui/ConfirmDialog";
 
 type UserRow = {
   id: string;
@@ -84,6 +85,7 @@ export default function MasterUsuariosIsland() {
   const [mfaStatuses, setMfaStatuses] = useState<MfaStatusMap>({});
   const [mfaLoading, setMfaLoading] = useState(false);
   const [mfaAvailable, setMfaAvailable] = useState(true);
+  const [mfaResetUser, setMfaResetUser] = useState<UserRow | null>(null);
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [novoNomeCompleto, setNovoNomeCompleto] = useState("");
@@ -339,11 +341,12 @@ export default function MasterUsuariosIsland() {
   }
 
   async function resetarMfa(user: UserRow) {
-    const nome = user.nome_completo || user.email || "este usuário";
-    const confirmado = window.confirm(
-      `Resetar o 2FA de ${nome}?\n\nTodos os fatores autenticadores serão removidos e as sessões ativas do usuário serão encerradas.`
-    );
-    if (!confirmado) return;
+    setMfaResetUser(user);
+  }
+
+  async function confirmarResetarMfa() {
+    const user = mfaResetUser;
+    if (!user) return;
 
     try {
       setResetandoMfaId(user.id);
@@ -378,6 +381,7 @@ export default function MasterUsuariosIsland() {
     } catch (e: any) {
       showToast(String(e?.message || "Erro ao resetar 2FA."), "error");
     } finally {
+      setMfaResetUser(null);
       setResetandoMfaId(null);
     }
   }
@@ -1009,6 +1013,16 @@ export default function MasterUsuariosIsland() {
         </div>
       )}
 
+      <ConfirmDialog
+        open={Boolean(mfaResetUser)}
+        title="Resetar 2FA"
+        message={`Resetar o 2FA de ${mfaResetUser?.nome_completo || mfaResetUser?.email || "este usuário"}? Todos os fatores autenticadores serão removidos e as sessões ativas do usuário serão encerradas.`}
+        confirmLabel="Resetar"
+        cancelLabel="Cancelar"
+        confirmVariant="danger"
+        onConfirm={() => void confirmarResetarMfa()}
+        onCancel={() => setMfaResetUser(null)}
+      />
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
       </div>
     </AppPrimerProvider>

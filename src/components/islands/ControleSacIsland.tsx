@@ -12,6 +12,7 @@ import { boundDateEndISO, selectAllInputOnFocus } from "../../lib/inputNormaliza
 import AlertMessage from "../ui/AlertMessage";
 import DataTable from "../ui/DataTable";
 import EmptyState from "../ui/EmptyState";
+import ConfirmDialog from "../ui/ConfirmDialog";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
@@ -112,6 +113,7 @@ export default function ControleSacIsland() {
   const [interacaoErro, setInteracaoErro] = useState<string | null>(null);
   const [visualizacaoSac, setVisualizacaoSac] = useState<SacRegistro | null>(null);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
+  const [sacExcluirPendente, setSacExcluirPendente] = useState<SacRegistro | null>(null);
 
   useEffect(() => {
     if (loadingPerm) return;
@@ -432,12 +434,12 @@ export default function ControleSacIsland() {
   }
 
   async function excluirSac(row: SacRegistro) {
-    if (typeof window !== "undefined") {
-      const confirmExclusao = window.confirm(
-        "Confirma a exclusão deste SAC? Essa ação não pode ser desfeita."
-      );
-      if (!confirmExclusao) return;
-    }
+    setSacExcluirPendente(row);
+  }
+
+  async function confirmarExcluirSac() {
+    const row = sacExcluirPendente;
+    if (!row) return;
     try {
       setExcluindoId(row.id);
       const { error } = await supabase.from("sac_controle").delete().eq("id", row.id);
@@ -447,6 +449,7 @@ export default function ControleSacIsland() {
       console.error(e);
       setErro("Não foi possível excluir o SAC.");
     } finally {
+      setSacExcluirPendente(null);
       setExcluindoId(null);
     }
   }
@@ -1022,6 +1025,16 @@ export default function ControleSacIsland() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={Boolean(sacExcluirPendente)}
+        title="Excluir SAC"
+        message="Confirma a exclusão deste SAC? Essa ação não pode ser desfeita."
+        confirmLabel="Excluir"
+        cancelLabel="Cancelar"
+        confirmVariant="danger"
+        onConfirm={() => void confirmarExcluirSac()}
+        onCancel={() => setSacExcluirPendente(null)}
+      />
     </div>
   );
 }

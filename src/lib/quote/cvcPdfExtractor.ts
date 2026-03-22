@@ -1,4 +1,16 @@
 import { titleCaseWithExceptions } from "../titleCase";
+import {
+  parseImportedRoteiroAereo,
+  type ImportedRoteiroAereo,
+} from "../roteiroAereoImport";
+import {
+  parseImportedRoteiroHotels,
+  type ImportedRoteiroHotel,
+} from "../roteiroHotelImport";
+import {
+  parseImportedRoteiroPasseios,
+  type ImportedRoteiroPasseio,
+} from "../roteiroPasseioImport";
 import { getOcrWorker } from "./ocrWorker";
 import type {
   ImportDebugImage,
@@ -307,16 +319,20 @@ function parseValorFromLines(lines: string[], tipo?: string) {
   if (!isSeguroLabel(tipoNormalized)) {
     const totalIndex = lines.findIndex((line) => isTotalValueLine(line));
     if (totalIndex >= 0) {
-      const end = Math.min(lines.length, totalIndex + 4);
+      const end = Math.min(lines.length, totalIndex + 7);
+      let lastCurrency: string | null = null;
       for (let i = totalIndex; i < end; i += 1) {
         const currencyText = extractCurrencyTextFromLine(lines[i]);
         if (currencyText) {
-          return {
-            valor: parseCurrencyValue(currencyText),
-            valor_formatado: currencyText,
-            moeda: "BRL",
-          };
+          lastCurrency = currencyText;
         }
+      }
+      if (lastCurrency) {
+        return {
+          valor: parseCurrencyValue(lastCurrency),
+          valor_formatado: lastCurrency,
+          moeda: "BRL",
+        };
       }
     }
   }
@@ -541,14 +557,16 @@ function isAddressLine(line: string) {
     return true;
   }
   if (/\d{4}-\d{3}/.test(line)) return true;
-  if (/(portugal|lisboa|porto|oporto)/i.test(normalized) && /\d/.test(line)) return true;
+  if (/\b(portugal|lisboa|porto|oporto)\b/i.test(normalized) && /\d/.test(line)) return true;
   return false;
 }
 
 function isHotelDetailLine(line: string) {
   const normalized = normalizeOcrText(line);
   if (!normalized) return false;
-  if (/(sem cafe|sem café|city design|double|single|suite|room|quarto)/i.test(normalized)) return true;
+  if (/(sem cafe|sem café|city design)/i.test(normalized)) return true;
+  if (/\b\d+\s*(double|single|suite|room|quarto)\b/i.test(normalized)) return true;
+  if (/\b(room|quarto)\b/i.test(normalized)) return true;
   return false;
 }
 
@@ -605,31 +623,59 @@ function extractServiceDescription(lines: string[]) {
     "passeio",
     "tour",
   ];
+  const hasKeyword = (normalized: string) => keywords.some((keyword) => normalized.includes(keyword));
+  const isValidCandidate = (line: string, cleaned: string, normalized: string) => {
+    if (!normalized) return false;
+    if (isCurrencyLine(line)) return false;
+    if (normalized.includes("total")) return false;
+    if (normalized.includes("detalhes")) return false;
+    if (normalized.includes("adulto") || normalized.includes("pax") || normalized.includes("passageiro")) return false;
+    if (/travel/.test(normalized)) return false;
+    if (/reembols/.test(normalized)) return false;
+    if (isRouteLine(line) && !hasKeyword(normalized)) return false;
+    if (isAddressLine(line)) return false;
+    if (isDateOnlyLine(line)) return false;
+    if (!/[A-Za-zÀ-ÿ]/.test(cleaned)) return false;
+    if (/^\d+$/.test(normalized)) return false;
+    return true;
+  };
+
+  const findKeywordLine = (fromIndex: number) => {
+    for (let idx = fromIndex; idx < lines.length; idx += 1) {
+      const line = lines[idx];
+      const cleaned = cleanProductLine(line);
+      const normalized = normalizeOcrText(cleaned);
+      if (!isValidCandidate(line, cleaned, normalized)) continue;
+      if (hasKeyword(normalized)) return cleaned;
+    }
+    return "";
+  };
+
   let startIndex = 0;
-  const routeIndex = lines.findIndex((line) => isRouteLine(line));
+  const routeIndex = lines.findIndex((line) => {
+    if (!isRouteLine(line)) return false;
+    const normalized = normalizeOcrText(line);
+    // Evita tratar o próprio descritivo do passeio (que pode ter hífen) como linha de rota.
+    if (hasKeyword(normalized)) return false;
+    return true;
+  });
   if (routeIndex >= 0) startIndex = routeIndex + 1;
+
+  const keywordCandidate = findKeywordLine(startIndex);
+  if (keywordCandidate) return keywordCandidate;
+
+  if (startIndex > 0) {
+    const fallbackKeywordCandidate = findKeywordLine(0);
+    if (fallbackKeywordCandidate) return fallbackKeywordCandidate;
+  }
 
   const candidates: string[] = [];
   for (let idx = startIndex; idx < lines.length; idx += 1) {
     const line = lines[idx];
     const cleaned = cleanProductLine(line);
     const normalized = normalizeOcrText(cleaned);
-    if (!normalized) continue;
-    if (isCurrencyLine(line)) continue;
-    if (normalized.includes("total")) continue;
-    if (normalized.includes("detalhes")) continue;
-    if (normalized.includes("adulto") || normalized.includes("pax") || normalized.includes("passageiro")) continue;
-    if (/travel/.test(normalized)) continue;
-    if (/reembols/.test(normalized)) continue;
-    if (isRouteLine(line)) continue;
-    if (isAddressLine(line)) continue;
-    if (isDateOnlyLine(line)) continue;
-    if (!/[A-Za-zÀ-ÿ]/.test(cleaned)) continue;
-    if (/^\d+$/.test(normalized)) continue;
+    if (!isValidCandidate(line, cleaned, normalized)) continue;
     candidates.push(cleaned);
-    if (keywords.some((keyword) => normalized.includes(keyword))) {
-      return cleaned;
-    }
   }
 
   if (candidates.length) {
@@ -638,6 +684,432 @@ function extractServiceDescription(lines: string[]) {
   }
 
   return null;
+}
+
+const SERVICE_DESCRIPTION_HINTS = [
+  "transporte",
+  "transfer",
+  "traslado",
+  "passeio",
+  "tour",
+  "city break",
+  "city tour",
+  "ingresso",
+  "vinhedo",
+  "ski",
+  "glaciar",
+  "chalten",
+  "lago",
+  "parque nacional",
+  "in/out",
+  "in e out",
+];
+
+function looksLikeServiceProviderLabel(value: string) {
+  const normalized = normalizeOcrText(value);
+  if (!normalized) return false;
+  if (SERVICE_DESCRIPTION_HINTS.some((hint) => normalized.includes(hint))) return false;
+  if (isRouteLine(value) || isDateOnlyLine(value)) return false;
+  if (/\d/.test(value)) return false;
+  const words = normalized.split(/\s+/).filter(Boolean);
+  if (words.length === 0 || words.length > 4) return false;
+  return true;
+}
+
+function extractServiceDescriptionFallback(lines: string[]) {
+  let best = "";
+
+  for (const line of lines) {
+    const cleaned = cleanProductLine(line);
+    const normalized = normalizeOcrText(cleaned);
+    if (!normalized) continue;
+    if (!SERVICE_DESCRIPTION_HINTS.some((hint) => normalized.includes(hint))) continue;
+    if (isCurrencyLine(line)) continue;
+    if (normalized.includes("total")) continue;
+    if (normalized.includes("detalhes")) continue;
+    if (normalized.includes("adulto") || normalized.includes("pax") || normalized.includes("passageiro")) continue;
+    if (/reembols/.test(normalized)) continue;
+    if (isAddressLine(line) || isDateOnlyLine(line)) continue;
+    if (!/[A-Za-zÀ-ÿ]/.test(cleaned)) continue;
+    if (/^\d+$/.test(normalized)) continue;
+    if (cleaned.length > best.length) best = cleaned;
+  }
+
+  return best || null;
+}
+
+function extractServiceNarrativeLine(lines: string[]) {
+  let best = "";
+  for (const line of lines) {
+    const cleaned = cleanProductLine(line);
+    const normalized = normalizeOcrText(cleaned);
+    if (!normalized) continue;
+    if (isCurrencyLine(line)) continue;
+    if (normalized.includes("total")) continue;
+    if (normalized.includes("detalhes")) continue;
+    if (normalized.includes("adulto") || normalized.includes("pax") || normalized.includes("passageiro")) continue;
+    if (/reembols/.test(normalized)) continue;
+    if (isAddressLine(line) || isDateOnlyLine(line)) continue;
+    if (!/[A-Za-zÀ-ÿ]/.test(cleaned)) continue;
+    if (/^\d+$/.test(normalized)) continue;
+
+    const wordCount = cleaned.split(/\s+/).filter(Boolean).length;
+    if (wordCount < 5) continue;
+    if (cleaned.length > best.length) best = cleaned;
+  }
+  return best || null;
+}
+
+function extractServicePrimaryLine(lines: string[]) {
+  for (const line of lines) {
+    const cleaned = cleanProductLine(line);
+    const normalized = normalizeOcrText(cleaned);
+    if (!normalized) continue;
+    if (!SERVICE_DESCRIPTION_HINTS.some((hint) => normalized.includes(hint))) continue;
+    if (isCurrencyLine(line)) continue;
+    if (normalized.includes("total")) continue;
+    if (normalized.includes("detalhes")) continue;
+    if (normalized.includes("adulto") || normalized.includes("pax") || normalized.includes("passageiro")) continue;
+    if (/reembols/.test(normalized)) continue;
+    if (isAddressLine(line) || isDateOnlyLine(line)) continue;
+    if (!/[A-Za-zÀ-ÿ]/.test(cleaned)) continue;
+    if (/^\d+$/.test(normalized)) continue;
+    if (cleaned.length < 12) continue;
+    return cleaned;
+  }
+  return "";
+}
+
+function pushUniqueLine(target: string[], value?: string | null) {
+  const normalized = (value || "").trim();
+  if (!normalized) return;
+  if (target.some((line) => normalizeOcrText(line) === normalizeOcrText(normalized))) return;
+  target.push(normalized);
+}
+
+function formatCurrencyLine(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "";
+  return `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function isOccupancyTotalLine(line: string) {
+  return /^total\s*\(/i.test(normalizeOcrText(line));
+}
+
+function isLikelyRoomLine(line: string) {
+  return /^\d+\s+\S+/i.test((line || "").trim());
+}
+
+function isLikelyServiceCodeLine(line: string) {
+  return /^\d{5,}$/.test((line || "").trim());
+}
+
+function isRegimeLine(line: string) {
+  const normalized = normalizeOcrText(line);
+  if (!normalized) return false;
+  return (
+    normalized.includes("cafe da manha") ||
+    normalized.includes("meia pensao") ||
+    normalized.includes("pensao completa") ||
+    normalized.includes("all inclusive") ||
+    normalized.includes("sem refeicao")
+  );
+}
+
+function findLikelyHotelAddressLine(lines: string[]) {
+  for (const line of lines) {
+    const cleaned = cleanProductLine(line);
+    const normalized = normalizeOcrText(cleaned);
+    if (!normalized) continue;
+    if (isCurrencyLine(line) || isDateOnlyLine(line) || isRouteLine(line)) continue;
+    if ((isLikelyRoomLine(line) && !cleaned.includes(",")) || isOccupancyTotalLine(line) || isRegimeLine(line)) continue;
+    if (normalized.includes("total") || normalized.includes("detalhes")) continue;
+    if (normalized.includes("adulto") || normalized.includes("pax") || normalized.includes("passageiro")) continue;
+    if (/(hotel|resort|pousada|suite|suíte|quarto|room)/i.test(normalized)) continue;
+    if (/reembols/.test(normalized)) continue;
+    if (!/[A-Za-zÀ-ÿ]/.test(cleaned)) continue;
+    if (cleaned.length < 12) continue;
+    if (cleaned.includes(",") || /\d{2,}/.test(cleaned)) return cleaned;
+  }
+  return "";
+}
+
+function extractOriginalFinalValuesFromLines(lines: string[]) {
+  let valorOriginal = 0;
+  let valorFinal = 0;
+  let sawDiscountLine = false;
+
+  for (const line of lines) {
+    const values = extractAllCurrencyValues(line);
+    if (!values.length) continue;
+    const normalized = normalizeOcrText(line);
+    if (normalized.includes("de r$") && normalized.includes(" por")) {
+      sawDiscountLine = true;
+      valorOriginal = values[0] || valorOriginal;
+      valorFinal = values[values.length - 1] || valorFinal;
+      continue;
+    }
+    if (sawDiscountLine) {
+      valorFinal = values[values.length - 1] || valorFinal;
+      continue;
+    }
+    valorFinal = values[values.length - 1] || valorFinal;
+  }
+
+  if (!valorFinal && valorOriginal) valorFinal = valorOriginal;
+  return { valorOriginal, valorFinal };
+}
+
+function findLikelyServiceProviderLine(lines: string[], serviceDescription: string) {
+  const serviceDescriptionNormalized = normalizeOcrText(serviceDescription);
+  for (const line of lines) {
+    const cleaned = cleanProductLine(line);
+    const normalized = normalizeOcrText(cleaned);
+    if (!normalized) continue;
+    if (normalized === serviceDescriptionNormalized) continue;
+    if (isCurrencyLine(line)) continue;
+    if (normalized.includes("total") || normalized.includes("detalhes")) continue;
+    if (normalized.includes("adulto") || normalized.includes("pax") || normalized.includes("passageiro")) continue;
+    if (isDateOnlyLine(line) || isRouteLine(line)) continue;
+    if (isAddressLine(line) || isLikelyServiceCodeLine(line) || isOccupancyTotalLine(line)) continue;
+    if (/reembols/.test(normalized)) continue;
+    if (!/[A-Za-zÀ-ÿ]/.test(cleaned)) continue;
+    if (SERVICE_DESCRIPTION_HINTS.some((hint) => normalized.includes(hint))) continue;
+    const words = cleaned.split(/\s+/).filter(Boolean);
+    if (words.length > 5) continue;
+    return cleaned;
+  }
+  return "";
+}
+
+function parseAdultChildCounts(text: string) {
+  const normalized = normalizeOcrText(text);
+  const adultsMatch = normalized.match(/(\d+)\s*adult/);
+  const childrenMatch = normalized.match(/(\d+)\s*crianc/);
+  return {
+    adults: adultsMatch?.[1] ? Number(adultsMatch[1]) : 0,
+    children: childrenMatch?.[1] ? Number(childrenMatch[1]) : 0,
+  };
+}
+
+function buildSyntheticHotelImportText(lines: string[]) {
+  const route = findRouteFromLines(lines)?.raw || "";
+  const periodLine = lines.find((line) => {
+    const normalized = normalizeOcrText(line);
+    return /\d{1,2}\s*de\s*[a-zçãõáéíóú]+\s*-\s*\d{1,2}\s*de\s*[a-zçãõáéíóú]+/.test(normalized);
+  }) || "";
+  const hotelName = extractHotelNameFromLines(lines) || extractHotelProductName(lines) || "";
+  const address = lines.find((line) => isAddressLine(line)) || findLikelyHotelAddressLine(lines) || "";
+  const roomLine = lines.find((line) => isLikelyRoomLine(line)) || "";
+  const regimeLine = lines.find((line) => isRegimeLine(line)) || "";
+  const refundLine = lines.find((line) => normalizeOcrText(line).includes("reembols")) || "";
+  const occupancyLine = lines.find((line) => isOccupancyTotalLine(line)) || "";
+  const { valorOriginal, valorFinal } = extractOriginalFinalValuesFromLines(lines);
+
+  const out: string[] = [];
+  pushUniqueLine(out, periodLine);
+  pushUniqueLine(out, route);
+  pushUniqueLine(out, hotelName);
+  pushUniqueLine(out, address);
+  pushUniqueLine(out, roomLine);
+  pushUniqueLine(out, regimeLine);
+  pushUniqueLine(out, refundLine);
+  pushUniqueLine(out, occupancyLine);
+  if (valorOriginal > 0 && valorFinal > 0 && Math.abs(valorOriginal - valorFinal) > 0.009) {
+    pushUniqueLine(out, `De ${formatCurrencyLine(valorOriginal)} por`);
+  }
+  if (valorFinal > 0) {
+    pushUniqueLine(out, formatCurrencyLine(valorFinal));
+  }
+  return out.join("\n");
+}
+
+function buildSyntheticServiceImportText(lines: string[], fallbackDescription: string) {
+  const dateLine = lines.find((line) => isDateOnlyLine(line)) || "";
+  const route = findRouteFromLines(lines)?.raw || "";
+  const serviceDescription =
+    extractServicePrimaryLine(lines) ||
+    extractServiceDescriptionFallback(lines) ||
+    extractServiceNarrativeLine(lines) ||
+    fallbackDescription ||
+    "";
+  const providerLine = findLikelyServiceProviderLine(lines, serviceDescription);
+  const serviceCode = lines.find((line) => isLikelyServiceCodeLine(line)) || "";
+  const refundLine = lines.find((line) => normalizeOcrText(line).includes("reembols")) || "";
+  const occupancyLine = lines.find((line) => isOccupancyTotalLine(line)) || "";
+  const { valorOriginal, valorFinal } = extractOriginalFinalValuesFromLines(lines);
+
+  const out: string[] = [];
+  pushUniqueLine(out, dateLine);
+  pushUniqueLine(out, route);
+  pushUniqueLine(out, serviceDescription);
+  pushUniqueLine(out, providerLine);
+  pushUniqueLine(out, serviceCode);
+  pushUniqueLine(out, refundLine);
+  pushUniqueLine(out, occupancyLine);
+  if (valorOriginal > 0 && valorFinal > 0 && Math.abs(valorOriginal - valorFinal) > 0.009) {
+    pushUniqueLine(out, `De ${formatCurrencyLine(valorOriginal)} por`);
+  }
+  if (valorFinal > 0) {
+    pushUniqueLine(out, formatCurrencyLine(valorFinal));
+  }
+  return out.join("\n");
+}
+
+function parseStructuredHotelFromLines(lines: string[], baseYear: number): ImportedRoteiroHotel | null {
+  const syntheticText = buildSyntheticHotelImportText(lines);
+  if (!syntheticText.trim()) return null;
+  const parsed = parseImportedRoteiroHotels(syntheticText, new Date(baseYear, 0, 1));
+  return parsed[0] || null;
+}
+
+function parseStructuredPasseioFromLines(
+  lines: string[],
+  baseYear: number,
+  fallbackDescription: string
+): ImportedRoteiroPasseio | null {
+  const syntheticText = buildSyntheticServiceImportText(lines, fallbackDescription);
+  if (!syntheticText.trim()) return null;
+  const parsed = parseImportedRoteiroPasseios(syntheticText, new Date(baseYear, 0, 1));
+  return parsed[0] || null;
+}
+
+function pickFlightDateIsoFromDirectionDate(dateLine?: string | null, baseYear?: number) {
+  const normalized = normalizeOcrText(dateLine || "");
+  const match = normalized.match(/(\d{1,2})\s*de\s*([a-zçãõáéíóú]+)/i);
+  if (!match) return "";
+  const day = Number(match[1]);
+  const month = parsePtMonth(match[2]);
+  if (!day || !month) return "";
+  return toIsoDate(day, month, baseYear || new Date().getFullYear());
+}
+
+function buildAereoImportSnapshotFromFlightDetails(
+  details: FlightDetails | null,
+  itemType: string,
+  fallbackRoute: string,
+  totalAmount: number,
+  taxesAmount: number,
+  startDate: string,
+  endDate: string,
+  quantity: number,
+  adultos: number,
+  criancas: number,
+  baseYear: number
+) {
+  if (!details) return null;
+  const fareTags = (details.fare_tags || []).filter(Boolean);
+  const tarifaNome = fareTags.find((tag) => normalizeOcrText(tag).includes("tarifa")) || "";
+  const reembolsoTipo =
+    fareTags.find((tag) => normalizeOcrText(tag).includes("reembols")) ||
+    (fareTags.length > 0 ? fareTags[fareTags.length - 1] : "");
+  const segments = (details.directions || []).flatMap((direction) => {
+    const dateIso = pickFlightDateIsoFromDirectionDate(direction.date, baseYear) || startDate || endDate || "";
+    return (direction.legs || []).map((leg, idx) => ({
+      ordem: idx,
+      data_voo: dateIso,
+      hora_saida: leg.departure_time || "",
+      aeroporto_saida: leg.departure_code || "",
+      cidade_saida: leg.departure_city || "",
+      hora_chegada: leg.arrival_time || "",
+      aeroporto_chegada: leg.arrival_code || "",
+      cidade_chegada: leg.arrival_city || "",
+      duracao_voo: leg.duration || "",
+      tipo_voo: leg.flight_type || "",
+      numero_voo: leg.flight_number || "",
+    }));
+  });
+
+  return {
+    tipo: itemType || "Passagem Aérea",
+    trecho: details.route || fallbackRoute,
+    cia_aerea: details.airline || "",
+    classe_reserva: details.cabin || "",
+    tarifa_nome: tarifaNome,
+    reembolso_tipo: reembolsoTipo,
+    qtd_adultos: adultos,
+    qtd_criancas: criancas,
+    quantidade: quantity,
+    data_inicio: startDate || "",
+    data_fim: endDate || startDate || "",
+    valor_total: totalAmount,
+    taxas: taxesAmount,
+    segmentos: segments,
+  };
+}
+
+function mapImportedAereoToQuoteItems(imported: ImportedRoteiroAereo[]): QuoteItemDraft[] {
+  const ordered = (imported || []).slice().sort((a, b) => {
+    const dateCompare = String(a.data_inicio || a.data_voo || "").localeCompare(
+      String(b.data_inicio || b.data_voo || "")
+    );
+    if (dateCompare !== 0) return dateCompare;
+    return String(a.hora_saida || "").localeCompare(String(b.hora_saida || ""));
+  });
+
+  return ordered.map((flight, index) => {
+    const trecho = String(flight.trecho || "").trim();
+    const cityName = trecho
+      .split("-")
+      .map((part) => part.trim())
+      .filter(Boolean)[0] || "";
+    const quantidade = Math.max(1, Number(flight.qtd_adultos || 0) + Number(flight.qtd_criancas || 0) || 1);
+    const total = Number(flight.valor_total || 0);
+    const taxes = Number(flight.taxas || 0);
+    const itemStart = String(flight.data_inicio || flight.data_voo || "").trim();
+    const itemEnd = String(flight.data_fim || itemStart || "").trim();
+
+    const details: FlightDetails = {
+      route: trecho || undefined,
+      airline: String(flight.cia_aerea || "").trim() || undefined,
+      cabin: String(flight.classe_reserva || "").trim() || undefined,
+      fare_tags: [flight.tarifa_nome, flight.reembolso_tipo]
+        .map((value) => String(value || "").trim())
+        .filter(Boolean),
+      directions: [
+        {
+          label: "Trecho",
+          date: "",
+          legs: [
+            {
+              departure_time: String(flight.hora_saida || "").trim() || undefined,
+              departure_code: String(flight.aeroporto_saida || "").trim() || undefined,
+              arrival_time: String(flight.hora_chegada || "").trim() || undefined,
+              arrival_code: String(flight.aeroporto_chegada || "").trim() || undefined,
+              duration: String(flight.duracao_voo || "").trim() || undefined,
+              flight_type: String(flight.tipo_voo || "").trim() || undefined,
+            },
+          ],
+        },
+      ],
+      baggage: [],
+      notices: [],
+    };
+
+    return {
+      temp_id: buildTempId(),
+      item_type: "Passagem Aérea",
+      title: trecho || "Passagem Aérea",
+      product_name: trecho || "Passagem Aérea",
+      city_name: cityName,
+      quantity: quantidade,
+      unit_price: quantidade > 0 ? total / quantidade : total,
+      total_amount: total,
+      taxes_amount: taxes,
+      start_date: itemStart,
+      end_date: itemEnd || itemStart,
+      currency: "BRL",
+      confidence: 0.82,
+      order_index: index,
+      segments: [],
+      raw: {
+        source: "text",
+        format: "roteiro_aereo_import",
+        aereo_import: flight,
+        flight_details: details,
+      },
+    };
+  });
 }
 
 function extractFlightRouteLine(lines: string[]) {
@@ -1830,6 +2302,33 @@ function parseItemsFromFullText(text: string, baseYear: number, pageNumber: numb
     if (!produto && routeInfo?.raw) {
       produto = routeInfo.raw;
     }
+    if (isServiceLabel(tipo)) {
+      const servicePrimary = extractServicePrimaryLine(block);
+      if (servicePrimary) {
+        produto = servicePrimary;
+      }
+      const serviceFallback = extractServiceDescriptionFallback(block);
+      if (serviceFallback && (!produto || looksLikeServiceProviderLabel(produto))) {
+        produto = serviceFallback;
+      }
+      if (looksLikeServiceProviderLabel(produto || "")) {
+        const narrativeFallback = extractServiceNarrativeLine(block);
+        if (narrativeFallback) produto = narrativeFallback;
+      }
+    }
+    const importedHotel = isHotelLabel(tipo) ? parseStructuredHotelFromLines(block, baseYear) : null;
+    if (importedHotel) {
+      if (importedHotel.hotel && (!produto || normalizeOcrText(produto) !== normalizeOcrText(importedHotel.hotel))) {
+        produto = importedHotel.hotel;
+      }
+    }
+    const importedPasseio =
+      isServiceLabel(tipo) || isSeguroLabel(tipo)
+        ? parseStructuredPasseioFromLines(block, baseYear, produto || "")
+        : null;
+    if (importedPasseio && importedPasseio.passeio && (!produto || looksLikeServiceProviderLabel(produto))) {
+      produto = importedPasseio.passeio;
+    }
     const quantity = parseQuantidadePax(blockText);
     const totalAmount = valorInfo.valor;
     const isCar = isCarLabel(tipo);
@@ -1841,6 +2340,22 @@ function parseItemsFromFullText(text: string, baseYear: number, pageNumber: numb
     const discountValue = ignoreTaxes ? 0 : summary.discount;
     const netBase = Math.max(baseValue - discountValue, 0);
     const totalWithTaxes = ignoreTaxes ? totalAmount : netBase + taxesValue;
+    const adultosCriancas = parseAdultChildCounts(blockText);
+    const aereoSnapshot = isFlight
+      ? buildAereoImportSnapshotFromFlightDetails(
+          flightDetails,
+          tipo,
+          routeInfo?.raw || produto || "",
+          totalWithTaxes,
+          taxesValue,
+          periodo.start || "",
+          periodo.end || periodo.start || "",
+          quantity || 1,
+          adultosCriancas.adults,
+          adultosCriancas.children,
+          baseYear
+        )
+      : null;
     items.push({
       temp_id: buildTempId(),
       item_type: tipo,
@@ -1860,6 +2375,9 @@ function parseItemsFromFullText(text: string, baseYear: number, pageNumber: numb
         page: pageNumber,
         block_text: blockText,
         city_label: destinoCidade.cidade || "",
+        ...(importedHotel ? { hotel_import: importedHotel } : {}),
+        ...(importedPasseio ? { passeio_import: importedPasseio } : {}),
+        ...(aereoSnapshot ? { aereo_import: aereoSnapshot } : {}),
         ...(circuitoMeta ? { circuito_meta: circuitoMeta } : {}),
         ...(flightDetails ? { flight_details: flightDetails } : {}),
       },
@@ -2212,6 +2730,33 @@ function parseItemsFromCvcText(text: string, baseYear: number): QuoteItemDraft[]
     if (!produto && routeInfo?.raw) {
       produto = routeInfo.raw;
     }
+    if (isServiceLabel(tipo)) {
+      const servicePrimary = extractServicePrimaryLine(block.lines);
+      if (servicePrimary) {
+        produto = servicePrimary;
+      }
+      const serviceFallback = extractServiceDescriptionFallback(block.lines);
+      if (serviceFallback && (!produto || looksLikeServiceProviderLabel(produto))) {
+        produto = serviceFallback;
+      }
+      if (looksLikeServiceProviderLabel(produto || "")) {
+        const narrativeFallback = extractServiceNarrativeLine(block.lines);
+        if (narrativeFallback) produto = narrativeFallback;
+      }
+    }
+    const importedHotel = isHotelLabel(tipo) ? parseStructuredHotelFromLines(block.lines, baseYear) : null;
+    if (importedHotel) {
+      if (importedHotel.hotel && (!produto || normalizeOcrText(produto) !== normalizeOcrText(importedHotel.hotel))) {
+        produto = importedHotel.hotel;
+      }
+    }
+    const importedPasseio =
+      isServiceLabel(tipo) || isSeguroLabel(tipo)
+        ? parseStructuredPasseioFromLines(block.lines, baseYear, produto || "")
+        : null;
+    if (importedPasseio && importedPasseio.passeio && (!produto || looksLikeServiceProviderLabel(produto))) {
+      produto = importedPasseio.passeio;
+    }
     const totalAmount = valorInfo.valor;
     const quantity = quantidade || 1;
     const title = produto || tipo || "Item";
@@ -2225,6 +2770,22 @@ function parseItemsFromCvcText(text: string, baseYear: number): QuoteItemDraft[]
     const discountValue = ignoreTaxes ? 0 : summary.discount;
     const netBase = Math.max(baseValue - discountValue, 0);
     const totalWithTaxes = ignoreTaxes ? totalAmount : netBase + taxesValue;
+    const adultosCriancas = parseAdultChildCounts(blockText);
+    const aereoSnapshot = isFlight
+      ? buildAereoImportSnapshotFromFlightDetails(
+          flightDetails,
+          tipo,
+          routeInfo?.raw || produto || "",
+          totalWithTaxes,
+          taxesValue,
+          periodo.start || "",
+          periodo.end || periodo.start || "",
+          quantity || 1,
+          adultosCriancas.adults,
+          adultosCriancas.children,
+          baseYear
+        )
+      : null;
 
     items.push({
       temp_id: buildTempId(),
@@ -2246,6 +2807,9 @@ function parseItemsFromCvcText(text: string, baseYear: number): QuoteItemDraft[]
         type_hint: block.typeHint,
         block_text: blockText,
         city_label: destinoCidade.cidade || "",
+        ...(importedHotel ? { hotel_import: importedHotel } : {}),
+        ...(importedPasseio ? { passeio_import: importedPasseio } : {}),
+        ...(aereoSnapshot ? { aereo_import: aereoSnapshot } : {}),
         ...(circuitoMeta ? { circuito_meta: circuitoMeta } : {}),
         ...(flightDetails ? { flight_details: flightDetails } : {}),
       },
@@ -2414,6 +2978,30 @@ export async function extractCvcQuoteFromText(text: string, options: ExtractOpti
   if (!deduped.length) {
     const summaryItems = parseItemsFromSummaryFormat(text, baseYear);
     if (summaryItems.length) deduped = dedupeItems(summaryItems);
+  }
+
+  // Fallback 3: aplica parser de passagem aérea do módulo de roteiros
+  // (cobre o padrão alternativo "Sua Escolha / Cia / Voo / Saída ...").
+  const hasFlightItems = deduped.some((item) => isFlightLabel(item.item_type));
+  if (!hasFlightItems) {
+    try {
+      const importedAereo = parseImportedRoteiroAereo(text, new Date(baseYear, 0, 1));
+      if (importedAereo.length > 0) {
+        const mappedFlights = mapImportedAereoToQuoteItems(importedAereo);
+        if (mappedFlights.length > 0) {
+          deduped = dedupeItems([...deduped, ...mappedFlights]);
+          logs.push({
+            level: "INFO",
+            message:
+              mappedFlights.length === 1
+                ? "1 trecho aéreo reconhecido pelo parser alternativo."
+                : `${mappedFlights.length} trechos aéreos reconhecidos pelo parser alternativo.`,
+          });
+        }
+      }
+    } catch {
+      // mantém fluxo principal sem interromper a importação.
+    }
   }
 
   if (!deduped.length) {

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "../../lib/supabase";
+import { buscarCidadesComCache } from "../../lib/cidadesSearchCache";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { registrarLog } from "../../lib/logs";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
@@ -228,14 +229,12 @@ export default function CidadesIsland() {
     async function buscar() {
       setErro(null);
       try {
-        const { data, error } = await supabase.rpc(
-          "buscar_cidades",
-          { q: termo, limite: 200 },
-          { signal: controller.signal }
-        );
+        const lista = await buscarCidadesComCache({
+          supabase,
+          query: termo,
+          limit: 200,
+        });
         if (controller.signal.aborted) return;
-        if (error) throw error;
-        const lista = (data as any[]) || [];
         setCidades(
           lista.map((c) => ({
             id: c.id,
@@ -250,21 +249,9 @@ export default function CidadesIsland() {
         setCarregouTodos(true);
       } catch (e) {
         if (controller.signal.aborted) return;
-        console.warn("[Cidades] RPC falhou, tentando fallback direto.", e);
-        try {
-          const { data, error } = await supabase
-            .from("cidades")
-            .select("id, nome, subdivisao_id, descricao, created_at")
-            .ilike("nome", `%${termo}%`)
-            .order("nome");
-          if (error) throw error;
-          setCidades((data as Cidade[]) || []);
-          setCarregouTodos(true);
-        } catch (errFinal) {
-          console.error(errFinal);
-          const msg = errFinal instanceof Error ? errFinal.message : "";
-          setErro(`Erro ao buscar cidades.${msg ? ` Detalhe: ${msg}` : ""}`);
-        }
+        console.error(e);
+        const msg = e instanceof Error ? e.message : "";
+        setErro(`Erro ao buscar cidades.${msg ? ` Detalhe: ${msg}` : ""}`);
       }
     }
 

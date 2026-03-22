@@ -1,11 +1,13 @@
 import { Dialog } from "../ui/primer/legacyCompat";
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { fetchApiJsonWithPersistentCache } from "../../lib/apiPersistentCache";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { useMasterScope } from "../../lib/useMasterScope";
 import { buildQueryLiteKey, queryLite } from "../../lib/queryLite";
 import { exportTableToPDF } from "../../lib/pdf";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
+import { fetchCidadesByApiWithCache } from "../../lib/cidadesSearchApiCache";
 import { normalizeText } from "../../lib/normalizeText";
 import { formatCurrencyBRL } from "../../lib/format";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
@@ -184,17 +186,13 @@ async function fetchCidadesSugestoes(params: {
   limite?: number;
   signal?: AbortSignal;
 }) {
-  const qs = new URLSearchParams();
-  qs.set("q", params.query);
-  qs.set("limite", String(params.limite ?? 8));
-  const resp = await fetch(`/api/v1/relatorios/cidades-busca?${qs.toString()}`, {
+  return fetchCidadesByApiWithCache({
+    query: params.query,
+    limit: params.limite ?? 8,
     signal: params.signal,
+    cacheNamespace: "relatorio-agrupado-produto",
+    endpoints: ["/api/v1/relatorios/cidades-busca"],
   });
-  if (!resp.ok) {
-    throw new Error(await resp.text());
-  }
-  const payload = await resp.json();
-  return Array.isArray(payload) ? payload : [];
 }
 
 function buildRecibosDetalhados(params: {
@@ -280,11 +278,18 @@ function formatCurrency(value: number): string {
 }
 
 async function fetchRelatorioBase() {
-  const resp = await fetch("/api/v1/relatorios/base");
-  if (!resp.ok) {
-    throw new Error(await resp.text());
-  }
-  return resp.json();
+  const { data: auth } = await supabase.auth.getUser();
+  const cacheIdentity = auth?.user?.id || "anon";
+  return fetchApiJsonWithPersistentCache<{
+    tiposProdutos?: Produto[];
+    cidades?: CidadeFiltro[];
+  }>({
+    endpoint: "/api/v1/relatorios/base",
+    cacheScope: "relatorios-base",
+    cacheKey: `v1:${cacheIdentity}`,
+    persistentTtlMs: 6 * 60 * 60 * 1000,
+    queryLiteTtlMs: 60_000,
+  });
 }
 
 export default function RelatorioAgrupadoProdutoIsland() {

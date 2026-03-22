@@ -1,4 +1,11 @@
 import React, { useEffect, useState } from "react";
+import { isPersistentCacheEnabled } from "../../lib/cachePolicy";
+import { buildQueryLiteKey, queryLite } from "../../lib/queryLite";
+import {
+  readPersistentCache,
+  removePersistentCache,
+  writePersistentCache,
+} from "../../lib/offline/persistentCache";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import ConfirmDialog from "../ui/ConfirmDialog";
@@ -21,6 +28,10 @@ type FormaPagamento = {
   created_at: string | null;
 };
 
+const FORMAS_PAGAMENTO_CACHE_SCOPE = "formas-pagamento";
+const FORMAS_PAGAMENTO_CACHE_KEY = "list-v1";
+const FORMAS_PAGAMENTO_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+
 const initialForm = {
   nome: "",
   descricao: "",
@@ -31,7 +42,7 @@ const initialForm = {
 };
 
 export default function FormasPagamentoIsland() {
-  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const { can, loading: loadingPerms, ready, userId } = usePermissoesStore();
   const loadPerm = loadingPerms || !ready;
   const podeVer = can("Formas de Pagamento");
   const podeCriar = can("Formas de Pagamento", "create");
@@ -49,14 +60,54 @@ export default function FormasPagamentoIsland() {
   const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
   async function fetchFormas(noCache = false) {
-    const params = new URLSearchParams();
-    if (noCache) params.set("no_cache", "1");
-    const resp = await fetch(`/api/v1/formas-pagamento/list?${params.toString()}`);
-    if (!resp.ok) {
-      throw new Error(await resp.text());
+    const canUsePersistentCache = isPersistentCacheEnabled();
+    const cacheIdentity = userId || "anon";
+    const cacheKey = `${FORMAS_PAGAMENTO_CACHE_KEY}:${cacheIdentity}`;
+
+    if (canUsePersistentCache && !noCache) {
+      const cached = await readPersistentCache<FormaPagamento[]>(
+        FORMAS_PAGAMENTO_CACHE_SCOPE,
+        cacheKey
+      );
+      if (Array.isArray(cached) && cached.length > 0) {
+        return cached;
+      }
     }
-    const json = (await resp.json()) as { items?: FormaPagamento[] };
-    return json.items || [];
+
+    if (canUsePersistentCache && noCache) {
+      await removePersistentCache(FORMAS_PAGAMENTO_CACHE_SCOPE, cacheKey);
+    }
+
+    const queryKey = buildQueryLiteKey([
+      "formasPagamentoList",
+      noCache ? "no-cache" : "cache",
+    ]);
+
+    const items = await queryLite(
+      queryKey,
+      async () => {
+        const params = new URLSearchParams();
+        if (noCache) params.set("no_cache", "1");
+        const resp = await fetch(`/api/v1/formas-pagamento/list?${params.toString()}`);
+        if (!resp.ok) {
+          throw new Error(await resp.text());
+        }
+        const json = (await resp.json()) as { items?: FormaPagamento[] };
+        return Array.isArray(json.items) ? json.items : [];
+      },
+      { ttlMs: noCache ? 0 : 60_000 }
+    );
+
+    if (canUsePersistentCache) {
+      await writePersistentCache(
+        FORMAS_PAGAMENTO_CACHE_SCOPE,
+        cacheKey,
+        items,
+        FORMAS_PAGAMENTO_CACHE_TTL_MS
+      );
+    }
+
+    return items;
   }
 
   async function carregar(noCache = false) {
@@ -77,7 +128,7 @@ export default function FormasPagamentoIsland() {
   useEffect(() => {
     if (loadPerm) return;
     carregar();
-  }, [loadPerm, podeVer]);
+  }, [loadPerm, podeVer, userId]);
 
   function resetForm() {
     setForm(initialForm);

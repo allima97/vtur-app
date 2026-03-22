@@ -8,6 +8,10 @@ import {
 } from "../../lib/vendas/contratoCvcExtractor";
 import { extractCruzeiroFromText } from "../../lib/vendas/cruzeiroExtractor";
 import { saveContratoImport } from "../../lib/vendas/saveContratoImport";
+import {
+  fetchCidadesByApiWithCache,
+  fetchCidadesFallbackSupabaseWithCache,
+} from "../../lib/cidadesSearchApiCache";
 import { supabase } from "../../lib/supabase";
 import { normalizeText } from "../../lib/normalizeText";
 import { formatNumberBR } from "../../lib/format";
@@ -164,71 +168,22 @@ function sanitizeCidadeSeed(value?: string | null) {
 }
 
 async function fetchCidadeSuggestions(params: { query: string; limit?: number; signal?: AbortSignal }) {
-  const query = String(params.query || "").trim();
-  if (query.length < 2) return [] as CidadeSugestao[];
-  const qs = new URLSearchParams();
-  qs.set("q", query);
-  qs.set("limite", String(params.limit ?? 60));
-  qs.set("no_cache", "1");
-  const endpoints = [
-    "/api/v1/vendas/cidades-busca",
-    "/api/v1/orcamentos/cidades-busca",
-    "/api/v1/relatorios/cidades-busca",
-  ];
-
-  let lastError = "Erro ao buscar cidades.";
-  for (const endpoint of endpoints) {
-    try {
-      const response = await fetch(`${endpoint}?${qs.toString()}`, {
-        signal: params.signal,
-      });
-      if (!response.ok) {
-        const text = await response.text();
-        lastError = text || lastError;
-        continue;
-      }
-      const data = (await response.json()) as CidadeSugestao[];
-      if (Array.isArray(data)) return data;
-    } catch (err: any) {
-      if (params.signal?.aborted) throw err;
-      lastError = err?.message || lastError;
-    }
-  }
-
-  throw new Error(lastError);
+  return fetchCidadesByApiWithCache({
+    query: params.query,
+    limit: params.limit ?? 60,
+    signal: params.signal,
+    cacheNamespace: "venda-contrato-import",
+    serverNoCache: true,
+  });
 }
 
 async function fetchCidadeSuggestionsFallback(query: string, limit = 60) {
-  const term = String(query || "").trim();
-  if (term.length < 2) {
-    return { data: [] as CidadeSugestao[], error: null as any };
-  }
-
-  const { data: rpcData, error: rpcError } = await supabase.rpc("buscar_cidades", {
-    q: term,
-    limite: limit,
+  return fetchCidadesFallbackSupabaseWithCache({
+    supabase,
+    query,
+    limit,
+    cacheNamespace: "venda-contrato-import",
   });
-  if (!rpcError && Array.isArray(rpcData) && rpcData.length > 0) {
-    return { data: rpcData as CidadeSugestao[], error: null as any };
-  }
-
-  const tableFallback = await supabase
-    .from("cidades")
-    .select("id, nome")
-    .ilike("nome", `%${term}%`)
-    .order("nome")
-    .limit(limit);
-  if (tableFallback.error) {
-    return {
-      data: [] as CidadeSugestao[],
-      error: tableFallback.error || rpcError || new Error("Erro ao buscar cidades."),
-    };
-  }
-
-  return {
-    data: (tableFallback.data as CidadeSugestao[]) || [],
-    error: null as any,
-  };
 }
 
 function isLocacaoCarroTerm(value?: string | null) {

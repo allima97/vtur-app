@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "../../lib/supabase";
+import { fetchApiJsonWithPersistentCache } from "../../lib/apiPersistentCache";
+import { fetchCidadesByApiWithCache } from "../../lib/cidadesSearchApiCache";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { registrarLog } from "../../lib/logs";
 import { normalizeText } from "../../lib/normalizeText";
@@ -37,14 +39,12 @@ type TipoPacote = {
   ativo?: boolean | null;
 };
 
-async function fetchVendasCadastroBase(params?: { noCache?: boolean }) {
+async function fetchVendasCadastroBase(params?: { noCache?: boolean; cacheIdentity?: string }) {
   const qs = new URLSearchParams();
   if (params?.noCache) qs.set("no_cache", "1");
-  const resp = await fetch(`/api/v1/vendas/cadastro-base?${qs.toString()}`);
-  if (!resp.ok) {
-    throw new Error(await resp.text());
-  }
-  return resp.json() as Promise<{
+  const endpoint = `/api/v1/vendas/cadastro-base?${qs.toString()}`;
+  const cacheIdentity = String(params?.cacheIdentity || "anon");
+  return fetchApiJsonWithPersistentCache<{
     user: {
       id: string;
       papel: string;
@@ -60,7 +60,14 @@ async function fetchVendasCadastroBase(params?: { noCache?: boolean }) {
     tipos: { id: string; nome: string | null; tipo?: string | null }[];
     tiposPacote: TipoPacote[];
     formasPagamento: FormaPagamento[];
-  }>;
+  }>({
+    endpoint,
+    cacheScope: "vendas-cadastro-base",
+    cacheKey: `v2:${cacheIdentity}`,
+    noCache: Boolean(params?.noCache),
+    persistentTtlMs: 10 * 60 * 1000,
+    queryLiteTtlMs: 20_000,
+  });
 }
 
 async function fetchCidadesSugestoes(params: {
@@ -68,18 +75,14 @@ async function fetchCidadesSugestoes(params: {
   limite?: number;
   signal?: AbortSignal;
 }) {
-  const qs = new URLSearchParams();
-  qs.set("q", params.query);
-  qs.set("limite", String(params.limite ?? 60));
-  qs.set("no_cache", "1");
-  const resp = await fetch(`/api/v1/vendas/cidades-busca?${qs.toString()}`,
-    { signal: params.signal }
-  );
-  if (!resp.ok) {
-    throw new Error(await resp.text());
-  }
-  const payload = await resp.json();
-  return Array.isArray(payload) ? payload : [];
+  return fetchCidadesByApiWithCache({
+    query: params.query,
+    limit: params.limite ?? 60,
+    signal: params.signal,
+    cacheNamespace: "vendas-cadastro",
+    endpoints: ["/api/v1/vendas/cidades-busca"],
+    serverNoCache: true,
+  });
 }
 
 type FormaPagamento = {
@@ -243,7 +246,7 @@ export default function VendasCadastroIsland() {
   // =======================================================
   // PERMISSÕES
   // =======================================================
-  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const { can, loading: loadingPerms, ready, userId } = usePermissoesStore();
   const loadPerm = loadingPerms || !ready;
   const podeVer = can("Vendas");
   const podeCriar = can("Vendas", "create");
@@ -311,7 +314,9 @@ export default function VendasCadastroIsland() {
     try {
       setLoading(true);
 
-      const payload = await fetchVendasCadastroBase();
+      const payload = await fetchVendasCadastroBase({
+        cacheIdentity: userId || "anon",
+      });
       const user = payload.user;
       setCurrentUserId(user.id || null);
       setCompanyId(user.company_id || null);
@@ -677,7 +682,7 @@ export default function VendasCadastroIsland() {
 
   useEffect(() => {
     if (!loadPerm && podeVer) carregarDados(editId || undefined, cidadePrefill, orcamentoId);
-  }, [loadPerm, podeVer, editId, cidadePrefill, orcamentoId]);
+  }, [loadPerm, podeVer, editId, cidadePrefill, orcamentoId, userId]);
 
   // Busca cidade (autocomplete)
   useEffect(() => {
@@ -701,6 +706,11 @@ export default function VendasCadastroIsland() {
           setResultadosCidade((data as CidadeSugestao[]) || []);
           setErroCidade(null);
         }
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        console.error("Erro ao buscar cidades:", err);
+        setResultadosCidade([]);
+        setErroCidade("Erro ao buscar cidades.");
       } finally {
         if (!controller.signal.aborted) setBuscandoCidade(false);
       }

@@ -10,6 +10,7 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import ConfirmDialog from "../ui/ConfirmDialog";
 import {
   buildConciliacaoMetrics,
   inferConciliacaoStatus,
@@ -809,6 +810,7 @@ export default function ConciliacaoIsland() {
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [savingAssignmentId, setSavingAssignmentId] = useState<string | null>(null);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
+  const [deleteConfirmRow, setDeleteConfirmRow] = useState<ConciliacaoItem | null>(null);
   const [comissaoDrafts, setComissaoDrafts] = useState<Record<string, string>>({});
   const [rankingVendedorDrafts, setRankingVendedorDrafts] = useState<Record<string, string>>({});
   const [rankingProdutoDrafts, setRankingProdutoDrafts] = useState<Record<string, string>>({});
@@ -1296,8 +1298,17 @@ export default function ConciliacaoIsland() {
       showToast("Nao e permitido excluir um recibo ja conciliado.", "error");
       return;
     }
-    const confirmado = window.confirm(`Excluir o recibo ${row.documento || row.id} da conciliacao?`);
-    if (!confirmado) return;
+    setDeleteConfirmRow(row);
+  }
+
+  async function confirmarExcluirLinha() {
+    const row = deleteConfirmRow;
+    if (!row) return;
+    if (!resolvedCompanyId) {
+      showToast("Selecione uma empresa.", "error");
+      setDeleteConfirmRow(null);
+      return;
+    }
 
     try {
       setDeletingItemId(row.id);
@@ -1341,6 +1352,7 @@ export default function ConciliacaoIsland() {
       console.error(e);
       showToast(e?.message || "Erro ao excluir recibo da conciliacao.", "error");
     } finally {
+      setDeleteConfirmRow(null);
       setDeletingItemId(null);
     }
   }
@@ -3259,6 +3271,16 @@ export default function ConciliacaoIsland() {
           </AppCard>
         ) : null}
       </div>
+      <ConfirmDialog
+        open={Boolean(deleteConfirmRow)}
+        title="Excluir recibo"
+        message={`Excluir o recibo ${deleteConfirmRow?.documento || deleteConfirmRow?.id || ""} da conciliacao?`}
+        confirmLabel="Excluir"
+        cancelLabel="Cancelar"
+        confirmVariant="danger"
+        onConfirm={() => void confirmarExcluirLinha()}
+        onCancel={() => setDeleteConfirmRow(null)}
+      />
     </AppPrimerProvider>
   );
 }

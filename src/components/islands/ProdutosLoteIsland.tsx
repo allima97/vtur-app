@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Select, Textarea, TextInput } from "../ui/primer/legacyCompat";
 import { supabase } from "../../lib/supabase";
+import { buscarCidadesComCache } from "../../lib/cidadesSearchCache";
+import { isPersistentCacheEnabled } from "../../lib/cachePolicy";
 import { normalizeText } from "../../lib/normalizeText";
+import { readPersistentCache, writePersistentCache } from "../../lib/offline/persistentCache";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { useCrudResource } from "../../lib/useCrudResource";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
@@ -119,6 +122,9 @@ function criarProdutoItem(id?: string): ProdutoItem {
 }
 
 const INITIAL_ITEM_ID = "temp-inicial";
+const TIPO_PRODUTOS_CACHE_SCOPE = "tipo-produtos";
+const TIPO_PRODUTOS_CACHE_KEY = "produtos-lote-v1";
+const TIPO_PRODUTOS_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 
 export default function ProdutosLoteIsland() {
   const { can, loading: loadingPerms, ready } = usePermissoesStore();
@@ -158,6 +164,16 @@ export default function ProdutosLoteIsland() {
     async function carregarDados() {
       setCarregando(true);
       try {
+        if (isPersistentCacheEnabled()) {
+          const tiposCache = await readPersistentCache<TipoProduto[]>(
+            TIPO_PRODUTOS_CACHE_SCOPE,
+            TIPO_PRODUTOS_CACHE_KEY
+          );
+          if (isActive && Array.isArray(tiposCache) && tiposCache.length > 0) {
+            setTipos(tiposCache);
+          }
+        }
+
         const [
           { data: tiposData, error: tiposErr },
           { data: destinosProdutosData, error: destinosProdutosErr },
@@ -174,7 +190,16 @@ export default function ProdutosLoteIsland() {
         if (!isActive) return;
         if (tiposErr) throw tiposErr;
 
-        setTipos((tiposData || []) as TipoProduto[]);
+        const tiposLista = (tiposData || []) as TipoProduto[];
+        setTipos(tiposLista);
+        if (isPersistentCacheEnabled() && tiposLista.length > 0) {
+          await writePersistentCache(
+            TIPO_PRODUTOS_CACHE_SCOPE,
+            TIPO_PRODUTOS_CACHE_KEY,
+            tiposLista,
+            TIPO_PRODUTOS_CACHE_TTL_MS
+          );
+        }
 
         const destinosNomes: string[] = [];
         const atracoesNomes: string[] = [];
@@ -283,30 +308,20 @@ export default function ProdutosLoteIsland() {
     const t = setTimeout(async () => {
       try {
         setBuscandoCidade(true);
-        const { data, error } = await supabase.rpc("buscar_cidades", {
-          q: cidadeBusca.trim(),
-          limite: 10,
+        if (controller.signal.aborted) return;
+        const cidades = await buscarCidadesComCache({
+          supabase,
+          query: cidadeBusca.trim(),
+          limit: 10,
         });
         if (controller.signal.aborted) return;
-        if (error) {
-          console.error("Erro ao buscar cidades:", error);
-          setErroCidadeBusca("Erro ao buscar cidades (RPC). Tentando fallback...");
-          const { data: dataFallback, error: errorFallback } = await supabase
-            .from("cidades")
-            .select("id, nome, subdivisao_id")
-            .ilike("nome", `%${cidadeBusca.trim()}%`)
-            .order("nome");
-          if (errorFallback) {
-            console.error("Erro no fallback de cidades:", errorFallback);
-            setErroCidadeBusca("Erro ao buscar cidades.");
-          } else {
-            setResultadosCidade((dataFallback as CidadeBusca[]) || []);
-            setErroCidadeBusca(null);
-          }
-        } else {
-          setResultadosCidade((data as CidadeBusca[]) || []);
-          setErroCidadeBusca(null);
-        }
+        setResultadosCidade((cidades as CidadeBusca[]) || []);
+        setErroCidadeBusca(null);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        console.error("Erro ao buscar cidades:", error);
+        setResultadosCidade([]);
+        setErroCidadeBusca("Erro ao buscar cidades.");
       } finally {
         if (!controller.signal.aborted) setBuscandoCidade(false);
       }

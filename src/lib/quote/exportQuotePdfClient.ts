@@ -1,5 +1,6 @@
 import { supabaseBrowser } from "../supabase-browser";
-import { exportQuoteToPdf, QuotePdfItem, QuotePdfSettings } from "./quotePdf";
+import type { QuotePdfItem, QuotePdfSettings } from "./quotePdf";
+import { exportQuoteToPdf } from "./quotePdfModern";
 
 type QuoteItemRecord = QuotePdfItem & {
   quote_item_segment?: Array<{

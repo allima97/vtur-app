@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { fetchApiJsonWithPersistentCache } from "../../lib/apiPersistentCache";
 import { usePermissoesStore } from "../../lib/permissoesStore";
+import { fetchCidadesByApiWithCache } from "../../lib/cidadesSearchApiCache";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { normalizeText } from "../../lib/normalizeText";
 import { useCrudResource } from "../../lib/useCrudResource";
@@ -52,17 +54,16 @@ async function fetchProdutosBase(params: {
   pageSize: number;
   all?: boolean;
   noCache?: boolean;
+  cacheIdentity?: string;
 }) {
   const qs = new URLSearchParams();
   qs.set("page", String(params.page));
   qs.set("pageSize", String(params.pageSize));
   if (params.all) qs.set("all", "1");
   if (params.noCache) qs.set("no_cache", "1");
-  const resp = await fetch(`/api/v1/produtos/base?${qs.toString()}`);
-  if (!resp.ok) {
-    throw new Error(await resp.text());
-  }
-  return resp.json() as Promise<{
+  const endpoint = `/api/v1/produtos/base?${qs.toString()}`;
+  const cacheIdentity = String(params.cacheIdentity || "anon");
+  return fetchApiJsonWithPersistentCache<{
     paises: Pais[];
     subdivisoes: Subdivisao[];
     tipos: TipoProduto[];
@@ -71,7 +72,14 @@ async function fetchProdutosBase(params: {
     destinosProdutos: { destino?: string | null; atracao_principal?: string | null; melhor_epoca?: string | null }[];
     cidades: Cidade[];
     fornecedores: FornecedorOption[];
-  }>;
+  }>({
+    endpoint,
+    cacheScope: "produtos-base",
+    cacheKey: `v1:${cacheIdentity}:${params.page}:${params.pageSize}:${params.all ? "all" : "paged"}`,
+    noCache: Boolean(params.noCache),
+    persistentTtlMs: 30 * 60 * 1000,
+    queryLiteTtlMs: 30_000,
+  });
 }
 
 async function fetchCidadesSugestoes(params: {
@@ -79,17 +87,13 @@ async function fetchCidadesSugestoes(params: {
   limite?: number;
   signal?: AbortSignal;
 }) {
-  const qs = new URLSearchParams();
-  qs.set("q", params.query);
-  qs.set("limite", String(params.limite ?? 10));
-  const resp = await fetch(`/api/v1/relatorios/cidades-busca?${qs.toString()}`,
-    { signal: params.signal }
-  );
-  if (!resp.ok) {
-    throw new Error(await resp.text());
-  }
-  const payload = await resp.json();
-  return Array.isArray(payload) ? payload : [];
+  return fetchCidadesByApiWithCache({
+    query: params.query,
+    limit: params.limite ?? 10,
+    signal: params.signal,
+    cacheNamespace: "produtos",
+    endpoints: ["/api/v1/relatorios/cidades-busca"],
+  });
 }
 
 const nivelPrecosOptions = [
@@ -208,7 +212,7 @@ const initialForm: FormState = {
 };
 
 export default function ProdutosIsland() {
-  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const { can, loading: loadingPerms, ready, userId } = usePermissoesStore();
   const loadingPerm = loadingPerms || !ready;
   const podeVer = can("Produtos");
   const podeCriar = can("Produtos", "create");
@@ -252,7 +256,7 @@ export default function ProdutosIsland() {
   const [pageSize, setPageSize] = useState(20);
   const [totalProdutosDb, setTotalProdutosDb] = useState(0);
 
-  async function carregarDados(todos = false, pageOverride?: number) {
+  async function carregarDados(todos = false, pageOverride?: number, noCache = false) {
     setLoading(true);
     setErro(null);
 
@@ -263,6 +267,8 @@ export default function ProdutosIsland() {
         page: paginaAtual,
         pageSize: tamanhoPagina,
         all: todos,
+        noCache,
+        cacheIdentity: userId || "anon",
       });
 
       setPaises(payload.paises || []);
@@ -306,7 +312,7 @@ export default function ProdutosIsland() {
       return;
     }
     carregarDados(false, page);
-  }, [loadingPerm, podeVer, busca, page, pageSize]);
+  }, [loadingPerm, podeVer, busca, page, pageSize, userId]);
 
   useEffect(() => {
     setPage(1);
@@ -673,7 +679,7 @@ export default function ProdutosIsland() {
 
       iniciarNovo();
       setMostrarFormulario(false);
-      await carregarDados(carregouTodos, page);
+      await carregarDados(carregouTodos, page, true);
       showToast(estavaEditando ? "Produto atualizado." : "Produto cadastrado.", "success");
     } catch (e: any) {
       console.error(e);
@@ -699,7 +705,7 @@ export default function ProdutosIsland() {
       });
       if (result.error) throw result.error;
 
-      await carregarDados(carregouTodos, page);
+      await carregarDados(carregouTodos, page, true);
       showToast("Produto excluido.", "success");
     } catch (e) {
       console.error(e);

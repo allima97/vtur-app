@@ -58,11 +58,18 @@ export default defineConfig({
         "tesseract.js",
         "pdfjs-dist",
         "@supabase/supabase-js",
+        "dexie",
+        "dexie-cloud-addon",
       ],
     },
     resolve: {
       // Evita múltiplas instâncias do React (Invalid hook call) quando o Vite reotimiza deps.
       dedupe: ["react", "react-dom", "scheduler"],
+      alias: {
+        // Dexie 4.3 pode resolver para import-wrapper (dev) que referencia bundle UMD sem
+        // default export no ambiente Vite com noDiscovery=true. Forçamos o bundle ESM.
+        dexie: "dexie/dist/dexie.mjs",
+      },
     },
   },
 });

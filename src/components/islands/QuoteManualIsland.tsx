@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { fetchCidadesByApiWithCache } from "../../lib/cidadesSearchApiCache";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { normalizeText } from "../../lib/normalizeText";
 import { formatNumberBR } from "../../lib/format";
+import { fetchTipoProdutosOptionsWithCache } from "../../lib/tipoProdutosCache";
 import { matchesCpfSearch, onlyDigits } from "../../lib/searchNormalization";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import ConfirmDialog from "../ui/ConfirmDialog";
@@ -252,22 +254,11 @@ export default function QuoteManualIsland() {
     let active = true;
     async function carregarTipos() {
       try {
-        const response = await fetch("/api/v1/orcamentos/tipos");
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(text || "Erro ao carregar tipos.");
-        }
-        const data = (await response.json()) as Array<{ id: string; nome?: string | null; tipo?: string | null }>;
+        const data = await fetchTipoProdutosOptionsWithCache({
+          cacheNamespace: "quote-manual",
+        });
         if (!active) return;
-        setTipoOptions(
-          (data || [])
-            .filter((tipo) => tipo && (tipo.nome || tipo.tipo))
-            .map((tipo) => {
-              const label = String(tipo.nome || tipo.tipo || "").trim();
-              return { id: tipo.id, label };
-            })
-            .filter((tipo) => tipo.label)
-        );
+        setTipoOptions(data as TipoProdutoOption[]);
       } catch (err) {
         if (!active) return;
         console.warn("[QuoteManual] Erro ao carregar tipos", err);
@@ -342,15 +333,12 @@ export default function QuoteManualIsland() {
     const limit = 25;
     let cidades: CidadeOption[] = [];
     try {
-      const params = new URLSearchParams();
-      if (search) params.set("q", search);
-      params.set("limite", String(limit));
-      const response = await fetch(`/api/v1/orcamentos/cidades-busca?${params.toString()}`);
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(text || "Erro ao buscar cidades.");
-      }
-      const data = (await response.json()) as CidadeOption[];
+      const data = await fetchCidadesByApiWithCache({
+        query: search,
+        limit,
+        cacheNamespace: "quote-manual",
+        endpoints: ["/api/v1/orcamentos/cidades-busca"],
+      });
       cidades = (data || []).filter((cidade) => cidade?.id && cidade.nome);
     } catch (err) {
       if (!isMountedRef.current) return;

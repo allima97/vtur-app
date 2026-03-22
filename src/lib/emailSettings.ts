@@ -17,6 +17,17 @@ export type EmailSettingsRow = {
   imap_secure: boolean | null;
 };
 
+function isEmailLike(value?: string | null) {
+  const raw = String(value || "").trim();
+  return raw.includes("@") ? raw : "";
+}
+
+function looksLikeResendSmtp(settings?: Partial<EmailSettingsRow> | null) {
+  const host = String(settings?.smtp_host || "").trim().toLowerCase();
+  const user = String(settings?.smtp_user || "").trim().toLowerCase();
+  return host === "smtp.resend.com" && user === "resend";
+}
+
 export type SmtpConfig = {
   host?: string;
   port?: number;
@@ -83,13 +94,13 @@ export async function resolveSmtpConfig(): Promise<SmtpConfig> {
 }
 
 export function buildFromEmails(settings: Partial<EmailSettingsRow> | null): FromEmails {
+  const smtpUserEmail = isEmailLike(settings?.smtp_user) || isEmailLike(readEnv("SMTP_USER"));
   const defaultFrom =
     settings?.alerta_from_email ||
     settings?.admin_from_email ||
     readEnv("ALERTA_FROM_EMAIL") ||
     readEnv("ADMIN_FROM_EMAIL") ||
-    settings?.smtp_user ||
-    readEnv("SMTP_USER");
+    smtpUserEmail;
 
   const avisos = settings?.avisos_from_email || readEnv("AVISOS_FROM_EMAIL") || defaultFrom;
   const financeiro =
@@ -116,7 +127,9 @@ export async function resolveFromEmails(): Promise<FromEmails> {
 export async function resolveResendApiKey(): Promise<string | undefined> {
   const settings = await getEmailSettings();
   const dbKey = settings?.resend_api_key?.trim();
-  return dbKey || readEnv("RESEND_API_KEY");
+  const smtpCompatKey =
+    !dbKey && looksLikeResendSmtp(settings) ? String(settings?.smtp_pass || "").trim() : "";
+  return dbKey || smtpCompatKey || readEnv("RESEND_API_KEY");
 }
 
 export async function resolveImapConfig(): Promise<ImapConfig> {

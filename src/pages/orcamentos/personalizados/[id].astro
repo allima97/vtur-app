@@ -16,6 +16,9 @@ if (!user) {
 
 const { id } = Astro.params;
 const isNew = id === "novo";
+const duplicateFromId = String(Astro.url.searchParams.get("duplicar") || "").trim();
+const shouldLoadSourceRoteiro = Boolean((!isNew && id) || (isNew && duplicateFromId));
+const sourceRoteiroId = !isNew && id ? id : duplicateFromId || null;
 let roteiro: any = null;
 
 function isMissingPercursoColumn(error: any) {
@@ -27,26 +30,61 @@ function isMissingPercursoColumn(error: any) {
   );
 }
 
-if (!isNew && id) {
-  const selectWithPercurso = `id, nome, duracao, inicio_cidade, fim_cidade, inclui_texto, nao_inclui_texto, informacoes_importantes,
-       roteiro_hotel (id, cidade, hotel, data_inicio, data_fim, noites, apto, categoria, regime, ordem),
-       roteiro_passeio (id, cidade, passeio, data_inicio, data_fim, tipo, ingressos, ordem),
-       roteiro_transporte (id, tipo, fornecedor, descricao, data_inicio, data_fim, categoria, observacao, ordem),
+function isMissingItinerarioConfigColumn(error: any) {
+  const code = String(error?.code || "");
+  const msg = String(error?.message || "");
+  return (
+    code === "42703" ||
+    (/itinerario_config/i.test(msg) && /does not exist|nao existe|não existe|unknown column|column/i.test(msg))
+  );
+}
+
+if (shouldLoadSourceRoteiro && sourceRoteiroId) {
+  const selectWithPercursoAndConfig = `id, nome, duracao, inicio_cidade, fim_cidade, inclui_texto, nao_inclui_texto, informacoes_importantes, itinerario_config,
+       roteiro_hotel (id, cidade, hotel, endereco, data_inicio, data_fim, noites, qtd_apto, apto, categoria, regime, tipo_tarifa, qtd_adultos, qtd_criancas, valor_original, valor_final, ordem),
+       roteiro_passeio (id, cidade, passeio, fornecedor, data_inicio, data_fim, tipo, ingressos, qtd_adultos, qtd_criancas, valor_original, valor_final, ordem),
+       roteiro_transporte (id, trecho, cia_aerea, data_voo, classe_reserva, hora_saida, aeroporto_saida, duracao_voo, tipo_voo, hora_chegada, aeroporto_chegada, tarifa_nome, reembolso_tipo, qtd_adultos, qtd_criancas, taxas, valor_total, tipo, fornecedor, descricao, data_inicio, data_fim, categoria, observacao, ordem),
        roteiro_dia (id, percurso, cidade, data, descricao, ordem),
        roteiro_investimento (id, tipo, valor_por_pessoa, qtd_apto, valor_por_apto, ordem),
        roteiro_pagamento (id, servico, valor_total_com_taxas, taxas, forma_pagamento, ordem)`;
 
-  const selectWithoutPercurso = `id, nome, duracao, inicio_cidade, fim_cidade, inclui_texto, nao_inclui_texto, informacoes_importantes,
-       roteiro_hotel (id, cidade, hotel, data_inicio, data_fim, noites, apto, categoria, regime, ordem),
-       roteiro_passeio (id, cidade, passeio, data_inicio, data_fim, tipo, ingressos, ordem),
-       roteiro_transporte (id, tipo, fornecedor, descricao, data_inicio, data_fim, categoria, observacao, ordem),
+  const selectWithPercurso = `id, nome, duracao, inicio_cidade, fim_cidade, inclui_texto, nao_inclui_texto, informacoes_importantes,
+       roteiro_hotel (id, cidade, hotel, endereco, data_inicio, data_fim, noites, qtd_apto, apto, categoria, regime, tipo_tarifa, qtd_adultos, qtd_criancas, valor_original, valor_final, ordem),
+       roteiro_passeio (id, cidade, passeio, fornecedor, data_inicio, data_fim, tipo, ingressos, qtd_adultos, qtd_criancas, valor_original, valor_final, ordem),
+       roteiro_transporte (id, trecho, cia_aerea, data_voo, classe_reserva, hora_saida, aeroporto_saida, duracao_voo, tipo_voo, hora_chegada, aeroporto_chegada, tarifa_nome, reembolso_tipo, qtd_adultos, qtd_criancas, taxas, valor_total, tipo, fornecedor, descricao, data_inicio, data_fim, categoria, observacao, ordem),
+       roteiro_dia (id, percurso, cidade, data, descricao, ordem),
+       roteiro_investimento (id, tipo, valor_por_pessoa, qtd_apto, valor_por_apto, ordem),
+       roteiro_pagamento (id, servico, valor_total_com_taxas, taxas, forma_pagamento, ordem)`;
+
+  const selectWithoutPercursoAndConfig = `id, nome, duracao, inicio_cidade, fim_cidade, inclui_texto, nao_inclui_texto, informacoes_importantes, itinerario_config,
+       roteiro_hotel (id, cidade, hotel, endereco, data_inicio, data_fim, noites, qtd_apto, apto, categoria, regime, tipo_tarifa, qtd_adultos, qtd_criancas, valor_original, valor_final, ordem),
+       roteiro_passeio (id, cidade, passeio, fornecedor, data_inicio, data_fim, tipo, ingressos, qtd_adultos, qtd_criancas, valor_original, valor_final, ordem),
+       roteiro_transporte (id, trecho, cia_aerea, data_voo, classe_reserva, hora_saida, aeroporto_saida, duracao_voo, tipo_voo, hora_chegada, aeroporto_chegada, tarifa_nome, reembolso_tipo, qtd_adultos, qtd_criancas, taxas, valor_total, tipo, fornecedor, descricao, data_inicio, data_fim, categoria, observacao, ordem),
        roteiro_dia (id, cidade, data, descricao, ordem),
        roteiro_investimento (id, tipo, valor_por_pessoa, qtd_apto, valor_por_apto, ordem),
        roteiro_pagamento (id, servico, valor_total_com_taxas, taxas, forma_pagamento, ordem)`;
 
-  let res = await supabaseAuth.from("roteiro_personalizado").select(selectWithPercurso).eq("id", id).maybeSingle();
-  if (res.error && isMissingPercursoColumn(res.error)) {
-    res = await supabaseAuth.from("roteiro_personalizado").select(selectWithoutPercurso).eq("id", id).maybeSingle();
+  const selectWithoutPercurso = `id, nome, duracao, inicio_cidade, fim_cidade, inclui_texto, nao_inclui_texto, informacoes_importantes,
+       roteiro_hotel (id, cidade, hotel, endereco, data_inicio, data_fim, noites, qtd_apto, apto, categoria, regime, tipo_tarifa, qtd_adultos, qtd_criancas, valor_original, valor_final, ordem),
+       roteiro_passeio (id, cidade, passeio, fornecedor, data_inicio, data_fim, tipo, ingressos, qtd_adultos, qtd_criancas, valor_original, valor_final, ordem),
+       roteiro_transporte (id, trecho, cia_aerea, data_voo, classe_reserva, hora_saida, aeroporto_saida, duracao_voo, tipo_voo, hora_chegada, aeroporto_chegada, tarifa_nome, reembolso_tipo, qtd_adultos, qtd_criancas, taxas, valor_total, tipo, fornecedor, descricao, data_inicio, data_fim, categoria, observacao, ordem),
+       roteiro_dia (id, cidade, data, descricao, ordem),
+       roteiro_investimento (id, tipo, valor_por_pessoa, qtd_apto, valor_por_apto, ordem),
+       roteiro_pagamento (id, servico, valor_total_com_taxas, taxas, forma_pagamento, ordem)`;
+
+  const selectCandidates = [
+    selectWithPercursoAndConfig,
+    selectWithPercurso,
+    selectWithoutPercursoAndConfig,
+    selectWithoutPercurso,
+  ];
+
+  let res: any = null;
+  for (const select of selectCandidates) {
+    res = await supabaseAuth.from("roteiro_personalizado").select(select).eq("id", sourceRoteiroId).maybeSingle();
+    if (!res.error) break;
+    const canRetry = isMissingPercursoColumn(res.error) || isMissingItinerarioConfigColumn(res.error);
+    if (!canRetry) break;
   }
 
   if (!res.error && res.data) {
@@ -55,11 +93,21 @@ if (!isNew && id) {
 }
 
 const activePage = "orcamentos";
-const pageTitle = isNew ? "Novo Roteiro" : (roteiro?.nome || "Editar Roteiro");
+const isDuplicate = isNew && Boolean(duplicateFromId) && Boolean(roteiro);
+const pageTitle = isDuplicate
+  ? "Duplicar Roteiro"
+  : isNew
+    ? "Novo Roteiro"
+    : (roteiro?.nome || "Editar roteiro personalizado");
 ---
 
 <DashboardLayout title={pageTitle} {activePage}>
   <div class="page-content-wrap">
-    <RoteiroEditIsland client:only="react" roteiroId={id || "novo"} roteiro={roteiro} />
+    <RoteiroEditIsland
+      client:only="react"
+      roteiroId={id || "novo"}
+      roteiro={roteiro}
+      duplicateFromId={isDuplicate ? duplicateFromId : null}
+    />
   </div>
 </DashboardLayout>

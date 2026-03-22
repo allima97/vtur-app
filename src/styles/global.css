@@ -636,10 +636,14 @@ body {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
 }
 
 .quote-detail-form-actions > .vtur-app-button {
-  flex: 1 1 0;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 150px;
 }
 
 /* Documentação */
@@ -2011,6 +2015,19 @@ input[type="radio"] {
   box-sizing: border-box;
 }
 
+.quote-items-table .vtur-quote-item-import-meta {
+  margin-top: 6px;
+  display: grid;
+  gap: 2px;
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: #64748b;
+}
+
+.quote-items-table .vtur-quote-item-import-meta > div {
+  overflow-wrap: anywhere;
+}
+
 .quote-items-table th:nth-child(1),
 .quote-items-table td:nth-child(1) {
   min-width: 132px;
@@ -2151,6 +2168,173 @@ input[type="radio"] {
 
 .table-default tbody td {
   padding: 10px 12px;
+}
+
+.roteiro-voos-grid {
+  display: grid;
+  gap: 0;
+}
+
+.roteiro-voos-grid-head,
+.roteiro-voos-grid-row {
+  display: grid;
+  grid-template-columns: minmax(210px, 1.45fr) minmax(190px, 1.32fr) minmax(104px, 0.84fr) minmax(190px, 1.32fr) minmax(104px, 0.84fr) minmax(160px, 1.23fr);
+  column-gap: 26px;
+  align-items: center;
+}
+
+.roteiro-voos-grid-head {
+  padding: 0 0 18px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.roteiro-voos-grid-body {
+  padding-top: 16px;
+}
+
+.roteiro-voos-grid-row {
+  padding: 6px 0;
+  font-size: 0.9rem;
+  color: #334155;
+}
+
+.roteiro-voos-grid-head > div,
+.roteiro-voos-grid-row > div {
+  min-width: 0;
+}
+
+.roteiro-voos-grid-row > div:nth-child(1),
+.roteiro-voos-grid-row > div:nth-child(2),
+.roteiro-voos-grid-row > div:nth-child(4) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.roteiro-voos-grid-row > div:nth-child(3),
+.roteiro-voos-grid-row > div:nth-child(5),
+.roteiro-voos-grid-row > div:nth-child(6) {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: 0.02em;
+}
+
+.roteiro-detail-item {
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr);
+  column-gap: 6px;
+  align-items: start;
+}
+
+.roteiro-detail-label {
+  font-weight: 700;
+}
+
+.roteiro-detail-value {
+  min-width: 0;
+}
+
+.passeio-resumo-table {
+  table-layout: fixed;
+}
+
+.passeio-resumo-table thead th,
+.passeio-resumo-table tbody td {
+  vertical-align: top;
+}
+
+.passeio-resumo-table tbody td:nth-child(1) {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+.passeio-resumo-table tbody td:nth-child(2),
+.passeio-resumo-table tbody td:nth-child(3) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.hotel-resumo-table {
+  table-layout: fixed;
+}
+
+.hotel-resumo-table thead th,
+.hotel-resumo-table tbody td {
+  vertical-align: top;
+}
+
+.hotel-resumo-table tbody td:nth-child(3),
+.hotel-resumo-table tbody td:nth-child(4),
+.hotel-resumo-table tbody td:nth-child(5) {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+.hotel-resumo-table tbody td:nth-child(1),
+.hotel-resumo-table tbody td:nth-child(2),
+.hotel-resumo-table tbody td:nth-child(6),
+.hotel-resumo-table tbody td:nth-child(7) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.roteiro-visual-circuit-panel {
+  border-top: none !important;
+  padding: 0 30px 10px !important;
+}
+
+.roteiro-visual-circuit-days-list {
+  gap: 16px;
+}
+
+.roteiro-visual-circuit-day {
+  padding: 20px 30px !important;
+}
+
+.roteiro-visual-circuit-day-content {
+  width: 100%;
+  max-width: calc(100% - 140px);
+  margin-right: auto;
+}
+
+.roteiro-visual-circuit-copy {
+  max-width: 100%;
+  line-height: 1.6;
+  text-align: left;
+}
+
+.roteiro-visual-circuit-day p {
+  overflow-wrap: break-word;
+  line-height: 1.6;
+}
+
+.roteiro-visual-circuit-paragraph {
+  padding-right: 84px !important;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .roteiro-visual-circuit-panel {
+    padding: 0 20px 8px !important;
+  }
+
+  .roteiro-visual-circuit-day {
+    padding: 16px 20px !important;
+  }
+
+  .roteiro-visual-circuit-day-content {
+    max-width: 100%;
+  }
+
+  .roteiro-visual-circuit-paragraph {
+    padding-right: 0 !important;
+  }
 }
 
 @media (hover: hover) and (pointer: fine) {

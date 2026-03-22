@@ -367,6 +367,7 @@ export async function exportQuoteToPdf(params: {
   const validityLabel = formatDateLong(createdAt);
   const clientName = (quote.client_name || "").trim() || "Cliente";
   const hasDiscount = discount > 0;
+  const isTotalOnlyPdf = !options.showItemValues;
   const whatsappLink = construirLinkWhatsApp(settings.whatsapp, settings.whatsapp_codigo_pais);
 
   let logoData: { dataUrl: string; format: string; width: number; height: number } | null = null;
@@ -1060,18 +1061,23 @@ export async function exportQuoteToPdf(params: {
     return cardH;
   }
 
-  function drawSummaryBox(startY: number) {
-    const totalsByType = orderedItems.reduce<Record<string, number>>((acc, item) => {
-      const key = item.item_type || "Outros";
-      acc[key] = (acc[key] || 0) + Number(item.total_amount || 0);
-      return acc;
-    }, {});
-    const rows = Object.entries(totalsByType);
-    rows.push(["Taxas e impostos", taxesTotal]);
-    if (hasDiscount) {
-      rows.push(["Desconto", -discount]);
-    }
-    rows.push(["Total", total]);
+  function drawSummaryBox(startY: number, totalOnly = false) {
+    const rows: Array<[string, number]> = totalOnly
+      ? [["Total", total]]
+      : (() => {
+          const totalsByType = orderedItems.reduce<Record<string, number>>((acc, item) => {
+            const key = item.item_type || "Outros";
+            acc[key] = (acc[key] || 0) + Number(item.total_amount || 0);
+            return acc;
+          }, {});
+          const result = Object.entries(totalsByType) as Array<[string, number]>;
+          result.push(["Taxas e impostos", taxesTotal]);
+          if (hasDiscount) {
+            result.push(["Desconto", -discount]);
+          }
+          result.push(["Total", total]);
+          return result;
+        })();
 
     const boxX = margin;
     const boxW = pageWidth - margin * 2;
@@ -1086,7 +1092,7 @@ export async function exportQuoteToPdf(params: {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
     doc.setTextColor(...colors.text);
-    doc.text("Resumo de servicos", boxX + padding, startY + 16);
+    doc.text(totalOnly ? "Total do orcamento" : "Resumo de servicos", boxX + padding, startY + 16);
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
@@ -1103,23 +1109,29 @@ export async function exportQuoteToPdf(params: {
   }
 
   function initPage(isFirstPage: boolean) {
-    drawHeader(isFirstPage);
-    const headerHeight = isFirstPage ? headerLayout.headerHeightFirst : headerLayout.headerHeightOther;
+    const showHeaderSummary = isFirstPage && options.showItemValues && options.showSummary;
+    drawHeader(showHeaderSummary);
+    const headerHeight = showHeaderSummary ? headerLayout.headerHeightFirst : headerLayout.headerHeightOther;
     return margin + headerHeight;
   }
 
-  function measureSummaryBoxHeight() {
-    const totalsByType = orderedItems.reduce<Record<string, number>>((acc, item) => {
-      const key = item.item_type || "Outros";
-      acc[key] = (acc[key] || 0) + Number(item.total_amount || 0);
-      return acc;
-    }, {});
-    const rows = Object.entries(totalsByType);
-    rows.push(["Taxas e impostos", taxesTotal]);
-    if (hasDiscount) {
-      rows.push(["Desconto", -discount]);
-    }
-    rows.push(["Total", total]);
+  function measureSummaryBoxHeight(totalOnly = false) {
+    const rows = totalOnly
+      ? [["Total", total]]
+      : (() => {
+          const totalsByType = orderedItems.reduce<Record<string, number>>((acc, item) => {
+            const key = item.item_type || "Outros";
+            acc[key] = (acc[key] || 0) + Number(item.total_amount || 0);
+            return acc;
+          }, {});
+          const result = Object.entries(totalsByType);
+          result.push(["Taxas e impostos", taxesTotal]);
+          if (hasDiscount) {
+            result.push(["Desconto", -discount]);
+          }
+          result.push(["Total", total]);
+          return result;
+        })();
 
     const lineHeight = 12;
     const headerHeight = 20;
@@ -1128,15 +1140,15 @@ export async function exportQuoteToPdf(params: {
   }
 
   const blocks: Array<
-    { kind: "item"; height: number; item: QuotePdfItem } | { kind: "summary"; height: number }
+    { kind: "item"; height: number; item: QuotePdfItem } | { kind: "summary"; height: number; totalOnly?: boolean }
   > = orderedItems.map((item) => ({
     kind: "item",
     item,
     height: measureItemCardHeight(item),
   }));
 
-  if (options.showSummary) {
-    blocks.push({ kind: "summary", height: measureSummaryBoxHeight() });
+  if (options.showSummary || isTotalOnlyPdf) {
+    blocks.push({ kind: "summary", height: measureSummaryBoxHeight(isTotalOnlyPdf), totalOnly: isTotalOnlyPdf });
   }
 
   let cursorY = initPage(true);
@@ -1176,7 +1188,7 @@ export async function exportQuoteToPdf(params: {
     if (block.kind === "item") {
       drawItemCard(block.item, cursorY);
     } else {
-      drawSummaryBox(cursorY);
+      drawSummaryBox(cursorY, Boolean(block.totalOnly));
     }
     cursorY += block.height + gap;
   }

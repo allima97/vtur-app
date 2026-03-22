@@ -12,6 +12,7 @@
 
 # Environment secrets
 .env*
+dexie-cloud.key
 
 # IDE + OS junk
 .DS_Store
