@@ -14,6 +14,11 @@ export default defineConfig({
   // Middleware + Supabase SSR precisam de modo server/híbrido para evitar redirecionos durante o build.
   output: 'server',
   vite: {
+    build: {
+      // Os maiores bundles são workers/fontes de PDF e libs de importação documental
+      // carregadas sob demanda. Mantemos o aviso mais alto para evitar ruído no CI.
+      chunkSizeWarningLimit: 2500,
+    },
     ssr: {
       // Primer injeta imports CSS internos no runtime SSR; sem bundlar o pacote,
       // Node/Workers tenta carregar esses .css como módulo externo e quebra a rota.

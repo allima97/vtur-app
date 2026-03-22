@@ -1,4 +1,9 @@
 import { createServerClient } from "../../lib/supabaseServer";
+import {
+  buildDocumentationMarkdownFromSections,
+  parseLegacyDocumentationSections,
+} from "../../lib/documentation";
+import { fetchDocumentationSections } from "../../lib/documentationServer";
 import { DOC_FALLBACK_PATHS, DOC_SLUGS } from "../../lib/systemName";
 
 import { getSupabaseEnv } from "./users";
@@ -69,6 +74,21 @@ export async function GET({ request }: { request: Request }) {
     }
 
     try {
+      const sections = await fetchDocumentationSections(authClient, DOC_SLUGS);
+      if (sections.length > 0) {
+        return new Response(JSON.stringify({ markdown: buildDocumentationMarkdownFromSections(sections), sections, source: "sections" }), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store",
+          },
+        });
+      }
+    } catch (err) {
+      console.warn("[documentacao] Falha ao ler system_documentation_sections.", err);
+    }
+
+    try {
       const { data, error } = await authClient
         .from("system_documentation")
         .select("slug, markdown, updated_at")
@@ -79,7 +99,7 @@ export async function GET({ request }: { request: Request }) {
 
       const row = Array.isArray(data) ? data[0] : null;
       if (row?.markdown) {
-        return new Response(JSON.stringify({ markdown: row.markdown }), {
+        return new Response(JSON.stringify({ markdown: row.markdown, sections: parseLegacyDocumentationSections(row.markdown, row.slug || "vtur"), source: "legacy" }), {
           status: 200,
           headers: {
             "Content-Type": "application/json",
@@ -92,7 +112,7 @@ export async function GET({ request }: { request: Request }) {
     }
 
     const fallback = await fetchFallbackMarkdown(request);
-    return new Response(JSON.stringify({ markdown: fallback }), {
+    return new Response(JSON.stringify({ markdown: fallback, sections: parseLegacyDocumentationSections(fallback), source: "fallback" }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",

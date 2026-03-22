@@ -7,6 +7,7 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import AlertMessage from "../ui/AlertMessage";
 import DataTable from "../ui/DataTable";
 import EmptyState from "../ui/EmptyState";
+import TableActions from "../ui/TableActions";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
@@ -639,10 +640,10 @@ const UsuariosAdminIsland: React.FC = () => {
   }
 
   return (
-    <div className="mt-6 admin-page admin-usuarios-page page-content-wrap">
+    <div className="admin-page admin-usuarios-page page-content-wrap admin-page-shell">
       <AppCard
         tone="config"
-        className="mb-3 list-toolbar-sticky"
+        className="list-toolbar-sticky"
         title="Usuarios do sistema"
         subtitle="Gerencie cargos, empresas e status de acesso."
         actions={
@@ -753,57 +754,52 @@ const UsuariosAdminIsland: React.FC = () => {
                   </td>
 
                   <td className="th-actions" data-label="Aviso">
-                    <div className="action-buttons">
-                      <AppButton
-                        type="button"
-                        variant="secondary"
-                        onClick={() => openAvisoModal(u)}
-                        disabled={!u.email || avisosTemplates.length === 0}
-                        title={
-                          !u.email
-                            ? "Usuario sem e-mail cadastrado"
-                            : avisosTemplates.length === 0
-                              ? "Nenhum template de aviso disponivel"
-                              : "Enviar aviso"
-                        }
-                        aria-label="Enviar aviso"
-                      >
-                        <i className="pi pi-send" aria-hidden="true" />
-                      </AppButton>
-                    </div>
+                    <TableActions
+                      actions={[
+                        {
+                          key: "send_notice",
+                          label:
+                            !u.email
+                              ? "Usuario sem e-mail cadastrado"
+                              : avisosTemplates.length === 0
+                                ? "Nenhum template de aviso disponivel"
+                                : "Enviar aviso",
+                          icon: "pi pi-send",
+                          variant: "light",
+                          disabled: !u.email || avisosTemplates.length === 0,
+                          onClick: () => openAvisoModal(u),
+                        },
+                      ]}
+                    />
                   </td>
 
                   <td className="th-actions" data-label="Ações">
-                    <div className="action-buttons">
-                      <AppButton
-                        type="button"
-                        variant="secondary"
-                        onClick={() => openSenhaModal(u)}
-                        title="Redefinir senha"
-                        aria-label="Redefinir senha"
-                      >
-                        <i className="pi pi-key" aria-hidden="true" />
-                      </AppButton>
-                      <AppButton
-                        type="button"
-                        variant="secondary"
-                        onClick={() => resetarMfa(u)}
-                        title="Resetar 2FA"
-                        aria-label="Resetar 2FA"
-                        disabled={resetandoMfaId === u.id}
-                      >
-                        <i className="pi pi-shield" aria-hidden="true" />
-                      </AppButton>
-                      <AppButton
-                        type="button"
-                        variant={u.active ? "danger" : "primary"}
-                        onClick={() => toggleAtivo(u, !u.active)}
-                        title={u.active ? "Desativar" : "Ativar"}
-                        aria-label={u.active ? "Desativar" : "Ativar"}
-                      >
-                        <i className={u.active ? "pi pi-times-circle" : "pi pi-check-circle"} aria-hidden="true" />
-                      </AppButton>
-                    </div>
+                    <TableActions
+                      actions={[
+                        {
+                          key: "reset_password",
+                          label: "Redefinir senha",
+                          icon: "pi pi-key",
+                          variant: "light",
+                          onClick: () => openSenhaModal(u),
+                        },
+                        {
+                          key: "reset_mfa",
+                          label: "Resetar 2FA",
+                          icon: "pi pi-shield",
+                          variant: "light",
+                          disabled: resetandoMfaId === u.id,
+                          onClick: () => resetarMfa(u),
+                        },
+                        {
+                          key: "toggle_active",
+                          label: u.active ? "Desativar" : "Ativar",
+                          icon: u.active ? "pi pi-times-circle" : "pi pi-check-circle",
+                          variant: u.active ? "danger" : "primary",
+                          onClick: () => toggleAtivo(u, !u.active),
+                        },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}

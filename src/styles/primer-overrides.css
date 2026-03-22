@@ -2199,9 +2199,17 @@ a.vtur-app-button:visited {
 }
 
 .vtur-import-upload-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
   cursor: pointer;
   white-space: nowrap;
   user-select: none;
+}
+
+.vtur-import-upload-trigger .p-button-icon {
+  font-size: 0.95rem;
 }
 
 .vtur-import-upload-trigger:focus-visible {
@@ -2219,6 +2227,8 @@ a.vtur-app-button:visited {
   color: var(--vtur-primer-muted);
   font-size: 0.9rem;
   line-height: 1.45;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .vtur-import-contract-list {

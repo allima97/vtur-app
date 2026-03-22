@@ -1,4 +1,5 @@
 import { createServerClient, supabaseServer } from "../../../../lib/supabaseServer";
+import { persistDocumentationMarkdown } from "../../../../lib/documentationServer";
 import { DOC_PRIMARY_SLUG, DOC_SLUGS } from "../../../../lib/systemName";
 
 import { getSupabaseEnv } from "../../users";
@@ -88,21 +89,14 @@ export async function POST({ request }: { request: Request }) {
       return new Response("Conteúdo da versão vazio.", { status: 400 });
     }
 
-    const finalContent = content.endsWith("\n") ? content : `${content}\n`;
-    const { error } = await supabaseServer
-      .from("system_documentation")
-      .upsert(
-        {
-          slug: DOC_PRIMARY_SLUG,
-          markdown: finalContent,
-          updated_at: new Date().toISOString(),
-          updated_by: user.id,
-        },
-        { onConflict: "slug" }
-      );
-    if (error) throw error;
+    const result = await persistDocumentationMarkdown({
+      client: supabaseServer,
+      userId: user.id,
+      slug: DOC_PRIMARY_SLUG,
+      markdown: content,
+    });
 
-    return new Response(JSON.stringify({ ok: true, markdown: finalContent }), {
+    return new Response(JSON.stringify({ ok: true, markdown: result.markdown, sections: result.sections }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });

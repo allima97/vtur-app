@@ -6,6 +6,7 @@ import { usePermissoesStore } from "../../lib/permissoesStore";
 import AlertMessage from "../ui/AlertMessage";
 import DataTable from "../ui/DataTable";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import TableActions from "../ui/TableActions";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
@@ -228,7 +229,7 @@ const AvisosAdminIsland: React.FC = () => {
   }
 
   return (
-    <div className="mt-6 admin-page admin-avisos-page page-content-wrap">
+    <div className="admin-page admin-avisos-page page-content-wrap admin-page-shell">
       <AppCard
         tone="config"
         className="list-toolbar-sticky"
@@ -278,26 +279,24 @@ const AvisosAdminIsland: React.FC = () => {
                   {t.ativo ? "Ativo" : "Inativo"}
                 </td>
                 <td className="th-actions" data-label="Ações">
-                  <div className="action-buttons">
-                    <AppButton
-                      type="button"
-                      variant="ghost"
-                      onClick={() => openModal(t)}
-                      title="Editar template"
-                      aria-label="Editar template"
-                    >
-                      <i className="pi pi-pencil" aria-hidden="true" />
-                    </AppButton>
-                    <AppButton
-                      type="button"
-                      variant="secondary"
-                      onClick={() => toggleAtivo(t)}
-                      title={t.ativo ? "Desativar template" : "Ativar template"}
-                      aria-label={t.ativo ? "Desativar template" : "Ativar template"}
-                    >
-                      <i className={t.ativo ? "pi pi-times-circle" : "pi pi-check-circle"} aria-hidden="true" />
-                    </AppButton>
-                  </div>
+                  <TableActions
+                    actions={[
+                      {
+                        key: "edit",
+                        label: "Editar template",
+                        icon: "pi pi-pencil",
+                        variant: "ghost",
+                        onClick: () => openModal(t),
+                      },
+                      {
+                        key: "toggle_active",
+                        label: t.ativo ? "Desativar template" : "Ativar template",
+                        icon: t.ativo ? "pi pi-times-circle" : "pi pi-check-circle",
+                        variant: t.ativo ? "danger" : "primary",
+                        onClick: () => toggleAtivo(t),
+                      },
+                    ]}
+                  />
                 </td>
               </tr>
             ))}

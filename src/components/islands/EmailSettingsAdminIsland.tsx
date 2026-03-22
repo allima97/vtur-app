@@ -230,10 +230,10 @@ const EmailSettingsAdminIsland: React.FC = () => {
 
   return (
     <AppPrimerProvider>
-      <div className="mt-6 admin-page admin-email-page page-content-wrap">
+      <div className="admin-page admin-email-page page-content-wrap admin-page-shell">
         <AppCard
           tone="config"
-          className="mb-3 list-toolbar-sticky"
+          className="list-toolbar-sticky"
           title="Configuracoes de envio de e-mail"
           subtitle="Em hospedagens como Cloudflare Pages, SMTP via TCP normalmente nao funciona. Prefira Resend via API HTTP e mantenha SMTP apenas como fallback."
         />
@@ -265,7 +265,7 @@ const EmailSettingsAdminIsland: React.FC = () => {
                   toggleLabels={{ show: "Mostrar chave", hide: "Ocultar chave" }}
                 />
 
-                <div className="vtur-form-grid vtur-form-grid-2">
+                <div className="vtur-form-grid vtur-form-grid-2 admin-email-test-grid">
                   <AppField
                     type="email"
                     label="Enviar teste para"
@@ -274,16 +274,22 @@ const EmailSettingsAdminIsland: React.FC = () => {
                     placeholder={form.admin_from_email || DEFAULT_FROM_EMAILS.admin}
                     caption="Se vazio, o sistema usa admin, alerta ou avisos como destino padrao."
                   />
-                  <div style={{ display: "flex", alignItems: "flex-end" }}>
-                    <AppButton
-                      type="button"
-                      variant="secondary"
-                      block
-                      onClick={enviarTeste}
-                      disabled={enviandoTeste}
-                    >
-                      {enviandoTeste ? "Enviando..." : "Testar envio"}
-                    </AppButton>
+                  <div className="vtur-app-field admin-email-test-action">
+                    <label className="vtur-app-field-label admin-email-action-spacer" aria-hidden="true">
+                      Acao
+                    </label>
+                    <div className="vtur-app-field-control">
+                      <AppButton
+                        type="button"
+                        variant="secondary"
+                        block
+                        className="admin-email-test-button"
+                        onClick={enviarTeste}
+                        disabled={enviandoTeste}
+                      >
+                        {enviandoTeste ? "Enviando..." : "Testar envio"}
+                      </AppButton>
+                    </div>
                   </div>
                 </div>
               </div>

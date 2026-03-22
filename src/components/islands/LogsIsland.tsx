@@ -5,6 +5,7 @@ import AlertMessage from "../ui/AlertMessage";
 import DataTable from "../ui/DataTable";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { formatDateTimeBR } from "../../lib/format";
+import TableActions from "../ui/TableActions";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
@@ -650,30 +651,31 @@ export default function LogsIsland() {
   // ---------------------------------------------------------------
 
   return (
-    <div className="logs-admin-page admin-page">
+    <div className="logs-admin-page admin-page page-content-wrap admin-page-shell">
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
       <AppCard
         tone="config"
+        className="list-toolbar-sticky"
         title="Logs de Auditoria"
         subtitle="Todas as acoes executadas no sistema."
       />
       {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5 mb-3">
-        <AppCard tone="config" title="Total" subtitle="Registros no recorte atual.">
-          <div className="text-2xl font-semibold">{stats.total}</div>
+      <div className="logs-kpi-grid">
+        <AppCard className="logs-kpi-card" tone="config" title="Total" subtitle="Registros no recorte atual.">
+          <div className="logs-kpi-value text-2xl font-semibold">{stats.total}</div>
         </AppCard>
-        <AppCard tone="info" title="Segurança" subtitle="Login, senha e MFA.">
-          <div className="text-2xl font-semibold">{stats.security_total}</div>
+        <AppCard className="logs-kpi-card" tone="info" title="Segurança" subtitle="Login, senha e MFA.">
+          <div className="logs-kpi-value text-2xl font-semibold">{stats.security_total}</div>
         </AppCard>
-        <AppCard tone="info" title="Login" subtitle="Eventos de autenticação.">
-          <div className="text-2xl font-semibold">{stats.login_total}</div>
+        <AppCard className="logs-kpi-card" tone="info" title="Login" subtitle="Eventos de autenticação.">
+          <div className="logs-kpi-value text-2xl font-semibold">{stats.login_total}</div>
         </AppCard>
-        <AppCard tone="info" title="2FA" subtitle="Ativações, validações e MFA.">
-          <div className="text-2xl font-semibold">{stats.mfa_total}</div>
+        <AppCard className="logs-kpi-card" tone="info" title="2FA" subtitle="Ativações, validações e MFA.">
+          <div className="logs-kpi-value text-2xl font-semibold">{stats.mfa_total}</div>
         </AppCard>
-        <AppCard tone="warning" title="Reset 2FA" subtitle="Resets administrativos.">
-          <div className="text-2xl font-semibold">{stats.reset_mfa_total}</div>
+        <AppCard className="logs-kpi-card" tone="warning" title="Reset 2FA" subtitle="Resets administrativos.">
+          <div className="logs-kpi-value text-2xl font-semibold">{stats.reset_mfa_total}</div>
         </AppCard>
       </div>
 
@@ -881,17 +883,17 @@ export default function LogsIsland() {
               <td data-label="Modulo">{l.modulo || "-"}</td>
               <td data-label="IP">{l.ip || "-"}</td>
               <td className="th-actions" data-label="Ações">
-                <div className="action-buttons">
-                  <AppButton
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setLogSelecionado(l)}
-                    title="Ver detalhes"
-                    aria-label="Ver detalhes"
-                  >
-                    <i className="pi pi-eye" aria-hidden="true" />
-                  </AppButton>
-                </div>
+                <TableActions
+                  actions={[
+                    {
+                      key: "view",
+                      label: "Ver detalhes",
+                      icon: "pi pi-eye",
+                      variant: "light",
+                      onClick: () => setLogSelecionado(l),
+                    },
+                  ]}
+                />
               </td>
             </tr>
           ))}

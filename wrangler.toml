@@ -5,10 +5,7 @@ compatibility_date = "2024-12-20"
 account_id = "eaf689768c1c323ce233771e12a94859"
 workers_dev = true
 
-# Astro build output (injeta PUBLIC_* no processo de build)
-build = { command = "PUBLIC_SUPABASE_URL=$PUBLIC_SUPABASE_URL PUBLIC_SUPABASE_ANON_KEY=$PUBLIC_SUPABASE_ANON_KEY npm run build -- --force", cwd = "." }
-
-# Variáveis padrão (usadas também no build via build.command)
+# Variáveis padrão (usadas também pelo script scripts/build-with-env.mjs)
 [vars]
 ENVIRONMENT = "production"
 SUPABASE_URL = "https://ggqmvruerbaqxthhnxrm.supabase.co"

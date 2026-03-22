@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { registrarLog } from "../../lib/logs";
 import { refreshPermissoes } from "../../lib/permissoesStore";
@@ -19,7 +19,19 @@ import AppDialog from "../ui/primer/AppDialog";
 import AppField from "../ui/primer/AppField";
 import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import FileUploadField from "../ui/primer/FileUploadField";
 import PasswordField from "../ui/primer/PasswordField";
+import {
+  getProfileAvatarPath,
+  getUserInitials,
+  MAX_PROFILE_AVATAR_BYTES,
+  PROFILE_AVATAR_BUCKET,
+} from "../../lib/profileAvatar";
+import {
+  clampAvatarCropPosition,
+  getAvatarCropBounds,
+  renderAvatarCropToBlob,
+} from "../../lib/avatarCrop";
 
 type Perfil = {
   nome_completo: string;
@@ -36,6 +48,7 @@ type Perfil = {
   estado: string | null;
   email: string;
   uso_individual: boolean | null;
+  avatar_url?: string | null;
   company_id?: string | null;
   company?: {
     nome_empresa?: string | null;
@@ -169,6 +182,13 @@ type MfaPendingEnrollment = {
   uri: string;
 };
 
+type AvatarCropPosition = {
+  x: number;
+  y: number;
+};
+
+const AVATAR_CROP_STAGE_SIZE = 320;
+
 export default function PerfilIsland() {
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [loading, setLoading] = useState(true);
@@ -198,6 +218,19 @@ export default function PerfilIsland() {
   const [camposObrigatorios, setCamposObrigatorios] = useState<CampoObrigatorioKey[]>([]);
   const [forcePasswordRequired, setForcePasswordRequired] = useState(false);
   const [atualizandoPermissoes, setAtualizandoPermissoes] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarInputKey, setAvatarInputKey] = useState(0);
+  const [avatarCropOpen, setAvatarCropOpen] = useState(false);
+  const [avatarCropSourceFile, setAvatarCropSourceFile] = useState<File | null>(null);
+  const [avatarCropSourceUrl, setAvatarCropSourceUrl] = useState<string | null>(null);
+  const [avatarCropZoom, setAvatarCropZoom] = useState(1);
+  const [avatarCropPosition, setAvatarCropPosition] = useState<AvatarCropPosition>({ x: 0, y: 0 });
+  const [avatarCropNaturalSize, setAvatarCropNaturalSize] = useState({ width: 0, height: 0 });
+  const [avatarCropApplying, setAvatarCropApplying] = useState(false);
+  const [avatarCropDragging, setAvatarCropDragging] = useState(false);
+  const [avatarCropError, setAvatarCropError] = useState<string | null>(null);
   const [mfaLoading, setMfaLoading] = useState(false);
   const [mfaBusy, setMfaBusy] = useState(false);
   const [mfaErro, setMfaErro] = useState<string | null>(null);
@@ -252,6 +285,42 @@ export default function PerfilIsland() {
     () => obterCamposObrigatoriosFaltando(perfil, usoIndividual),
     [perfil, usoIndividual]
   );
+  const avatarSrc = avatarPreviewUrl || perfil?.avatar_url || "";
+  const avatarInitials = useMemo(
+    () => getUserInitials(perfil?.nome_completo, perfil?.email),
+    [perfil?.email, perfil?.nome_completo]
+  );
+  const avatarCropDragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+  } | null>(null);
+  const avatarCropBounds = useMemo(() => {
+    if (!avatarCropNaturalSize.width || !avatarCropNaturalSize.height) return null;
+    return getAvatarCropBounds({
+      naturalWidth: avatarCropNaturalSize.width,
+      naturalHeight: avatarCropNaturalSize.height,
+      containerSize: AVATAR_CROP_STAGE_SIZE,
+      zoom: avatarCropZoom,
+    });
+  }, [avatarCropNaturalSize.height, avatarCropNaturalSize.width, avatarCropZoom]);
+
+  useEffect(() => {
+    if (!avatarPreviewUrl || !avatarPreviewUrl.startsWith("blob:")) return;
+    return () => URL.revokeObjectURL(avatarPreviewUrl);
+  }, [avatarPreviewUrl]);
+
+  useEffect(() => {
+    if (!avatarCropSourceUrl || !avatarCropSourceUrl.startsWith("blob:")) return;
+    return () => URL.revokeObjectURL(avatarCropSourceUrl);
+  }, [avatarCropSourceUrl]);
+
+  useEffect(() => {
+    if (!avatarCropBounds) return;
+    setAvatarCropPosition((prev) => clampAvatarCropPosition(prev, avatarCropBounds));
+  }, [avatarCropBounds]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -291,7 +360,7 @@ export default function PerfilIsland() {
         }
 
         const colsExtras =
-          "nome_completo, cpf, data_nascimento, telefone, whatsapp, rg, cep, endereco, numero, complemento, cidade, estado, email, uso_individual, must_change_password, company_id, created_by_gestor, companies(nome_empresa, nome_fantasia, cnpj, endereco, telefone, cidade, estado), user_types(name)";
+          "nome_completo, cpf, data_nascimento, telefone, whatsapp, rg, cep, endereco, numero, complemento, cidade, estado, email, uso_individual, must_change_password, avatar_url, company_id, created_by_gestor, companies(nome_empresa, nome_fantasia, cnpj, endereco, telefone, cidade, estado), user_types(name)";
         const colsBasicos =
           "nome_completo, cpf, data_nascimento, telefone, cidade, estado, email, uso_individual, must_change_password, company_id, companies(nome_empresa, nome_fantasia, cnpj, endereco, telefone, cidade, estado), user_types(name)";
 
@@ -325,6 +394,7 @@ export default function PerfilIsland() {
           estado: data?.estado || "",
           email: emailInicial,
           uso_individual: data?.uso_individual ?? null,
+          avatar_url: (data as any)?.avatar_url || null,
           company_id: data?.company_id || null,
           company: data?.companies || null,
           cargo: data?.user_types?.name || null,
@@ -700,6 +770,10 @@ function formatCnpj(value: string) {
       } else {
         setMsg("Dados salvos com sucesso.");
       }
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("sgtur:user-profile-updated"));
+      }
     } catch (e: any) {
       console.error(e);
       setErro("Não foi possível salvar seus dados.");
@@ -802,6 +876,224 @@ function formatCnpj(value: string) {
     }
   }
 
+  function handleAvatarSelection(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] || null;
+    if (!file) {
+      return;
+    }
+
+    const isImage = /^image\/(jpeg|jpg|png|webp)$/i.test(file.type);
+    if (!isImage) {
+      setErro("Selecione uma imagem JPG, PNG ou WebP para o avatar.");
+      setAvatarFile(null);
+      setAvatarPreviewUrl(null);
+      setAvatarInputKey((prev) => prev + 1);
+      return;
+    }
+
+    if (file.size > MAX_PROFILE_AVATAR_BYTES) {
+      setErro("O avatar deve ter no maximo 5 MB.");
+      setAvatarFile(null);
+      setAvatarPreviewUrl(null);
+      setAvatarInputKey((prev) => prev + 1);
+      return;
+    }
+
+    setErro(null);
+    setAvatarCropError(null);
+    setAvatarCropSourceFile(file);
+    setAvatarCropSourceUrl(URL.createObjectURL(file));
+    setAvatarCropZoom(1);
+    setAvatarCropPosition({ x: 0, y: 0 });
+    setAvatarCropNaturalSize({ width: 0, height: 0 });
+    setAvatarCropOpen(true);
+    setAvatarInputKey((prev) => prev + 1);
+  }
+
+  function handleAvatarCropImageLoad(event: React.SyntheticEvent<HTMLImageElement>) {
+    const target = event.currentTarget;
+    setAvatarCropNaturalSize({
+      width: target.naturalWidth || AVATAR_CROP_STAGE_SIZE,
+      height: target.naturalHeight || AVATAR_CROP_STAGE_SIZE,
+    });
+    setAvatarCropPosition({ x: 0, y: 0 });
+  }
+
+  function handleAvatarCropPointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    if (!avatarCropBounds) return;
+    avatarCropDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: avatarCropPosition.x,
+      originY: avatarCropPosition.y,
+    };
+    setAvatarCropDragging(true);
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  }
+
+  function handleAvatarCropPointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    const activeDrag = avatarCropDragRef.current;
+    if (!activeDrag || activeDrag.pointerId !== event.pointerId || !avatarCropBounds) return;
+
+    const deltaX = event.clientX - activeDrag.startX;
+    const deltaY = event.clientY - activeDrag.startY;
+    setAvatarCropPosition(
+      clampAvatarCropPosition(
+        { x: activeDrag.originX + deltaX, y: activeDrag.originY + deltaY },
+        avatarCropBounds
+      )
+    );
+  }
+
+  function finishAvatarCropPointer(event?: React.PointerEvent<HTMLDivElement>) {
+    const activeDrag = avatarCropDragRef.current;
+    if (event && activeDrag && activeDrag.pointerId === event.pointerId) {
+      event.currentTarget.releasePointerCapture?.(event.pointerId);
+    }
+    avatarCropDragRef.current = null;
+    setAvatarCropDragging(false);
+  }
+
+  function cancelarAvatarCrop() {
+    setAvatarCropOpen(false);
+    setAvatarCropSourceFile(null);
+    setAvatarCropSourceUrl(null);
+    setAvatarCropZoom(1);
+    setAvatarCropPosition({ x: 0, y: 0 });
+    setAvatarCropNaturalSize({ width: 0, height: 0 });
+    setAvatarCropError(null);
+  }
+
+  async function aplicarAvatarCrop() {
+    if (!avatarCropSourceFile || !avatarCropSourceUrl || !avatarCropBounds) {
+      setAvatarCropError("Selecione uma imagem valida para recortar.");
+      return;
+    }
+
+    try {
+      setAvatarCropApplying(true);
+      setAvatarCropError(null);
+      const { file } = await renderAvatarCropToBlob({
+        imageSrc: avatarCropSourceUrl,
+        mimeType: avatarCropSourceFile.type,
+        fileName: avatarCropSourceFile.name,
+        viewport: {
+          naturalWidth: avatarCropNaturalSize.width,
+          naturalHeight: avatarCropNaturalSize.height,
+          containerSize: AVATAR_CROP_STAGE_SIZE,
+          zoom: avatarCropZoom,
+        },
+        position: avatarCropPosition,
+      });
+
+      setAvatarFile(file);
+      setAvatarPreviewUrl(URL.createObjectURL(file));
+      cancelarAvatarCrop();
+      setMsg("Recorte pronto. Clique em Enviar avatar para salvar.");
+    } catch (error) {
+      console.error("Erro ao aplicar recorte do avatar:", error);
+      setAvatarCropError("Nao foi possivel aplicar o recorte da foto.");
+    } finally {
+      setAvatarCropApplying(false);
+    }
+  }
+
+  async function enviarAvatar() {
+    if (!avatarFile) {
+      setErro("Selecione uma imagem antes de enviar.");
+      return;
+    }
+
+    try {
+      setAvatarBusy(true);
+      setErro(null);
+      setMsg(null);
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData?.session?.user;
+      if (!user) {
+        window.location.href = "/auth/login";
+        return;
+      }
+
+      const storagePath = getProfileAvatarPath(user.id);
+      const upload = await supabase.storage.from(PROFILE_AVATAR_BUCKET).upload(storagePath, avatarFile, {
+        upsert: true,
+        contentType: avatarFile.type || "image/jpeg",
+      });
+      if (upload.error) throw upload.error;
+
+      const publicUrl = supabase.storage.from(PROFILE_AVATAR_BUCKET).getPublicUrl(storagePath).data.publicUrl;
+      const versionedUrl = publicUrl ? `${publicUrl}?v=${Date.now()}` : null;
+
+      const { error: updateError } = await supabase
+        .from("users")
+        .update({ avatar_url: versionedUrl })
+        .eq("id", user.id);
+
+      if (updateError) throw updateError;
+
+      setPerfil((prev) => (prev ? { ...prev, avatar_url: versionedUrl } : prev));
+      setAvatarFile(null);
+      setAvatarPreviewUrl(null);
+      setAvatarInputKey((prev) => prev + 1);
+      setMsg("Avatar atualizado com sucesso.");
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("sgtur:user-profile-updated"));
+      }
+    } catch (e: any) {
+      console.error("Erro ao enviar avatar:", e);
+      setErro("Nao foi possivel atualizar o avatar.");
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
+
+  async function removerAvatar() {
+    try {
+      setAvatarBusy(true);
+      setErro(null);
+      setMsg(null);
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData?.session?.user;
+      if (!user) {
+        window.location.href = "/auth/login";
+        return;
+      }
+
+      const storagePath = getProfileAvatarPath(user.id);
+      const storageResponse = await supabase.storage.from(PROFILE_AVATAR_BUCKET).remove([storagePath]);
+      if (storageResponse.error) {
+        console.warn("Falha ao remover avatar do storage:", storageResponse.error);
+      }
+
+      const { error: updateError } = await supabase
+        .from("users")
+        .update({ avatar_url: null })
+        .eq("id", user.id);
+
+      if (updateError) throw updateError;
+
+      setPerfil((prev) => (prev ? { ...prev, avatar_url: null } : prev));
+      setAvatarFile(null);
+      setAvatarPreviewUrl(null);
+      setAvatarInputKey((prev) => prev + 1);
+      setMsg("Avatar removido com sucesso.");
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("sgtur:user-profile-updated"));
+      }
+    } catch (e: any) {
+      console.error("Erro ao remover avatar:", e);
+      setErro("Nao foi possivel remover o avatar.");
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
+
   // Função precisa estar dentro do componente para acessar o estado corretamente
   async function buscarCepIfNeeded(cepRaw: string) {
     if (!camposExtrasOk) return;
@@ -860,6 +1152,84 @@ function formatCnpj(value: string) {
   return (
     <AppPrimerProvider>
       <div className="page-content-wrap perfil-page vtur-legacy-module">
+      <AppDialog
+        open={avatarCropOpen}
+        title="Ajustar avatar"
+        message=""
+        confirmLabel="Usar recorte"
+        cancelLabel="Cancelar"
+        confirmDisabled={!avatarCropSourceUrl || !avatarCropBounds}
+        confirmLoading={avatarCropApplying}
+        onConfirm={() => void aplicarAvatarCrop()}
+        onCancel={cancelarAvatarCrop}
+      >
+        <div className="perfil-avatar-cropper">
+          <p className="perfil-avatar-cropper-text">
+            Arraste a imagem para enquadrar melhor o avatar e use o zoom para aproximar.
+          </p>
+          <div
+            className={`perfil-avatar-crop-stage${avatarCropDragging ? " is-dragging" : ""}`}
+            onPointerDown={handleAvatarCropPointerDown}
+            onPointerMove={handleAvatarCropPointerMove}
+            onPointerUp={finishAvatarCropPointer}
+            onPointerCancel={finishAvatarCropPointer}
+          >
+            {avatarCropSourceUrl ? (
+              <img
+                src={avatarCropSourceUrl}
+                alt="Recorte do avatar"
+                className="perfil-avatar-crop-image"
+                onLoad={handleAvatarCropImageLoad}
+                draggable={false}
+                style={{
+                  opacity: avatarCropBounds ? 1 : 0,
+                  ...(avatarCropBounds
+                    ? {
+                        width: avatarCropBounds.drawWidth,
+                        height: avatarCropBounds.drawHeight,
+                        left: `calc(50% + ${avatarCropPosition.x}px)`,
+                        top: `calc(50% + ${avatarCropPosition.y}px)`,
+                      }
+                    : {}),
+                }}
+              />
+            ) : null}
+            <div className="perfil-avatar-crop-overlay" aria-hidden="true" />
+          </div>
+          <div className="perfil-avatar-crop-controls">
+            <label className="perfil-avatar-crop-range-label" htmlFor="perfil-avatar-zoom">
+              Zoom
+            </label>
+            <input
+              id="perfil-avatar-zoom"
+              type="range"
+              min="1"
+              max="3"
+              step="0.01"
+              value={avatarCropZoom}
+              onChange={(event) => setAvatarCropZoom(Number(event.target.value) || 1)}
+            />
+            <span className="perfil-avatar-crop-range-value">{Math.round(avatarCropZoom * 100)}%</span>
+          </div>
+          <div className="mobile-stack-buttons perfil-avatar-crop-actions">
+            <AppButton
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setAvatarCropZoom(1);
+                setAvatarCropPosition({ x: 0, y: 0 });
+              }}
+            >
+              Centralizar
+            </AppButton>
+          </div>
+          {avatarCropError && (
+            <small className="perfil-warning-text" role="alert">
+              {avatarCropError}
+            </small>
+          )}
+        </div>
+      </AppDialog>
       <AppNoticeDialog
         open={modalCamposObrigatorios}
         title="Campos obrigatórios"
@@ -950,6 +1320,50 @@ function formatCnpj(value: string) {
               Campos extras indisponíveis. Adicione as colunas novas em "users" no banco para editar CEP/WhatsApp/RG/endereço.
             </small>
           )}
+          <div className="perfil-avatar-panel">
+            <div className="perfil-avatar-preview" aria-hidden="true">
+              {avatarSrc ? (
+                <img src={avatarSrc} alt="" className="perfil-avatar-image" />
+              ) : (
+                <span className="perfil-avatar-fallback">{avatarInitials}</span>
+              )}
+            </div>
+            <div className="perfil-avatar-copy">
+              <strong className="perfil-avatar-title">Foto do perfil</strong>
+              <p className="perfil-avatar-description">
+                Envie um avatar para aparecer no topo do sistema. Aceitamos JPG, PNG ou WebP com ate 5 MB.
+              </p>
+              <div className="perfil-avatar-upload-grid">
+                <FileUploadField
+                  key={avatarInputKey}
+                  label="Selecionar imagem"
+                  accept="image/png,image/jpeg,image/webp"
+                  fileName={avatarFile?.name || "Nenhum arquivo escolhido"}
+                  caption="Escolha a imagem e ajuste o recorte antes de enviar."
+                  buttonLabel="Escolher arquivo"
+                  onChange={handleAvatarSelection}
+                />
+                <div className="mobile-stack-buttons perfil-avatar-actions">
+                  <AppButton
+                    type="button"
+                    variant="primary"
+                    onClick={enviarAvatar}
+                    disabled={!avatarFile || avatarBusy}
+                  >
+                    {avatarBusy ? "Enviando..." : "Enviar avatar"}
+                  </AppButton>
+                  <AppButton
+                    type="button"
+                    variant="secondary"
+                    onClick={removerAvatar}
+                    disabled={avatarBusy || (!perfil.avatar_url && !avatarPreviewUrl)}
+                  >
+                    Remover avatar
+                  </AppButton>
+                </div>
+              </div>
+            </div>
+          </div>
             <div
               className={`form-group${camposObrigatorios.includes("uso_individual") ? " perfil-required-outline" : ""}`}
             >

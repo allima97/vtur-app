@@ -1,4 +1,13 @@
 import { createServerClient, supabaseServer } from "../../../lib/supabaseServer";
+import {
+  buildDocumentationMarkdownFromSections,
+  parseLegacyDocumentationSections,
+} from "../../../lib/documentation";
+import {
+  fetchDocumentationSections,
+  persistDocumentationMarkdown,
+  persistDocumentationSections,
+} from "../../../lib/documentationServer";
 import { DOC_FALLBACK_PATHS, DOC_PRIMARY_SLUG, DOC_SLUGS } from "../../../lib/systemName";
 
 import { getSupabaseEnv } from "../users";
@@ -83,6 +92,21 @@ export async function GET({ request }: { request: Request }) {
     }
 
     try {
+      const sections = await fetchDocumentationSections(supabaseServer, DOC_SLUGS);
+      if (sections.length > 0) {
+        return new Response(JSON.stringify({ markdown: buildDocumentationMarkdownFromSections(sections), sections, source: "sections" }), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store",
+          },
+        });
+      }
+    } catch (err) {
+      console.warn("[admin/documentacao] Falha ao ler system_documentation_sections.", err);
+    }
+
+    try {
       const { data, error } = await supabaseServer
         .from("system_documentation")
         .select("slug, markdown, updated_at, updated_by")
@@ -93,7 +117,7 @@ export async function GET({ request }: { request: Request }) {
 
       const row = Array.isArray(data) ? data[0] : null;
       if (row?.markdown) {
-        return new Response(JSON.stringify({ markdown: row.markdown }), {
+        return new Response(JSON.stringify({ markdown: row.markdown, sections: parseLegacyDocumentationSections(row.markdown, row.slug || DOC_PRIMARY_SLUG), source: "legacy" }), {
           status: 200,
           headers: {
             "Content-Type": "application/json",
@@ -106,7 +130,7 @@ export async function GET({ request }: { request: Request }) {
     }
 
     const fallback = await fetchFallbackMarkdown(request);
-    return new Response(JSON.stringify({ markdown: fallback }), {
+    return new Response(JSON.stringify({ markdown: fallback, sections: parseLegacyDocumentationSections(fallback, DOC_PRIMARY_SLUG), source: "fallback" }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
@@ -130,26 +154,33 @@ export async function PUT({ request }: { request: Request }) {
     }
 
     const body = await request.json();
-    const markdown = String(body?.markdown ?? "").trim();
-    if (!markdown) {
-      return new Response("Conteúdo inválido.", { status: 400 });
+    let markdown = "";
+    let sections: any[] = [];
+
+    if (Array.isArray(body?.sections)) {
+      sections = await persistDocumentationSections({
+        client: supabaseServer,
+        userId: user.id,
+        slug: DOC_PRIMARY_SLUG,
+        sections: body.sections,
+      });
+      markdown = buildDocumentationMarkdownFromSections(sections);
+    } else {
+      const content = String(body?.markdown ?? "").trim();
+      if (!content) {
+        return new Response("Conteúdo inválido.", { status: 400 });
+      }
+      const result = await persistDocumentationMarkdown({
+        client: supabaseServer,
+        userId: user.id,
+        slug: DOC_PRIMARY_SLUG,
+        markdown: content,
+      });
+      markdown = result.markdown;
+      sections = result.sections;
     }
 
-    const content = markdown.endsWith("\n") ? markdown : `${markdown}\n`;
-    const { error } = await supabaseServer
-      .from("system_documentation")
-      .upsert(
-        {
-          slug: DOC_PRIMARY_SLUG,
-          markdown: content,
-          updated_at: new Date().toISOString(),
-          updated_by: user.id,
-        },
-        { onConflict: "slug" }
-      );
-    if (error) throw error;
-
-    return new Response(JSON.stringify({ ok: true }), {
+    return new Response(JSON.stringify({ ok: true, markdown, sections }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });

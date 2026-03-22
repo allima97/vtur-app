@@ -5,6 +5,7 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import AlertMessage from "../ui/AlertMessage";
 import DataTable from "../ui/DataTable";
 import EmptyState from "../ui/EmptyState";
+import TableActions from "../ui/TableActions";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
@@ -348,7 +349,7 @@ const FinanceiroAdminIsland: React.FC = () => {
   }
 
   return (
-    <div className="mt-6 admin-page admin-financeiro-page page-content-wrap">
+    <div className="admin-page admin-financeiro-page page-content-wrap admin-page-shell">
       <AppCard
         tone="config"
         className="list-toolbar-sticky"
@@ -395,57 +396,49 @@ const FinanceiroAdminIsland: React.FC = () => {
                   <td data-label="Prox. vencimento">{formatarData(r.proximo_vencimento)}</td>
                   <td data-label="Valor">{formatarValor(r.valor_mensal)}</td>
                   <td className="th-actions" data-label="Ações">
-                    <div className="action-buttons">
-                      <AppButton
-                        type="button"
-                        variant="ghost"
-                        onClick={() => openModal(r)}
-                        title="Editar cobranca"
-                        aria-label="Editar cobranca"
-                      >
-                        <i className="pi pi-pencil" aria-hidden="true" />
-                      </AppButton>
-                      <AppButton
-                        type="button"
-                        variant="primary"
-                        onClick={() => atualizarStatus(r, "active")}
-                        disabled={r.status === "active"}
-                        title="Ativar cobrança"
-                        aria-label="Ativar cobrança"
-                      >
-                        <i className="pi pi-check-circle" aria-hidden="true" />
-                      </AppButton>
-                      <AppButton
-                        type="button"
-                        variant="secondary"
-                        onClick={() => atualizarStatus(r, "past_due")}
-                        disabled={r.status === "past_due"}
-                        title="Marcar cobrança em atraso"
-                        aria-label="Marcar cobrança em atraso"
-                      >
-                        <i className="pi pi-clock" aria-hidden="true" />
-                      </AppButton>
-                      <AppButton
-                        type="button"
-                        variant="danger"
-                        onClick={() => atualizarStatus(r, "suspended")}
-                        disabled={r.status === "suspended"}
-                        title="Suspender cobrança"
-                        aria-label="Suspender cobrança"
-                      >
-                        <i className="pi pi-ban" aria-hidden="true" />
-                      </AppButton>
-                      <AppButton
-                        type="button"
-                        variant="danger"
-                        onClick={() => atualizarStatus(r, "canceled")}
-                        disabled={r.status === "canceled"}
-                        title="Cancelar cobrança"
-                        aria-label="Cancelar cobrança"
-                      >
-                        <i className="pi pi-times-circle" aria-hidden="true" />
-                      </AppButton>
-                    </div>
+                    <TableActions
+                      actions={[
+                        {
+                          key: "edit",
+                          label: "Editar cobrança",
+                          icon: "pi pi-pencil",
+                          variant: "ghost",
+                          onClick: () => openModal(r),
+                        },
+                        {
+                          key: "active",
+                          label: "Ativar cobrança",
+                          icon: "pi pi-check-circle",
+                          variant: "primary",
+                          disabled: r.status === "active",
+                          onClick: () => atualizarStatus(r, "active"),
+                        },
+                        {
+                          key: "past_due",
+                          label: "Marcar cobrança em atraso",
+                          icon: "pi pi-clock",
+                          variant: "light",
+                          disabled: r.status === "past_due",
+                          onClick: () => atualizarStatus(r, "past_due"),
+                        },
+                        {
+                          key: "suspended",
+                          label: "Suspender cobrança",
+                          icon: "pi pi-ban",
+                          variant: "danger",
+                          disabled: r.status === "suspended",
+                          onClick: () => atualizarStatus(r, "suspended"),
+                        },
+                        {
+                          key: "canceled",
+                          label: "Cancelar cobrança",
+                          icon: "pi pi-times-circle",
+                          variant: "danger",
+                          disabled: r.status === "canceled",
+                          onClick: () => atualizarStatus(r, "canceled"),
+                        },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}

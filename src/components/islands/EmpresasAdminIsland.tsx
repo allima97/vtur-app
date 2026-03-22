@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import AlertMessage from "../ui/AlertMessage";
 import DataTable from "../ui/DataTable";
 import EmptyState from "../ui/EmptyState";
+import TableActions from "../ui/TableActions";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
@@ -352,10 +353,10 @@ const EmpresasAdminIsland: React.FC = () => {
   }
 
   return (
-    <div className="mt-6 admin-page admin-empresas-page page-content-wrap">
+    <div className="admin-page admin-empresas-page page-content-wrap admin-page-shell">
       <AppCard
         tone="info"
-        className="mb-3 list-toolbar-sticky"
+        className="list-toolbar-sticky"
         title="Empresas cadastradas"
         subtitle="Gestao de contas e status de cobranca."
         actions={
@@ -425,44 +426,38 @@ const EmpresasAdminIsland: React.FC = () => {
                       : "—"}
                   </td>
                   <td className="th-actions" data-label="Ações">
-                    <div className="action-buttons">
-                      <AppButton
-                        type="button"
-                        variant="secondary"
-                        onClick={() => atualizarStatus(e.id, "active")}
-                        title="Ativar empresa"
-                        aria-label="Ativar empresa"
-                      >
-                        <i className="pi pi-check-circle" aria-hidden="true" />
-                      </AppButton>
-                      <AppButton
-                        type="button"
-                        variant="secondary"
-                        onClick={() => atualizarStatus(e.id, "past_due")}
-                        title="Marcar empresa em atraso"
-                        aria-label="Marcar empresa em atraso"
-                      >
-                        <i className="pi pi-clock" aria-hidden="true" />
-                      </AppButton>
-                      <AppButton
-                        type="button"
-                        variant="secondary"
-                        onClick={() => atualizarStatus(e.id, "suspended")}
-                        title="Suspender empresa"
-                        aria-label="Suspender empresa"
-                      >
-                        <i className="pi pi-ban" aria-hidden="true" />
-                      </AppButton>
-                      <AppButton
-                        type="button"
-                        variant="danger"
-                        onClick={() => atualizarStatus(e.id, "canceled")}
-                        title="Cancelar empresa"
-                        aria-label="Cancelar empresa"
-                      >
-                        <i className="pi pi-times-circle" aria-hidden="true" />
-                      </AppButton>
-                    </div>
+                    <TableActions
+                      actions={[
+                        {
+                          key: "active",
+                          label: "Ativar empresa",
+                          icon: "pi pi-check-circle",
+                          variant: "primary",
+                          onClick: () => atualizarStatus(e.id, "active"),
+                        },
+                        {
+                          key: "past_due",
+                          label: "Marcar empresa em atraso",
+                          icon: "pi pi-clock",
+                          variant: "light",
+                          onClick: () => atualizarStatus(e.id, "past_due"),
+                        },
+                        {
+                          key: "suspended",
+                          label: "Suspender empresa",
+                          icon: "pi pi-ban",
+                          variant: "danger",
+                          onClick: () => atualizarStatus(e.id, "suspended"),
+                        },
+                        {
+                          key: "canceled",
+                          label: "Cancelar empresa",
+                          icon: "pi pi-times-circle",
+                          variant: "danger",
+                          onClick: () => atualizarStatus(e.id, "canceled"),
+                        },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}
@@ -568,35 +563,31 @@ const EmpresasAdminIsland: React.FC = () => {
                       {v.approved_at ? formatDateBR(v.approved_at) : "—"}
                     </td>
                     <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        <AppButton
-                          type="button"
-                          variant="secondary"
-                          onClick={() => atualizarVinculo(v.id, "approved")}
-                          title="Aprovar vínculo"
-                          aria-label="Aprovar vínculo"
-                        >
-                          <i className="pi pi-check-circle" aria-hidden="true" />
-                        </AppButton>
-                        <AppButton
-                          type="button"
-                          variant="secondary"
-                          onClick={() => atualizarVinculo(v.id, "rejected")}
-                          title="Rejeitar vínculo"
-                          aria-label="Rejeitar vínculo"
-                        >
-                          <i className="pi pi-times-circle" aria-hidden="true" />
-                        </AppButton>
-                        <AppButton
-                          type="button"
-                          variant="danger"
-                          onClick={() => removerVinculoMaster(v.id)}
-                          title="Remover vínculo"
-                          aria-label="Remover vínculo"
-                        >
-                          <i className="pi pi-trash" aria-hidden="true" />
-                        </AppButton>
-                      </div>
+                      <TableActions
+                        actions={[
+                          {
+                            key: "approved",
+                            label: "Aprovar vínculo",
+                            icon: "pi pi-check-circle",
+                            variant: "primary",
+                            onClick: () => atualizarVinculo(v.id, "approved"),
+                          },
+                          {
+                            key: "rejected",
+                            label: "Rejeitar vínculo",
+                            icon: "pi pi-times-circle",
+                            variant: "danger",
+                            onClick: () => atualizarVinculo(v.id, "rejected"),
+                          },
+                          {
+                            key: "remove",
+                            label: "Remover vínculo",
+                            icon: "pi pi-trash",
+                            variant: "danger",
+                            onClick: () => removerVinculoMaster(v.id),
+                          },
+                        ]}
+                      />
                     </td>
                   </tr>
                 ))}

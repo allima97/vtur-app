@@ -12,6 +12,7 @@ import ConsultoriaLembretesModalIsland from "../components/islands/ConsultoriaLe
 import PushNotificationsIsland from "../components/islands/PushNotificationsIsland";
 import HelpDrawerIsland from "../components/islands/HelpDrawerIsland";
 import NetMetricsPanelIsland from "../components/islands/NetMetricsPanelIsland";
+import TopbarActionsIsland from "../components/islands/TopbarActionsIsland";
 import { SYSTEM_NAME } from "../lib/systemName";
 import { readEnv } from "../lib/supabaseServer";
 
@@ -243,6 +244,7 @@ try {
           <img src="/brand/vtur-symbol.svg" alt="VTUR" />
           <span>VTUR</span>
         </a>
+        <TopbarActionsIsland client:load />
       </header>
       <main class={`app-main ${moduleClass}`.trim()}>
         <slot />

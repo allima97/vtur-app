@@ -26,6 +26,16 @@ export default function FileUploadField({
   onChange,
 }: FileUploadFieldProps) {
   const generatedId = useId();
+  const triggerClassName = [
+    "vtur-import-upload-trigger",
+    "p-button",
+    "p-component",
+    "vtur-app-button",
+    "vtur-app-button-primary",
+    disabled ? "is-disabled p-disabled" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div className={["vtur-app-field", wrapperClassName].filter(Boolean).join(" ")}>
@@ -46,10 +56,20 @@ export default function FileUploadField({
           />
           <label
             htmlFor={generatedId}
-            className="vtur-import-upload-trigger"
+            className={triggerClassName}
             aria-disabled={disabled || undefined}
+            tabIndex={disabled ? -1 : 0}
+            onKeyDown={(event) => {
+              if (disabled) return;
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                const input = document.getElementById(generatedId) as HTMLInputElement | null;
+                input?.click();
+              }
+            }}
           >
-            {buttonLabel || "Escolher arquivo"}
+            <span className="p-button-icon p-c pi pi-upload" aria-hidden="true" />
+            <span className="p-button-label p-c">{buttonLabel || "Escolher arquivo"}</span>
           </label>
           <span className="vtur-import-file-name">{fileName || "Nenhum arquivo escolhido"}</span>
         </div>

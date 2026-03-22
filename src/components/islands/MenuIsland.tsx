@@ -97,7 +97,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
   const envMinutes = Number(import.meta.env.PUBLIC_AUTO_LOGOUT_MINUTES || "");
   const DEFAULT_LOGOUT_MINUTES =
     Number.isFinite(envMinutes) && envMinutes > 0 ? envMinutes : 15;
-  const { userId, isSystemAdmin, can, canDb, ready, userType, refresh } = usePermissoesStore();
+  const { userId, isSystemAdmin, can, canDb, ready, userType } = usePermissoesStore();
   const [cachedPerms, setCachedPerms] = useState<PermissoesCache | null>(() => initialCache ?? null);
   const [saindo, setSaindo] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -108,8 +108,6 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
   const [currentCompanyId, setCurrentCompanyId] = useState<string | null>(null);
   const [isDesktopViewport, setIsDesktopViewport] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
-  const [updatingPerms, setUpdatingPerms] = useState(false);
-  const [permSyncMsg, setPermSyncMsg] = useState<string | null>(null);
   const [menuPrefs, setMenuPrefs] = useState<MenuPrefsV1>(() =>
     MENU_PREFS_ENABLED ? readMenuPrefs(null) : { v: 1, hidden: [], order: {} }
   );
@@ -468,7 +466,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
           )}
         </span>
       ),
-      canShow: canMenuExact("Agenda"),
+      canShow: canMenuExact("Agenda") && !isDesktopViewport,
     });
     entries.push({
       key: "operacao_todo",
@@ -493,7 +491,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
           )}
         </span>
       ),
-      canShow: canMenuExact("Mural de Recados"),
+      canShow: canMenuExact("Mural de Recados") && !isDesktopViewport,
     });
     entries.push({
       key: "operacao_preferencias",
@@ -1268,22 +1266,6 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
     await executarLogout(true);
   }
 
-  async function handleRefreshPermissionsNow() {
-    try {
-      setUpdatingPerms(true);
-      setPermSyncMsg(null);
-      await refresh();
-      setPermSyncMsg("Permissoes atualizadas.");
-      setTimeout(() => setPermSyncMsg(null), 2500);
-    } catch (err) {
-      console.error("Erro ao atualizar permissoes no menu:", err);
-      setPermSyncMsg("Falha ao atualizar permissoes.");
-      setTimeout(() => setPermSyncMsg(null), 3500);
-    } finally {
-      setUpdatingPerms(false);
-    }
-  }
-
   const cadastrosMenu = [
     { name: "Produtos", href: "/cadastros/produtos", active: "produtos", icon: "pi pi-ticket", label: "Produtos" },
     { name: "Circuitos", href: "/cadastros/circuitos", active: "circuitos", icon: "pi pi-compass", label: "Circuitos" },
@@ -1557,57 +1539,39 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
 
         {/* PERFIL */}
         {menuUserId && !menuIsSystemAdmin && (
-          renderSidebarLinks("Conta", "conta", [
-            { key: "perfil", href: "/perfil", active: "perfil", icon: "pi pi-user", label: "Perfil", locked: true },
-            {
-              key: "perfil-personalizar",
-              href: "/perfil/personalizar",
-              active: "perfil-personalizar",
-              icon: "pi pi-sliders-h",
-              label: "Personalizar",
-              locked: true,
-            },
-          ])
+          <div className="sidebar-mobile-account-only">
+            {renderSidebarLinks("Conta", "conta", [
+              { key: "perfil", href: "/perfil", active: "perfil", icon: "pi pi-user", label: "Perfil", locked: true },
+              {
+                key: "perfil-personalizar",
+                href: "/perfil/personalizar",
+                active: "perfil-personalizar",
+                icon: "pi pi-sliders-h",
+                label: "Personalizar",
+                locked: true,
+              },
+            ])}
+          </div>
         )}
 
         {menuUserId && menuIsSystemAdmin && (
-          renderSidebarLinks("Conta", "conta", [
-            { key: "perfil", href: "/perfil", active: "perfil", icon: "pi pi-user", label: "Perfil", locked: true },
-            {
-              key: "perfil-personalizar",
-              href: "/perfil/personalizar",
-              active: "perfil-personalizar",
-              icon: "pi pi-sliders-h",
-              label: "Personalizar",
-              locked: true,
-            },
-          ])
-        )}
-
-        {menuUserId && (
-          <div>
-            <div className="vtur-sidebar-action-group">
-              <AppButton
-                type="button"
-                variant="secondary"
-                className="sidebar-refresh-perms-btn"
-                block
-                onClick={handleRefreshPermissionsNow}
-                disabled={updatingPerms}
-                icon={`pi pi-sync${updatingPerms ? " pi-spin" : ""}`}
-                title="Atualizar permissoes"
-              >
-                {updatingPerms ? "Atualizando permissoes..." : "Atualizar permissoes"}
-              </AppButton>
-            </div>
-            {permSyncMsg && (
-              <small className="vtur-sidebar-action-note">{permSyncMsg}</small>
-            )}
+          <div className="sidebar-mobile-account-only">
+            {renderSidebarLinks("Conta", "conta", [
+              { key: "perfil", href: "/perfil", active: "perfil", icon: "pi pi-user", label: "Perfil", locked: true },
+              {
+                key: "perfil-personalizar",
+                href: "/perfil/personalizar",
+                active: "perfil-personalizar",
+                icon: "pi pi-sliders-h",
+                label: "Personalizar",
+                locked: true,
+              },
+            ])}
           </div>
         )}
 
         {/* LOGOUT */}
-        <div style={{ marginTop: 20 }}>
+        <div style={{ marginTop: 20 }} className="sidebar-mobile-account-only">
           <div className="vtur-sidebar-action-group">
             <AppButton
               type="button"
