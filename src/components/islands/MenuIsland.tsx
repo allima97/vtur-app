@@ -96,7 +96,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
   const envMinutes = Number(import.meta.env.PUBLIC_AUTO_LOGOUT_MINUTES || "");
   const DEFAULT_LOGOUT_MINUTES =
     Number.isFinite(envMinutes) && envMinutes > 0 ? envMinutes : 15;
-  const { userId, isSystemAdmin, can, canDb, ready, userType } = usePermissoesStore();
+  const { userId, isSystemAdmin, can, canDb, ready, userType, refresh } = usePermissoesStore();
   const [cachedPerms, setCachedPerms] = useState<PermissoesCache | null>(() => initialCache ?? null);
   const [, setSaindo] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -104,6 +104,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
   const [consultoriaBadge, setConsultoriaBadge] = useState(0);
   const [isDesktopViewport, setIsDesktopViewport] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
+  const [refreshingPerms, setRefreshingPerms] = useState(false);
   const [menuPrefs, setMenuPrefs] = useState<MenuPrefsV1>(() =>
     MENU_PREFS_ENABLED ? readMenuPrefs(null) : { v: 1, hidden: [], order: {} }
   );
@@ -229,6 +230,9 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
     canRelatoriosProdutos ||
     canRelatoriosClientes ||
     canRelatoriosRanking;
+  const canSeeAgenda = canMenuExact("Agenda");
+  const canSeeRecados = canMenuExact("Mural de Recados");
+  const canOpenHelp = activePage !== "documentacao";
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1024,6 +1028,17 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
     scheduleTimers(SESSION_EXTENSION_MS);
   };
 
+  const handleRefreshPermissions = useCallback(async () => {
+    try {
+      setRefreshingPerms(true);
+      await refresh();
+    } catch (error) {
+      console.error("Erro ao atualizar permissoes pelo menu mobile:", error);
+    } finally {
+      setRefreshingPerms(false);
+    }
+  }, [refresh]);
+
   const handleActivity = useCallback(() => {
     if (typeof document !== "undefined" && document.visibilityState === "hidden") {
       return;
@@ -1042,13 +1057,6 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       setShowWarning(false);
     };
   }, [handleActivity, scheduleTimers, clearTimers]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const handleOpenMobileMenu = () => setMobileOpen(true);
-    window.addEventListener("sgtur:open-mobile-menu", handleOpenMobileMenu as EventListener);
-    return () => window.removeEventListener("sgtur:open-mobile-menu", handleOpenMobileMenu as EventListener);
-  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1090,29 +1098,25 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
 
   const mobileNavItems: MobileNavItem[] = [];
 
-  if (menuIsSystemAdmin) {
+  const dashboardHref = menuIsSystemAdmin
+    ? "/dashboard/admin"
+    : menuIsMaster
+    ? "/dashboard/master"
+    : menuIsGestor
+    ? "/dashboard/gestor"
+    : "/";
+
+  if (menuIsSystemAdmin || canMenuExact("Dashboard")) {
     mobileNavItems.push({
-      key: "admin-dashboard",
+      key: "dashboard",
       label: "Dashboard",
-      href: "/dashboard/admin",
+      href: dashboardHref,
       icon: "pi pi-compass",
-      active: "admin-dashboard",
+      active: menuIsSystemAdmin ? "admin-dashboard" : "dashboard",
     });
-  } else {
-    if (canMenuExact("Dashboard")) {
-      const dashboardHref = menuIsMaster
-        ? "/dashboard/master"
-        : menuIsGestor
-        ? "/dashboard/gestor"
-        : "/";
-      mobileNavItems.push({
-        key: "dashboard",
-        label: "Dashboard",
-        href: dashboardHref,
-        icon: "pi pi-chart-bar",
-        active: "dashboard",
-      });
-    }
+  }
+
+  if (!menuIsSystemAdmin) {
     if (canMenuExact("Tarefas")) {
       mobileNavItems.push({
         key: "tarefas",
@@ -1141,6 +1145,28 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       });
     }
   }
+
+  if (canOpenHelp) {
+    mobileNavItems.push({
+      key: "ajuda",
+      label: "Ajuda",
+      icon: "pi pi-question-circle",
+      onPress: () => {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("sgtur:open-help"));
+        }
+      },
+    });
+  }
+
+  mobileNavItems.push({
+    key: "sair",
+    label: "Sair",
+    icon: "pi pi-sign-out",
+    onPress: () => {
+      void executarLogout(true);
+    },
+  });
 
   mobileNavItems.push({
     key: "menu",
@@ -1222,6 +1248,74 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
         </AppButton>
 
         {renderMenuSections()}
+
+        <div className="sidebar-mobile-utility-shell">
+          <div className="sidebar-section-title">Acesso rápido</div>
+          <div className="vtur-sidebar-action-group sidebar-mobile-utility-group">
+            {canSeeAgenda && (
+              <AppButton
+                as="a"
+                href="/operacao/agenda"
+                variant="secondary"
+                icon="pi pi-calendar"
+                onClick={handleNavClick}
+              >
+                Agenda
+              </AppButton>
+            )}
+
+            {canSeeRecados && (
+              <AppButton
+                as="a"
+                href="/operacao/recados"
+                variant="secondary"
+                icon="pi pi-comments"
+                onClick={handleNavClick}
+              >
+                Mural de recados
+              </AppButton>
+            )}
+
+            <AppButton
+              type="button"
+              variant="secondary"
+              className="sidebar-refresh-perms-btn"
+              icon={`pi pi-sync${refreshingPerms ? " pi-spin" : ""}`}
+              onClick={() => {
+                void handleRefreshPermissions();
+              }}
+              disabled={refreshingPerms}
+            >
+              {refreshingPerms ? "Atualizando permissões..." : "Atualizar permissões"}
+            </AppButton>
+
+            {canOpenHelp && (
+              <AppButton
+                type="button"
+                variant="secondary"
+                icon="pi pi-question-circle"
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    window.dispatchEvent(new CustomEvent("sgtur:open-help"));
+                  }
+                  closeMobile();
+                }}
+              >
+                Ajuda
+              </AppButton>
+            )}
+
+            <AppButton
+              as="a"
+              href="/perfil/personalizar"
+              variant="secondary"
+              icon="pi pi-sliders-h"
+              onClick={handleNavClick}
+            >
+              Personalizar
+            </AppButton>
+          </div>
+        </div>
       </aside>
       {showWarning && (
         <div
