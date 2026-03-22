@@ -2252,6 +2252,75 @@ function dedupeItems(items: QuoteItemDraft[]) {
   return Array.from(map.values());
 }
 
+function parseIsoDateSafe(value?: string | null) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  const parsed = new Date(`${raw}T12:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function parseTimeToMinutes(value?: string | null) {
+  const match = String(value || "").trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return Number.MAX_SAFE_INTEGER;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return Number.MAX_SAFE_INTEGER;
+  return hour * 60 + minute;
+}
+
+function extractItemStartMinutes(item: QuoteItemDraft) {
+  const raw = (item.raw || {}) as {
+    aereo_import?: { segmentos?: Array<{ hora_saida?: string }>; hora_saida?: string };
+    flight_details?: { directions?: Array<{ legs?: Array<{ departure_time?: string }> }> };
+  };
+
+  const importedSegmentTime = raw.aereo_import?.segmentos?.find((segment) => String(segment?.hora_saida || "").trim())?.hora_saida;
+  if (importedSegmentTime) return parseTimeToMinutes(importedSegmentTime);
+
+  if (raw.aereo_import?.hora_saida) return parseTimeToMinutes(raw.aereo_import.hora_saida);
+
+  const detailTime = raw.flight_details?.directions
+    ?.flatMap((direction) => direction.legs || [])
+    ?.find((leg) => String(leg?.departure_time || "").trim())?.departure_time;
+  if (detailTime) return parseTimeToMinutes(detailTime);
+
+  return Number.MAX_SAFE_INTEGER;
+}
+
+function sortItemsByDate(items: QuoteItemDraft[]) {
+  return items
+    .map((item, idx) => ({ item, idx }))
+    .sort((left, right) => {
+      const leftStart = parseIsoDateSafe(left.item.start_date)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      const rightStart = parseIsoDateSafe(right.item.start_date)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      if (leftStart !== rightStart) return leftStart - rightStart;
+
+      const leftTime = extractItemStartMinutes(left.item);
+      const rightTime = extractItemStartMinutes(right.item);
+      if (leftTime !== rightTime) return leftTime - rightTime;
+
+      const leftEnd = parseIsoDateSafe(left.item.end_date || left.item.start_date)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      const rightEnd = parseIsoDateSafe(right.item.end_date || right.item.start_date)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      if (leftEnd !== rightEnd) return leftEnd - rightEnd;
+
+      const typeCompare = normalizeOcrText(left.item.item_type).localeCompare(
+        normalizeOcrText(right.item.item_type)
+      );
+      if (typeCompare !== 0) return typeCompare;
+
+      const titleCompare = normalizeOcrText(left.item.title).localeCompare(
+        normalizeOcrText(right.item.title)
+      );
+      if (titleCompare !== 0) return titleCompare;
+
+      return left.idx - right.idx;
+    })
+    .map(({ item }, index) => ({
+      ...item,
+      order_index: index,
+    }));
+}
+
 function parseItemsFromFullText(text: string, baseYear: number, pageNumber: number): QuoteItemDraft[] {
   const lines = (text || "")
     .split(/\r?\n/)
@@ -3008,8 +3077,10 @@ export async function extractCvcQuoteFromText(text: string, options: ExtractOpti
     throw new Error("Nenhum item identificado no texto.");
   }
 
-  const total = deduped.reduce((sum, item) => sum + Number(item.total_amount || 0), 0);
-  const averageConfidence = deduped.reduce((sum, item) => sum + Number(item.confidence || 0), 0) / deduped.length;
+  const orderedItems = sortItemsByDate(deduped);
+  const total = orderedItems.reduce((sum, item) => sum + Number(item.total_amount || 0), 0);
+  const averageConfidence =
+    orderedItems.reduce((sum, item) => sum + Number(item.confidence || 0), 0) / orderedItems.length;
   const extractedAt = new Date().toISOString();
 
   const rawJson = {
@@ -3017,7 +3088,7 @@ export async function extractCvcQuoteFromText(text: string, options: ExtractOpti
     extracted_at: extractedAt,
     text_length: text.length,
     raw_text: text,
-    items: deduped.map((item) => ({
+    items: orderedItems.map((item) => ({
       item_type: item.item_type,
       title: item.title,
       product_name: item.product_name,
@@ -3040,7 +3111,7 @@ export async function extractCvcQuoteFromText(text: string, options: ExtractOpti
     currency: "BRL",
     total,
     average_confidence: averageConfidence,
-    items: deduped,
+    items: orderedItems,
     meta: {
       file_name: "texto-colado",
       page_count: 1,
@@ -3049,7 +3120,7 @@ export async function extractCvcQuoteFromText(text: string, options: ExtractOpti
     raw_json: rawJson,
   };
 
-  logs.push({ level: "INFO", message: `Texto importado com ${deduped.length} itens.` });
+  logs.push({ level: "INFO", message: `Texto importado com ${orderedItems.length} itens.` });
 
   return {
     draft,
@@ -3126,9 +3197,10 @@ export async function extractCvcQuoteFromImage(file: File, options: ExtractOptio
     throw new Error("Nenhum item identificado no PDF/imagem.");
   }
 
-  const total = deduped.reduce((sum, item) => sum + Number(item.total_amount || 0), 0);
-  const averageConfidence = deduped.length
-    ? deduped.reduce((sum, item) => sum + Number(item.confidence || 0), 0) / deduped.length
+  const orderedItems = sortItemsByDate(deduped);
+  const total = orderedItems.reduce((sum, item) => sum + Number(item.total_amount || 0), 0);
+  const averageConfidence = orderedItems.length
+    ? orderedItems.reduce((sum, item) => sum + Number(item.confidence || 0), 0) / orderedItems.length
     : 0;
   const extractedAt = new Date().toISOString();
 
@@ -3138,7 +3210,7 @@ export async function extractCvcQuoteFromImage(file: File, options: ExtractOptio
     page_count: 1,
     extracted_at: extractedAt,
     ocr_text: fullOcr.text,
-    items: deduped.map((item) => ({
+    items: orderedItems.map((item) => ({
       item_type: item.item_type,
       title: item.title,
       product_name: item.product_name,
@@ -3161,7 +3233,7 @@ export async function extractCvcQuoteFromImage(file: File, options: ExtractOptio
     currency: "BRL",
     total,
     average_confidence: averageConfidence,
-    items: deduped,
+    items: orderedItems,
     meta: {
       file_name: file.name,
       page_count: 1,
@@ -3309,9 +3381,10 @@ export async function extractCvcQuoteFromPdf(file: File, options: ExtractOptions
   }
 
   const deduped = dedupeItems(extractedItems);
-  const total = deduped.reduce((sum, item) => sum + Number(item.total_amount || 0), 0);
-  const averageConfidence = deduped.length
-    ? deduped.reduce((sum, item) => sum + Number(item.confidence || 0), 0) / deduped.length
+  const orderedItems = sortItemsByDate(deduped);
+  const total = orderedItems.reduce((sum, item) => sum + Number(item.total_amount || 0), 0);
+  const averageConfidence = orderedItems.length
+    ? orderedItems.reduce((sum, item) => sum + Number(item.confidence || 0), 0) / orderedItems.length
     : 0;
 
   if (!deduped.length) {
@@ -3323,7 +3396,7 @@ export async function extractCvcQuoteFromPdf(file: File, options: ExtractOptions
     file_name: file.name,
     page_count: pdf.numPages,
     extracted_at: new Date().toISOString(),
-    items: deduped.map((item) => ({
+    items: orderedItems.map((item) => ({
       item_type: item.item_type,
       title: item.title,
       product_name: item.product_name,
@@ -3346,7 +3419,7 @@ export async function extractCvcQuoteFromPdf(file: File, options: ExtractOptions
     currency: "BRL",
     total,
     average_confidence: averageConfidence,
-    items: deduped,
+    items: orderedItems,
     meta: {
       file_name: file.name,
       page_count: pdf.numPages,

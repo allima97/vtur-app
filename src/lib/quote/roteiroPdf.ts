@@ -7,6 +7,9 @@ import { QuotePdfSettings } from "./quotePdf";
 
 export type RoteiroParaPdf = {
   nome: string;
+  titulo_documento?: string | null;
+  subtitulo_documento?: string | null;
+  orcamento_resumo?: RoteiroOrcamentoResumoPdf | null;
   duracao?: number | null;
   inicio_cidade?: string | null;
   fim_cidade?: string | null;
@@ -99,6 +102,14 @@ export type RoteiroPagamentoPdf = {
   valor_total_com_taxas?: number;
   taxas?: number;
   forma_pagamento?: string;
+};
+
+export type RoteiroOrcamentoResumoPdf = {
+  itens?: number;
+  valor_sem_taxas?: number;
+  taxas?: number;
+  desconto?: number;
+  total?: number;
 };
 
 export type ExportRoteiroPdfOptions = {
@@ -656,6 +667,7 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
   let curY = margin;
 
   const pagamentos = (roteiro.pagamentos || []).filter((p) => hasMeaningfulPagamento(p));
+  const resumoOrcamento = roteiro.orcamento_resumo || null;
 
   const whatsappLink = construirLinkWhatsApp(pdfSettings.whatsapp, (pdfSettings as any).whatsapp_codigo_pais);
 
@@ -886,6 +898,15 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
     }
   }
 
+  function ensureRoomForStandaloneCard(needed: number) {
+    if (activeCardTitle) return;
+    if (curY + needed > contentBottom) {
+      doc.addPage();
+      curY = margin;
+      drawPageHeader();
+    }
+  }
+
   function ensureSpace(needed: number) {
     if (activeCardTitle && activeCardStartY != null) {
       if (curY + needed + cardPaddingBottom > contentBottom) {
@@ -912,6 +933,7 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
 
   function drawPageHeader() {
     const topY = margin;
+    const isFirstPage = doc.getNumberOfPages() === 1;
     const logoSize = headerLogoSize;
     const leftX = margin;
     let textX = leftX;
@@ -970,7 +992,65 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
     doc.setDrawColor(180);
     doc.line(margin, lineY, pageWidth - margin, lineY);
 
-    curY = lineY + 22;
+    if (isFirstPage && resumoOrcamento) {
+      const itemsCount = Math.max(Number(resumoOrcamento.itens || 0), 0);
+      const valorSemTaxas = Number.isFinite(Number(resumoOrcamento.valor_sem_taxas || 0))
+        ? Math.max(Number(resumoOrcamento.valor_sem_taxas || 0), 0)
+        : 0;
+      const taxesTotal = Number.isFinite(Number(resumoOrcamento.taxas || 0))
+        ? Math.max(Number(resumoOrcamento.taxas || 0), 0)
+        : 0;
+      const discountValue = Number.isFinite(Number(resumoOrcamento.desconto || 0))
+        ? Math.max(Number(resumoOrcamento.desconto || 0), 0)
+        : 0;
+      const totalValue = Number.isFinite(Number(resumoOrcamento.total || 0))
+        ? Math.max(Number(resumoOrcamento.total || 0), 0)
+        : Math.max(valorSemTaxas + taxesTotal - discountValue, 0);
+      const hasDiscount = discountValue > 0;
+      const titleText = String(roteiro.titulo_documento || "Orçamento da sua viagem").trim();
+      const dateText = String(roteiro.subtitulo_documento || "").trim();
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(...colors.title);
+      doc.text(titleText, margin, lineY + 26);
+
+      if (dateText) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+        doc.setTextColor(...colors.text);
+        doc.text(dateText, margin, lineY + 44);
+      }
+
+      const boxW = 190;
+      const boxH = hasDiscount ? 90 : 70;
+      const boxX = pageWidth - margin - boxW;
+      const boxY = lineY + 6;
+      doc.setDrawColor(...colors.border);
+      doc.setLineWidth(0.8);
+      doc.roundedRect(boxX, boxY, boxW, boxH, 8, 8);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      const labelX = boxX + 12;
+      const valueX = boxX + boxW - 12;
+      doc.setTextColor(...colors.text);
+      doc.text(`Valor (${itemsCount} produto${itemsCount === 1 ? "" : "s"})`, labelX, boxY + 18);
+      doc.text(formatCurrency(valorSemTaxas), valueX, boxY + 18, { align: "right" });
+      doc.text("Taxas e impostos", labelX, boxY + 34);
+      doc.text(formatCurrency(taxesTotal), valueX, boxY + 34, { align: "right" });
+      if (hasDiscount) {
+        doc.text("Desconto", labelX, boxY + 50);
+        doc.text(formatCurrency(-discountValue), valueX, boxY + 50, { align: "right" });
+      }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      const totalLineY = hasDiscount ? boxY + 72 : boxY + 56;
+      doc.text("Total de", labelX, totalLineY);
+      doc.text(formatCurrency(totalValue), valueX, totalLineY, { align: "right" });
+      curY = Math.max(lineY + 22, boxY + boxH + 18);
+    } else {
+      curY = lineY + 22;
+    }
     doc.setTextColor(...colors.text);
   }
 
@@ -1220,8 +1300,8 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
   }
 
   function drawCenteredTitle() {
-    const title = "Roteiro Personalizado";
-    const subtitle = String(roteiro.nome || "").trim();
+    const title = String(roteiro.titulo_documento || "Roteiro Personalizado").trim();
+    const subtitle = String(roteiro.subtitulo_documento || roteiro.nome || "").trim();
 
     openCard(title, cardPaddingX, { showTitle: false });
 
@@ -1537,7 +1617,9 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
   drawPageHeader();
 
   // Título centralizado (como no modelo)
-  drawCenteredTitle();
+  if (!resumoOrcamento) {
+    drawCenteredTitle();
+  }
 
   // Bloco de resumo textual (cidades / período) em card
   const diasOrdenados = normalizeDiasForPdf(roteiro.dias || []);
@@ -1655,11 +1737,10 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
     const groupedHoteis = groupHoteisByCidadeForPdf(hoteis);
 
     groupedHoteis.forEach((group) => {
-      openCard(`Hotéis Sugeridos - ${group.cidade || "Hospedagem"}`, cardPaddingX, { showTitle: false });
-
       const hotelHeaderFontSize = bodyFontSize;
       const hotelBodyFontSize = bodyFontSize;
-      const tableWidth = pageWidth - margin * 2 - activeCardIndent - 8;
+      const cardIndent = cardPaddingX;
+      const tableWidth = pageWidth - margin * 2 - cardIndent - 8;
       const columnGap = 12;
       const columnsContentWidth = tableWidth - columnGap * 5;
       const columns = [
@@ -1690,6 +1771,32 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
           regime: formatBudgetItemText(h.regime),
         } as const;
       });
+
+      const cityHeadingLines = doc.splitTextToSize(
+        String(group.cidade || "Hospedagem"),
+        pageWidth - margin * 2 - cardIndent - 20
+      );
+      const estimatedHotelRowsHeight = hotelRows.reduce((sum, row) => {
+        const lineCounts = columns.map((column) => {
+          const value = String(row[column.key] || "") || "-";
+          if (hotelNoWrapColumns.has(String(column.key))) return 1;
+          doc.setFont(bodyFont, "normal");
+          doc.setFontSize(hotelBodyFontSize);
+          return doc.splitTextToSize(value, Math.max(column.width - 2, 28)).length || 1;
+        });
+        return sum + Math.max(...lineCounts, 1) * bodyLineHeight + 6;
+      }, 0);
+      const estimatedHotelCardHeight =
+        cardPaddingTop +
+        10 +
+        cityHeadingLines.length * (bodyLineHeight + 1) +
+        10 +
+        (bodyLineHeight + 10) +
+        estimatedHotelRowsHeight +
+        8 +
+        cardPaddingBottom;
+      ensureRoomForStandaloneCard(estimatedHotelCardHeight);
+      openCard(`Hotéis Sugeridos - ${group.cidade || "Hospedagem"}`, cardIndent, { showTitle: false });
 
       const hotelHeaderSegments = columns.map((column) => {
         doc.setFont(bodyFont, "bold");
@@ -1802,11 +1909,10 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
         ? roteiroCitiesLabel
         : (group.cidade || "Serviços");
 
-      openCard(`Passeios e Serviços - ${displayCidade}`, cardPaddingX, { showTitle: false });
       const passeioHeaderFontSize = bodyFontSize;
       const passeioBodyFontSize = bodyFontSize;
-
-      const tableWidth = pageWidth - margin * 2 - activeCardIndent - 8;
+      const cardIndent = cardPaddingX;
+      const tableWidth = pageWidth - margin * 2 - cardIndent - 8;
       const columnGap = 12;
       const columnsContentWidth = tableWidth - columnGap * 2;
       const columns = [
@@ -1826,6 +1932,31 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
           ingressos: formatBudgetItemText(p.ingressos),
         } as const;
       });
+
+      const cityHeadingLines = doc.splitTextToSize(
+        String(displayCidade || "Serviços"),
+        pageWidth - margin * 2 - cardIndent - 20
+      );
+      const estimatedPasseioRowsHeight = passeioRows.reduce((sum, row) => {
+        const lineCounts = columns.map((column) => {
+          const value = String(row[column.key] || "") || "-";
+          doc.setFont(bodyFont, "normal");
+          doc.setFontSize(passeioBodyFontSize);
+          return doc.splitTextToSize(value, Math.max(column.width - 2, 40)).length || 1;
+        });
+        return sum + Math.max(...lineCounts, 1) * bodyLineHeight + 4;
+      }, 0);
+      const estimatedPasseioCardHeight =
+        cardPaddingTop +
+        10 +
+        cityHeadingLines.length * (bodyLineHeight + 1) +
+        10 +
+        (bodyLineHeight + 10) +
+        estimatedPasseioRowsHeight +
+        8 +
+        cardPaddingBottom;
+      ensureRoomForStandaloneCard(estimatedPasseioCardHeight);
+      openCard(`Passeios e Serviços - ${displayCidade}`, cardIndent, { showTitle: false });
 
       const passeioHeaderSegments = columns.map((column) => {
         doc.setFont(bodyFont, "bold");

@@ -1,0 +1,4 @@
+Testing Quick Look thumbnails with files:
+	/Users/allima97/Desktop/orcamento-61e1ba89-6e00-42c4-a80f-75fd7b2c231d-202603220232.pdf
+* /Users/allima97/Desktop/orcamento-61e1ba89-6e00-42c4-a80f-75fd7b2c231d-202603220232.pdf produced one thumbnail
+Done producing thumbnails

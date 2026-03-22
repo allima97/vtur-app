@@ -114,6 +114,58 @@ function formatCurrency(value: number) {
   return formatNumberBR(value, 2);
 }
 
+function parseIsoDateSafe(value?: string | null) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  const parsed = new Date(`${raw}T12:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function parseTimeToMinutes(value?: string | null) {
+  const match = String(value || "").trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return Number.MAX_SAFE_INTEGER;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return Number.MAX_SAFE_INTEGER;
+  return hour * 60 + minute;
+}
+
+function extractItemStartMinutes(item: QuoteItemDraft) {
+  const raw = (item.raw || {}) as {
+    aereo_import?: { segmentos?: Array<{ hora_saida?: string }>; hora_saida?: string };
+    flight_details?: { directions?: Array<{ legs?: Array<{ departure_time?: string }> }> };
+  };
+  const importedSegmentTime = raw.aereo_import?.segmentos?.find((segment) => String(segment?.hora_saida || "").trim())?.hora_saida;
+  if (importedSegmentTime) return parseTimeToMinutes(importedSegmentTime);
+  if (raw.aereo_import?.hora_saida) return parseTimeToMinutes(raw.aereo_import.hora_saida);
+  const detailsTime = raw.flight_details?.directions
+    ?.flatMap((direction) => direction.legs || [])
+    ?.find((leg) => String(leg?.departure_time || "").trim())?.departure_time;
+  if (detailsTime) return parseTimeToMinutes(detailsTime);
+  return Number.MAX_SAFE_INTEGER;
+}
+
+function sortDraftItemsByDate(items: QuoteItemDraft[]) {
+  return items
+    .map((item, idx) => ({ item, idx }))
+    .sort((left, right) => {
+      const leftStart = parseIsoDateSafe(left.item.start_date)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      const rightStart = parseIsoDateSafe(right.item.start_date)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      if (leftStart !== rightStart) return leftStart - rightStart;
+
+      const leftTime = extractItemStartMinutes(left.item);
+      const rightTime = extractItemStartMinutes(right.item);
+      if (leftTime !== rightTime) return leftTime - rightTime;
+
+      const leftEnd = parseIsoDateSafe(left.item.end_date || left.item.start_date)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      const rightEnd = parseIsoDateSafe(right.item.end_date || right.item.start_date)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      if (leftEnd !== rightEnd) return leftEnd - rightEnd;
+
+      return left.idx - right.idx;
+    })
+    .map(({ item }) => item);
+}
+
 const IMPORT_TIPO_DATALIST_ID = "quote-import-tipos-list";
 const IMPORT_CACHE_CIDADES_SCOPE = "quote-import-cidades";
 const IMPORT_CACHE_CIDADES_TTL_MS = 6 * 60 * 60 * 1000;
@@ -764,7 +816,7 @@ export default function QuoteImportIsland() {
         return;
       }
       setImportResult(result);
-      const filteredItems = filtrarItensImportacao(result.draft.items, importMode);
+      const filteredItems = sortDraftItemsByDate(filtrarItensImportacao(result.draft.items, importMode));
       const orderedItems = filteredItems.map((item, index) =>
         normalizeImportedItemText({
           ...item,

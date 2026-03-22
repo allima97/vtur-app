@@ -11,6 +11,7 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import { exportQuotePdfById } from "../../lib/quote/exportQuotePdfClient";
 
 type QuoteRecord = {
   id: string;
@@ -548,7 +549,6 @@ export default function QuoteDetailIsland(props: {
       setExporting(true);
       setExportError(null);
       try {
-        const { exportQuotePdfById } = await import("../../lib/quote/exportQuotePdfClient");
         await exportQuotePdfById({
           quoteId: props.quote.id,
           showItemValues,
