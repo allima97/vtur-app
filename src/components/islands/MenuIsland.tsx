@@ -3,7 +3,6 @@ import { NavList } from "../ui/primer/legacyCompat";
 import { logoutUsuario } from "../../lib/logout";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { MAPA_MODULOS, listarModulosComHeranca } from "../../config/modulos";
-import { supabase } from "../../lib/supabase";
 import {
   getPermissaoFromCache,
   readPermissoesCache,
@@ -99,13 +98,10 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
     Number.isFinite(envMinutes) && envMinutes > 0 ? envMinutes : 15;
   const { userId, isSystemAdmin, can, canDb, ready, userType } = usePermissoesStore();
   const [cachedPerms, setCachedPerms] = useState<PermissoesCache | null>(() => initialCache ?? null);
-  const [saindo, setSaindo] = useState(false);
+  const [, setSaindo] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
   const [consultoriaBadge, setConsultoriaBadge] = useState(0);
-  const [recadosBadge, setRecadosBadge] = useState(0);
-  const [agendaBadge, setAgendaBadge] = useState(0);
-  const [currentCompanyId, setCurrentCompanyId] = useState<string | null>(null);
   const [isDesktopViewport, setIsDesktopViewport] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
   const [menuPrefs, setMenuPrefs] = useState<MenuPrefsV1>(() =>
@@ -453,22 +449,6 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       canShow: canMenuExact("Dashboard"),
     });
     entries.push({
-      key: "operacao_agenda",
-      section: "informativos",
-      href: "/operacao/agenda",
-      active: "operacao_agenda",
-      icon: "pi pi-calendar",
-      label: (
-        <span className="sidebar-link-label">
-          Agenda
-          {agendaBadge > 0 && (
-            <span className="menu-badge menu-badge-pulse">{formatBadge(agendaBadge)}</span>
-          )}
-        </span>
-      ),
-      canShow: canMenuExact("Agenda") && !isDesktopViewport,
-    });
-    entries.push({
       key: "operacao_todo",
       section: "informativos",
       href: "/operacao/todo",
@@ -476,22 +456,6 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       icon: "pi pi-check-circle",
       label: "Tarefas",
       canShow: canMenuExact("Tarefas"),
-    });
-    entries.push({
-      key: "operacao_recados",
-      section: "informativos",
-      href: "/operacao/recados",
-      active: "operacao_recados",
-      icon: "pi pi-comments",
-      label: (
-        <span className="sidebar-link-label">
-          Mural de Recados
-          {recadosBadge > 0 && (
-            <span className="menu-badge">{formatBadge(recadosBadge)}</span>
-          )}
-        </span>
-      ),
-      canShow: canMenuExact("Mural de Recados") && !isDesktopViewport,
     });
     entries.push({
       key: "operacao_preferencias",
@@ -995,7 +959,6 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [mobileOpen]);
 
-  const toggleMobile = () => setMobileOpen((prev) => !prev);
   const toggleDesktopCollapsed = () => {
     if (typeof window === "undefined" || !isDesktopViewport) return;
     setDesktopCollapsed((prev) => {
@@ -1026,8 +989,6 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
     if (typeof window !== "undefined" && window.innerWidth <= 1024) closeMobile();
   };
 
-  type TodoNavTab = "novo" | "agendado" | "em_andamento" | "categorias";
-
   type MobileNavItem = {
     key: string;
     label: string;
@@ -1035,40 +996,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
     onPress?: () => void;
     icon: React.ReactNode;
     active?: string;
-    todoTab?: TodoNavTab;
-    tone?: "blue" | "orange" | "green" | "violet" | "slate";
   };
-
-  const TODO_MOBILE_TAB_STORAGE_KEY = "sgtur_todo_tab";
-  const isTodoMobileNav = activePage === "operacao_todo" && !menuIsSystemAdmin;
-  const [todoNavTab, setTodoNavTab] = useState<TodoNavTab>("novo");
-
-  const setTodoTab = useCallback((tab: TodoNavTab) => {
-    setTodoNavTab(tab);
-    try {
-      window.localStorage.setItem(TODO_MOBILE_TAB_STORAGE_KEY, tab);
-    } catch {}
-    window.dispatchEvent(new CustomEvent("sgtur:todo:setTab", { detail: { tab } }));
-  }, []);
-
-  useEffect(() => {
-    if (!isTodoMobileNav) return;
-    try {
-      const stored = window.localStorage.getItem(TODO_MOBILE_TAB_STORAGE_KEY);
-      if (stored === "novo" || stored === "agendado" || stored === "em_andamento" || stored === "categorias") {
-        setTodoNavTab(stored as TodoNavTab);
-      }
-    } catch {}
-
-    const onTabChanged = (event: Event) => {
-      const tab = (event as CustomEvent).detail?.tab;
-      if (tab === "novo" || tab === "agendado" || tab === "em_andamento" || tab === "categorias") {
-        setTodoNavTab(tab as TodoNavTab);
-      }
-    };
-    window.addEventListener("sgtur:todo:tabChanged", onTabChanged as EventListener);
-    return () => window.removeEventListener("sgtur:todo:tabChanged", onTabChanged as EventListener);
-  }, [isTodoMobileNav]);
 
   const clearTimers = useCallback(() => {
     if (logoutTimeoutRef.current) {
@@ -1117,6 +1045,13 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const handleOpenMobileMenu = () => setMobileOpen(true);
+    window.addEventListener("sgtur:open-mobile-menu", handleOpenMobileMenu as EventListener);
+    return () => window.removeEventListener("sgtur:open-mobile-menu", handleOpenMobileMenu as EventListener);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     const raw = window.localStorage.getItem("consultoria_lembretes_badge");
     const initial = Number(raw || 0);
     if (Number.isFinite(initial)) setConsultoriaBadge(initial);
@@ -1130,142 +1065,6 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
   }, []);
 
   const formatBadge = (count: number) => (count > 99 ? "99+" : String(count));
-
-  const refreshRecadosBadge = useCallback(async () => {
-    if (!menuUserId) {
-      setCurrentCompanyId(null);
-      setRecadosBadge(0);
-      setAgendaBadge(0);
-      return;
-    }
-    try {
-      const resp = await fetch("/api/v1/session/bootstrap");
-      if (!resp.ok) {
-        throw new Error(await resp.text());
-      }
-      const payload = await resp.json();
-      const companyId = payload?.companyId ? String(payload.companyId) : null;
-      const count = Number(payload?.recadosUnread ?? 0);
-      const agendaCount = Number(payload?.agendaToday ?? 0);
-      setCurrentCompanyId(companyId);
-      setRecadosBadge(Number.isFinite(count) ? count : 0);
-      setAgendaBadge(Number.isFinite(agendaCount) ? agendaCount : 0);
-    } catch (error) {
-      console.error("Erro ao atualizar badge de recados:", error);
-      setRecadosBadge(0);
-      setAgendaBadge(0);
-    }
-  }, [menuUserId, setAgendaBadge, setCurrentCompanyId, setRecadosBadge]);
-
-  useEffect(() => {
-    if (!menuUserId) return;
-    refreshRecadosBadge();
-  }, [menuUserId, refreshRecadosBadge]);
-
-  useEffect(() => {
-    if (!menuUserId) return;
-
-    const channel = supabase.channel(`menu-recados-${menuUserId}-${currentCompanyId || "no-company"}`);
-
-    // Privado: novas mensagens direcionadas ao usuário (independente de company).
-    channel.on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "mural_recados",
-        filter: `receiver_id=eq.${menuUserId}`,
-      },
-      refreshRecadosBadge
-    );
-    channel.on(
-      "postgres_changes",
-      {
-        event: "DELETE",
-        schema: "public",
-        table: "mural_recados",
-        filter: `receiver_id=eq.${menuUserId}`,
-      },
-      refreshRecadosBadge
-    );
-
-    // Empresa: mudanças no mural da empresa atual (quando houver company no contexto).
-    if (currentCompanyId) {
-      channel.on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "mural_recados",
-          filter: `company_id=eq.${currentCompanyId}`,
-        },
-        refreshRecadosBadge
-      );
-      channel.on(
-        "postgres_changes",
-        {
-          event: "DELETE",
-          schema: "public",
-          table: "mural_recados",
-          filter: `company_id=eq.${currentCompanyId}`,
-        },
-        refreshRecadosBadge
-      );
-    }
-
-    // Leituras: quando o usuário marca como lido.
-    channel.on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "mural_recados_leituras",
-        filter: `user_id=eq.${menuUserId}`,
-      },
-      refreshRecadosBadge
-    );
-    channel.on(
-      "postgres_changes",
-      {
-        event: "UPDATE",
-        schema: "public",
-        table: "mural_recados_leituras",
-        filter: `user_id=eq.${menuUserId}`,
-      },
-      refreshRecadosBadge
-    );
-
-    channel.subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [currentCompanyId, menuUserId, refreshRecadosBadge]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!menuUserId) return;
-
-    const onFocus = () => refreshRecadosBadge();
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "visible") refreshRecadosBadge();
-    };
-
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    const intervalId = window.setInterval(() => refreshRecadosBadge(), 30000);
-
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-      window.clearInterval(intervalId);
-    };
-  }, [menuUserId, refreshRecadosBadge]);
-
-  async function handleLogout() {
-    await executarLogout(true);
-  }
-
   const cadastrosMenu = [
     { name: "Produtos", href: "/cadastros/produtos", active: "produtos", icon: "pi pi-ticket", label: "Produtos" },
     { name: "Circuitos", href: "/cadastros/circuitos", active: "circuitos", icon: "pi pi-compass", label: "Circuitos" },
@@ -1287,84 +1086,11 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       label: "Fornecedores",
     },
   ];
-  const hasCadastrosSection = canMenuExact("Clientes") || cadastrosMenu.some((item) => canMenuExact(item.name));
-
   const sidebarId = "app-sidebar";
 
-  const renderSidebarLinks = (
-    title: string,
-    sectionKey: string,
-    items: Array<{
-      key: string;
-      href: string;
-      active?: string;
-      icon: React.ReactNode;
-      label: React.ReactNode;
-      locked?: boolean;
-    }>
-  ) => (
-    <div>
-      <div className="sidebar-section-title">{title}</div>
-      <NavList className="vtur-sidebar-nav" aria-label={title}>
-        {items.map((item, index) => {
-          const tooltip = labelToTooltipText(item.label) || item.key;
-          return (
-            <NavList.Item
-              key={item.key}
-              href={item.href}
-              className="vtur-sidebar-nav-item"
-              style={liStyle(sectionKey, item.key, index, Boolean(item.locked))}
-              aria-current={activePage === item.active ? "page" : undefined}
-              aria-label={tooltip}
-              title={tooltip}
-              onClick={handleNavClick}
-            >
-              <NavList.LeadingVisual>{renderMenuIcon(item.icon)}</NavList.LeadingVisual>
-              <span className="sidebar-item-label">{item.label}</span>
-            </NavList.Item>
-          );
-        })}
-      </NavList>
-    </div>
-  );
-
   const mobileNavItems: MobileNavItem[] = [];
-  if (isTodoMobileNav) {
-    mobileNavItems.push(
-      {
-        key: "todo-novo",
-        label: "A Fazer",
-        icon: "pi pi-list",
-        todoTab: "novo",
-        tone: "blue",
-        onPress: () => setTodoTab("novo"),
-      },
-      {
-        key: "todo-agendado",
-        label: "Fazendo",
-        icon: "pi pi-clock",
-        todoTab: "agendado",
-        tone: "orange",
-        onPress: () => setTodoTab("agendado"),
-      },
-      {
-        key: "todo-em-andamento",
-        label: "Feito",
-        icon: "pi pi-check-circle",
-        todoTab: "em_andamento",
-        tone: "green",
-        onPress: () => setTodoTab("em_andamento"),
-      },
-      {
-        key: "todo-categorias",
-        label: "Categorias",
-        icon: "pi pi-tag",
-        todoTab: "categorias",
-        tone: "violet",
-        onPress: () => setTodoTab("categorias"),
-      }
-    );
-  } else if (menuIsSystemAdmin) {
+
+  if (menuIsSystemAdmin) {
     mobileNavItems.push({
       key: "admin-dashboard",
       label: "Dashboard",
@@ -1387,15 +1113,6 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
         active: "dashboard",
       });
     }
-    if (canMenuExact("Agenda")) {
-      mobileNavItems.push({
-        key: "agenda",
-        label: "Agenda",
-        href: "/operacao/agenda",
-        icon: "pi pi-calendar",
-        active: "operacao_agenda",
-      });
-    }
     if (canMenuExact("Tarefas")) {
       mobileNavItems.push({
         key: "tarefas",
@@ -1414,28 +1131,31 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
         active: "vendas",
       });
     }
+    if (canMenuExact("Clientes")) {
+      mobileNavItems.push({
+        key: "clientes",
+        label: "Clientes",
+        href: "/clientes/carteira",
+        icon: "pi pi-users",
+        active: "clientes",
+      });
+    }
   }
+
+  mobileNavItems.push({
+    key: "menu",
+    label: "Menu",
+    icon: "pi pi-bars",
+    onPress: () => setMobileOpen(true),
+  });
 
   return (
     <AppPrimerProvider>
-      <AppButton
-        type="button"
-        variant="ghost"
-        className="sidebar-mobile-trigger"
-        aria-expanded={mobileOpen}
-        aria-controls={sidebarId}
-        onClick={toggleMobile}
-      >
-        <span className="sidebar-mobile-icon" aria-hidden="true">
-          <i className={mobileOpen ? "pi pi-times" : "pi pi-bars"} />
-        </span>
-        <span>{mobileOpen ? "Fechar" : "Menu"}</span>
-      </AppButton>
       <div className={`sidebar-overlay ${mobileOpen ? "visible" : ""}`} onClick={closeMobile} />
 
-      <nav className={`mobile-bottom-nav${isTodoMobileNav ? " todo-nav" : ""}`} aria-label="Atalhos principais">
+      <nav className="mobile-bottom-nav" aria-label="Atalhos principais">
         {mobileNavItems.map((item) => {
-          const isActive = isTodoMobileNav ? item.todoTab === todoNavTab : activePage === item.active;
+          const isActive = activePage === item.active;
           const className = `mobile-bottom-nav-item ${isActive ? "active" : ""}`;
 
           if (item.href) {
@@ -1445,15 +1165,11 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
                 className={className}
                 href={item.href}
                 onClick={handleNavClick}
-                data-tone={item.tone || undefined}
               >
                 <span className="mobile-bottom-nav-icon">
                   {renderMenuIcon(item.icon)}
                   {item.key === "consultoria" && consultoriaBadge > 0 && (
                     <span className="mobile-badge">{formatBadge(consultoriaBadge)}</span>
-                  )}
-                  {item.key === "agenda" && agendaBadge > 0 && (
-                    <span className="mobile-badge mobile-badge-pulse">{formatBadge(agendaBadge)}</span>
                   )}
                 </span>
                 <span className="mobile-bottom-nav-label">{item.label}</span>
@@ -1467,10 +1183,8 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
               type="button"
               variant="ghost"
               className={className}
-              data-tone={item.tone || undefined}
               onClick={() => {
                 item.onPress?.();
-                closeMobile();
               }}
             >
               <span className="mobile-bottom-nav-icon">{renderMenuIcon(item.icon)}</span>
@@ -1478,34 +1192,6 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
             </AppButton>
           );
         })}
-        <AppButton
-          type="button"
-          variant="ghost"
-          className="mobile-bottom-nav-item"
-          onClick={() => {
-            if (typeof window !== "undefined") {
-              window.dispatchEvent(new CustomEvent("sgtur:open-help"));
-            }
-          }}
-        >
-          <span className="mobile-bottom-nav-icon" aria-hidden="true">
-            <i className="pi pi-question-circle" />
-          </span>
-          <span className="mobile-bottom-nav-label">Ajuda</span>
-        </AppButton>
-        <AppButton
-          type="button"
-          variant="ghost"
-          className="mobile-bottom-nav-item"
-          aria-expanded={mobileOpen}
-          aria-controls={sidebarId}
-          onClick={toggleMobile}
-        >
-          <span className="mobile-bottom-nav-icon" aria-hidden="true">
-            <i className="pi pi-bars" />
-          </span>
-          <span className="mobile-bottom-nav-label">Mais</span>
-        </AppButton>
       </nav>
 
       <aside
@@ -1536,57 +1222,6 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
         </AppButton>
 
         {renderMenuSections()}
-
-        {/* PERFIL */}
-        {menuUserId && !menuIsSystemAdmin && (
-          <div className="sidebar-mobile-account-only">
-            {renderSidebarLinks("Conta", "conta", [
-              { key: "perfil", href: "/perfil", active: "perfil", icon: "pi pi-user", label: "Perfil", locked: true },
-              {
-                key: "perfil-personalizar",
-                href: "/perfil/personalizar",
-                active: "perfil-personalizar",
-                icon: "pi pi-sliders-h",
-                label: "Personalizar",
-                locked: true,
-              },
-            ])}
-          </div>
-        )}
-
-        {menuUserId && menuIsSystemAdmin && (
-          <div className="sidebar-mobile-account-only">
-            {renderSidebarLinks("Conta", "conta", [
-              { key: "perfil", href: "/perfil", active: "perfil", icon: "pi pi-user", label: "Perfil", locked: true },
-              {
-                key: "perfil-personalizar",
-                href: "/perfil/personalizar",
-                active: "perfil-personalizar",
-                icon: "pi pi-sliders-h",
-                label: "Personalizar",
-                locked: true,
-              },
-            ])}
-          </div>
-        )}
-
-        {/* LOGOUT */}
-        <div style={{ marginTop: 20 }} className="sidebar-mobile-account-only">
-          <div className="vtur-sidebar-action-group">
-            <AppButton
-              type="button"
-              variant="danger"
-              block
-              onClick={handleLogout}
-              disabled={saindo}
-              icon="pi pi-sign-out"
-              title={saindo ? "Saindo..." : "Sair"}
-            >
-              {saindo ? "Saindo..." : "Sair"}
-            </AppButton>
-          </div>
-        </div>
-
       </aside>
       {showWarning && (
         <div

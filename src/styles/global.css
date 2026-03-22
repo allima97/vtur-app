@@ -1135,10 +1135,14 @@ body {
 /* Ajuda por módulo */
 .app-topbar-actions {
   display: none;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
 }
 
 .app-topbar-action-item {
   position: relative;
+  flex: 0 0 auto;
 }
 
 .app-topbar-badge {
@@ -1158,6 +1162,69 @@ body {
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.28);
 }
 
+.app-topbar-icon-button.vtur-app-button.p-button,
+.app-topbar-icon-button.vtur-app-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: #334155;
+  background: transparent;
+  box-shadow: none;
+  flex: 0 0 auto;
+}
+
+.app-topbar-icon-button.vtur-app-button.p-button:hover:not(:disabled):not(.p-disabled),
+.app-topbar-icon-button.vtur-app-button:hover:not(:disabled):not(.p-disabled) {
+  background: rgba(219, 234, 254, 0.78);
+  border-color: rgba(147, 197, 253, 0.72);
+  color: #1d4ed8;
+}
+
+.app-topbar-icon-button.vtur-app-button.p-button .p-button-icon,
+.app-topbar-icon-button.vtur-app-button .p-button-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 1rem;
+  margin: 0 !important;
+  font-size: 1rem;
+  line-height: 1;
+  text-align: center;
+}
+
+.app-topbar-icon-button.vtur-app-button.p-button .p-button-icon::before,
+.app-topbar-icon-button.vtur-app-button .p-button-icon::before {
+  width: 100%;
+  line-height: 1;
+  text-align: center;
+}
+
+.app-topbar-icon-button.vtur-app-button.p-button.p-button-icon-only .p-button-label,
+.app-topbar-icon-button.vtur-app-button.p-button .p-button-label:empty {
+  display: none;
+}
+
+.app-topbar-icon-button-danger.vtur-app-button.p-button:hover:not(:disabled):not(.p-disabled),
+.app-topbar-icon-button-danger.vtur-app-button:hover:not(:disabled):not(.p-disabled) {
+  background: rgba(254, 226, 226, 0.9);
+  border-color: rgba(248, 113, 113, 0.58);
+  color: #dc2626;
+}
+
+.app-topbar-menu-button {
+  display: none !important;
+}
+
 .app-topbar-avatar-button {
   width: 40px;
   height: 40px;
@@ -1170,6 +1237,7 @@ body {
   overflow: hidden;
   text-decoration: none;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  flex: 0 0 auto;
 }
 
 .app-topbar-avatar-button:hover {
@@ -1283,11 +1351,44 @@ body {
   }
 
   .app-topbar-actions {
-    display: none !important;
+    display: inline-flex !important;
+    flex: 1 1 auto;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-left: 0.5rem;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
 
-  .sidebar-mobile-account-only {
-    display: block;
+  .app-topbar-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app-topbar-menu-button {
+    display: inline-flex !important;
+  }
+
+  .app-topbar-icon-button.vtur-app-button.p-button,
+  .app-topbar-icon-button.vtur-app-button,
+  .app-topbar-avatar-button {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  body.sakai-theme .app-topbar {
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-left: calc(1rem + env(safe-area-inset-left));
+    padding-right: calc(1rem + env(safe-area-inset-right));
+  }
+
+  body.sakai-theme .app-topbar-logo {
+    flex: 0 0 auto;
+    min-width: 0;
   }
 
   .vtur-sales-discount-mobile-row {
@@ -1355,70 +1456,12 @@ body {
 
   .app-topbar-actions {
     display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
   }
+}
 
-  .app-topbar-icon-button.vtur-app-button.p-button,
-  .app-topbar-icon-button.vtur-app-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0;
-    width: 40px;
-    height: 40px;
-    min-width: 40px;
-    min-height: 40px;
-    padding: 0;
-    border: 1px solid transparent;
-    border-radius: 999px;
-    color: #334155;
-    background: transparent;
-    box-shadow: none;
-  }
-
-  .app-topbar-icon-button.vtur-app-button.p-button:hover:not(:disabled):not(.p-disabled),
-  .app-topbar-icon-button.vtur-app-button:hover:not(:disabled):not(.p-disabled) {
-    background: rgba(219, 234, 254, 0.78);
-    border-color: rgba(147, 197, 253, 0.72);
-    color: #1d4ed8;
-  }
-
-  .app-topbar-icon-button.vtur-app-button.p-button .p-button-icon,
-  .app-topbar-icon-button.vtur-app-button .p-button-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1rem;
-    height: 1rem;
-    flex: 0 0 1rem;
-    margin: 0 !important;
-    font-size: 1rem;
-    line-height: 1;
-    text-align: center;
-  }
-
-  .app-topbar-icon-button.vtur-app-button.p-button .p-button-icon::before,
-  .app-topbar-icon-button.vtur-app-button .p-button-icon::before {
-    width: 100%;
-    line-height: 1;
-    text-align: center;
-  }
-
-  .app-topbar-icon-button.vtur-app-button.p-button.p-button-icon-only .p-button-label,
-  .app-topbar-icon-button.vtur-app-button.p-button .p-button-label:empty {
+@media (max-width: 640px) {
+  body.sakai-theme .app-topbar-logo span {
     display: none;
-  }
-
-  .app-topbar-icon-button-danger.vtur-app-button.p-button:hover:not(:disabled):not(.p-disabled),
-  .app-topbar-icon-button-danger.vtur-app-button:hover:not(:disabled):not(.p-disabled) {
-    background: rgba(254, 226, 226, 0.9);
-    border-color: rgba(248, 113, 113, 0.58);
-    color: #dc2626;
-  }
-
-  .sidebar-mobile-account-only {
-    display: none !important;
   }
 }
 
