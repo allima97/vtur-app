@@ -2284,9 +2284,122 @@ input[type="radio"] {
   overflow-wrap: anywhere;
 }
 
+.roteiro-visual-page {
+  width: 100%;
+  overflow-x: clip;
+}
+
+.roteiro-visual-content {
+  width: 100%;
+  margin: 0;
+  padding: 0 0 2rem;
+  box-sizing: border-box;
+}
+
+.roteiro-visual-section {
+  width: 100%;
+}
+
+.roteiro-visual-section .vtur-app-card-body {
+  display: grid;
+  gap: 16px;
+}
+
+.roteiro-visual-summary-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.roteiro-visual-summary-item {
+  justify-items: flex-start;
+  text-align: left;
+  align-content: start;
+  min-height: 110px;
+}
+
+.roteiro-visual-summary-item strong {
+  font-size: 1.08rem;
+  line-height: 1.35;
+}
+
+.roteiro-visual-title-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.roteiro-visual-table-shell {
+  width: 100%;
+}
+
+.roteiro-visual-flight-mobile-list {
+  display: none;
+}
+
+.roteiro-visual-subcard {
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 18px;
+  padding: 16px 18px;
+  background: rgba(248, 250, 252, 0.88);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.roteiro-visual-include-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+}
+
+.roteiro-visual-include-grid > .roteiro-visual-subcard {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .roteiro-visual-include-grid.is-split {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.roteiro-visual-subcard-title {
+  color: var(--vtur-primer-ink);
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.roteiro-visual-flight-card {
+  display: grid;
+  gap: 12px;
+}
+
+.roteiro-visual-flight-route {
+  color: var(--vtur-primer-ink);
+  font-size: 0.94rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.roteiro-visual-flight-fields {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.roteiro-visual-flight-field {
+  display: grid;
+  gap: 4px;
+}
+
+.roteiro-visual-flight-field strong {
+  color: var(--vtur-primer-ink);
+  font-size: 0.96rem;
+  line-height: 1.35;
+}
+
 .roteiro-visual-circuit-panel {
   border-top: none !important;
-  padding: 0 30px 10px !important;
+  padding: 0 !important;
+  gap: 0;
 }
 
 .roteiro-visual-circuit-days-list {
@@ -2294,13 +2407,30 @@ input[type="radio"] {
 }
 
 .roteiro-visual-circuit-day {
-  padding: 20px 30px !important;
+  padding: 18px 20px !important;
+  background: rgba(248, 250, 252, 0.88);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
 .roteiro-visual-circuit-day-content {
   width: 100%;
-  max-width: calc(100% - 140px);
-  margin-right: auto;
+  max-width: 100%;
+  margin-right: 0;
+}
+
+.roteiro-visual-circuit-day-title {
+  display: block;
+  color: var(--vtur-primer-ink);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.roteiro-visual-circuit-date {
+  margin-top: 4px;
+  color: var(--vtur-primer-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .roteiro-visual-circuit-copy {
@@ -2309,31 +2439,85 @@ input[type="radio"] {
   text-align: left;
 }
 
+.roteiro-visual-circuit-copy-stack {
+  margin-top: 12px;
+  display: grid;
+  gap: 6px;
+}
+
 .roteiro-visual-circuit-day p {
   overflow-wrap: break-word;
   line-height: 1.6;
 }
 
 .roteiro-visual-circuit-paragraph {
-  padding-right: 84px !important;
+  padding-right: 0 !important;
   box-sizing: border-box;
 }
 
 @media (max-width: 640px) {
+  .roteiro-visual-content {
+    padding-bottom: 1.5rem;
+  }
+
+  .roteiro-visual-section .vtur-app-card-header {
+    margin-bottom: 14px;
+  }
+
+  .roteiro-visual-section .vtur-app-card-body {
+    gap: 14px;
+  }
+
   .roteiro-visual-circuit-panel {
-    padding: 0 20px 8px !important;
+    gap: 0;
   }
 
-  .roteiro-visual-circuit-day {
-    padding: 16px 20px !important;
+  .roteiro-visual-table-shell {
+    overflow: visible !important;
   }
 
-  .roteiro-visual-circuit-day-content {
-    max-width: 100%;
+  .roteiro-visual-mobile-table {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .roteiro-visual-mobile-table.hotel-resumo-table,
+  .roteiro-visual-mobile-table.passeio-resumo-table {
+    table-layout: auto;
+  }
+
+  .roteiro-visual-mobile-table td {
+    font-size: 0.92rem;
+  }
+
+  .roteiro-visual-flight-desktop {
+    display: none !important;
+  }
+
+  .roteiro-visual-flight-mobile-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .roteiro-visual-flight-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .roteiro-visual-circuit-paragraph {
     padding-right: 0 !important;
+  }
+
+  .roteiro-visual-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .roteiro-visual-summary-item {
+    min-height: auto;
+  }
+
+  .roteiro-visual-subcard,
+  .roteiro-visual-circuit-day {
+    padding: 16px 18px !important;
   }
 }
 
