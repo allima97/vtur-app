@@ -2440,7 +2440,7 @@ function toLineChartConfig(
                 <AppButton
                   type="button"
                   variant="secondary"
-                  className="btn-calculator-trigger"
+                  className="vtur-calculator-trigger"
                   onClick={() => setShowCalculator(true)}
                   aria-label="Calculadora"
                   title="Calculadora"

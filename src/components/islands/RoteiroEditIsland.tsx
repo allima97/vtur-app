@@ -657,7 +657,7 @@ function RowActions({
           type="button"
           onClick={onUp}
           variant="ghost"
-          className="btn-icon vtur-table-action roteiro-action-btn"
+          className="icon-action-btn vtur-table-action roteiro-action-btn"
           icon="pi pi-arrow-up"
           title="Subir"
           aria-label="Subir"
@@ -666,7 +666,7 @@ function RowActions({
           type="button"
           onClick={onDown}
           variant="ghost"
-          className="btn-icon vtur-table-action roteiro-action-btn"
+          className="icon-action-btn vtur-table-action roteiro-action-btn"
           icon="pi pi-arrow-down"
           title="Descer"
           aria-label="Descer"
@@ -675,7 +675,7 @@ function RowActions({
           type="button"
           onClick={onAdd}
           variant="ghost"
-          className="btn-icon vtur-table-action roteiro-action-btn"
+          className="icon-action-btn vtur-table-action roteiro-action-btn"
           icon="pi pi-plus"
           title="Adicionar abaixo"
           aria-label="Adicionar abaixo"
@@ -684,7 +684,7 @@ function RowActions({
           type="button"
           onClick={onDelete}
           variant="danger"
-          className="btn-icon danger vtur-table-action roteiro-action-btn"
+          className="icon-action-btn danger vtur-table-action roteiro-action-btn"
           icon="pi pi-trash"
           title="Excluir"
           aria-label="Excluir"
@@ -2245,9 +2245,10 @@ export default function RoteiroEditIsland({ roteiroId, roteiro, duplicateFromId 
 
           <div className="roteiro-tab-grid" role="tablist" aria-label="Seções do roteiro">
             {ABAS.map((aba) => (
-              <button
+              <AppButton
                 key={aba.id}
                 type="button"
+                variant="ghost"
                 onClick={() => setAbaAtiva(aba.id)}
                 className={`roteiro-tab-card ${abaAtiva === aba.id ? "is-active" : ""}`}
                 aria-pressed={abaAtiva === aba.id}
@@ -2262,10 +2263,11 @@ export default function RoteiroEditIsland({ roteiroId, roteiro, duplicateFromId 
                   </span>
                   <span className="roteiro-tab-card-hint">{aba.hint}</span>
                 </span>
-              </button>
+              </AppButton>
             ))}
-            <button
+            <AppButton
               type="button"
+              variant="ghost"
               className="roteiro-tab-card roteiro-tab-card-quick"
               onClick={handleQuickOpenSection}
             >
@@ -2278,7 +2280,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro, duplicateFromId 
                 </span>
                 <span className="roteiro-tab-card-hint">Leva você para a primeira seção ainda vazia.</span>
               </span>
-            </button>
+            </AppButton>
           </div>
         </section>
 
@@ -3102,10 +3104,10 @@ export default function RoteiroEditIsland({ roteiroId, roteiro, duplicateFromId 
                   />
                 </div>
                 <div className="roteiro-dia-actions vtur-table-actions">
-                  <AppButton type="button" variant="ghost" className="btn-icon vtur-table-action roteiro-action-btn" icon="pi pi-arrow-up" onClick={() => diaOps.moveUp(i)} title="Subir" aria-label="Subir" />
-                  <AppButton type="button" variant="ghost" className="btn-icon vtur-table-action roteiro-action-btn" icon="pi pi-arrow-down" onClick={() => diaOps.moveDown(i)} title="Descer" aria-label="Descer" />
-                  <AppButton type="button" variant="ghost" className="btn-icon vtur-table-action roteiro-action-btn" icon="pi pi-plus" onClick={() => diaOps.add(i)} title="Adicionar" aria-label="Adicionar" />
-                  <AppButton type="button" variant="danger" className="btn-icon danger vtur-table-action roteiro-action-btn" icon="pi pi-trash" onClick={() => diaOps.remove(i)} title="Excluir" aria-label="Excluir" />
+                  <AppButton type="button" variant="ghost" className="icon-action-btn vtur-table-action roteiro-action-btn" icon="pi pi-arrow-up" onClick={() => diaOps.moveUp(i)} title="Subir" aria-label="Subir" />
+                  <AppButton type="button" variant="ghost" className="icon-action-btn vtur-table-action roteiro-action-btn" icon="pi pi-arrow-down" onClick={() => diaOps.moveDown(i)} title="Descer" aria-label="Descer" />
+                  <AppButton type="button" variant="ghost" className="icon-action-btn vtur-table-action roteiro-action-btn" icon="pi pi-plus" onClick={() => diaOps.add(i)} title="Adicionar" aria-label="Adicionar" />
+                  <AppButton type="button" variant="danger" className="icon-action-btn danger vtur-table-action roteiro-action-btn" icon="pi pi-trash" onClick={() => diaOps.remove(i)} title="Excluir" aria-label="Excluir" />
                 </div>
               </div>
             ))}
@@ -3306,9 +3308,11 @@ export default function RoteiroEditIsland({ roteiroId, roteiro, duplicateFromId 
                               return (
                                 <tr key={`cat-${categoria}`} style={{ borderBottom: "1px solid #f1f5f9" }}>
                                   <td style={{ padding: "0.65rem", fontSize: 13, color: active ? "#1d4ed8" : "#334155", fontWeight: active ? 700 : 500 }}>
-                                    <button
+                                    <AppButton
                                       type="button"
+                                      variant="ghost"
                                       onClick={() => setPagamentoPresetCategoria(categoria)}
+                                      aria-pressed={active}
                                       style={{
                                         border: "none",
                                         background: "transparent",
@@ -3316,17 +3320,21 @@ export default function RoteiroEditIsland({ roteiroId, roteiro, duplicateFromId 
                                         fontWeight: "inherit",
                                         cursor: "pointer",
                                         padding: 0,
+                                        minHeight: "auto",
+                                        minWidth: 0,
+                                        borderRadius: 0,
+                                        justifyContent: "flex-start",
                                       }}
                                     >
                                       {categoria}
-                                    </button>
+                                    </AppButton>
                                   </td>
                                   <td style={{ padding: "0.65rem", textAlign: "center" }}>
                                     <div className="action-buttons action-buttons-center roteiro-row-actions" style={{ justifyContent: "center" }}>
                                       <AppButton
                                         type="button"
                                         variant="ghost"
-                                        className="btn-icon vtur-table-action roteiro-action-btn"
+                                        className="icon-action-btn vtur-table-action roteiro-action-btn"
                                         icon="pi pi-pencil"
                                         onClick={() => handleEditarPagamentoCategoria(categoria)}
                                         title={`Editar categoria ${categoria}`}
@@ -3335,7 +3343,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro, duplicateFromId 
                                       <AppButton
                                         type="button"
                                         variant="danger"
-                                        className="btn-icon danger vtur-table-action roteiro-action-btn"
+                                        className="icon-action-btn danger vtur-table-action roteiro-action-btn"
                                         icon="pi pi-trash"
                                         onClick={() => handleExcluirPagamentoCategoria(categoria)}
                                         title={`Excluir categoria ${categoria}`}
@@ -3426,7 +3434,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro, duplicateFromId 
                                   <AppButton
                                     type="button"
                                     variant="ghost"
-                                    className="btn-icon vtur-table-action roteiro-action-btn"
+                                    className="icon-action-btn vtur-table-action roteiro-action-btn"
                                     icon="pi pi-pencil"
                                     onClick={() => handleEditarFormaPagamentoCategoriaAtual(forma)}
                                     title={`Editar forma ${forma}`}
@@ -3435,7 +3443,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro, duplicateFromId 
                                   <AppButton
                                     type="button"
                                     variant="danger"
-                                    className="btn-icon danger vtur-table-action roteiro-action-btn"
+                                    className="icon-action-btn danger vtur-table-action roteiro-action-btn"
                                     icon="pi pi-trash"
                                     onClick={() => handleExcluirFormaPagamentoCategoriaAtual(forma)}
                                     title={`Excluir forma ${forma}`}

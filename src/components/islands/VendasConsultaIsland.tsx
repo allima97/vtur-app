@@ -1910,9 +1910,16 @@ export default function VendasConsultaIsland() {
                   Detalhes da venda
                 </div>
               </div>
-              <button className="btn-ghost" onClick={() => setModalVenda(null)}>
+              <AppButton
+                type="button"
+                variant="ghost"
+                onClick={() => setModalVenda(null)}
+                aria-label="Fechar detalhes da venda"
+                title="Fechar"
+                style={{ minWidth: 36, minHeight: 36, padding: 0, borderRadius: 10 }}
+              >
                 ✕
-              </button>
+              </AppButton>
             </div>
 
             <div className="modal-body vtur-venda-modal-body" style={{ overflowX: "auto" }}>

@@ -1617,7 +1617,7 @@ body {
   margin: 0 !important;
 }
 
-.btn-calculator-trigger {
+:is(.btn-calculator-trigger, .vtur-calculator-trigger) {
   width: 44px;
   min-width: 44px;
   height: 44px;
@@ -1630,7 +1630,7 @@ body {
   flex-shrink: 0;
 }
 
-.btn-calculator-trigger.vtur-app-button {
+:is(.btn-calculator-trigger, .vtur-calculator-trigger).vtur-app-button {
   border-radius: 12px !important;
   display: inline-flex !important;
   align-items: center !important;
@@ -1640,16 +1640,16 @@ body {
   box-shadow: none !important;
 }
 
-.btn-calculator-trigger.vtur-app-button .p-button-icon,
-.btn-calculator-trigger .pi {
+:is(.btn-calculator-trigger, .vtur-calculator-trigger).vtur-app-button .p-button-icon,
+:is(.btn-calculator-trigger, .vtur-calculator-trigger) .pi {
   font-size: 1.2rem;
   line-height: 1;
   margin: 0 !important;
 }
 
-.btn-calculator-trigger.vtur-app-button:hover:not(:disabled):not(.p-disabled),
-.btn-calculator-trigger.vtur-app-button:focus-visible,
-.btn-calculator-trigger.vtur-app-button:active:not(:disabled):not(.p-disabled) {
+:is(.btn-calculator-trigger, .vtur-calculator-trigger).vtur-app-button:hover:not(:disabled):not(.p-disabled),
+:is(.btn-calculator-trigger, .vtur-calculator-trigger).vtur-app-button:focus-visible,
+:is(.btn-calculator-trigger, .vtur-calculator-trigger).vtur-app-button:active:not(:disabled):not(.p-disabled) {
   border-color: transparent !important;
   background: transparent !important;
   box-shadow: none !important;
@@ -3237,6 +3237,9 @@ input[type="radio"] {
     padding: 10px 14px;
   }
 
+  .vtur-calculator-trigger.vtur-app-button,
+  .mobile-stack-buttons .vtur-calculator-trigger.vtur-app-button,
+  .mobile-actionbar .vtur-calculator-trigger.vtur-app-button,
   .btn-calculator-trigger.vtur-app-button,
   .mobile-stack-buttons .btn-calculator-trigger.vtur-app-button,
   .mobile-actionbar .btn-calculator-trigger.vtur-app-button {

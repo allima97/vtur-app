@@ -731,7 +731,7 @@ a.vtur-app-button:visited {
 }
 
 @media (min-width: 640px) {
-  .vtur-dashboard-toolbar-actions .btn-calculator-trigger.vtur-app-button {
+  .vtur-dashboard-toolbar-actions :is(.btn-calculator-trigger, .vtur-calculator-trigger).vtur-app-button {
     width: 42px;
     min-width: 42px;
     height: 42px;

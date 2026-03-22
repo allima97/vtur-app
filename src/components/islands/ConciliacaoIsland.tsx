@@ -2139,60 +2139,66 @@ export default function ConciliacaoIsland() {
           </div>
 
           <div className="vtur-quote-summary-grid" style={{ marginTop: 16 }}>
-            <button
+            <AppButton
               type="button"
+              variant="ghost"
               className={`vtur-quote-summary-item vtur-quote-summary-action${atalhoAtivo === "importados" ? " active" : ""}`}
               disabled={loadingResumo || precisaEmpresaMaster}
               onClick={() => abrirAtalho("importados")}
             >
               <span className="vtur-quote-summary-label">Importados</span>
               <strong>{loadingResumo ? "..." : resumoTotais.importados || 0}</strong>
-            </button>
-            <button
+            </AppButton>
+            <AppButton
               type="button"
+              variant="ghost"
               className={`vtur-quote-summary-item vtur-quote-summary-action${atalhoAtivo === "pendentes_conciliacao" ? " active" : ""}`}
               disabled={loadingResumo || precisaEmpresaMaster}
               onClick={() => abrirAtalho("pendentes_conciliacao")}
             >
               <span className="vtur-quote-summary-label">Pendentes conciliação</span>
               <strong>{loadingResumo ? "..." : resumoTotais.pendentesConciliacao || 0}</strong>
-            </button>
-            <button
+            </AppButton>
+            <AppButton
               type="button"
+              variant="ghost"
               className={`vtur-quote-summary-item vtur-quote-summary-action${atalhoAtivo === "dias_pendentes_importacao" ? " active" : ""}`}
               disabled={loadingResumo || precisaEmpresaMaster}
               onClick={() => abrirAtalho("dias_pendentes_importacao")}
             >
               <span className="vtur-quote-summary-label">Dias pendentes importação</span>
               <strong>{loadingResumo ? "..." : resumoTotais.pendentesImportacao || 0}</strong>
-            </button>
-            <button
+            </AppButton>
+            <AppButton
               type="button"
+              variant="ghost"
               className={`vtur-quote-summary-item vtur-quote-summary-action${atalhoAtivo === "pendentes_ranking" ? " active" : ""}`}
               disabled={loadingResumo || precisaEmpresaMaster}
               onClick={() => abrirAtalho("pendentes_ranking")}
             >
               <span className="vtur-quote-summary-label">Pendentes ranking</span>
               <strong>{loadingResumo ? "..." : resumoTotais.pendentesRanking || 0}</strong>
-            </button>
-            <button
+            </AppButton>
+            <AppButton
               type="button"
+              variant="ghost"
               className={`vtur-quote-summary-item vtur-quote-summary-action${atalhoAtivo === "conciliados_sistema" ? " active" : ""}`}
               disabled={loadingResumo || precisaEmpresaMaster}
               onClick={() => abrirAtalho("conciliados_sistema")}
             >
               <span className="vtur-quote-summary-label">Conciliados sist.</span>
               <strong>{loadingResumo ? "..." : resumoTotais.conciliadosSistema || 0}</strong>
-            </button>
-            <button
+            </AppButton>
+            <AppButton
               type="button"
+              variant="ghost"
               className={`vtur-quote-summary-item vtur-quote-summary-action${atalhoAtivo === "atribuidos_ranking" ? " active" : ""}`}
               disabled={loadingResumo || precisaEmpresaMaster}
               onClick={() => abrirAtalho("atribuidos_ranking")}
             >
               <span className="vtur-quote-summary-label">Atribuídos ranking</span>
               <strong>{loadingResumo ? "..." : resumoTotais.atribuidosRanking || 0}</strong>
-            </button>
+            </AppButton>
           </div>
 
           <div className="vtur-conciliacao-focus-strip" style={{ marginTop: 16 }}>
@@ -2241,9 +2247,10 @@ export default function ConciliacaoIsland() {
           {navSections.map((section) => {
             const active = secaoAtiva === section.id;
             return (
-              <button
+              <AppButton
                 key={section.id}
                 type="button"
+                variant="ghost"
                 className={`vtur-conciliacao-nav-card${active ? " active" : ""}`}
                 aria-pressed={active}
                 onClick={() => {
@@ -2254,7 +2261,7 @@ export default function ConciliacaoIsland() {
                 <span className="vtur-quote-summary-label">{section.label}</span>
                 <strong>{section.value}</strong>
                 <span className="vtur-conciliacao-nav-hint">{section.hint}</span>
-              </button>
+              </AppButton>
             );
           })}
         </div>
@@ -2370,9 +2377,10 @@ export default function ConciliacaoIsland() {
                       const dayNumber = cell.date ? Number(cell.date.slice(-2)) : "";
                       const canFilter = Boolean(cell.item?.date);
                       return (
-                        <button
+                        <AppButton
                           key={cell.date || `empty-${index}`}
                           type="button"
+                          variant="ghost"
                           className={`vtur-conciliacao-calendar-day ${tone}`}
                           disabled={!canFilter}
                           title={cell.date ? `${formatDate(cell.date)} • ${getResumoDiaLabel(cell.item)}` : ""}
@@ -2397,7 +2405,7 @@ export default function ConciliacaoIsland() {
                                 : ""}
                             </span>
                           ) : null}
-                        </button>
+                        </AppButton>
                       );
                     })}
                   </div>
@@ -2406,30 +2414,33 @@ export default function ConciliacaoIsland() {
                 <div className="vtur-conciliacao-pending-card">
                   <h4>Dias pendentes no mês</h4>
                   <div className="vtur-conciliacao-pending-chips">
-                    <button
+                    <AppButton
                       type="button"
+                      variant="ghost"
                       className="vtur-conciliacao-pending-chip importacao"
                       onClick={() => setShowPendingDetails(true)}
                     >
                       <strong>Importação</strong>
                       <span>{formatPendingDayList(diasPendentesImportacao)}</span>
-                    </button>
-                    <button
+                    </AppButton>
+                    <AppButton
                       type="button"
+                      variant="ghost"
                       className="vtur-conciliacao-pending-chip conciliacao"
                       onClick={() => setShowPendingDetails(true)}
                     >
                       <strong>Conciliação</strong>
                       <span>{formatPendingDayList(diasPendentesConciliacao)}</span>
-                    </button>
-                    <button
+                    </AppButton>
+                    <AppButton
                       type="button"
+                      variant="ghost"
                       className="vtur-conciliacao-pending-chip ranking"
                       onClick={() => setShowPendingDetails(true)}
                     >
                       <strong>Ranking</strong>
                       <span>{formatPendingDayList(diasPendentesRanking)}</span>
-                    </button>
+                    </AppButton>
                   </div>
 
                   <div className="vtur-conciliacao-pending-actions">
@@ -3091,7 +3102,7 @@ export default function ConciliacaoIsland() {
                         <AppButton
                           type="button"
                           variant="ghost"
-                          className="btn-icon vtur-table-action"
+                          className="icon-action-btn vtur-table-action"
                           icon="pi pi-pencil"
                           title="Editar"
                           aria-label="Editar"
@@ -3102,7 +3113,7 @@ export default function ConciliacaoIsland() {
                         <AppButton
                           type="button"
                           variant="ghost"
-                          className="btn-icon vtur-table-action"
+                          className="icon-action-btn vtur-table-action"
                           icon={rowSaving ? "pi pi-spin pi-spinner" : "pi pi-save"}
                           title={rowSaving ? "Salvando" : "Salvar"}
                           aria-label={rowSaving ? "Salvando" : "Salvar"}
@@ -3113,7 +3124,7 @@ export default function ConciliacaoIsland() {
                       <AppButton
                         type="button"
                         variant="danger"
-                        className="btn-icon vtur-table-action"
+                        className="icon-action-btn vtur-table-action"
                         icon={deletingItemId === row.id ? "pi pi-spin pi-spinner" : "pi pi-trash"}
                         title={
                           row.conciliado

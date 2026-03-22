@@ -865,7 +865,7 @@ export default function ParametrosSistemaIsland() {
                                 <AppButton
                                   type="button"
                                   variant="ghost"
-                                  className="btn-icon vtur-table-action"
+                                  className="icon-action-btn vtur-table-action"
                                   onClick={() =>
                                     setEditableConciliacaoTiers((prev) => ({
                                       ...prev,
@@ -880,7 +880,7 @@ export default function ParametrosSistemaIsland() {
                                 <AppButton
                                   type="button"
                                   variant="danger"
-                                  className="btn-icon vtur-table-action"
+                                  className="icon-action-btn vtur-table-action"
                                   onClick={() => removeConciliacaoTier(index)}
                                   disabled={bloqueado}
                                   icon="pi pi-trash"
@@ -1238,7 +1238,7 @@ export default function ParametrosSistemaIsland() {
                                                 <AppButton
                                                   type="button"
                                                   variant="ghost"
-                                                  className="btn-icon vtur-table-action"
+                                                  className="icon-action-btn vtur-table-action"
                                                   onClick={() =>
                                                     setEditableBandTiers((prev) => ({
                                                       ...prev,
@@ -1253,7 +1253,7 @@ export default function ParametrosSistemaIsland() {
                                                 <AppButton
                                                   type="button"
                                                   variant="danger"
-                                                  className="btn-icon vtur-table-action"
+                                                  className="icon-action-btn vtur-table-action"
                                                   onClick={() => removeConciliacaoBandTier(band.faixa_loja, index)}
                                                   disabled={bloqueado || !params.conciliacao_regra_ativa || !band.ativo}
                                                   icon="pi pi-trash"

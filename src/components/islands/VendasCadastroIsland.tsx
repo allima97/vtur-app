@@ -1835,7 +1835,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
               <AppButton
                 type="button"
                 variant="secondary"
-                className="btn-calculator-trigger vtur-sales-recibos-calculator"
+                className="vtur-calculator-trigger vtur-sales-recibos-calculator"
                 onClick={() => setShowCalculator(true)}
                 aria-label="Calculadora"
                 title="Calculadora"
