@@ -14,7 +14,7 @@ PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_yO4zM8WFfmRTZKtBG1PaHw_9pLyVXMh"
 PUBLIC_AUTO_LOGOUT_MINUTES = "60"
 PUBLIC_DEXIE_CLOUD_SYNC_ENABLED = "true"
 PUBLIC_DEXIE_CLOUD_DB_URL = "https://zw2vmfn8g.dexie.cloud"
-PUBLIC_DEXIE_CLOUD_SYNC_SCOPES = "quote-import-draft"
+PUBLIC_DEXIE_CLOUD_SYNC_SCOPES = "*"
 
 # Bindings do Worker default (workers.dev)
 # Mantidos alinhados ao ambiente atual para evitar erro de runtime em preview.
@@ -49,7 +49,7 @@ PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_yO4zM8WFfmRTZKtBG1PaHw_9pLyVXMh"
 PUBLIC_AUTO_LOGOUT_MINUTES = "60"
 PUBLIC_DEXIE_CLOUD_SYNC_ENABLED = "true"
 PUBLIC_DEXIE_CLOUD_DB_URL = "https://zw2vmfn8g.dexie.cloud"
-PUBLIC_DEXIE_CLOUD_SYNC_SCOPES = "quote-import-draft"
+PUBLIC_DEXIE_CLOUD_SYNC_SCOPES = "*"
 
 # KV para sessão (novo, usando o ID que você mencionou)
 [[env.production.kv_namespaces]]
@@ -74,7 +74,7 @@ PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_yO4zM8WFfmRTZKtBG1PaHw_9pLyVXMh"
 PUBLIC_AUTO_LOGOUT_MINUTES = "60"
 PUBLIC_DEXIE_CLOUD_SYNC_ENABLED = "true"
 PUBLIC_DEXIE_CLOUD_DB_URL = "https://zw2vmfn8g.dexie.cloud"
-PUBLIC_DEXIE_CLOUD_SYNC_SCOPES = "quote-import-draft"
+PUBLIC_DEXIE_CLOUD_SYNC_SCOPES = "*"
 
 # Se quiser sessão em staging, crie um KV próprio e ative isto:
 # [[env.staging.kv_namespaces]]
@@ -87,7 +87,7 @@ PUBLIC_DEXIE_CLOUD_SYNC_SCOPES = "quote-import-draft"
 # =========================
 [env.development]
 name = "vtur-dev"
-vars = { ENVIRONMENT = "development", PUBLIC_AUTO_LOGOUT_MINUTES = "60", PUBLIC_DEXIE_CLOUD_SYNC_ENABLED = "true", PUBLIC_DEXIE_CLOUD_DB_URL = "https://zw2vmfn8g.dexie.cloud", PUBLIC_DEXIE_CLOUD_SYNC_SCOPES = "quote-import-draft" }
+vars = { ENVIRONMENT = "development", PUBLIC_AUTO_LOGOUT_MINUTES = "60", PUBLIC_DEXIE_CLOUD_SYNC_ENABLED = "true", PUBLIC_DEXIE_CLOUD_DB_URL = "https://zw2vmfn8g.dexie.cloud", PUBLIC_DEXIE_CLOUD_SYNC_SCOPES = "*" }
 
 # Se quiser sessão em dev:
 # [[env.development.kv_namespaces]]
