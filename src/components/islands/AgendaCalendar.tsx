@@ -706,6 +706,7 @@ export default function AgendaCalendar() {
         <div
           ref={calendarWrapRef}
           className={isMobile ? "agenda-calendar-mobile" : "agenda-calendar-desktop"}
+          data-view={currentViewType}
         >
           {viewportReady ? (
             <FullCalendar
@@ -715,6 +716,10 @@ export default function AgendaCalendar() {
               height="auto"
               events={calendarEvents}
               dayMinWidth={0}
+              fixedWeekCount={!isMobile}
+              expandRows={isMobile}
+              dayMaxEventRows={isMobile ? 2 : true}
+              scrollTime={isMobile ? "07:00:00" : "08:00:00"}
               headerToolbar={
                 isMobile
                   ? false
@@ -732,7 +737,7 @@ export default function AgendaCalendar() {
                         ),
                       },
                       timeGridDay: { dayHeaderFormat: { weekday: "short", day: "2-digit" } },
-                      dayGridMonth: { dayHeaderFormat: { weekday: "narrow" } },
+                      dayGridMonth: { dayHeaderFormat: { weekday: "short" } },
                     }
                   : undefined
               }

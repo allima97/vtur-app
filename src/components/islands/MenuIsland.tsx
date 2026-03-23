@@ -1235,24 +1235,14 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
   } else if (isAgendaMobileContext) {
     mobileNavItems.push(
       {
-        key: "agenda-hoje",
-        label: "Hoje",
-        icon: "pi pi-calendar-plus",
-        onPress: () => {
-          if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("sgtur:agenda:setView", { detail: { action: "today" } }));
-          }
-        },
-      },
-      {
-        key: "agenda-mes",
-        label: "Mês",
-        icon: "pi pi-calendar",
-        isActive: mobileAgendaView === "dayGridMonth",
+        key: "agenda-dia",
+        label: "Dia",
+        icon: "pi pi-stopwatch",
+        isActive: mobileAgendaView === "timeGridDay",
         onPress: () => {
           if (typeof window !== "undefined") {
             window.dispatchEvent(
-              new CustomEvent("sgtur:agenda:setView", { detail: { action: "dayGridMonth" } })
+              new CustomEvent("sgtur:agenda:setView", { detail: { action: "timeGridDay" } })
             );
           }
         },
@@ -1271,14 +1261,14 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
         },
       },
       {
-        key: "agenda-dia",
-        label: "Dia",
-        icon: "pi pi-stopwatch",
-        isActive: mobileAgendaView === "timeGridDay",
+        key: "agenda-mes",
+        label: "Mês",
+        icon: "pi pi-calendar",
+        isActive: mobileAgendaView === "dayGridMonth",
         onPress: () => {
           if (typeof window !== "undefined") {
             window.dispatchEvent(
-              new CustomEvent("sgtur:agenda:setView", { detail: { action: "timeGridDay" } })
+              new CustomEvent("sgtur:agenda:setView", { detail: { action: "dayGridMonth" } })
             );
           }
         },

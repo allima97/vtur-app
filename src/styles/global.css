@@ -6506,7 +6506,7 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 /* Agenda (mobile): feriados/eventos longos não podem "sumir" na célula do dia */
 @media (max-width: 768px) {
   .agenda-page {
-    gap: 8px !important;
+    gap: 6px !important;
   }
 
   .sac-page .form-input[type="date"],
@@ -6522,7 +6522,8 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   }
 
   .agenda-calendar-shell .agenda-calendar-mobile {
-    margin-top: 4px;
+    margin-top: 2px;
+    margin-inline: -6px;
   }
 
   .agenda-calendar-mobile .fc .fc-toolbar.fc-header-toolbar {
@@ -6573,8 +6574,8 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   .agenda-calendar-mobile .fc .fc-timegrid-event .fc-event-main,
   .agenda-calendar-mobile .fc .fc-list-event-title,
   .agenda-calendar-mobile .fc .fc-list-event-title a {
-    font-size: 0.62rem;
-    line-height: 1.02;
+    font-size: 0.68rem;
+    line-height: 1.14;
   }
 
   .agenda-calendar-mobile .fc .fc-daygrid-event .fc-event-title,
@@ -6584,9 +6585,9 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   }
 
   .agenda-calendar-mobile .fc .fc-col-header-cell-cushion {
-    font-size: 0.52rem;
-    line-height: 1.02;
-    padding: 1px 0;
+    font-size: 0.68rem;
+    line-height: 1.1;
+    padding: 4px 0 6px;
     white-space: nowrap;
     display: inline-flex;
     flex-direction: column;
@@ -6597,7 +6598,7 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   .agenda-calendar-mobile .fc .agenda-week-header-weekday,
   .agenda-calendar-mobile .fc .agenda-week-header-date {
     font-size: inherit;
-    line-height: 1.02;
+    line-height: 1.1;
   }
 
   .agenda-calendar-mobile .fc .agenda-week-header-weekday {
@@ -6606,31 +6607,161 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 
   .agenda-calendar-mobile .fc .fc-timegrid-axis-cushion,
   .agenda-calendar-mobile .fc .fc-timegrid-slot-label-cushion {
-    font-size: 0.52rem;
-    line-height: 1.02;
-    padding: 0 2px;
+    font-size: 0.68rem;
+    line-height: 1.1;
+    padding: 0 4px;
   }
 
   .agenda-calendar-mobile .fc .fc-timegrid-axis-cushion {
-    max-width: 34px;
+    max-width: 48px;
   }
 
   .agenda-calendar-mobile .fc .fc-timegrid-event .fc-event-time,
   .agenda-calendar-mobile .fc .fc-timegrid-event .fc-event-title {
-    font-size: 0.56rem;
-    line-height: 1.02;
+    font-size: 0.68rem;
+    line-height: 1.12;
   }
 
   .agenda-calendar-mobile .fc .fc-daygrid-event .fc-event-main-frame,
   .agenda-calendar-mobile .fc .fc-timegrid-event .fc-event-main-frame {
-    padding-left: 2px;
-    padding-right: 2px;
+    padding-left: 4px;
+    padding-right: 4px;
   }
 
   .agenda-calendar-mobile .fc .fc-list-event-title,
   .agenda-calendar-mobile .fc .fc-list-event-title a {
     overflow: visible;
     text-overflow: clip;
+  }
+
+  .agenda-month-card {
+    grid-template-columns: 44px 1fr 44px;
+    gap: 10px;
+    padding: 2px 4px 0;
+  }
+
+  .agenda-month-title {
+    font-size: 1.28rem;
+    font-weight: 900;
+  }
+
+  .agenda-month-nav-btn.vtur-app-button {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+
+  .agenda-calendar-mobile .fc {
+    --fc-border-color: #dbe3ef;
+    --fc-neutral-bg-color: #f8fbff;
+  }
+
+  .agenda-calendar-mobile .fc .fc-scrollgrid,
+  .agenda-calendar-mobile .fc .fc-scrollgrid-section > td {
+    border: 0;
+  }
+
+  .agenda-calendar-mobile .fc .fc-theme-standard td,
+  .agenda-calendar-mobile .fc .fc-theme-standard th {
+    border-color: #e2e8f0;
+  }
+
+  .agenda-calendar-mobile[data-view="dayGridMonth"] .fc .fc-col-header-cell {
+    border-left: 0;
+    border-right: 0;
+    background: transparent;
+  }
+
+  .agenda-calendar-mobile[data-view="dayGridMonth"] .fc .fc-col-header-cell-cushion {
+    font-size: 0.74rem;
+    font-weight: 800;
+    padding: 6px 0 8px;
+  }
+
+  .agenda-calendar-mobile[data-view="dayGridMonth"] .fc .fc-daygrid-day-frame {
+    min-height: 88px;
+    padding: 4px 3px;
+  }
+
+  .agenda-calendar-mobile[data-view="dayGridMonth"] .fc .fc-daygrid-day-top {
+    justify-content: flex-start;
+    padding: 2px 2px 6px;
+  }
+
+  .agenda-calendar-mobile[data-view="dayGridMonth"] .fc .fc-daygrid-day-number {
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: #0f172a;
+  }
+
+  .agenda-calendar-mobile[data-view="dayGridMonth"] .fc .fc-day-today {
+    background: rgba(37, 99, 235, 0.04);
+  }
+
+  .agenda-calendar-mobile[data-view="dayGridMonth"] .fc .fc-day-today .fc-daygrid-day-number {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .agenda-calendar-mobile[data-view="dayGridMonth"] .fc .fc-daygrid-event {
+    border-radius: 999px;
+    margin: 0 0 4px;
+    min-height: 20px;
+    box-shadow: none;
+  }
+
+  .agenda-calendar-mobile[data-view="dayGridMonth"] .fc .fc-daygrid-day-events {
+    margin-top: 0;
+  }
+
+  .agenda-calendar-mobile[data-view="dayGridMonth"] .fc .fc-daygrid-more-link {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding-top: 2px;
+  }
+
+  .agenda-calendar-mobile[data-view="timeGridWeek"] .fc .fc-timegrid-axis,
+  .agenda-calendar-mobile[data-view="timeGridDay"] .fc .fc-timegrid-axis {
+    width: 52px;
+  }
+
+  .agenda-calendar-mobile[data-view="timeGridWeek"] .fc .fc-timegrid-slot,
+  .agenda-calendar-mobile[data-view="timeGridDay"] .fc .fc-timegrid-slot {
+    height: 3.2rem;
+  }
+
+  .agenda-calendar-mobile[data-view="timeGridWeek"] .fc .fc-timegrid-slot-lane,
+  .agenda-calendar-mobile[data-view="timeGridDay"] .fc .fc-timegrid-slot-lane {
+    background: #fff;
+  }
+
+  .agenda-calendar-mobile[data-view="timeGridWeek"] .fc .fc-timegrid-event,
+  .agenda-calendar-mobile[data-view="timeGridDay"] .fc .fc-timegrid-event {
+    border-radius: 12px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+  }
+
+  .agenda-calendar-mobile[data-view="timeGridWeek"] .fc .fc-timegrid-col-frame,
+  .agenda-calendar-mobile[data-view="timeGridDay"] .fc .fc-timegrid-col-frame {
+    min-height: 100%;
+  }
+
+  .agenda-calendar-mobile[data-view="listWeek"] .fc .fc-list-day-cushion {
+    padding: 10px 12px;
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .agenda-calendar-mobile[data-view="listWeek"] .fc .fc-list-event td {
+    padding: 10px 8px;
+  }
+
+  .agenda-calendar-mobile[data-view="listWeek"] .fc .fc-list-event-time {
+    font-size: 0.72rem;
+    white-space: nowrap;
   }
 }
 
