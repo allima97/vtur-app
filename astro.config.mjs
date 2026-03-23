@@ -23,6 +23,12 @@ export default defineConfig({
       // Primer injeta imports CSS internos no runtime SSR; sem bundlar o pacote,
       // Node/Workers tenta carregar esses .css como módulo externo e quebra a rota.
       noExternal: [/^@primer\//],
+      // Em dev, o otimizador SSR do Vite/Astro pode gerar apenas o sourcemap do
+      // `astro/compiler-runtime` em `node_modules/.vite/deps_ssr`, deixando o `.js`
+      // ausente e quebrando o carregamento. Mantemos esse runtime interno fora do prebundle.
+      optimizeDeps: {
+        exclude: ["astro/compiler-runtime"],
+      },
     },
     // Evita falhas de "Outdated Optimize Dep" no dev ao carregar gráficos
     optimizeDeps: {
@@ -32,7 +38,7 @@ export default defineConfig({
       force: true,
       // Essas libs são pesadas e, quando reotimizadas, geram 504 "Outdated Optimize Dep" com mais frequência.
       // Como já carregamos sob demanda (dynamic import), mantemos fora do prebundle.
-      exclude: ["xlsx", "jspdf", "jspdf-autotable"],
+      exclude: ["xlsx", "jspdf", "jspdf-autotable", "astro/compiler-runtime"],
       include: [
         "react",
         "react-dom",

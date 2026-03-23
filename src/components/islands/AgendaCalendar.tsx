@@ -43,6 +43,7 @@ type EventEditForm = {
 export default function AgendaCalendar() {
   const supabase = supabaseBrowser;
   const { userId } = usePermissoesStore();
+  const fullCalendarRef = React.useRef<FullCalendar | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [viewportReady, setViewportReady] = useState(false);
   const [currentViewType, setCurrentViewType] = useState("listWeek");
@@ -152,6 +153,21 @@ export default function AgendaCalendar() {
     setEditForm(null);
   }
 
+  function runAgendaCommand(action: "today" | "prev" | "next" | "dayGridMonth" | "timeGridWeek" | "timeGridDay" | "listWeek") {
+    const api = fullCalendarRef.current?.getApi();
+    if (!api) return;
+    if (action === "today") {
+      api.today();
+    } else if (action === "prev") {
+      api.prev();
+    } else if (action === "next") {
+      api.next();
+    } else {
+      api.changeView(action);
+    }
+    requestAnimationFrame(applyMobileCalendarTooltips);
+  }
+
   function applyMobileCalendarTooltips() {
     if (!isMobile) return;
     const container = calendarWrapRef.current;
@@ -209,6 +225,35 @@ export default function AgendaCalendar() {
   useEffect(() => {
     visibleRangeRef.current = visibleRange;
   }, [visibleRange]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !isMobile) return;
+    const handler = (event: Event) => {
+      const action = (event as CustomEvent).detail?.action;
+      if (
+        action === "today" ||
+        action === "dayGridMonth" ||
+        action === "timeGridWeek" ||
+        action === "timeGridDay" ||
+        action === "listWeek"
+      ) {
+        runAgendaCommand(action);
+      }
+    };
+    window.addEventListener("sgtur:agenda:setView", handler as EventListener);
+    return () => window.removeEventListener("sgtur:agenda:setView", handler as EventListener);
+  }, [isMobile]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !currentViewType) return;
+    window.dispatchEvent(
+      new CustomEvent("sgtur:agenda:viewChanged", {
+        detail: {
+          view: currentViewType,
+        },
+      })
+    );
+  }, [currentViewType]);
 
   function intersectsRange(ev: EventItem, range: { inicio: string; fim: string }) {
     const startDate = (ev.start || "").split("T")[0];
@@ -613,7 +658,27 @@ export default function AgendaCalendar() {
     <div className="agenda-page" style={{ display: "grid", gap: 16 }}>
       {viewportReady && isMobile && (
         <div className="agenda-month-card" aria-label={`Mês atual: ${currentMonthTitle}`}>
+          <AppButton
+            type="button"
+            variant="ghost"
+            className="agenda-month-nav-btn"
+            onClick={() => runAgendaCommand("prev")}
+            aria-label="Ir para período anterior"
+            title="Anterior"
+          >
+            <i className="pi pi-angle-left" aria-hidden="true" />
+          </AppButton>
           <div className="agenda-month-title">{currentMonthTitle}</div>
+          <AppButton
+            type="button"
+            variant="ghost"
+            className="agenda-month-nav-btn"
+            onClick={() => runAgendaCommand("next")}
+            aria-label="Ir para próximo período"
+            title="Próximo"
+          >
+            <i className="pi pi-angle-right" aria-hidden="true" />
+          </AppButton>
         </div>
       )}
 
@@ -644,15 +709,16 @@ export default function AgendaCalendar() {
         >
           {viewportReady ? (
             <FullCalendar
+              ref={fullCalendarRef}
               plugins={[dayGridPlugin, interactionPlugin, listPlugin, timeGridPlugin, scrollGridPlugin]}
               initialView={isMobile ? "listWeek" : "dayGridMonth"}
-          height="auto"
-          events={calendarEvents}
-          dayMinWidth={0}
-          headerToolbar={
-            isMobile
-              ? { left: "prev,next today", center: "", right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek" }
-              : { left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek,timeGridDay,listMonth" }
+              height="auto"
+              events={calendarEvents}
+              dayMinWidth={0}
+              headerToolbar={
+                isMobile
+                  ? false
+                  : { left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek,timeGridDay,listMonth" }
               }
               views={
                 isMobile

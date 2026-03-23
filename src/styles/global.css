@@ -3905,6 +3905,12 @@ input[type="radio"] {
     z-index: 35;
   }
 
+  .mobile-bottom-nav.contextual-nav {
+    justify-content: space-between;
+    gap: 2px;
+    overflow-x: visible;
+  }
+
   .mobile-bottom-nav-item {
     display: flex;
     flex-direction: column;
@@ -3920,6 +3926,11 @@ input[type="radio"] {
     border: none;
     padding: 6px 1px;
     border-radius: 10px;
+  }
+
+  .mobile-bottom-nav.contextual-nav .mobile-bottom-nav-item {
+    flex: 1 1 0;
+    min-width: 0;
   }
 
   .mobile-bottom-nav-item.active {
@@ -4006,6 +4017,16 @@ input[type="radio"] {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .mobile-bottom-nav.contextual-nav .mobile-bottom-nav-label {
+    min-height: 2.3em;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    line-height: 1;
+    text-align: center;
+    font-size: 0.58rem;
   }
 
   .sidebar-mobile-utility-shell {
@@ -6410,7 +6431,11 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 
 /* Agenda (mobile): card do mês + FAB */
 .agenda-month-card {
-  padding: 2px 2px 0;
+  display: grid;
+  grid-template-columns: 40px 1fr 40px;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0 0;
   background: transparent;
   border: 0;
   box-shadow: none;
@@ -6421,8 +6446,25 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   font-size: 1.15rem;
   font-weight: 900;
   color: #0f172a;
-  text-align: left;
+  text-align: center;
   line-height: 1.1;
+}
+
+.agenda-month-nav-btn.vtur-app-button {
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 999px !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.agenda-month-nav-btn.vtur-app-button .pi {
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .agenda-fab {

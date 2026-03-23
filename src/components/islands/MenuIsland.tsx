@@ -1000,7 +1000,12 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
     onPress?: () => void;
     icon: React.ReactNode;
     active?: string;
+    isActive?: boolean;
+    tone?: "blue" | "orange" | "green" | "violet";
   };
+
+  type MobileTodoTab = "novo" | "agendado" | "em_andamento" | "categorias";
+  type MobileAgendaView = "dayGridMonth" | "timeGridWeek" | "timeGridDay" | "listWeek";
 
   const clearTimers = useCallback(() => {
     if (logoutTimeoutRef.current) {
@@ -1045,6 +1050,8 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
     }
     scheduleTimers();
   }, [scheduleTimers]);
+  const [mobileTodoTab, setMobileTodoTab] = useState<MobileTodoTab>("novo");
+  const [mobileAgendaView, setMobileAgendaView] = useState<MobileAgendaView>("listWeek");
 
   useEffect(() => {
     scheduleTimers();
@@ -1072,6 +1079,54 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
     return () => window.removeEventListener("consultoria-lembretes-badge", handler as EventListener);
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const rawTodoTab = window.localStorage.getItem("sgtur_todo_tab");
+      if (
+        rawTodoTab === "novo" ||
+        rawTodoTab === "agendado" ||
+        rawTodoTab === "em_andamento" ||
+        rawTodoTab === "categorias"
+      ) {
+        setMobileTodoTab(rawTodoTab);
+      }
+    } catch {
+      // ignore
+    }
+
+    const handleTodoTabChanged = (event: Event) => {
+      const nextTab = (event as CustomEvent).detail?.tab;
+      if (
+        nextTab === "novo" ||
+        nextTab === "agendado" ||
+        nextTab === "em_andamento" ||
+        nextTab === "categorias"
+      ) {
+        setMobileTodoTab(nextTab);
+      }
+    };
+
+    const handleAgendaViewChanged = (event: Event) => {
+      const nextView = (event as CustomEvent).detail?.view;
+      if (
+        nextView === "dayGridMonth" ||
+        nextView === "timeGridWeek" ||
+        nextView === "timeGridDay" ||
+        nextView === "listWeek"
+      ) {
+        setMobileAgendaView(nextView);
+      }
+    };
+
+    window.addEventListener("sgtur:todo:tabChanged", handleTodoTabChanged as EventListener);
+    window.addEventListener("sgtur:agenda:viewChanged", handleAgendaViewChanged as EventListener);
+    return () => {
+      window.removeEventListener("sgtur:todo:tabChanged", handleTodoTabChanged as EventListener);
+      window.removeEventListener("sgtur:agenda:viewChanged", handleAgendaViewChanged as EventListener);
+    };
+  }, []);
+
   const formatBadge = (count: number) => (count > 99 ? "99+" : String(count));
   const cadastrosMenu = [
     { name: "Produtos", href: "/cadastros/produtos", active: "produtos", icon: "pi pi-ticket", label: "Produtos" },
@@ -1097,6 +1152,16 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
   const sidebarId = "app-sidebar";
 
   const mobileNavItems: MobileNavItem[] = [];
+  const isTodoMobileContext = activePage === "operacao_todo" && canMenuExact("Tarefas");
+  const isAgendaMobileContext = activePage === "operacao_agenda" && canSeeAgenda;
+  const isContextualMobileNav = isTodoMobileContext || isAgendaMobileContext;
+  const mobileNavClassName = [
+    "mobile-bottom-nav",
+    isTodoMobileContext ? "todo-nav contextual-nav" : "",
+    isAgendaMobileContext ? "agenda-nav contextual-nav" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const dashboardHref = menuIsSystemAdmin
     ? "/dashboard/admin"
@@ -1106,7 +1171,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
     ? "/dashboard/gestor"
     : "/";
 
-  if (menuIsSystemAdmin || canMenuExact("Dashboard")) {
+  if (!isContextualMobileNav && (menuIsSystemAdmin || canMenuExact("Dashboard"))) {
     mobileNavItems.push({
       key: "dashboard",
       label: "Dashboard",
@@ -1116,7 +1181,123 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
     });
   }
 
-  if (!menuIsSystemAdmin) {
+  if (isTodoMobileContext) {
+    mobileNavItems.push(
+      {
+        key: "todo-novo",
+        label: "A Fazer",
+        icon: "pi pi-clipboard",
+        isActive: mobileTodoTab === "novo",
+        tone: "blue",
+        onPress: () => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("sgtur:todo:setTab", { detail: { tab: "novo" } }));
+          }
+        },
+      },
+      {
+        key: "todo-agendado",
+        label: "Fazendo",
+        icon: "pi pi-clock",
+        isActive: mobileTodoTab === "agendado",
+        tone: "orange",
+        onPress: () => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("sgtur:todo:setTab", { detail: { tab: "agendado" } }));
+          }
+        },
+      },
+      {
+        key: "todo-feito",
+        label: "Feito",
+        icon: "pi pi-check-circle",
+        isActive: mobileTodoTab === "em_andamento",
+        tone: "green",
+        onPress: () => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("sgtur:todo:setTab", { detail: { tab: "em_andamento" } }));
+          }
+        },
+      },
+      {
+        key: "todo-categorias",
+        label: "Categorias",
+        icon: "pi pi-tags",
+        isActive: mobileTodoTab === "categorias",
+        tone: "violet",
+        onPress: () => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("sgtur:todo:setTab", { detail: { tab: "categorias" } }));
+          }
+        },
+      }
+    );
+  } else if (isAgendaMobileContext) {
+    mobileNavItems.push(
+      {
+        key: "agenda-hoje",
+        label: "Hoje",
+        icon: "pi pi-calendar-plus",
+        onPress: () => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("sgtur:agenda:setView", { detail: { action: "today" } }));
+          }
+        },
+      },
+      {
+        key: "agenda-mes",
+        label: "Mês",
+        icon: "pi pi-calendar",
+        isActive: mobileAgendaView === "dayGridMonth",
+        onPress: () => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("sgtur:agenda:setView", { detail: { action: "dayGridMonth" } })
+            );
+          }
+        },
+      },
+      {
+        key: "agenda-semana",
+        label: "Semana",
+        icon: "pi pi-table",
+        isActive: mobileAgendaView === "timeGridWeek",
+        onPress: () => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("sgtur:agenda:setView", { detail: { action: "timeGridWeek" } })
+            );
+          }
+        },
+      },
+      {
+        key: "agenda-dia",
+        label: "Dia",
+        icon: "pi pi-stopwatch",
+        isActive: mobileAgendaView === "timeGridDay",
+        onPress: () => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("sgtur:agenda:setView", { detail: { action: "timeGridDay" } })
+            );
+          }
+        },
+      },
+      {
+        key: "agenda-lista",
+        label: "Lista",
+        icon: "pi pi-list",
+        isActive: mobileAgendaView === "listWeek",
+        onPress: () => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("sgtur:agenda:setView", { detail: { action: "listWeek" } })
+            );
+          }
+        },
+      }
+    );
+  } else if (!menuIsSystemAdmin) {
     if (canMenuExact("Tarefas")) {
       mobileNavItems.push({
         key: "tarefas",
@@ -1175,49 +1356,53 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
     onPress: () => setMobileOpen(true),
   });
 
+  const renderMobileNavItem = (item: MobileNavItem) => {
+    const isActive = item.isActive ?? activePage === item.active;
+    const className = `mobile-bottom-nav-item ${isActive ? "active" : ""}`;
+
+    if (item.href) {
+      return (
+        <a
+          key={item.key}
+          className={className}
+          data-tone={item.tone}
+          href={item.href}
+          onClick={handleNavClick}
+        >
+          <span className="mobile-bottom-nav-icon">
+            {renderMenuIcon(item.icon)}
+            {item.key === "consultoria" && consultoriaBadge > 0 && (
+              <span className="mobile-badge">{formatBadge(consultoriaBadge)}</span>
+            )}
+          </span>
+          <span className="mobile-bottom-nav-label">{item.label}</span>
+        </a>
+      );
+    }
+
+    return (
+      <AppButton
+        key={item.key}
+        type="button"
+        variant="ghost"
+        className={className}
+        data-tone={item.tone}
+        onClick={() => {
+          item.onPress?.();
+        }}
+      >
+        <span className="mobile-bottom-nav-icon">{renderMenuIcon(item.icon)}</span>
+        <span className="mobile-bottom-nav-label">{item.label}</span>
+      </AppButton>
+    );
+  };
+
   return (
     <AppPrimerProvider>
       <div className={`sidebar-overlay ${mobileOpen ? "visible" : ""}`} onClick={closeMobile} />
 
-      <nav className="mobile-bottom-nav" aria-label="Atalhos principais">
-        {mobileNavItems.map((item) => {
-          const isActive = activePage === item.active;
-          const className = `mobile-bottom-nav-item ${isActive ? "active" : ""}`;
-
-          if (item.href) {
-            return (
-              <a
-                key={item.key}
-                className={className}
-                href={item.href}
-                onClick={handleNavClick}
-              >
-                <span className="mobile-bottom-nav-icon">
-                  {renderMenuIcon(item.icon)}
-                  {item.key === "consultoria" && consultoriaBadge > 0 && (
-                    <span className="mobile-badge">{formatBadge(consultoriaBadge)}</span>
-                  )}
-                </span>
-                <span className="mobile-bottom-nav-label">{item.label}</span>
-              </a>
-            );
-          }
-
-          return (
-            <AppButton
-              key={item.key}
-              type="button"
-              variant="ghost"
-              className={className}
-              onClick={() => {
-                item.onPress?.();
-              }}
-            >
-              <span className="mobile-bottom-nav-icon">{renderMenuIcon(item.icon)}</span>
-              <span className="mobile-bottom-nav-label">{item.label}</span>
-            </AppButton>
-          );
-        })}
+      <nav className={mobileNavClassName} aria-label="Atalhos principais">
+        {mobileNavItems.map(renderMobileNavItem)}
       </nav>
 
       <aside
