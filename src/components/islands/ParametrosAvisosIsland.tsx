@@ -34,6 +34,11 @@ import {
 } from "../../lib/cards/styleConfig";
 
 const STORAGE_BUCKET = "message-template-themes";
+const BRANDING_BUCKET = "quotes";
+const BODY_MAX_WORDS = 50;
+const SIGNATURE_MAX_WORDS = 20;
+const BODY_RECOMMENDED_LINES = 6;
+const SIGNATURE_RECOMMENDED_LINES = 3;
 
 const OCASIOES_OFICIAIS = [
   "Aniversário",
@@ -125,6 +130,14 @@ type ThemeForm = {
   ativo: boolean;
 };
 
+type BrandLogoSettings = {
+  id?: string | null;
+  owner_user_id?: string | null;
+  company_id?: string | null;
+  logo_url?: string | null;
+  logo_path?: string | null;
+};
+
 const initialTemplateForm: TemplateForm = {
   id: "",
   nome: "",
@@ -211,6 +224,19 @@ function normalizeColorInput(value: unknown, fallback = "#000000") {
   return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(color) ? color : fallback;
 }
 
+function countWords(value?: string | null) {
+  return String(value || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+}
+
+function countManualLines(value?: string | null) {
+  const text = String(value || "").trim();
+  if (!text) return 0;
+  return text.split(/\r?\n/).length;
+}
+
 function isRecord(value: unknown): value is Record<string, any> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -249,6 +275,14 @@ function readImageDimensions(file: File) {
   });
 }
 
+function getFileExtension(file: File) {
+  const name = file?.name || "";
+  const match = name.match(/\.([a-z0-9]+)$/i);
+  if (match?.[1]) return match[1].toLowerCase();
+  if (file.type.startsWith("image/")) return file.type.split("/")[1] || "png";
+  return "png";
+}
+
 export default function ParametrosAvisosIsland() {
   const { can, loading: loadingPerms, ready } = usePermissoesStore();
   const loadPerm = loadingPerms || !ready;
@@ -267,8 +301,12 @@ export default function ParametrosAvisosIsland() {
   const [styleForm, setStyleForm] = useState<CardStyleMap>(() => createDefaultCardStyleMap());
   const [themeForm, setThemeForm] = useState<ThemeForm>(initialThemeForm);
   const [themeFile, setThemeFile] = useState<File | null>(null);
+  const [brandLogo, setBrandLogo] = useState<BrandLogoSettings | null>(null);
+  const [brandLogoFile, setBrandLogoFile] = useState<File | null>(null);
+  const [brandLogoPreview, setBrandLogoPreview] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [salvandoTheme, setSalvandoTheme] = useState(false);
+  const [salvandoBrandLogo, setSalvandoBrandLogo] = useState(false);
   const [carregandoPadrao, setCarregandoPadrao] = useState(false);
   const [mostrarFormularioTema, setMostrarFormularioTema] = useState(false);
   const [mostrarListaArtes, setMostrarListaArtes] = useState(false);
@@ -290,10 +328,25 @@ export default function ParametrosAvisosIsland() {
 
       const { data: userData } = await supabase
         .from("users")
-        .select("nome_completo")
+        .select("nome_completo, company_id")
         .eq("id", userId)
         .maybeSingle();
       setNomeUsuario(String(userData?.nome_completo || authData.user.user_metadata?.name || "").trim());
+
+      const { data: brandingData } = await supabase
+        .from("quote_print_settings")
+        .select("id, owner_user_id, company_id, logo_url, logo_path")
+        .eq("owner_user_id", userId)
+        .maybeSingle();
+      setBrandLogo({
+        id: brandingData?.id || null,
+        owner_user_id: brandingData?.owner_user_id || userId,
+        company_id: brandingData?.company_id || userData?.company_id || null,
+        logo_url: brandingData?.logo_url || null,
+        logo_path: brandingData?.logo_path || null,
+      });
+      setBrandLogoPreview(String(brandingData?.logo_url || "").trim() || null);
+      setBrandLogoFile(null);
 
       const tplResp = await supabase
         .from("user_message_templates")
@@ -334,6 +387,16 @@ export default function ParametrosAvisosIsland() {
       void carregar();
     }
   }, [loadPerm, podeVer]);
+
+  useEffect(() => {
+    if (!brandLogoFile) {
+      setBrandLogoPreview(String(brandLogo?.logo_url || "").trim() || null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(brandLogoFile);
+    setBrandLogoPreview(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [brandLogoFile, brandLogo?.logo_url]);
 
   const selectedThemeForForm = useMemo(
     () => themes.find((theme) => theme.id === form.theme_id) || null,
@@ -376,6 +439,22 @@ export default function ParametrosAvisosIsland() {
     });
   }, [form.corpo, form.assinatura, nomeUsuario, previewNomeCliente, previewNomeClienteManual]);
 
+  const activeBrandLogoUrl = useMemo(
+    () => String(brandLogoPreview || brandLogo?.logo_url || "").trim(),
+    [brandLogoPreview, brandLogo?.logo_url],
+  );
+
+  const bodyWordCount = useMemo(() => countWords(form.corpo), [form.corpo]);
+  const signatureWordCount = useMemo(
+    () => countWords([form.footerLead, form.assinatura || nomeUsuario, form.consultantRole].filter(Boolean).join(" ")),
+    [form.footerLead, form.assinatura, form.consultantRole, nomeUsuario],
+  );
+  const bodyManualLines = useMemo(() => countManualLines(form.corpo), [form.corpo]);
+  const signatureManualLines = useMemo(
+    () => countManualLines([form.footerLead, form.assinatura || nomeUsuario, form.consultantRole].filter(Boolean).join("\n")),
+    [form.footerLead, form.assinatura, form.consultantRole, nomeUsuario],
+  );
+
   const previewBaseParams = useMemo(() => {
     if (!selectedThemeForForm) return null;
     const resolvedThemeAsset = resolveThemeAssetMeta(selectedThemeForForm);
@@ -400,9 +479,10 @@ export default function ParametrosAvisosIsland() {
     if (resolvedThemeAsset.asset_url) params.set("theme_asset_url", resolvedThemeAsset.asset_url);
     if (resolvedThemeAsset.width_px) params.set("width", String(resolvedThemeAsset.width_px));
     if (resolvedThemeAsset.height_px) params.set("height", String(resolvedThemeAsset.height_px));
+    if (activeBrandLogoUrl) params.set("logo_url", activeBrandLogoUrl);
     params.set("style_overrides", JSON.stringify(styleForm));
     return params;
-  }, [selectedThemeForForm, previewNomeCliente, previewCardTitle, form.corpo, form.footerLead, form.assinatura, form.consultantRole, nomeUsuario, styleForm, previewNomeClienteManual]);
+  }, [selectedThemeForForm, previewNomeCliente, previewCardTitle, form.corpo, form.footerLead, form.assinatura, form.consultantRole, nomeUsuario, styleForm, previewNomeClienteManual, activeBrandLogoUrl]);
 
   const previewThemeSvgUrl = useMemo(() => {
     if (!previewBaseParams) return "";

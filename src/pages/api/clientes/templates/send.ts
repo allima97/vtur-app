@@ -8,6 +8,7 @@ import {
 } from "../../../../lib/emailSettings";
 import { renderTemplateText } from "../../../../lib/messageTemplates";
 import { resolveThemeAssetMeta } from "../../../../lib/cards/officialLibrary";
+import { resolveCardStyleMap } from "../../../../lib/cards/styleConfig";
 import { getSupabaseEnv } from "../../users";
 
 type Body = {
@@ -18,6 +19,27 @@ type Body = {
   emailDestinatario?: string;
   themeId?: string | null;
 };
+
+function isPlainObject(value: unknown): value is Record<string, any> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function extractSignatureTextConfig(signatureStyle?: unknown) {
+  const content = isPlainObject(signatureStyle) && isPlainObject(signatureStyle.content)
+    ? signatureStyle.content
+    : null;
+  const hasFooterLead =
+    !!content && Object.prototype.hasOwnProperty.call(content, "footerLead");
+  const hasConsultantRole =
+    !!content && Object.prototype.hasOwnProperty.call(content, "consultantRole");
+
+  return {
+    footerLead: String(content?.footerLead || "").trim(),
+    consultantRole: String(content?.consultantRole || "").trim(),
+    hasFooterLead,
+    hasConsultantRole,
+  };
+}
 
 function parseCookies(request: Request): Map<string, string> {
   const header = request.headers.get("cookie") ?? "";
@@ -121,24 +143,54 @@ export async function POST({ request }: { request: Request }) {
       assinatura,
     });
     const origin = new URL(request.url).origin;
-    const cardParams = new URLSearchParams({
-      template_id: tpl.id,
-      nome: nomeDestinatario,
-      titulo: String(tpl.titulo || ""),
-      corpo: String(tpl.corpo || ""),
-      assinatura,
-      v: String(Date.now()),
-    });
     const requestedThemeId = String(body.themeId || "").trim();
     const selectedThemeId = requestedThemeId || String(tpl.theme_id || "").trim();
+    const signatureTextConfig = extractSignatureTextConfig(tpl.signature_style);
+    let themeRow: Record<string, any> | null = null;
     if (selectedThemeId) {
-      cardParams.set("theme_id", selectedThemeId);
-      const { data: themeRow } = await authClient
+      const { data } = await authClient
         .from("user_message_template_themes")
-        .select("nome, asset_url, width_px, height_px")
+        .select("nome, asset_url, width_px, height_px, title_style, body_style, signature_style")
         .eq("id", selectedThemeId)
         .maybeSingle();
-      const resolvedThemeAsset = resolveThemeAssetMeta(themeRow || null);
+      themeRow = data || null;
+    }
+    const { data: brandingRow } = await authClient
+      .from("quote_print_settings")
+      .select("logo_url, logo_path")
+      .eq("owner_user_id", userId)
+      .maybeSingle();
+    const resolvedStyleMap = resolveCardStyleMap({
+      themeName: String(themeRow?.nome || "").trim() || null,
+      themeBuckets: themeRow
+        ? {
+            title_style: themeRow.title_style,
+            body_style: themeRow.body_style,
+            signature_style: themeRow.signature_style,
+          }
+        : null,
+      templateBuckets: {
+        title_style: tpl.title_style,
+        body_style: tpl.body_style,
+        signature_style: tpl.signature_style,
+      },
+    });
+    const cardParams = new URLSearchParams({
+      nome: nomeDestinatario,
+      cliente_nome: nomeDestinatario,
+      cliente_nome_literal: nomeDestinatario,
+      titulo: String(tpl.titulo || ""),
+      corpo: String(tpl.corpo || ""),
+      footer_lead: signatureTextConfig.hasFooterLead ? signatureTextConfig.footerLead : "Com carinho",
+      assinatura,
+      cargo_consultor: signatureTextConfig.hasConsultantRole
+        ? signatureTextConfig.consultantRole || "Consultor de viagens"
+        : "Consultor de viagens",
+      style_overrides: JSON.stringify(resolvedStyleMap),
+      v: String(Date.now()),
+    });
+    if (themeRow) {
+      const resolvedThemeAsset = resolveThemeAssetMeta(themeRow);
       if (resolvedThemeAsset.asset_url) cardParams.set("theme_asset_url", resolvedThemeAsset.asset_url);
       if (Number.isFinite(resolvedThemeAsset.width_px) && resolvedThemeAsset.width_px > 0) {
         cardParams.set("width", String(Math.round(resolvedThemeAsset.width_px)));
@@ -147,6 +199,14 @@ export async function POST({ request }: { request: Request }) {
         cardParams.set("height", String(Math.round(resolvedThemeAsset.height_px)));
       }
     }
+    const brandingLogoUrl =
+      String(brandingRow?.logo_url || "").trim() ||
+      String(
+        brandingRow?.logo_path
+          ? authClient.storage.from("quotes").getPublicUrl(String(brandingRow.logo_path)).data.publicUrl || ""
+          : "",
+      ).trim();
+    if (brandingLogoUrl) cardParams.set("logo_url", brandingLogoUrl);
     const cardUrlSvg = `${origin}/api/v1/cards/render.svg?${cardParams.toString()}`;
     const cardUrlPng = `${origin}/api/v1/cards/render.png?${cardParams.toString()}`;
 

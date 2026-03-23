@@ -19,6 +19,7 @@ import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import { renderTemplateText } from "../../lib/messageTemplates";
 import { resolveThemeAssetMeta } from "../../lib/cards/officialLibrary";
 import { renderSvgUrlToPngObjectUrl, validarPngServidor } from "../../lib/cards/browserPng";
+import { resolveCardStyleMap } from "../../lib/cards/styleConfig";
 import AlertMessage from "../ui/AlertMessage";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import DataTable from "../ui/DataTable";
@@ -157,6 +158,27 @@ function validarCamposObrigatoriosCliente(form: typeof initialForm) {
   if (!telefoneDigits) return "Informe o telefone do cliente.";
   if (telefoneDigits.length < 10) return "Telefone inválido. Informe DDD e número.";
   return null;
+}
+
+function isPlainObject(value: unknown): value is Record<string, any> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function extractSignatureTextConfig(signatureStyle?: unknown) {
+  const content = isPlainObject(signatureStyle) && isPlainObject(signatureStyle.content)
+    ? signatureStyle.content
+    : null;
+  const hasFooterLead =
+    !!content && Object.prototype.hasOwnProperty.call(content, "footerLead");
+  const hasConsultantRole =
+    !!content && Object.prototype.hasOwnProperty.call(content, "consultantRole");
+
+  return {
+    footerLead: String(content?.footerLead || "").trim(),
+    consultantRole: String(content?.consultantRole || "").trim(),
+    hasFooterLead,
+    hasConsultantRole,
+  };
 }
 
 export default function ClientesIsland() {
@@ -417,7 +439,7 @@ export default function ClientesIsland() {
 
         const themeResp = await supabase
           .from("user_message_template_themes")
-          .select("id, nome, categoria, asset_url, width_px, height_px")
+          .select("id, nome, categoria, asset_url, width_px, height_px, title_style, body_style, signature_style")
           .eq("user_id", uid)
           .eq("ativo", true)
           .order("categoria")
@@ -762,6 +784,11 @@ export default function ClientesIsland() {
       .select("nome_completo")
       .eq("id", authData?.user?.id || "")
       .maybeSingle();
+    const { data: brandingData } = await supabase
+      .from("quote_print_settings")
+      .select("logo_url, logo_path")
+      .eq("owner_user_id", authData?.user?.id || "")
+      .maybeSingle();
 
     const assinatura = String(tpl.assinatura || userData?.nome_completo || "").trim();
     const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -771,25 +798,47 @@ export default function ClientesIsland() {
     const selectedTheme = themesAviso.find((theme) => theme.id === selectedThemeId) || null;
     const resolvedThemeAsset = resolveThemeAssetMeta(selectedTheme);
     const nomeCard = String(recipient.nome || "Cliente").trim() || "Cliente";
+    const signatureTextConfig = extractSignatureTextConfig(tpl.signature_style);
+    const resolvedStyleMap = resolveCardStyleMap({
+      themeName: selectedTheme?.nome || null,
+      themeBuckets: selectedTheme
+        ? {
+            title_style: selectedTheme.title_style,
+            body_style: selectedTheme.body_style,
+            signature_style: selectedTheme.signature_style,
+          }
+        : null,
+      templateBuckets: {
+        title_style: tpl.title_style,
+        body_style: tpl.body_style,
+        signature_style: tpl.signature_style,
+      },
+    });
+    const brandingLogoUrl =
+      String(brandingData?.logo_url || "").trim() ||
+      String(
+        brandingData?.logo_path
+          ? supabase.storage.from("quotes").getPublicUrl(String(brandingData.logo_path)).data.publicUrl || ""
+          : "",
+      ).trim();
     const cardParams = new URLSearchParams({
-      template_id: tpl.id,
       nome: nomeCard,
+      cliente_nome: nomeCard,
+      cliente_nome_literal: nomeCard,
       titulo: tpl.titulo || "",
       corpo: tpl.corpo || "",
+      footer_lead: signatureTextConfig.hasFooterLead ? signatureTextConfig.footerLead : "Com carinho",
       assinatura,
+      cargo_consultor: signatureTextConfig.hasConsultantRole
+        ? signatureTextConfig.consultantRole || "Consultor de viagens"
+        : "Consultor de viagens",
+      style_overrides: JSON.stringify(resolvedStyleMap),
       v: String(Date.now()),
     });
-    if (selectedThemeId) cardParams.set("theme_id", selectedThemeId);
     if (resolvedThemeAsset.asset_url) cardParams.set("theme_asset_url", resolvedThemeAsset.asset_url);
     if (resolvedThemeAsset.width_px) cardParams.set("width", String(resolvedThemeAsset.width_px));
     if (resolvedThemeAsset.height_px) cardParams.set("height", String(resolvedThemeAsset.height_px));
-    if (tpl.title_style?.fontSize) cardParams.set("title_font_size", String(tpl.title_style.fontSize));
-    if (tpl.title_style?.color) cardParams.set("title_color", String(tpl.title_style.color));
-    if (tpl.body_style?.fontSize) cardParams.set("body_font_size", String(tpl.body_style.fontSize));
-    if (tpl.body_style?.color) cardParams.set("body_color", String(tpl.body_style.color));
-    if (tpl.signature_style?.fontSize) cardParams.set("signature_font_size", String(tpl.signature_style.fontSize));
-    if (tpl.signature_style?.color) cardParams.set("signature_color", String(tpl.signature_style.color));
-    if (tpl.signature_style?.italic !== undefined) cardParams.set("signature_italic", tpl.signature_style.italic ? "1" : "0");
+    if (brandingLogoUrl) cardParams.set("logo_url", brandingLogoUrl);
 
     const subject = renderTemplateText(tpl.assunto || tpl.titulo || tpl.nome, {
       nomeCompleto: recipient.nome,

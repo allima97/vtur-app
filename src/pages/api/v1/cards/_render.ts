@@ -1,7 +1,12 @@
 import { createServerClient } from "../../../../lib/supabaseServer";
 import { resolveThemeAssetMeta } from "../../../../lib/cards/officialLibrary";
 import { buildCardFontFaceCss } from "../../../../lib/cards/cardFonts";
-import { getCardThemeLayout, type CardThemeMask, type CardThemePhotoSlot } from "../../../../lib/cards/themeLayouts";
+import {
+  getCardThemeLayout,
+  type CardThemeLogoSlot,
+  type CardThemeMask,
+  type CardThemePhotoSlot,
+} from "../../../../lib/cards/themeLayouts";
 import { parseCardStyleOverrideParam, resolveCardStyleMap } from "../../../../lib/cards/styleConfig";
 import { renderTemplateText } from "../../../../lib/messageTemplates";
 import { getSupabaseEnv } from "../../users";
@@ -31,6 +36,12 @@ export type CardRenderResult = {
 const MASTER_WIDTH = 1080;
 const MASTER_HEIGHT = 1080;
 const MASTER_LAYOUT_KEY = "master-card-v1";
+const DEFAULT_LOGO_SLOT_RATIOS = {
+  x: 0.835,
+  y: 0.84,
+  width: 0.125,
+  height: 0.125,
+};
 
 function escapeXml(value: string) {
   return value
@@ -235,6 +246,49 @@ function drawPhotoBlock(photoUrl: string, slot: CardThemePhotoSlot) {
   </g>`;
 }
 
+function scaleLogoSlot(
+  slot: CardThemeLogoSlot,
+  layoutCanvas: { width?: number; height?: number } | undefined,
+  width: number,
+  height: number,
+): CardThemeLogoSlot {
+  const baseWidth = Math.max(1, Number(layoutCanvas?.width || width || MASTER_WIDTH));
+  const baseHeight = Math.max(1, Number(layoutCanvas?.height || height || MASTER_HEIGHT));
+  const scaleX = width / baseWidth;
+  const scaleY = height / baseHeight;
+  return {
+    x: Math.round(Number(slot.x || 0) * scaleX),
+    y: Math.round(Number(slot.y || 0) * scaleY),
+    width: Math.round(Number(slot.width || 0) * scaleX),
+    height: Math.round(Number(slot.height || 0) * scaleY),
+  };
+}
+
+function resolveLogoSlot(
+  themeLayout: ReturnType<typeof getCardThemeLayout>,
+  width: number,
+  height: number,
+): CardThemeLogoSlot {
+  if (themeLayout?.logo) {
+    return scaleLogoSlot(themeLayout.logo, themeLayout.canvas, width, height);
+  }
+  return {
+    x: Math.round(width * DEFAULT_LOGO_SLOT_RATIOS.x),
+    y: Math.round(height * DEFAULT_LOGO_SLOT_RATIOS.y),
+    width: Math.round(width * DEFAULT_LOGO_SLOT_RATIOS.width),
+    height: Math.round(height * DEFAULT_LOGO_SLOT_RATIOS.height),
+  };
+}
+
+function drawLogoBlock(logoUrl: string, slot: CardThemeLogoSlot) {
+  const x = Number(slot.x || 0);
+  const y = Number(slot.y || 0);
+  const width = Number(slot.width || 0);
+  const height = Number(slot.height || 0);
+  if (!logoUrl || width <= 0 || height <= 0) return "";
+  return `<image href="${escapeXml(logoUrl)}" x="${x}" y="${y}" width="${width}" height="${height}" preserveAspectRatio="xMidYMid meet" />`;
+}
+
 function drawMaskBlock(mask: CardThemeMask, id: string) {
   const x = Number(mask.x || 0);
   const y = Number(mask.y || 0);
@@ -357,6 +411,7 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
   const ctaRaw = String(url.searchParams.get("cta") || "").trim();
   const mensagemRaw = String(url.searchParams.get("mensagem") || "").trim();
   const photoUrlRaw = String(url.searchParams.get("photo_url") || url.searchParams.get("photo") || "").trim();
+  const logoUrlRaw = String(url.searchParams.get("logo_url") || url.searchParams.get("logo") || "").trim();
   const templateId = String(url.searchParams.get("template_id") || "").trim();
   let themeId = String(url.searchParams.get("theme_id") || "").trim();
   const themeName = String(url.searchParams.get("theme_name") || url.searchParams.get("theme_key") || "").trim();
@@ -496,11 +551,14 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
   const titleText = renderTemplateText(titulo, renderVars, {
     useFullNameAsFirstName: forceNomeCompleto,
   });
+  const clientNameTemplate = String(url.searchParams.get("cliente_nome") || "").trim();
   const clientNameText = clienteNomeLiteralRaw
     ? clienteNomeLiteralRaw
-    : renderTemplateText(String(url.searchParams.get("cliente_nome") || "[PRIMEIRO_NOME],"), renderVars, {
-        useFullNameAsFirstName: forceNomeCompleto,
-      });
+    : clientNameTemplate
+      ? renderTemplateText(clientNameTemplate, renderVars, {
+          useFullNameAsFirstName: true,
+        })
+      : nome;
   const bodyTextRaw = renderTemplateText(corpo, {
     ...renderVars,
     mensagem: mensagemRaw || corpo,
@@ -522,6 +580,8 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
   const hideClientName = Boolean(showPhoto && themeLayout?.photo?.hideClientNameWhenPhoto);
   const hideBody = Boolean(showPhoto && themeLayout?.photo?.hideBodyWhenPhoto);
   const visibility = themeLayout?.visibility;
+  const logoUrl = absoluteAssetUrl(url.origin, logoUrlRaw);
+  const logoSlot = resolveLogoSlot(themeLayout, width, height);
 
   const backgroundUrl = absoluteAssetUrl(
     url.origin,
@@ -545,6 +605,7 @@ ${fontFaceCss}
   ${isVisible(visibility?.footerLead) ? drawTextBlock(footerLeadText, footerLeadStyle) : ""}
   ${isVisible(visibility?.consultant) ? drawTextBlock(consultantNameText, consultantStyle) : ""}
   ${isVisible(visibility?.consultantRole) ? drawTextBlock(consultantRoleText, consultantRoleStyle) : ""}
+  ${logoUrl && isVisible(visibility?.logo) ? drawLogoBlock(logoUrl, logoSlot) : ""}
 </svg>`;
 
   return { svg, width, height };
