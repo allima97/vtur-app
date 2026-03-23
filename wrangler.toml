@@ -11,6 +11,7 @@ ENVIRONMENT = "production"
 SUPABASE_URL = "https://ggqmvruerbaqxthhnxrm.supabase.co"
 PUBLIC_SUPABASE_URL = "https://ggqmvruerbaqxthhnxrm.supabase.co"
 PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_yO4zM8WFfmRTZKtBG1PaHw_9pLyVXMh"
+PUBLIC_AUTO_LOGOUT_MINUTES = "60"
 
 # Bindings do Worker default (workers.dev)
 # Mantidos alinhados ao ambiente atual para evitar erro de runtime em preview.
@@ -42,6 +43,7 @@ ENVIRONMENT = "production"
 SUPABASE_URL = "https://ggqmvruerbaqxthhnxrm.supabase.co"
 PUBLIC_SUPABASE_URL = "https://ggqmvruerbaqxthhnxrm.supabase.co"
 PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_yO4zM8WFfmRTZKtBG1PaHw_9pLyVXMh"
+PUBLIC_AUTO_LOGOUT_MINUTES = "60"
 
 # KV para sessão (novo, usando o ID que você mencionou)
 [[env.production.kv_namespaces]]
@@ -63,6 +65,7 @@ ENVIRONMENT = "staging"
 SUPABASE_URL = "https://ggqmvruerbaqxthhnxrm.supabase.co"
 PUBLIC_SUPABASE_URL = "https://ggqmvruerbaqxthhnxrm.supabase.co"
 PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_yO4zM8WFfmRTZKtBG1PaHw_9pLyVXMh"
+PUBLIC_AUTO_LOGOUT_MINUTES = "60"
 
 # Se quiser sessão em staging, crie um KV próprio e ative isto:
 # [[env.staging.kv_namespaces]]
@@ -75,7 +78,7 @@ PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_yO4zM8WFfmRTZKtBG1PaHw_9pLyVXMh"
 # =========================
 [env.development]
 name = "vtur-dev"
-vars = { ENVIRONMENT = "development" }
+vars = { ENVIRONMENT = "development", PUBLIC_AUTO_LOGOUT_MINUTES = "60" }
 
 # Se quiser sessão em dev:
 # [[env.development.kv_namespaces]]
