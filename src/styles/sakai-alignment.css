@@ -194,6 +194,30 @@ body.sakai-theme .app-sidebar .sidebar-refresh-perms-btn.vtur-app-button-seconda
   color: #f8fafc;
 }
 
+body.sakai-theme .app-sidebar .sidebar-mobile-utility-group .vtur-app-button,
+body.sakai-theme .app-sidebar .sidebar-mobile-utility-group .vtur-app-button.vtur-app-button-secondary,
+body.sakai-theme .app-sidebar .sidebar-mobile-utility-group .vtur-app-button.vtur-app-button-secondary.p-button-outlined {
+  background: transparent;
+  border-color: transparent;
+  color: #e2e8f0;
+}
+
+body.sakai-theme .app-sidebar .sidebar-mobile-utility-group .vtur-app-button:hover:not(:disabled):not(.p-disabled),
+body.sakai-theme .app-sidebar .sidebar-mobile-utility-group .vtur-app-button.vtur-app-button-secondary:hover:not(:disabled):not(.p-disabled),
+body.sakai-theme .app-sidebar .sidebar-mobile-utility-group .vtur-app-button.vtur-app-button-secondary.p-button-outlined:hover:not(:disabled):not(.p-disabled) {
+  background: rgba(148, 163, 184, 0.2);
+  border-color: transparent;
+  color: #f8fafc;
+}
+
+body.sakai-theme .app-sidebar .sidebar-mobile-utility-group .vtur-app-button .p-button-icon {
+  color: #93c5fd;
+}
+
+body.sakai-theme .app-sidebar .sidebar-mobile-utility-group .vtur-app-button:hover:not(:disabled):not(.p-disabled) .p-button-icon {
+  color: #dbeafe;
+}
+
 body.sakai-theme .vtur-app-card,
 body.sakai-theme .vtur-app-toolbar,
 body.sakai-theme .card-base,

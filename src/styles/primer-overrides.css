@@ -1113,6 +1113,48 @@ a.vtur-app-button:visited {
   color: #f8fafc;
 }
 
+.app-sidebar .sidebar-mobile-utility-group .vtur-app-button,
+.app-sidebar .sidebar-mobile-utility-group .vtur-app-button.vtur-app-button-secondary,
+.app-sidebar .sidebar-mobile-utility-group .vtur-app-button.vtur-app-button-secondary.p-button-outlined {
+  width: 100%;
+  min-height: auto;
+  justify-content: flex-start;
+  gap: 0.7rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #e2e8f0;
+  box-shadow: none;
+}
+
+.app-sidebar .sidebar-mobile-utility-group .vtur-app-button:hover:not(:disabled):not(.p-disabled),
+.app-sidebar .sidebar-mobile-utility-group .vtur-app-button.vtur-app-button-secondary:hover:not(:disabled):not(.p-disabled),
+.app-sidebar .sidebar-mobile-utility-group .vtur-app-button.vtur-app-button-secondary.p-button-outlined:hover:not(:disabled):not(.p-disabled) {
+  background: rgba(148, 163, 184, 0.2);
+  border-color: transparent;
+  color: #f8fafc;
+}
+
+.app-sidebar .sidebar-mobile-utility-group .vtur-app-button .p-button-icon {
+  margin: 0;
+  color: #93c5fd;
+  font-size: 1rem;
+}
+
+.app-sidebar .sidebar-mobile-utility-group .vtur-app-button:hover:not(:disabled):not(.p-disabled) .p-button-icon {
+  color: #dbeafe;
+}
+
+.app-sidebar .sidebar-mobile-utility-group .vtur-app-button .p-button-label {
+  flex: 1 1 auto;
+  width: 100%;
+  text-align: left;
+  font-weight: 400;
+  font-size: 0.9rem;
+  letter-spacing: 0;
+}
+
 .vtur-app-dialog-title {
   display: inline-flex;
   align-items: center;
