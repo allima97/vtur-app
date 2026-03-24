@@ -4,6 +4,8 @@ import nunitoSansBoldUrl from "../../assets/cards/fonts/NunitoSans-Bold.ttf?url"
 import nunitoSansRegularUrl from "../../assets/cards/fonts/NunitoSans-Regular.ttf?url";
 import nunitoSansSemiBoldUrl from "../../assets/cards/fonts/NunitoSans-SemiBold.ttf?url";
 import type { QuotePdfSettings } from "./quotePdf";
+import { resolveAirlineIata, resolveAirlineNameByIata, type AirlineIataLookupEntry } from "../airlineIata";
+import { construirLinkWhatsApp } from "../whatsapp";
 import type {
   ExportRoteiroPdfOptions,
   RoteiroDiaPdf,
@@ -256,6 +258,13 @@ function formatBudgetItemText(value?: string | null) {
       return lower.charAt(0).toUpperCase() + lower.slice(1);
     })
     .join("");
+}
+
+function formatFlightPlace(city?: string | null, airport?: string | null) {
+  const cityValue = formatBudgetItemText(city);
+  const airportValue = textValue(airport).toUpperCase();
+  if (cityValue && /^[A-Z]{3}$/.test(airportValue)) return `${cityValue} (${airportValue})`;
+  return cityValue || airportValue;
 }
 
 function splitTrechoCities(trecho?: string | null) {
@@ -566,6 +575,16 @@ function makeCard(body: any, marginBottom = 14): any {
   };
 }
 
+const SECTION_SEPARATOR = {
+  canvas: [{ type: "line", x1: 0, y1: 0, x2: 800, y2: 0, lineWidth: 0.5, lineColor: "#e2e8f0" }],
+  margin: [0, 8, 0, 10],
+};
+
+function makeSectionCard(title: string, kind: IconKind, body: any | any[], marginBottom = 14): any {
+  const items = Array.isArray(body) ? body : [body];
+  return makeCard([sectionHeaderContent(title, kind), SECTION_SEPARATOR, ...items], marginBottom);
+}
+
 // ── Vector icons (ported from jsPDF drawIcon) ──────────────────────────────
 type IconKind = "itinerary" | "hotel" | "passeio" | "flight" | "invest" | "included" | "excluded" | "payment" | "info" | "city";
 
@@ -658,7 +677,7 @@ function td(text: string, align: "left" | "center" | "right" = "left"): any {
   return { text, fontSize: 10, alignment: align, color: TEXT_MUTED_CLR };
 }
 
-function buildRoteiroPdfContent(roteiro: RoteiroParaPdf, settings: QuotePdfSettings): any[] {
+function buildRoteiroPdfContent(roteiro: RoteiroParaPdf, settings: QuotePdfSettings, airlineLookup: AirlineIataLookupEntry[] = []): any[] {
   const dias = normalizeDiasForPdf(roteiro.dias || []);
   const hoteis = (roteiro.hoteis || []).filter((item) => Boolean(textValue(item.cidade) || textValue(item.hotel)));
   const passeios = (roteiro.passeios || []).filter((item) => Boolean(textValue(item.passeio) || textValue(item.cidade)));
@@ -712,7 +731,6 @@ function buildRoteiroPdfContent(roteiro: RoteiroParaPdf, settings: QuotePdfSetti
 
   // ── Itinerary ─────────────────────────────────────────────────
   if (dias.length > 0) {
-    content.push(makeCard(sectionHeaderContent("Itiner\u00e1rio Detalhado", "itinerary"), 4));
     const diaItems = dias.map((dia, index) => {
       const place = formatBudgetItemText(dia.percurso) || formatBudgetItemText(dia.cidade);
       const header = `${formatDate(dia.data)} \u2014 Dia ${index + 1}${place ? `: ${place}` : ""}`;
@@ -726,13 +744,12 @@ function buildRoteiroPdfContent(roteiro: RoteiroParaPdf, settings: QuotePdfSetti
         margin: [0, 0, 0, index < dias.length - 1 ? 8 : 0],
       };
     });
-    content.push(makeCard({ stack: diaItems }, 12));
+    content.push(makeSectionCard("Itiner\u00e1rio Detalhado", "itinerary", { stack: diaItems }, 14));
   }
 
   // ── Hotels ────────────────────────────────────────────────────
   if (groupedHoteis.length > 0) {
-    content.push(makeCard(sectionHeaderContent("Hot\u00e9is Sugeridos", "hotel"), 4));
-    groupedHoteis.forEach((group) => {
+    groupedHoteis.forEach((group, groupIndex) => {
       const tableBody: any[][] = [
         [
           th("Nome Hotel"),
@@ -751,20 +768,21 @@ function buildRoteiroPdfContent(roteiro: RoteiroParaPdf, settings: QuotePdfSetti
           td(formatBudgetItemText(hotel.regime) || "-", "center"),
         ]),
       ];
-      content.push(makeCard([
-        cityLabel(group.cidade),
-        {
-          table: { widths: ["*", "auto", "auto", "auto", "auto", "auto"], headerRows: 1, body: tableBody },
-          layout: innerTableLayout,
-        },
-      ], 10));
+      const tableBlock = {
+        table: { widths: ["*", "auto", "auto", "auto", "auto", "auto"], headerRows: 1, body: tableBody },
+        layout: innerTableLayout,
+      };
+      if (groupIndex === 0) {
+        content.push(makeSectionCard("Hot\u00e9is Sugeridos", "hotel", [cityLabel(group.cidade), tableBlock], 10));
+      } else {
+        content.push(makeCard([cityLabel(group.cidade), tableBlock], 10));
+      }
     });
   }
 
   // ── Passeios e Servicos ───────────────────────────────────────
   if (groupedPasseios.length > 0) {
-    content.push(makeCard(sectionHeaderContent("Passeios e Servi\u00e7os", "passeio"), 4));
-    groupedPasseios.forEach((group) => {
+    groupedPasseios.forEach((group, groupIndex) => {
       const groupHasSeguro = group.items.some((item) => isSeguroPasseioLike(item as any));
       const isGenericServiceGroup = !normalizeLookup(group.cidade) || normalizeLookup(group.cidade) === "servicos";
       const displayCidade = groupHasSeguro && isGenericServiceGroup ? groupedSeguroCityLabel : group.cidade;
@@ -783,49 +801,73 @@ function buildRoteiroPdfContent(roteiro: RoteiroParaPdf, settings: QuotePdfSetti
           ];
         }),
       ];
-      content.push(makeCard([
-        cityLabel(displayCidade || "Servi\u00e7os"),
-        {
-          table: { widths: ["auto", "*", "auto"], headerRows: 1, body: tableBody },
-          layout: innerTableLayout,
-        },
-      ], 10));
+      const tableBlock = {
+        table: { widths: ["auto", "*", "auto"], headerRows: 1, body: tableBody },
+        layout: innerTableLayout,
+      };
+      if (groupIndex === 0) {
+        content.push(makeSectionCard("Passeios e Servi\u00e7os", "passeio", [cityLabel(displayCidade || "Servi\u00e7os"), tableBlock], 10));
+      } else {
+        content.push(makeCard([cityLabel(displayCidade || "Servi\u00e7os"), tableBlock], 10));
+      }
     });
   }
 
   // ── Passagem Aerea ────────────────────────────────────────────
   if (transportes.length > 0) {
-    content.push(makeCard(sectionHeaderContent("Passagem A\u00e9rea", "flight"), 4));
-    const tableBody: any[][] = [
+    const flightRows = transportes.map((item) => {
+      const trecho = splitTrechoCities(item.trecho);
+      const dataOrigem = formatDate(item.data_voo || item.data_inicio);
+      const dataDestino = formatDate(item.data_fim || item.data_voo || item.data_inicio);
+      const horarios =
+        textValue(item.hora_saida) && textValue(item.hora_chegada)
+          ? `${textValue(item.hora_saida)} / ${textValue(item.hora_chegada)}`
+          : textValue(item.hora_saida) || textValue(item.hora_chegada) || "-";
+      const iataCode = resolveAirlineIata(item.cia_aerea, airlineLookup) || formatBudgetItemText(item.cia_aerea) || "-";
+      const origemDisplay = formatFlightPlace(trecho.origem, item.aeroporto_saida) || "-";
+      const destinoDisplay = formatFlightPlace(trecho.destino, item.aeroporto_chegada) || "-";
+      return { iataCode, origemDisplay, dataOrigem, destinoDisplay, dataDestino, horarios };
+    });
+    const flightTableBody: any[][] = [
       [th("Cia"), th("Origem"), th("Sa\u00edda"), th("Destino"), th("Chegada"), th("Sa\u00edda / Chegada")],
-      ...transportes.map((item) => {
-        const trecho = splitTrechoCities(item.trecho);
-        const dataOrigem = formatDate(item.data_voo || item.data_inicio);
-        const dataDestino = formatDate(item.data_fim || item.data_voo || item.data_inicio);
-        const horarios =
-          textValue(item.hora_saida) && textValue(item.hora_chegada)
-            ? `${textValue(item.hora_saida)} / ${textValue(item.hora_chegada)}`
-            : textValue(item.hora_saida) || textValue(item.hora_chegada) || "-";
-        return [
-          td(formatBudgetItemText(item.cia_aerea) || "-"),
-          td(trecho.origem || "-"),
-          td(dataOrigem || "-"),
-          td(trecho.destino || "-"),
-          td(dataDestino || "-"),
-          td(horarios),
-        ];
-      }),
+      ...flightRows.map((row) => [
+        td(row.iataCode),
+        td(row.origemDisplay),
+        td(row.dataOrigem || "-"),
+        td(row.destinoDisplay),
+        td(row.dataDestino || "-"),
+        td(row.horarios),
+      ]),
     ];
-    content.push(makeCard({
-      table: { widths: ["auto", "*", "auto", "*", "auto", "auto"], headerRows: 1, body: tableBody },
-      layout: innerTableLayout,
-    }, 12));
+    const airlineLegendParts: string[] = [];
+    const seenCodes = new Set<string>();
+    flightRows.forEach((row, index) => {
+      const code = resolveAirlineIata(transportes[index].cia_aerea, airlineLookup);
+      if (!code || code === "-" || seenCodes.has(code)) return;
+      seenCodes.add(code);
+      const name = resolveAirlineNameByIata(code, airlineLookup) || formatBudgetItemText(transportes[index].cia_aerea);
+      if (name) airlineLegendParts.push(`${code} = ${name}`);
+    });
+    const flightCardBody: any[] = [
+      {
+        table: { widths: ["auto", "*", "auto", "*", "auto", "auto"], headerRows: 1, body: flightTableBody },
+        layout: innerTableLayout,
+      },
+    ];
+    if (airlineLegendParts.length > 0) {
+      flightCardBody.push({
+        text: airlineLegendParts.join("  |  "),
+        fontSize: 8,
+        color: TEXT_MUTED_CLR,
+        margin: [0, 6, 0, 0],
+      });
+    }
+    content.push(makeSectionCard("Passagem A\u00e9rea", "flight", flightCardBody, 14));
   }
 
   // ── Investimento ──────────────────────────────────────────────
   if (investimentos.length > 0) {
-    content.push(makeCard(sectionHeaderContent("Investimento", "invest"), 4));
-    const tableBody: any[][] = [
+    const investTableBody: any[][] = [
       [th("Tipo"), th("Valor por Pessoa", "center"), th("Qte Paxs", "center"), th("Valor total por Apto", "center")],
       ...investimentos.map((item) => {
         const valorApto = resolveInvestimentoValorTotalApto(item as any);
@@ -843,15 +885,14 @@ function buildRoteiroPdfContent(roteiro: RoteiroParaPdf, settings: QuotePdfSetti
         { text: formatCurrency(investimentoTotalApto), bold: true, fontSize: 10, alignment: "center", color: TEXT_CLR },
       ],
     ];
-    content.push(makeCard({
-      table: { widths: ["*", "auto", "auto", "auto"], headerRows: 1, body: tableBody },
+    content.push(makeSectionCard("Investimento", "invest", {
+      table: { widths: ["*", "auto", "auto", "auto"], headerRows: 1, body: investTableBody },
       layout: innerTableLayout,
-    }, 12));
+    }, 14));
   }
 
   // ── Pagamento ─────────────────────────────────────────────────
   if (pagamentoGroups.length > 0) {
-    content.push(makeCard(sectionHeaderContent("Pagamento", "payment"), 4));
     const pagItems: any[] = pagamentoGroups.map((group, index) => {
       const serviceTitle = group.servicos.join(" / ");
       const isAereoGroup = group.servicos.some((servico) => normalizeLookup(servico).startsWith("passagem aerea"));
@@ -882,25 +923,22 @@ function buildRoteiroPdfContent(roteiro: RoteiroParaPdf, settings: QuotePdfSetti
         margin: [0, 0, 0, index < pagamentoGroups.length - 1 ? 10 : 0],
       };
     });
-    content.push(makeCard({ stack: pagItems }, 14));
+    content.push(makeSectionCard("Pagamento", "payment", { stack: pagItems }, 14));
   }
 
   // ── O que esta incluido ───────────────────────────────────────
   if (includeUnique.length > 0) {
-    content.push(makeCard(sectionHeaderContent("O que est\u00e1 inclu\u00eddo:", "included"), 4));
-    content.push(makeCard({ ul: includeUnique.map((item) => ({ text: item, fontSize: 11, color: TEXT_MUTED_CLR })) }, 14));
+    content.push(makeSectionCard("O que est\u00e1 inclu\u00eddo:", "included", { ul: includeUnique.map((item) => ({ text: item, fontSize: 11, color: TEXT_MUTED_CLR })) }, 14));
   }
 
   // ── O que nao esta incluido ───────────────────────────────────
   if (noIncludeItems.length > 0) {
-    content.push(makeCard(sectionHeaderContent("O que n\u00e3o est\u00e1 inclu\u00eddo", "excluded"), 4));
-    content.push(makeCard({ ul: noIncludeItems.map((item) => ({ text: item, fontSize: 11, color: TEXT_MUTED_CLR })) }, 14));
+    content.push(makeSectionCard("O que n\u00e3o est\u00e1 inclu\u00eddo", "excluded", { ul: noIncludeItems.map((item) => ({ text: item, fontSize: 11, color: TEXT_MUTED_CLR })) }, 14));
   }
 
   // ── Informacoes Importantes ───────────────────────────────────
   if (infoItems.length > 0) {
-    content.push(makeCard(sectionHeaderContent("Informa\u00e7\u00f5es Importantes", "info"), 4));
-    content.push(makeCard({ ul: infoItems.map((item) => ({ text: item, fontSize: 11, color: TEXT_MUTED_CLR })) }, 14));
+    content.push(makeSectionCard("Informa\u00e7\u00f5es Importantes", "info", { ul: infoItems.map((item) => ({ text: item, fontSize: 11, color: TEXT_MUTED_CLR })) }, 14));
   }
 
   // ── Rodape ────────────────────────────────────────────────────
@@ -963,10 +1001,42 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
     if (!settings) throw new Error("Configure os parametros do PDF em Parametros > Orcamentos.");
 
     const logoUrl = await resolveStorageUrl((settings as any).logo_url, (settings as any).logo_path).catch(() => null);
-    const logoDataUrl = logoUrl ? await fetchImageDataUrl(logoUrl).catch(() => null) : null;
+
+    const whatsappLink = construirLinkWhatsApp((settings as any).whatsapp, (settings as any).whatsapp_codigo_pais);
+
+    const [logoDataUrl, qrDataUrl, airlineLookup] = await Promise.all([
+      logoUrl ? fetchImageDataUrl(logoUrl).catch(() => null) : Promise.resolve(null),
+      whatsappLink
+        ? fetchImageDataUrl(`https://quickchart.io/qr?size=200&margin=1&text=${encodeURIComponent(whatsappLink)}`).catch(() => null)
+        : Promise.resolve(null),
+      (async () => {
+        try {
+          const [{ data: codes }, { data: aliases }] = await Promise.all([
+            supabaseBrowser.from("airline_iata_codes").select("id, iata_code, airline_name").eq("active", true).limit(2000),
+            supabaseBrowser.from("airline_iata_aliases").select("airline_code_id, alias").limit(5000),
+          ]);
+          const aliasByCodeId = new Map<string, string[]>();
+          (aliases || []).forEach((row: any) => {
+            const codeId = String(row?.airline_code_id || "").trim();
+            const alias = String(row?.alias || "").trim();
+            if (!codeId || !alias) return;
+            const current = aliasByCodeId.get(codeId) || [];
+            current.push(alias);
+            aliasByCodeId.set(codeId, current);
+          });
+          return (codes || []).map((row: any) => ({
+            iata: String(row?.iata_code || "").trim().toUpperCase(),
+            name: String(row?.airline_name || "").trim(),
+            aliases: aliasByCodeId.get(String(row?.id || "").trim()) || [],
+          }));
+        } catch {
+          return [];
+        }
+      })(),
+    ]);
 
     const { pdfMake, defaultFont } = await loadPdfmakeDeps();
-    const content = buildRoteiroPdfContent(roteiro, settings as QuotePdfSettings);
+    const content = buildRoteiroPdfContent(roteiro, settings as QuotePdfSettings, airlineLookup);
 
     const filialLines = [
       (settings as any).filial_nome,
@@ -984,6 +1054,7 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
     ].filter(Boolean) as string[];
 
     const headerLogoDataUrl = logoDataUrl;
+    const headerQrDataUrl = qrDataUrl;
 
     const docDefinition = {
       pageSize: "A4",
@@ -1002,6 +1073,20 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
         const leftInner = filialStack.length > 0
           ? { stack: filialStack }
           : { text: "" };
+        const rightConsultorStack: any[] = [
+          ...(headerQrDataUrl ? [{ text: "Aponte para o QR Code e fale com o consultor:", fontSize: 7, color: "#94a3b8", margin: [0, 0, 0, 2] }] : []),
+          ...consultorLines.map((line) => ({ text: line, fontSize: 8, color: "#334155" })),
+        ];
+        const rightCol: any = headerQrDataUrl
+          ? {
+              columns: [
+                { stack: rightConsultorStack, width: "*" },
+                { image: headerQrDataUrl, width: 44, height: 44, margin: [4, 0, 0, 0] },
+              ],
+              columnGap: 4,
+              width: "*",
+            }
+          : { stack: rightConsultorStack, width: "*" };
         return {
           margin: [40, 12, 40, 0],
           stack: [
@@ -1012,13 +1097,7 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
                   columnGap: 6,
                   width: "48%",
                 },
-                {
-                  stack: [
-                    { text: "Aponte para o QR Code abaixo e chame o consultor:", fontSize: 7, color: "#94a3b8", margin: [0, 0, 0, 2] },
-                    ...consultorLines.map((line) => ({ text: line, fontSize: 8, color: "#334155" })),
-                  ],
-                  width: "*",
-                },
+                rightCol,
               ],
               columnGap: 10,
             },
