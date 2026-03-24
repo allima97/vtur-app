@@ -19,8 +19,9 @@ type PdfMakeLike = {
   vfs?: Record<string, string>;
   fonts?: Record<string, any>;
   createPdf: (docDefinition: any) => {
-    download: (fileName?: string) => void;
-    getBlob: (cb: (blob: Blob) => void) => void;
+    // pdfmake 0.3.x: both are async; 2.x: getBlob was callback-based
+    download: (fileName?: string) => Promise<void> | void;
+    getBlob: ((cb: (blob: Blob) => void) => void) | (() => Promise<Blob>);
   };
 };
 
@@ -866,10 +867,16 @@ function buildFileName(roteiro: RoteiroParaPdf) {
   return `roteiro-${safeName || "roteiro"}.pdf`;
 }
 
-async function getBlobFromPdf(pdfDoc: { getBlob: (cb: (blob: Blob) => void) => void }) {
-  return await new Promise<Blob>((resolve, reject) => {
+async function getBlobFromPdf(pdfDoc: { getBlob: (...args: any[]) => any }): Promise<Blob> {
+  // pdfmake 0.3.x: getBlob() is async and returns Promise<Blob>
+  // pdfmake 2.x: getBlob(callback) was callback-based
+  const maybePromise = (pdfDoc as any).getBlob();
+  if (maybePromise && typeof (maybePromise as any).then === "function") {
+    return maybePromise as Promise<Blob>;
+  }
+  return new Promise<Blob>((resolve, reject) => {
     try {
-      pdfDoc.getBlob((blob) => resolve(blob));
+      (pdfDoc as any).getBlob((blob: Blob) => resolve(blob));
     } catch (error) {
       reject(error);
     }
@@ -935,12 +942,12 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
       const previewWindow = window.open(url, "_blank", "noopener,noreferrer");
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
       if (!previewWindow) {
-        pdfDoc.download(fileName);
+        await pdfDoc.download(fileName);
       }
       return;
     }
 
-    pdfDoc.download(fileName);
+    await pdfDoc.download(fileName);
   } catch (error) {
     // Fallback seguro para o gerador atual baseado em jsPDF.
     if (typeof window !== "undefined") {

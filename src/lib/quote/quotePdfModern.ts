@@ -16,7 +16,8 @@ type PdfMakeLike = {
   vfs?: Record<string, string>;
   fonts?: Record<string, any>;
   createPdf: (docDefinition: any) => {
-    download: (fileName?: string) => void;
+    // pdfmake 0.3.x: download is async; 2.x was void
+    download: (fileName?: string) => Promise<void> | void;
   };
 };
 
@@ -1493,7 +1494,7 @@ export async function exportQuoteToPdf(params: QuoteModernParams) {
     if (typeof window !== "undefined") {
       console.info("[Quote PDF] Renderer moderno ativo (pdfmake).");
     }
-    pdfMake.createPdf(docDefinition).download(fileName);
+    await pdfMake.createPdf(docDefinition).download(fileName);
   } catch (error) {
     if (typeof window !== "undefined") {
       console.warn("[Quote PDF] Falha no renderer moderno; usando fallback legado (jsPDF).", error);
