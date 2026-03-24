@@ -530,32 +530,34 @@ async function fetchImageDataUrl(url: string) {
 
 // ── Native pdfmake content builder (no html-to-pdfmake) ─────────────────────
 
-const CARD_BORDER_CLR = "#d1d5db";
+const CARD_BORDER_CLR = "#9ca3af";
 const TITLE_BLUE_CLR = "#1a2cc8";
+const TEXT_MUTED_CLR = "#64748b";
+const TEXT_CLR = "#0f172a";
 
 const cardLayout = {
   hLineWidth: () => 0.8,
   vLineWidth: () => 0.8,
   hLineColor: () => CARD_BORDER_CLR,
   vLineColor: () => CARD_BORDER_CLR,
-  paddingLeft: () => 12,
-  paddingRight: () => 12,
-  paddingTop: () => 10,
-  paddingBottom: () => 10,
+  paddingLeft: () => 14,
+  paddingRight: () => 14,
+  paddingTop: () => 11,
+  paddingBottom: () => 11,
 };
 
 const innerTableLayout = {
   hLineWidth: (i: number, node: any) =>
-    i === 0 || i === 1 || i === node.table.body.length ? 0.6 : 0.3,
+    i === 0 || i === 1 || i === node.table.body.length ? 0.7 : 0.3,
   vLineWidth: () => 0,
-  hLineColor: () => "#e2e8f0",
-  paddingLeft: () => 4,
-  paddingRight: () => 4,
-  paddingTop: () => 3,
-  paddingBottom: () => 3,
+  hLineColor: () => "#d1d5db",
+  paddingLeft: () => 5,
+  paddingRight: () => 5,
+  paddingTop: () => 4,
+  paddingBottom: () => 4,
 };
 
-function makeCard(body: any, marginBottom = 10): any {
+function makeCard(body: any, marginBottom = 14): any {
   const inner = Array.isArray(body) ? { stack: body } : body;
   return {
     table: { widths: ["*"], body: [[inner]] },
@@ -564,20 +566,96 @@ function makeCard(body: any, marginBottom = 10): any {
   };
 }
 
-function sectionHeaderContent(title: string): any {
-  return { text: title, fontSize: 13, bold: true, color: TITLE_BLUE_CLR };
+// ── Vector icons (ported from jsPDF drawIcon) ──────────────────────────────
+type IconKind = "itinerary" | "hotel" | "passeio" | "flight" | "invest" | "included" | "excluded" | "payment" | "info" | "city";
+
+function makeIconCanvas(kind: IconKind, size = 14, color = TITLE_BLUE_CLR): any {
+  const s = size;
+  const shapes: any[] = [];
+
+  if (kind === "itinerary") {
+    const r = s * 0.12;
+    const yMid = s * 0.5;
+    const x1 = s * 0.12, x2 = s * 0.5, x3 = s * 0.88;
+    shapes.push({ type: "ellipse", x: x1, y: yMid, r1: r, r2: r, lineWidth: 1, lineColor: color });
+    shapes.push({ type: "ellipse", x: x2, y: s * 0.24, r1: r, r2: r, lineWidth: 1, lineColor: color });
+    shapes.push({ type: "ellipse", x: x3, y: s * 0.72, r1: r, r2: r, lineWidth: 1, lineColor: color });
+    shapes.push({ type: "line", x1: x1 + r, y1: yMid, x2: x2 - r, y2: s * 0.24, lineWidth: 1, lineColor: color });
+    shapes.push({ type: "line", x1: x2 + r, y1: s * 0.24, x2: x3 - r, y2: s * 0.72, lineWidth: 1, lineColor: color });
+  } else if (kind === "hotel") {
+    const baseY = s * 0.74;
+    shapes.push({ type: "rect", x: s * 0.14, y: baseY - s * 0.38, w: s * 0.72, h: s * 0.38 + s * 0.12, lineWidth: 1, lineColor: color });
+    shapes.push({ type: "rect", x: s * 0.14, y: baseY - s * 0.38, w: s * 0.22, h: s * 0.18, lineWidth: 0.6, lineColor: color });
+  } else if (kind === "passeio") {
+    shapes.push({ type: "ellipse", x: s * 0.5, y: s * 0.5, r1: s * 0.28, r2: s * 0.28, lineWidth: 1, lineColor: color });
+    shapes.push({ type: "line", x1: s * 0.5, y1: s * 0.22, x2: s * 0.5, y2: s * 0.78, lineWidth: 1, lineColor: color });
+    shapes.push({ type: "line", x1: s * 0.22, y1: s * 0.5, x2: s * 0.78, y2: s * 0.5, lineWidth: 1, lineColor: color });
+  } else if (kind === "flight") {
+    shapes.push({ type: "line", x1: s * 0.08, y1: s * 0.52, x2: s * 0.9, y2: s * 0.52, lineWidth: 1, lineColor: color });
+    shapes.push({ type: "line", x1: s * 0.58, y1: s * 0.3, x2: s * 0.9, y2: s * 0.52, lineWidth: 1, lineColor: color });
+    shapes.push({ type: "line", x1: s * 0.58, y1: s * 0.74, x2: s * 0.9, y2: s * 0.52, lineWidth: 1, lineColor: color });
+    shapes.push({ type: "line", x1: s * 0.32, y1: s * 0.4, x2: s * 0.2, y2: s * 0.2, lineWidth: 1, lineColor: color });
+    shapes.push({ type: "line", x1: s * 0.32, y1: s * 0.64, x2: s * 0.2, y2: s * 0.84, lineWidth: 1, lineColor: color });
+  } else if (kind === "invest") {
+    const bx = s * 0.1, by = s * 0.2, bw = s * 0.8, bh = s * 0.56;
+    shapes.push({ type: "rect", x: bx, y: by, w: bw, h: bh, r: 2, lineWidth: 1, lineColor: color });
+    shapes.push({ type: "ellipse", x: bx + bw * 0.5, y: by + bh * 0.5, r1: s * 0.12, r2: s * 0.12, lineWidth: 1, lineColor: color });
+    shapes.push({ type: "line", x1: bx + bw * 0.16, y1: by + bh * 0.24, x2: bx + bw * 0.28, y2: by + bh * 0.24, lineWidth: 1, lineColor: color });
+    shapes.push({ type: "line", x1: bx + bw * 0.72, y1: by + bh * 0.76, x2: bx + bw * 0.84, y2: by + bh * 0.76, lineWidth: 1, lineColor: color });
+  } else if (kind === "included") {
+    shapes.push({ type: "rect", x: s * 0.1, y: s * 0.1, w: s * 0.8, h: s * 0.8, r: 2, lineWidth: 1, lineColor: color });
+    shapes.push({ type: "line", x1: s * 0.28, y1: s * 0.52, x2: s * 0.45, y2: s * 0.7, lineWidth: 1.5, lineColor: color });
+    shapes.push({ type: "line", x1: s * 0.45, y1: s * 0.7, x2: s * 0.74, y2: s * 0.34, lineWidth: 1.5, lineColor: color });
+  } else if (kind === "excluded") {
+    shapes.push({ type: "rect", x: s * 0.1, y: s * 0.1, w: s * 0.8, h: s * 0.8, r: 2, lineWidth: 1, lineColor: color });
+    shapes.push({ type: "line", x1: s * 0.28, y1: s * 0.28, x2: s * 0.72, y2: s * 0.72, lineWidth: 1.5, lineColor: color });
+    shapes.push({ type: "line", x1: s * 0.72, y1: s * 0.28, x2: s * 0.28, y2: s * 0.72, lineWidth: 1.5, lineColor: color });
+  } else if (kind === "payment") {
+    shapes.push({ type: "rect", x: s * 0.08, y: s * 0.2, w: s * 0.84, h: s * 0.62, r: 2, lineWidth: 1, lineColor: color });
+    shapes.push({ type: "line", x1: s * 0.08, y1: s * 0.38, x2: s * 0.92, y2: s * 0.38, lineWidth: 1, lineColor: color });
+    shapes.push({ type: "line", x1: s * 0.2, y1: s * 0.58, x2: s * 0.42, y2: s * 0.58, lineWidth: 1.5, lineColor: color });
+  } else if (kind === "info") {
+    shapes.push({ type: "ellipse", x: s * 0.5, y: s * 0.5, r1: s * 0.34, r2: s * 0.34, lineWidth: 1, lineColor: color });
+    shapes.push({ type: "line", x1: s * 0.5, y1: s * 0.42, x2: s * 0.5, y2: s * 0.66, lineWidth: 1.5, lineColor: color });
+    shapes.push({ type: "ellipse", x: s * 0.5, y: s * 0.28, r1: s * 0.05, r2: s * 0.05, lineWidth: 1, lineColor: color, color });
+  } else if (kind === "city") {
+    const cx = s * 0.5, cy = s * 0.38, r = s * 0.2;
+    shapes.push({ type: "ellipse", x: cx, y: cy, r1: r, r2: r, lineWidth: 1, lineColor: color });
+    shapes.push({ type: "ellipse", x: cx, y: cy, r1: r * 0.35, r2: r * 0.35, lineWidth: 1, lineColor: color });
+    shapes.push({ type: "line", x1: cx - r * 0.75, y1: cy + r * 0.7, x2: cx, y2: s * 0.92, lineWidth: 1, lineColor: color });
+    shapes.push({ type: "line", x1: cx + r * 0.75, y1: cy + r * 0.7, x2: cx, y2: s * 0.92, lineWidth: 1, lineColor: color });
+  }
+
+  return { canvas: shapes, width: s + 2, height: s };
+}
+
+function sectionHeaderContent(title: string, kind: IconKind): any {
+  return {
+    columns: [
+      { ...makeIconCanvas(kind, 14, TITLE_BLUE_CLR), margin: [0, 1, 0, 0] },
+      { text: title, fontSize: 16, bold: true, color: TITLE_BLUE_CLR, width: "*" },
+    ],
+    columnGap: 8,
+  };
 }
 
 function cityLabel(cidade: string): any {
-  return { text: `\u2022 ${cidade}`, fontSize: 11, bold: true, color: TITLE_BLUE_CLR, margin: [0, 0, 0, 6] };
+  return {
+    columns: [
+      { ...makeIconCanvas("city", 12, TEXT_MUTED_CLR), margin: [0, 1, 0, 0] },
+      { text: cidade, fontSize: 12, bold: true, color: "#334155", width: "*" },
+    ],
+    columnGap: 6,
+    margin: [0, 0, 0, 7],
+  };
 }
 
 function th(text: string, align: "left" | "center" | "right" = "left"): any {
-  return { text, fontSize: 9, bold: true, color: "#1e3a8a", fillColor: "#e0e7ff", alignment: align };
+  return { text, fontSize: 10, bold: true, color: "#1e3a8a", fillColor: "#e0e7ff", alignment: align };
 }
 
 function td(text: string, align: "left" | "center" | "right" = "left"): any {
-  return { text, fontSize: 9, alignment: align, color: "#0f172a" };
+  return { text, fontSize: 10, alignment: align, color: TEXT_MUTED_CLR };
 }
 
 function buildRoteiroPdfContent(roteiro: RoteiroParaPdf, settings: QuotePdfSettings): any[] {
@@ -620,32 +698,32 @@ function buildRoteiroPdfContent(roteiro: RoteiroParaPdf, settings: QuotePdfSetti
 
   // ── Title card ────────────────────────────────────────────────
   content.push(makeCard([
-    { text: "Roteiro Personalizado", fontSize: 15, bold: true, color: TITLE_BLUE_CLR },
-    { text: textValue(roteiro.nome || "Roteiro"), fontSize: 12, bold: true, color: "#0f172a", margin: [0, 5, 0, 0] },
-  ], 8));
+    { text: "Roteiro Personalizado", fontSize: 18, bold: true, color: TITLE_BLUE_CLR },
+    { text: textValue(roteiro.nome || "Roteiro"), fontSize: 15, bold: true, color: TEXT_CLR, margin: [0, 6, 0, 0] },
+  ], 10));
 
   // ── Period / cities card ──────────────────────────────────────
   if (citiesLine || periodText) {
     const periodItems: any[] = [];
-    if (citiesLine) periodItems.push({ text: citiesLine, fontSize: 11, bold: true, color: "#0f172a", margin: [0, 0, 0, 3] });
-    if (periodText) periodItems.push({ text: [{ text: "Per\u00edodo: ", bold: true }, { text: periodText }], fontSize: 10 });
-    content.push(makeCard(periodItems.length === 1 ? periodItems[0] : { stack: periodItems }, 12));
+    if (citiesLine) periodItems.push({ text: citiesLine, fontSize: 13, bold: true, color: TEXT_CLR, margin: [0, 0, 0, 4] });
+    if (periodText) periodItems.push({ text: [{ text: "Per\u00edodo: ", bold: true }, { text: periodText }], fontSize: 11 });
+    content.push(makeCard(periodItems.length === 1 ? periodItems[0] : { stack: periodItems }, 14));
   }
 
   // ── Itinerary ─────────────────────────────────────────────────
   if (dias.length > 0) {
-    content.push(makeCard(sectionHeaderContent("Itiner\u00e1rio Detalhado"), 4));
+    content.push(makeCard(sectionHeaderContent("Itiner\u00e1rio Detalhado", "itinerary"), 4));
     const diaItems = dias.map((dia, index) => {
       const place = formatBudgetItemText(dia.percurso) || formatBudgetItemText(dia.cidade);
       const header = `${formatDate(dia.data)} \u2014 Dia ${index + 1}${place ? `: ${place}` : ""}`;
       const descricao = formatBudgetItemText(dia.descricao) || "-";
       return {
         stack: [
-          { text: header, bold: true, fontSize: 10 },
-          { text: descricao, fontSize: 9, color: "#334155", margin: [0, 2, 0, 0] },
+          { text: header, bold: true, fontSize: 11, color: TEXT_CLR },
+          { text: descricao, fontSize: 11, color: TEXT_MUTED_CLR, margin: [0, 2, 0, 0] },
         ],
         unbreakable: true,
-        margin: [0, 0, 0, index < dias.length - 1 ? 7 : 0],
+        margin: [0, 0, 0, index < dias.length - 1 ? 8 : 0],
       };
     });
     content.push(makeCard({ stack: diaItems }, 12));
@@ -653,7 +731,7 @@ function buildRoteiroPdfContent(roteiro: RoteiroParaPdf, settings: QuotePdfSetti
 
   // ── Hotels ────────────────────────────────────────────────────
   if (groupedHoteis.length > 0) {
-    content.push(makeCard(sectionHeaderContent("Hot\u00e9is Sugeridos"), 4));
+    content.push(makeCard(sectionHeaderContent("Hot\u00e9is Sugeridos", "hotel"), 4));
     groupedHoteis.forEach((group) => {
       const tableBody: any[][] = [
         [
@@ -685,7 +763,7 @@ function buildRoteiroPdfContent(roteiro: RoteiroParaPdf, settings: QuotePdfSetti
 
   // ── Passeios e Servicos ───────────────────────────────────────
   if (groupedPasseios.length > 0) {
-    content.push(makeCard(sectionHeaderContent("Passeios e Servi\u00e7os"), 4));
+    content.push(makeCard(sectionHeaderContent("Passeios e Servi\u00e7os", "passeio"), 4));
     groupedPasseios.forEach((group) => {
       const groupHasSeguro = group.items.some((item) => isSeguroPasseioLike(item as any));
       const isGenericServiceGroup = !normalizeLookup(group.cidade) || normalizeLookup(group.cidade) === "servicos";
@@ -717,7 +795,7 @@ function buildRoteiroPdfContent(roteiro: RoteiroParaPdf, settings: QuotePdfSetti
 
   // ── Passagem Aerea ────────────────────────────────────────────
   if (transportes.length > 0) {
-    content.push(makeCard(sectionHeaderContent("Passagem A\u00e9rea"), 4));
+    content.push(makeCard(sectionHeaderContent("Passagem A\u00e9rea", "flight"), 4));
     const tableBody: any[][] = [
       [th("Cia"), th("Origem"), th("Sa\u00edda"), th("Destino"), th("Chegada"), th("Sa\u00edda / Chegada")],
       ...transportes.map((item) => {
@@ -746,7 +824,7 @@ function buildRoteiroPdfContent(roteiro: RoteiroParaPdf, settings: QuotePdfSetti
 
   // ── Investimento ──────────────────────────────────────────────
   if (investimentos.length > 0) {
-    content.push(makeCard(sectionHeaderContent("Investimento"), 4));
+    content.push(makeCard(sectionHeaderContent("Investimento", "invest"), 4));
     const tableBody: any[][] = [
       [th("Tipo"), th("Valor por Pessoa", "center"), th("Qte Paxs", "center"), th("Valor total por Apto", "center")],
       ...investimentos.map((item) => {
@@ -759,10 +837,10 @@ function buildRoteiroPdfContent(roteiro: RoteiroParaPdf, settings: QuotePdfSetti
         ];
       }),
       [
-        { text: "Total Geral (Aptos)", bold: true, fontSize: 9, colSpan: 3, color: "#0f172a" },
+        { text: "Total Geral (Aptos)", bold: true, fontSize: 10, colSpan: 3, color: TEXT_CLR },
         {},
         {},
-        { text: formatCurrency(investimentoTotalApto), bold: true, fontSize: 9, alignment: "center", color: "#0f172a" },
+        { text: formatCurrency(investimentoTotalApto), bold: true, fontSize: 10, alignment: "center", color: TEXT_CLR },
       ],
     ];
     content.push(makeCard({
@@ -773,7 +851,7 @@ function buildRoteiroPdfContent(roteiro: RoteiroParaPdf, settings: QuotePdfSetti
 
   // ── Pagamento ─────────────────────────────────────────────────
   if (pagamentoGroups.length > 0) {
-    content.push(makeCard(sectionHeaderContent("Pagamento"), 4));
+    content.push(makeCard(sectionHeaderContent("Pagamento", "payment"), 4));
     const pagItems: any[] = pagamentoGroups.map((group, index) => {
       const serviceTitle = group.servicos.join(" / ");
       const isAereoGroup = group.servicos.some((servico) => normalizeLookup(servico).startsWith("passagem aerea"));
@@ -790,39 +868,39 @@ function buildRoteiroPdfContent(roteiro: RoteiroParaPdf, settings: QuotePdfSetti
         ? `Valor sem Taxas: ${formatCurrency(displaySubtotal)} | Taxas: ${formatCurrency(displayTaxes)} | Total: ${formatCurrency(displayTotal)}`
         : `Valor Total: ${formatCurrency(displayTotal)}`;
       const stackItems: any[] = [];
-      if (serviceTitle) stackItems.push({ text: `> ${serviceTitle}`, bold: true, fontSize: 10, color: "#0f172a" });
-      stackItems.push({ text: resumo, fontSize: 8.5, color: "#64748b", margin: [12, 2, 0, 4] });
+      if (serviceTitle) stackItems.push({ text: `> ${serviceTitle}`, bold: true, fontSize: 11, color: TEXT_CLR });
+      stackItems.push({ text: resumo, fontSize: 10, color: TEXT_MUTED_CLR, margin: [14, 2, 0, 4] });
       if (group.formas.length > 0) {
-        stackItems.push({ text: "Forma de Pagamento:", bold: true, fontSize: 9, margin: [12, 0, 0, 2] });
+        stackItems.push({ text: "Forma de Pagamento:", bold: true, fontSize: 11, color: TEXT_CLR, margin: [14, 0, 0, 2] });
         group.formas.forEach((forma) => {
-          stackItems.push({ text: `  \u2022 ${forma}`, fontSize: 9, margin: [20, 0, 0, 1] });
+          stackItems.push({ text: `  \u2022 ${forma}`, fontSize: 11, color: TEXT_MUTED_CLR, margin: [22, 0, 0, 1] });
         });
       }
       return {
         stack: stackItems,
         unbreakable: true,
-        margin: [0, 0, 0, index < pagamentoGroups.length - 1 ? 8 : 0],
+        margin: [0, 0, 0, index < pagamentoGroups.length - 1 ? 10 : 0],
       };
     });
-    content.push(makeCard({ stack: pagItems }, 12));
+    content.push(makeCard({ stack: pagItems }, 14));
   }
 
   // ── O que esta incluido ───────────────────────────────────────
   if (includeUnique.length > 0) {
-    content.push(makeCard(sectionHeaderContent("O que est\u00e1 inclu\u00eddo:"), 4));
-    content.push(makeCard({ ul: includeUnique.map((item) => ({ text: item, fontSize: 9 })) }, 12));
+    content.push(makeCard(sectionHeaderContent("O que est\u00e1 inclu\u00eddo:", "included"), 4));
+    content.push(makeCard({ ul: includeUnique.map((item) => ({ text: item, fontSize: 11, color: TEXT_MUTED_CLR })) }, 14));
   }
 
   // ── O que nao esta incluido ───────────────────────────────────
   if (noIncludeItems.length > 0) {
-    content.push(makeCard(sectionHeaderContent("O que n\u00e3o est\u00e1 inclu\u00eddo"), 4));
-    content.push(makeCard({ ul: noIncludeItems.map((item) => ({ text: item, fontSize: 9 })) }, 12));
+    content.push(makeCard(sectionHeaderContent("O que n\u00e3o est\u00e1 inclu\u00eddo", "excluded"), 4));
+    content.push(makeCard({ ul: noIncludeItems.map((item) => ({ text: item, fontSize: 11, color: TEXT_MUTED_CLR })) }, 14));
   }
 
   // ── Informacoes Importantes ───────────────────────────────────
   if (infoItems.length > 0) {
-    content.push(makeCard(sectionHeaderContent("Informa\u00e7\u00f5es Importantes"), 4));
-    content.push(makeCard({ ul: infoItems.map((item) => ({ text: item, fontSize: 9 })) }, 12));
+    content.push(makeCard(sectionHeaderContent("Informa\u00e7\u00f5es Importantes", "info"), 4));
+    content.push(makeCard({ ul: infoItems.map((item) => ({ text: item, fontSize: 11, color: TEXT_MUTED_CLR })) }, 14));
   }
 
   // ── Rodape ────────────────────────────────────────────────────
@@ -909,12 +987,12 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
 
     const docDefinition = {
       pageSize: "A4",
-      pageMargins: [22, 82, 22, 28],
+      pageMargins: [40, 90, 40, 40],
       defaultStyle: {
         font: defaultFont,
-        fontSize: 10,
-        color: "#0f172a",
-        lineHeight: 1.2,
+        fontSize: 11,
+        color: TEXT_CLR,
+        lineHeight: 1.3,
       },
       header: (_currentPage: number, _pageCount: number, pageSize: any) => {
         const logoCol: any[] = headerLogoDataUrl
@@ -925,7 +1003,7 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
           ? { stack: filialStack }
           : { text: "" };
         return {
-          margin: [22, 10, 22, 0],
+          margin: [40, 12, 40, 0],
           stack: [
             {
               columns: [
@@ -948,7 +1026,7 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
               canvas: [{
                 type: "line",
                 x1: 0, y1: 6,
-                x2: pageSize.width - 44, y2: 6,
+                x2: pageSize.width - 80, y2: 6,
                 lineWidth: 0.5,
                 lineColor: "#d1d5db",
               }],
