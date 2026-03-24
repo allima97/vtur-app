@@ -58,16 +58,50 @@ function loadPdfmakeDeps() {
     pdfmakeDepsPromise = Promise.all([
       import("pdfmake/build/pdfmake"),
       import("pdfmake/build/vfs_fonts"),
-      import("html-to-pdfmake"),
+      import("html-to-pdfmake/browser.js"),
     ]).then(async ([pdfmakeMod, vfsFontsMod, htmlToPdfmakeMod]) => {
-      const pdfMake = ((pdfmakeMod as any).default || pdfmakeMod) as PdfMakeLike;
-      const vfsFonts = (vfsFontsMod as any).default || vfsFontsMod;
-      const htmlToPdfmake = ((htmlToPdfmakeMod as any).default || htmlToPdfmakeMod) as HtmlToPdfmakeLike;
+      const pdfmakeAny = pdfmakeMod as any;
+      const pdfMake = (
+        [
+          pdfmakeAny?.pdfMake,
+          pdfmakeAny?.default?.pdfMake,
+          pdfmakeAny?.default,
+          (globalThis as any)?.pdfMake,
+          pdfmakeAny,
+        ].find((candidate: any) => candidate && typeof candidate.createPdf === "function") || null
+      ) as PdfMakeLike | null;
+      if (!pdfMake) {
+        throw new Error("PDFMake não disponível no ambiente do navegador.");
+      }
 
-      if (vfsFonts?.pdfMake?.vfs) {
-        pdfMake.vfs = vfsFonts.pdfMake.vfs;
-      } else if (vfsFonts?.vfs) {
-        pdfMake.vfs = vfsFonts.vfs;
+      const vfsFontsAny = vfsFontsMod as any;
+      const htmlToPdfmake = (
+        [
+          (htmlToPdfmakeMod as any)?.default,
+          typeof htmlToPdfmakeMod === "function" ? (htmlToPdfmakeMod as any) : null,
+          (globalThis as any)?.htmlToPdfmake,
+        ].find((candidate: any) => typeof candidate === "function") || null
+      ) as HtmlToPdfmakeLike | null;
+      if (typeof htmlToPdfmake !== "function") {
+        throw new Error("html-to-pdfmake não disponível no ambiente do navegador.");
+      }
+
+      const resolvedVfs =
+        vfsFontsAny?.pdfMake?.vfs ||
+        vfsFontsAny?.default?.pdfMake?.vfs ||
+        vfsFontsAny?.vfs ||
+        vfsFontsAny?.default?.vfs ||
+        null;
+      if (resolvedVfs) {
+        if (typeof (pdfMake as any).addVirtualFileSystem === "function") {
+          (pdfMake as any).addVirtualFileSystem(resolvedVfs);
+        } else {
+          try {
+            pdfMake.vfs = resolvedVfs;
+          } catch {
+            // fallback silencioso quando o objeto importado é readonly
+          }
+        }
       }
 
       const robotoFontMap = {
@@ -78,10 +112,18 @@ function loadPdfmakeDeps() {
           bolditalics: "Roboto-MediumItalic.ttf",
         },
       };
-      pdfMake.fonts = {
-        ...(pdfMake.fonts || {}),
-        ...robotoFontMap,
-      };
+      if (typeof (pdfMake as any).addFonts === "function") {
+        (pdfMake as any).addFonts(robotoFontMap);
+      } else {
+        try {
+          pdfMake.fonts = {
+            ...(pdfMake.fonts || {}),
+            ...robotoFontMap,
+          };
+        } catch {
+          // fallback silencioso quando o objeto importado é readonly
+        }
+      }
 
       let defaultFont = "Roboto";
 
@@ -92,14 +134,21 @@ function loadPdfmakeDeps() {
       ]);
 
       if (nunitoRegularBase64 && nunitoSemiBoldBase64 && nunitoBoldBase64) {
-        pdfMake.vfs = {
-          ...(pdfMake.vfs || {}),
+        const nunitoVfs = {
           [NUNITO_REGULAR_FILE]: nunitoRegularBase64,
           [NUNITO_SEMIBOLD_FILE]: nunitoSemiBoldBase64,
           [NUNITO_BOLD_FILE]: nunitoBoldBase64,
         };
-        pdfMake.fonts = {
-          ...(pdfMake.fonts || {}),
+        if (typeof (pdfMake as any).addVirtualFileSystem === "function") {
+          (pdfMake as any).addVirtualFileSystem(nunitoVfs);
+        } else {
+          try {
+            pdfMake.vfs = { ...(pdfMake.vfs || {}), ...nunitoVfs };
+          } catch {
+            // fallback silencioso quando o objeto importado é readonly
+          }
+        }
+        const nunitoFonts = {
           NunitoSans: {
             normal: NUNITO_REGULAR_FILE,
             bold: NUNITO_BOLD_FILE,
@@ -107,6 +156,15 @@ function loadPdfmakeDeps() {
             bolditalics: NUNITO_BOLD_FILE,
           },
         };
+        if (typeof (pdfMake as any).addFonts === "function") {
+          (pdfMake as any).addFonts(nunitoFonts);
+        } else {
+          try {
+            pdfMake.fonts = { ...(pdfMake.fonts || {}), ...nunitoFonts };
+          } catch {
+            // fallback silencioso quando o objeto importado é readonly
+          }
+        }
         defaultFont = "NunitoSans";
       }
 

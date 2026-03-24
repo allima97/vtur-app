@@ -1,7 +1,7 @@
 import { supabaseBrowser } from "../supabase-browser";
 import type { QuotePdfItem } from "./quotePdf";
 import { exportQuoteToPdf } from "./quotePdfModern";
-import { exportRoteiroPdf } from "./roteiroPdf";
+import { exportRoteiroPdf } from "./roteiroPdfModern";
 import type { RoteiroParaPdf, RoteiroHotelPdf, RoteiroPasseioPdf, RoteiroTransportePdf } from "./roteiroPdf";
 
 type QuoteItemRecord = QuotePdfItem & {
