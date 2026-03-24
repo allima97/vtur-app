@@ -25,8 +25,6 @@ type PdfMakeLike = {
   };
 };
 
-type HtmlToPdfmakeLike = (html: string, options?: { window?: Window }) => any;
-
 const NUNITO_REGULAR_FILE = "NunitoSans-Regular.ttf";
 const NUNITO_SEMIBOLD_FILE = "NunitoSans-SemiBold.ttf";
 const NUNITO_BOLD_FILE = "NunitoSans-Bold.ttf";
@@ -52,15 +50,14 @@ async function fetchAssetBase64(url: string) {
   }
 }
 
-let pdfmakeDepsPromise: Promise<{ pdfMake: PdfMakeLike; htmlToPdfmake: HtmlToPdfmakeLike; defaultFont: string }> | null = null;
+let pdfmakeDepsPromise: Promise<{ pdfMake: PdfMakeLike; defaultFont: string }> | null = null;
 
 function loadPdfmakeDeps() {
   if (!pdfmakeDepsPromise) {
     pdfmakeDepsPromise = Promise.all([
       import("pdfmake/build/pdfmake"),
       import("pdfmake/build/vfs_fonts"),
-      import("html-to-pdfmake/browser.js"),
-    ]).then(async ([pdfmakeMod, vfsFontsMod, htmlToPdfmakeMod]) => {
+    ]).then(async ([pdfmakeMod, vfsFontsMod]) => {
       const pdfmakeAny = pdfmakeMod as any;
       const pdfMake = (
         [
@@ -76,16 +73,6 @@ function loadPdfmakeDeps() {
       }
 
       const vfsFontsAny = vfsFontsMod as any;
-      const htmlToPdfmake = (
-        [
-          (htmlToPdfmakeMod as any)?.default,
-          typeof htmlToPdfmakeMod === "function" ? (htmlToPdfmakeMod as any) : null,
-          (globalThis as any)?.htmlToPdfmake,
-        ].find((candidate: any) => typeof candidate === "function") || null
-      ) as HtmlToPdfmakeLike | null;
-      if (typeof htmlToPdfmake !== "function") {
-        throw new Error("html-to-pdfmake não disponível no ambiente do navegador.");
-      }
 
       // pdfmake 2.x: vfs nested under pdfMake.vfs or .vfs
       // pdfmake 0.3.x: the module (or its default) IS the vfs object directly
@@ -174,7 +161,7 @@ function loadPdfmakeDeps() {
         defaultFont = "NunitoSans";
       }
 
-      return { pdfMake, htmlToPdfmake, defaultFont };
+      return { pdfMake, defaultFont };
     });
   }
   return pdfmakeDepsPromise;
@@ -191,14 +178,6 @@ function normalizeLookup(value?: string | null) {
     .toLocaleLowerCase();
 }
 
-function escapeHtml(value?: string | null) {
-  return textValue(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
 
 function formatCurrency(value?: number | string | null) {
   const n = Number(value);
@@ -549,7 +528,59 @@ async function fetchImageDataUrl(url: string) {
   });
 }
 
-function buildRoteiroHtml(roteiro: RoteiroParaPdf, settings: QuotePdfSettings, logoDataUrl: string | null) {
+// ── Native pdfmake content builder (no html-to-pdfmake) ─────────────────────
+
+const CARD_BORDER_CLR = "#d1d5db";
+const TITLE_BLUE_CLR = "#1a2cc8";
+
+const cardLayout = {
+  hLineWidth: () => 0.8,
+  vLineWidth: () => 0.8,
+  hLineColor: () => CARD_BORDER_CLR,
+  vLineColor: () => CARD_BORDER_CLR,
+  paddingLeft: () => 12,
+  paddingRight: () => 12,
+  paddingTop: () => 10,
+  paddingBottom: () => 10,
+};
+
+const innerTableLayout = {
+  hLineWidth: (i: number, node: any) =>
+    i === 0 || i === 1 || i === node.table.body.length ? 0.6 : 0.3,
+  vLineWidth: () => 0,
+  hLineColor: () => "#e2e8f0",
+  paddingLeft: () => 4,
+  paddingRight: () => 4,
+  paddingTop: () => 3,
+  paddingBottom: () => 3,
+};
+
+function makeCard(body: any, marginBottom = 10): any {
+  const inner = Array.isArray(body) ? { stack: body } : body;
+  return {
+    table: { widths: ["*"], body: [[inner]] },
+    layout: cardLayout,
+    margin: [0, 0, 0, marginBottom],
+  };
+}
+
+function sectionHeaderContent(title: string): any {
+  return { text: title, fontSize: 13, bold: true, color: TITLE_BLUE_CLR };
+}
+
+function cityLabel(cidade: string): any {
+  return { text: `\u2022 ${cidade}`, fontSize: 11, bold: true, color: TITLE_BLUE_CLR, margin: [0, 0, 0, 6] };
+}
+
+function th(text: string, align: "left" | "center" | "right" = "left"): any {
+  return { text, fontSize: 9, bold: true, color: "#1e3a8a", fillColor: "#e0e7ff", alignment: align };
+}
+
+function td(text: string, align: "left" | "center" | "right" = "left"): any {
+  return { text, fontSize: 9, alignment: align, color: "#0f172a" };
+}
+
+function buildRoteiroPdfContent(roteiro: RoteiroParaPdf, settings: QuotePdfSettings): any[] {
   const dias = normalizeDiasForPdf(roteiro.dias || []);
   const hoteis = (roteiro.hoteis || []).filter((item) => Boolean(textValue(item.cidade) || textValue(item.hotel)));
   const passeios = (roteiro.passeios || []).filter((item) => Boolean(textValue(item.passeio) || textValue(item.cidade)));
@@ -585,261 +616,228 @@ function buildRoteiroHtml(roteiro: RoteiroParaPdf, settings: QuotePdfSettings, l
   const noIncludeItems = parseLineItems(String(roteiro.nao_inclui_texto || ""));
   const infoItems = parseLineItems(String(roteiro.informacoes_importantes || ""));
 
-  return `
-<div>
-  <div data-pdfmake='{"unbreakable":true}' style="border:1px solid #d1d5db; padding:16px 14px; margin-bottom:8px;">
-    <div style="color:#1a2cc8; font-size:18px; font-weight:bold; margin-bottom:6px;">Roteiro Personalizado</div>
-    <div style="font-size:13px; font-weight:bold; color:#0f172a;">${escapeHtml(roteiro.nome || "Roteiro")}</div>
-  </div>
+  const content: any[] = [];
 
-  <div data-pdfmake='{"unbreakable":true}' style="border:1px solid #d1d5db; padding:12px 14px; margin-bottom:12px;">
-    ${citiesLine ? `<div style="font-size:12px; font-weight:bold; margin-bottom:4px;">${escapeHtml(citiesLine)}</div>` : ""}
-    ${periodText ? `<div style="font-size:12px;"><b>Período:</b> ${escapeHtml(periodText)}</div>` : ""}
-  </div>
+  // ── Title card ────────────────────────────────────────────────
+  content.push(makeCard([
+    { text: "Roteiro Personalizado", fontSize: 15, bold: true, color: TITLE_BLUE_CLR },
+    { text: textValue(roteiro.nome || "Roteiro"), fontSize: 12, bold: true, color: "#0f172a", margin: [0, 5, 0, 0] },
+  ], 8));
 
-  ${
-    dias.length > 0
-      ? `<div style="border:1px solid #d1d5db; padding:12px 14px; margin-bottom:4px;"><div style="color:#1a2cc8; font-size:14px; font-weight:bold;">\u221e\u2002 Itiner\u00e1rio Detalhado</div></div>
-         <div style="border:1px solid #d1d5db; padding:10px; margin-bottom:12px;">
-           ${dias
-             .map((dia, index) => {
-               const place = formatBudgetItemText(dia.percurso) || formatBudgetItemText(dia.cidade);
-               const header = `${formatDate(dia.data)} — Dia ${index + 1}${place ? `: ${place}` : ""}`;
-               const descricao = formatBudgetItemText(dia.descricao) || "-";
-               return `<div data-pdfmake='{"unbreakable":true}' style="margin-bottom:8px;"><b>${escapeHtml(header)}</b><br/>${escapeHtml(descricao)}</div>`;
-             })
-             .join("")}
-         </div>`
-      : ""
+  // ── Period / cities card ──────────────────────────────────────
+  if (citiesLine || periodText) {
+    const periodItems: any[] = [];
+    if (citiesLine) periodItems.push({ text: citiesLine, fontSize: 11, bold: true, color: "#0f172a", margin: [0, 0, 0, 3] });
+    if (periodText) periodItems.push({ text: [{ text: "Per\u00edodo: ", bold: true }, { text: periodText }], fontSize: 10 });
+    content.push(makeCard(periodItems.length === 1 ? periodItems[0] : { stack: periodItems }, 12));
   }
 
-  ${
-    groupedHoteis.length > 0
-      ? `<div style="border:1px solid #d1d5db; padding:12px 14px; margin-bottom:4px;"><div style="color:#1a2cc8; font-size:14px; font-weight:bold;">\u229e\u2002 Hot\u00e9is Sugeridos</div></div>
-         ${groupedHoteis
-           .map((group) => {
-             const rows = group.items
-               .map((hotel) => {
-                 const de = formatDate(hotel.data_inicio);
-                 const ate = formatDate(hotel.data_fim);
-                 return `<tr>
-                   <td>${escapeHtml(formatBudgetItemText(hotel.hotel) || "-")}</td>
-                   <td style="text-align:center;">${escapeHtml(de || "-")}</td>
-                   <td style="text-align:center;">${escapeHtml(ate || "-")}</td>
-                   <td style="text-align:center;">${Number(hotel.noites || 0) || "-"}</td>
-                   <td style="text-align:center;">${escapeHtml(formatBudgetItemText(hotel.apto) || "-")}</td>
-                   <td style="text-align:center;">${escapeHtml(formatBudgetItemText(hotel.regime) || "-")}</td>
-                 </tr>`;
-               })
-               .join("");
-             return `<div style="border:1px solid #d1d5db; padding:10px; margin-bottom:10px;">
-               <div style="font-size:12px; color:#1a2cc8; font-weight:bold; margin-bottom:6px;">\u25cf\u2002${escapeHtml(group.cidade)}</div>
-               <table style="width:100%; font-size:10px;">
-                 <thead>
-                   <tr>
-                     <th style="text-align:left;">Nome Hotel</th>
-                     <th style="text-align:center;">Período de</th>
-                     <th style="text-align:center;">Período até</th>
-                     <th style="text-align:center;">Noites</th>
-                     <th style="text-align:center;">Acomodação</th>
-                     <th style="text-align:center;">Regime</th>
-                   </tr>
-                 </thead>
-                 <tbody>${rows}</tbody>
-               </table>
-             </div>`;
-           })
-           .join("")}`
-      : ""
+  // ── Itinerary ─────────────────────────────────────────────────
+  if (dias.length > 0) {
+    content.push(makeCard(sectionHeaderContent("Itiner\u00e1rio Detalhado"), 4));
+    const diaItems = dias.map((dia, index) => {
+      const place = formatBudgetItemText(dia.percurso) || formatBudgetItemText(dia.cidade);
+      const header = `${formatDate(dia.data)} \u2014 Dia ${index + 1}${place ? `: ${place}` : ""}`;
+      const descricao = formatBudgetItemText(dia.descricao) || "-";
+      return {
+        stack: [
+          { text: header, bold: true, fontSize: 10 },
+          { text: descricao, fontSize: 9, color: "#334155", margin: [0, 2, 0, 0] },
+        ],
+        unbreakable: true,
+        margin: [0, 0, 0, index < dias.length - 1 ? 7 : 0],
+      };
+    });
+    content.push(makeCard({ stack: diaItems }, 12));
   }
 
-  ${
-    groupedPasseios.length > 0
-      ? `<div style="border:1px solid #d1d5db; padding:12px 14px; margin-bottom:4px;"><div style="color:#1a2cc8; font-size:14px; font-weight:bold;">\u2295\u2002 Passeios e Servi\u00e7os</div></div>
-         ${groupedPasseios
-           .map((group) => {
-             const groupHasSeguro = group.items.some((item) => isSeguroPasseioLike(item as any));
-             const isGenericServiceGroup = !normalizeLookup(group.cidade) || normalizeLookup(group.cidade) === "servicos";
-             const displayCidade = groupHasSeguro && isGenericServiceGroup ? groupedSeguroCityLabel : group.cidade;
-             const rows = group.items
-               .map((item) => {
-                 const dataInicio = formatDate(item.data_inicio);
-                 const dataFim = formatDate(item.data_fim);
-                 const data = dataInicio && dataFim && dataInicio !== dataFim ? `${dataInicio} a ${dataFim}` : dataInicio || dataFim || "-";
-                 return `<tr>
-                   <td style="text-align:left;">${escapeHtml(data)}</td>
-                   <td style="text-align:left;">${escapeHtml(formatBudgetItemText(item.passeio) || "-")}</td>
-                   <td style="text-align:left;">${escapeHtml(formatBudgetItemText(item.ingressos) || "-")}</td>
-                 </tr>`;
-               })
-               .join("");
-             return `<div style="border:1px solid #d1d5db; padding:10px; margin-bottom:10px;">
-               <div style="font-size:12px; color:#1a2cc8; font-weight:bold; margin-bottom:6px;">\u25cf\u2002${escapeHtml(displayCidade || "Serviços")}</div>
-               <table style="width:100%; font-size:10px;">
-                 <thead>
-                   <tr>
-                     <th style="text-align:left; width:18%;">Data</th>
-                     <th style="text-align:left; width:62%;">Descrição</th>
-                     <th style="text-align:left; width:20%;">Ingressos</th>
-                   </tr>
-                 </thead>
-                 <tbody>${rows}</tbody>
-               </table>
-             </div>`;
-           })
-           .join("")}`
-      : ""
+  // ── Hotels ────────────────────────────────────────────────────
+  if (groupedHoteis.length > 0) {
+    content.push(makeCard(sectionHeaderContent("Hot\u00e9is Sugeridos"), 4));
+    groupedHoteis.forEach((group) => {
+      const tableBody: any[][] = [
+        [
+          th("Nome Hotel"),
+          th("Per\u00edodo de", "center"),
+          th("Per\u00edodo at\u00e9", "center"),
+          th("Noites", "center"),
+          th("Acomoda\u00e7\u00e3o", "center"),
+          th("Regime", "center"),
+        ],
+        ...group.items.map((hotel) => [
+          td(formatBudgetItemText(hotel.hotel) || "-"),
+          td(formatDate(hotel.data_inicio) || "-", "center"),
+          td(formatDate(hotel.data_fim) || "-", "center"),
+          td(String(Number(hotel.noites || 0) || "-"), "center"),
+          td(formatBudgetItemText(hotel.apto) || "-", "center"),
+          td(formatBudgetItemText(hotel.regime) || "-", "center"),
+        ]),
+      ];
+      content.push(makeCard([
+        cityLabel(group.cidade),
+        {
+          table: { widths: ["*", "auto", "auto", "auto", "auto", "auto"], headerRows: 1, body: tableBody },
+          layout: innerTableLayout,
+        },
+      ], 10));
+    });
   }
 
-  ${
-    transportes.length > 0
-      ? `<div style="border:1px solid #d1d5db; padding:12px 14px; margin-bottom:4px;"><div style="color:#1a2cc8; font-size:14px; font-weight:bold;">\u219d\u2002 Passagem A\u00e9rea</div></div>
-         <div style="border:1px solid #d1d5db; padding:10px; margin-bottom:12px;">
-           <table style="width:100%; font-size:10px;">
-             <thead>
-               <tr>
-                 <th style="text-align:left;">Cia</th>
-                 <th style="text-align:left;">Origem</th>
-                 <th style="text-align:left;">Saída</th>
-                 <th style="text-align:left;">Destino</th>
-                 <th style="text-align:left;">Chegada</th>
-                 <th style="text-align:left;">Saída / Chegada</th>
-               </tr>
-             </thead>
-             <tbody>
-               ${transportes
-                 .map((item) => {
-                   const trecho = splitTrechoCities(item.trecho);
-                   const dataOrigem = formatDate(item.data_voo || item.data_inicio);
-                   const dataDestino = formatDate(item.data_fim || item.data_voo || item.data_inicio);
-                   const horarios =
-                     textValue(item.hora_saida) && textValue(item.hora_chegada)
-                       ? `${textValue(item.hora_saida)} / ${textValue(item.hora_chegada)}`
-                       : textValue(item.hora_saida) || textValue(item.hora_chegada) || "-";
-                   return `<tr>
-                     <td>${escapeHtml(formatBudgetItemText(item.cia_aerea) || "-")}</td>
-                     <td>${escapeHtml(trecho.origem || "-")}</td>
-                     <td>${escapeHtml(dataOrigem || "-")}</td>
-                     <td>${escapeHtml(trecho.destino || "-")}</td>
-                     <td>${escapeHtml(dataDestino || "-")}</td>
-                     <td>${escapeHtml(horarios)}</td>
-                   </tr>`;
-                 })
-                 .join("")}
-             </tbody>
-           </table>
-         </div>`
-      : ""
+  // ── Passeios e Servicos ───────────────────────────────────────
+  if (groupedPasseios.length > 0) {
+    content.push(makeCard(sectionHeaderContent("Passeios e Servi\u00e7os"), 4));
+    groupedPasseios.forEach((group) => {
+      const groupHasSeguro = group.items.some((item) => isSeguroPasseioLike(item as any));
+      const isGenericServiceGroup = !normalizeLookup(group.cidade) || normalizeLookup(group.cidade) === "servicos";
+      const displayCidade = groupHasSeguro && isGenericServiceGroup ? groupedSeguroCityLabel : group.cidade;
+      const tableBody: any[][] = [
+        [th("Data"), th("Descri\u00e7\u00e3o"), th("Ingressos")],
+        ...group.items.map((item) => {
+          const dataInicio = formatDate(item.data_inicio);
+          const dataFim = formatDate(item.data_fim);
+          const data = dataInicio && dataFim && dataInicio !== dataFim
+            ? `${dataInicio} a ${dataFim}`
+            : dataInicio || dataFim || "-";
+          return [
+            td(data),
+            td(formatBudgetItemText(item.passeio) || "-"),
+            td(formatBudgetItemText(item.ingressos) || "-"),
+          ];
+        }),
+      ];
+      content.push(makeCard([
+        cityLabel(displayCidade || "Servi\u00e7os"),
+        {
+          table: { widths: ["auto", "*", "auto"], headerRows: 1, body: tableBody },
+          layout: innerTableLayout,
+        },
+      ], 10));
+    });
   }
 
-  ${
-    investimentos.length > 0
-      ? `<div style="border:1px solid #d1d5db; padding:12px 14px; margin-bottom:4px;"><div style="color:#1a2cc8; font-size:14px; font-weight:bold;">\u25ce\u2002 Investimento</div></div>
-         <div style="border:1px solid #d1d5db; padding:10px; margin-bottom:12px;">
-           <table style="width:100%; font-size:10px;">
-             <thead>
-               <tr>
-                 <th style="text-align:left;">Tipo</th>
-                 <th style="text-align:center;">Valor por Pessoa</th>
-                 <th style="text-align:center;">Qte Paxs</th>
-                 <th style="text-align:center;">Valor total por Apto</th>
-               </tr>
-             </thead>
-             <tbody>
-               ${investimentos
-                 .map((item) => {
-                   const valorApto = resolveInvestimentoValorTotalApto(item as any);
-                   return `<tr>
-                     <td>${escapeHtml(formatBudgetItemText(item.tipo) || "-")}</td>
-                     <td style="text-align:center;">${escapeHtml(Number(item.valor_por_pessoa || 0) > 0 ? formatCurrency(item.valor_por_pessoa) : "-")}</td>
-                     <td style="text-align:center;">${Number(item.qtd_apto || 0) > 0 ? Number(item.qtd_apto || 0) : "-"}</td>
-                     <td style="text-align:center;">${escapeHtml(valorApto > 0 ? formatCurrency(valorApto) : "-")}</td>
-                   </tr>`;
-                 })
-                 .join("")}
-               <tr>
-                 <td colspan="3"><b>Total Geral (Aptos)</b></td>
-                 <td style="text-align:center;"><b>${escapeHtml(formatCurrency(investimentoTotalApto))}</b></td>
-               </tr>
-             </tbody>
-           </table>
-         </div>`
-      : ""
+  // ── Passagem Aerea ────────────────────────────────────────────
+  if (transportes.length > 0) {
+    content.push(makeCard(sectionHeaderContent("Passagem A\u00e9rea"), 4));
+    const tableBody: any[][] = [
+      [th("Cia"), th("Origem"), th("Sa\u00edda"), th("Destino"), th("Chegada"), th("Sa\u00edda / Chegada")],
+      ...transportes.map((item) => {
+        const trecho = splitTrechoCities(item.trecho);
+        const dataOrigem = formatDate(item.data_voo || item.data_inicio);
+        const dataDestino = formatDate(item.data_fim || item.data_voo || item.data_inicio);
+        const horarios =
+          textValue(item.hora_saida) && textValue(item.hora_chegada)
+            ? `${textValue(item.hora_saida)} / ${textValue(item.hora_chegada)}`
+            : textValue(item.hora_saida) || textValue(item.hora_chegada) || "-";
+        return [
+          td(formatBudgetItemText(item.cia_aerea) || "-"),
+          td(trecho.origem || "-"),
+          td(dataOrigem || "-"),
+          td(trecho.destino || "-"),
+          td(dataDestino || "-"),
+          td(horarios),
+        ];
+      }),
+    ];
+    content.push(makeCard({
+      table: { widths: ["auto", "*", "auto", "*", "auto", "auto"], headerRows: 1, body: tableBody },
+      layout: innerTableLayout,
+    }, 12));
   }
 
-  ${
-    pagamentoGroups.length > 0
-      ? `<div style="border:1px solid #d1d5db; padding:12px 14px; margin-bottom:4px;"><div style="color:#1a2cc8; font-size:14px; font-weight:bold;">\u229f\u2002 Pagamento</div></div>
-         <div style="border:1px solid #d1d5db; padding:10px; margin-bottom:12px;">
-           ${pagamentoGroups
-             .map((group) => {
-               const serviceTitle = group.servicos.join(" / ");
-               const isAereoGroup = group.servicos.some((servico) => normalizeLookup(servico).startsWith("passagem aerea"));
-               const hasPacoteCompleto = group.servicos.some((servico) => normalizeLookup(servico) === "pacote completo");
-               let displaySubtotal = group.subtotal;
-               let displayTaxes = group.taxesTotal;
-               let displayTotal = group.total;
-               if (hasPacoteCompleto && displayTotal <= 0 && investimentoTotalApto > 0) {
-                 displaySubtotal = investimentoTotalApto;
-                 displayTaxes = 0;
-                 displayTotal = investimentoTotalApto;
-               }
-               const resumo = isAereoGroup
-                 ? `Valor sem Taxas: ${formatCurrency(displaySubtotal)} | Valor das Taxas: ${formatCurrency(displayTaxes)} | Valor Total: ${formatCurrency(displayTotal)}`
-                 : `Valor Total: ${formatCurrency(displayTotal)}`;
-               const formas = group.formas.map((forma) => `<li>${escapeHtml(forma)}</li>`).join("");
-               return `<div data-pdfmake='{"unbreakable":true}' style="margin-bottom:10px;">
-                 ${serviceTitle ? `<div><b>→ ${escapeHtml(serviceTitle)}</b></div>` : ""}
-                 <div style="font-size:9px; color:#64748b; margin:3px 0 6px 14px;">${escapeHtml(resumo)}</div>
-                 ${
-                   formas
-                     ? `<div style="margin-left:14px;"><b>Forma de Pagamento:</b><ul style="margin:4px 0 0 12px;">${formas}</ul></div>`
-                     : ""
-                 }
-               </div>`;
-             })
-             .join("")}
-         </div>`
-      : ""
+  // ── Investimento ──────────────────────────────────────────────
+  if (investimentos.length > 0) {
+    content.push(makeCard(sectionHeaderContent("Investimento"), 4));
+    const tableBody: any[][] = [
+      [th("Tipo"), th("Valor por Pessoa", "center"), th("Qte Paxs", "center"), th("Valor total por Apto", "center")],
+      ...investimentos.map((item) => {
+        const valorApto = resolveInvestimentoValorTotalApto(item as any);
+        return [
+          td(formatBudgetItemText(item.tipo) || "-"),
+          td(Number(item.valor_por_pessoa || 0) > 0 ? formatCurrency(item.valor_por_pessoa) : "-", "center"),
+          td(Number(item.qtd_apto || 0) > 0 ? String(Number(item.qtd_apto)) : "-", "center"),
+          td(valorApto > 0 ? formatCurrency(valorApto) : "-", "center"),
+        ];
+      }),
+      [
+        { text: "Total Geral (Aptos)", bold: true, fontSize: 9, colSpan: 3, color: "#0f172a" },
+        {},
+        {},
+        { text: formatCurrency(investimentoTotalApto), bold: true, fontSize: 9, alignment: "center", color: "#0f172a" },
+      ],
+    ];
+    content.push(makeCard({
+      table: { widths: ["*", "auto", "auto", "auto"], headerRows: 1, body: tableBody },
+      layout: innerTableLayout,
+    }, 12));
   }
 
-  ${
-    includeUnique.length > 0
-      ? `<div style="border:1px solid #d1d5db; padding:12px 14px; margin-bottom:4px;"><div style="color:#1a2cc8; font-size:14px; font-weight:bold;">\u2611\u2002 O que est\u00e1 inclu\u00eddo:</div></div>
-         <div style="border:1px solid #d1d5db; padding:10px; margin-bottom:12px;">
-           <ul>${includeUnique.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-         </div>`
-      : ""
+  // ── Pagamento ─────────────────────────────────────────────────
+  if (pagamentoGroups.length > 0) {
+    content.push(makeCard(sectionHeaderContent("Pagamento"), 4));
+    const pagItems: any[] = pagamentoGroups.map((group, index) => {
+      const serviceTitle = group.servicos.join(" / ");
+      const isAereoGroup = group.servicos.some((servico) => normalizeLookup(servico).startsWith("passagem aerea"));
+      const hasPacoteCompleto = group.servicos.some((servico) => normalizeLookup(servico) === "pacote completo");
+      let displaySubtotal = group.subtotal;
+      let displayTaxes = group.taxesTotal;
+      let displayTotal = group.total;
+      if (hasPacoteCompleto && displayTotal <= 0 && investimentoTotalApto > 0) {
+        displaySubtotal = investimentoTotalApto;
+        displayTaxes = 0;
+        displayTotal = investimentoTotalApto;
+      }
+      const resumo = isAereoGroup
+        ? `Valor sem Taxas: ${formatCurrency(displaySubtotal)} | Taxas: ${formatCurrency(displayTaxes)} | Total: ${formatCurrency(displayTotal)}`
+        : `Valor Total: ${formatCurrency(displayTotal)}`;
+      const stackItems: any[] = [];
+      if (serviceTitle) stackItems.push({ text: `> ${serviceTitle}`, bold: true, fontSize: 10, color: "#0f172a" });
+      stackItems.push({ text: resumo, fontSize: 8.5, color: "#64748b", margin: [12, 2, 0, 4] });
+      if (group.formas.length > 0) {
+        stackItems.push({ text: "Forma de Pagamento:", bold: true, fontSize: 9, margin: [12, 0, 0, 2] });
+        group.formas.forEach((forma) => {
+          stackItems.push({ text: `  \u2022 ${forma}`, fontSize: 9, margin: [20, 0, 0, 1] });
+        });
+      }
+      return {
+        stack: stackItems,
+        unbreakable: true,
+        margin: [0, 0, 0, index < pagamentoGroups.length - 1 ? 8 : 0],
+      };
+    });
+    content.push(makeCard({ stack: pagItems }, 12));
   }
 
-  ${
-    noIncludeItems.length > 0
-      ? `<div style="border:1px solid #d1d5db; padding:12px 14px; margin-bottom:4px;"><div style="color:#1a2cc8; font-size:14px; font-weight:bold;">\u2612\u2002 O que n\u00e3o est\u00e1 inclu\u00eddo</div></div>
-         <div style="border:1px solid #d1d5db; padding:10px; margin-bottom:12px;">
-           <ul>${noIncludeItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-         </div>`
-      : ""
+  // ── O que esta incluido ───────────────────────────────────────
+  if (includeUnique.length > 0) {
+    content.push(makeCard(sectionHeaderContent("O que est\u00e1 inclu\u00eddo:"), 4));
+    content.push(makeCard({ ul: includeUnique.map((item) => ({ text: item, fontSize: 9 })) }, 12));
   }
 
-  ${
-    infoItems.length > 0
-      ? `<div style="border:1px solid #d1d5db; padding:12px 14px; margin-bottom:4px;"><div style="color:#1a2cc8; font-size:14px; font-weight:bold;">\u2139\u2002 Informa\u00e7\u00f5es Importantes</div></div>
-         <div style="border:1px solid #d1d5db; padding:10px; margin-bottom:12px;">
-           <ul>${infoItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-         </div>`
-      : ""
+  // ── O que nao esta incluido ───────────────────────────────────
+  if (noIncludeItems.length > 0) {
+    content.push(makeCard(sectionHeaderContent("O que n\u00e3o est\u00e1 inclu\u00eddo"), 4));
+    content.push(makeCard({ ul: noIncludeItems.map((item) => ({ text: item, fontSize: 9 })) }, 12));
   }
 
-  ${
-    textValue(settings.rodape_texto)
-      ? `<div style="margin-top:12px; font-size:8px; color:#64748b;">
-          ${parseLineItems(String(settings.rodape_texto || ""))
-            .map((line) => `<div>${escapeHtml(line)}</div>`)
-            .join("")}
-        </div>`
-      : ""
+  // ── Informacoes Importantes ───────────────────────────────────
+  if (infoItems.length > 0) {
+    content.push(makeCard(sectionHeaderContent("Informa\u00e7\u00f5es Importantes"), 4));
+    content.push(makeCard({ ul: infoItems.map((item) => ({ text: item, fontSize: 9 })) }, 12));
   }
-</div>`;
+
+  // ── Rodape ────────────────────────────────────────────────────
+  if (textValue(settings.rodape_texto)) {
+    content.push({
+      stack: parseLineItems(String(settings.rodape_texto || "")).map((line) => ({
+        text: line,
+        fontSize: 8,
+        color: "#64748b",
+      })),
+      margin: [0, 10, 0, 0],
+    });
+  }
+
+  return content;
 }
 
 function buildFileName(roteiro: RoteiroParaPdf) {
@@ -889,9 +887,8 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
     const logoUrl = await resolveStorageUrl((settings as any).logo_url, (settings as any).logo_path).catch(() => null);
     const logoDataUrl = logoUrl ? await fetchImageDataUrl(logoUrl).catch(() => null) : null;
 
-    const { pdfMake, htmlToPdfmake, defaultFont } = await loadPdfmakeDeps();
-    const html = buildRoteiroHtml(roteiro, settings as QuotePdfSettings, logoDataUrl || null);
-    const content = htmlToPdfmake(html, { window });
+    const { pdfMake, defaultFont } = await loadPdfmakeDeps();
+    const content = buildRoteiroPdfContent(roteiro, settings as QuotePdfSettings);
 
     const filialLines = [
       (settings as any).filial_nome,
@@ -960,7 +957,7 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
           ],
         };
       },
-      content: Array.isArray(content) ? content : [content],
+      content,
       footer: (currentPage: number, pageCount: number) => ({
         text: `Pagina ${currentPage} de ${pageCount}`,
         alignment: "center",
