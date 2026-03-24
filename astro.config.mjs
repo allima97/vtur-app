@@ -27,7 +27,7 @@ export default defineConfig({
       // `astro/compiler-runtime` em `node_modules/.vite/deps_ssr`, deixando o `.js`
       // ausente e quebrando o carregamento. Mantemos esse runtime interno fora do prebundle.
       optimizeDeps: {
-        exclude: ["astro/compiler-runtime"],
+        exclude: ["astro/compiler-runtime", "@astrojs/cloudflare/handler"],
       },
     },
     // Evita falhas de "Outdated Optimize Dep" no dev ao carregar gráficos
