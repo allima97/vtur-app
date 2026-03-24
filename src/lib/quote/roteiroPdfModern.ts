@@ -585,40 +585,22 @@ function buildRoteiroHtml(roteiro: RoteiroParaPdf, settings: QuotePdfSettings, l
   const noIncludeItems = parseLineItems(String(roteiro.nao_inclui_texto || ""));
   const infoItems = parseLineItems(String(roteiro.informacoes_importantes || ""));
 
-  const headerInfo = [
-    settings.consultor_nome ? `Consultor: ${settings.consultor_nome}` : "",
-    settings.telefone ? `Telefone: ${settings.telefone}` : "",
-    settings.whatsapp ? `WhatsApp: ${settings.whatsapp}` : "",
-    settings.email ? `E-mail: ${settings.email}` : "",
-  ].filter(Boolean);
-
   return `
 <div>
-  <table style="width:100%; margin-bottom:10px;">
-    <tbody>
-      <tr>
-        <td style="width:45%; vertical-align:top;">
-          ${logoDataUrl ? `<img src="${logoDataUrl}" style="width:180px; height:auto;" />` : ""}
-        </td>
-        <td style="width:55%; text-align:right; vertical-align:top; color:#475569; font-size:9px;">
-          ${headerInfo.map((line) => `<div>${escapeHtml(line)}</div>`).join("")}
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  <div data-pdfmake='{"unbreakable":true}' style="border:1px solid #d1d5db; padding:16px 14px; margin-bottom:8px;">
+    <div style="color:#1a2cc8; font-size:18px; font-weight:bold; margin-bottom:6px;">Roteiro Personalizado</div>
+    <div style="font-size:13px; font-weight:bold; color:#0f172a;">${escapeHtml(roteiro.nome || "Roteiro")}</div>
+  </div>
 
-  <h1 style="color:#1d4ed8; font-size:20px; margin:0 0 4px 0;">Roteiro Personalizado</h1>
-  <h2 style="color:#0f172a; font-size:15px; margin:0 0 10px 0;">${escapeHtml(roteiro.nome || "Roteiro")}</h2>
-
-  <div data-pdfmake='{"unbreakable":true}' style="border:1px solid #d1d5db; padding:10px; margin-bottom:10px;">
-    ${citiesLine ? `<div style="font-size:12px; margin-bottom:4px;"><b>Cidades:</b> ${escapeHtml(citiesLine)}</div>` : ""}
+  <div data-pdfmake='{"unbreakable":true}' style="border:1px solid #d1d5db; padding:12px 14px; margin-bottom:12px;">
+    ${citiesLine ? `<div style="font-size:12px; font-weight:bold; margin-bottom:4px;">${escapeHtml(citiesLine)}</div>` : ""}
     ${periodText ? `<div style="font-size:12px;"><b>Período:</b> ${escapeHtml(periodText)}</div>` : ""}
   </div>
 
   ${
     dias.length > 0
-      ? `<h2 style="color:#1d4ed8; font-size:16px; margin:0 0 6px 0;">Itinerário Detalhado</h2>
-         <div style="border:1px solid #d1d5db; padding:10px; margin-bottom:10px;">
+      ? `<div style="border:1px solid #d1d5db; padding:12px 14px; margin-bottom:4px;"><div style="color:#1a2cc8; font-size:14px; font-weight:bold;">\u221e\u2002 Itiner\u00e1rio Detalhado</div></div>
+         <div style="border:1px solid #d1d5db; padding:10px; margin-bottom:12px;">
            ${dias
              .map((dia, index) => {
                const place = formatBudgetItemText(dia.percurso) || formatBudgetItemText(dia.cidade);
@@ -633,7 +615,7 @@ function buildRoteiroHtml(roteiro: RoteiroParaPdf, settings: QuotePdfSettings, l
 
   ${
     groupedHoteis.length > 0
-      ? `<h2 style="color:#1d4ed8; font-size:16px; margin:0 0 6px 0;">Hotéis Sugeridos</h2>
+      ? `<div style="border:1px solid #d1d5db; padding:12px 14px; margin-bottom:4px;"><div style="color:#1a2cc8; font-size:14px; font-weight:bold;">\u229e\u2002 Hot\u00e9is Sugeridos</div></div>
          ${groupedHoteis
            .map((group) => {
              const rows = group.items
@@ -651,7 +633,7 @@ function buildRoteiroHtml(roteiro: RoteiroParaPdf, settings: QuotePdfSettings, l
                })
                .join("");
              return `<div style="border:1px solid #d1d5db; padding:10px; margin-bottom:10px;">
-               <div style="font-size:13px; color:#334155; margin-bottom:6px;"><b>${escapeHtml(group.cidade)}</b></div>
+               <div style="font-size:12px; color:#1a2cc8; font-weight:bold; margin-bottom:6px;">\u25cf\u2002${escapeHtml(group.cidade)}</div>
                <table style="width:100%; font-size:10px;">
                  <thead>
                    <tr>
@@ -673,7 +655,7 @@ function buildRoteiroHtml(roteiro: RoteiroParaPdf, settings: QuotePdfSettings, l
 
   ${
     groupedPasseios.length > 0
-      ? `<h2 style="color:#1d4ed8; font-size:16px; margin:0 0 6px 0;">Passeios e Serviços</h2>
+      ? `<div style="border:1px solid #d1d5db; padding:12px 14px; margin-bottom:4px;"><div style="color:#1a2cc8; font-size:14px; font-weight:bold;">\u2295\u2002 Passeios e Servi\u00e7os</div></div>
          ${groupedPasseios
            .map((group) => {
              const groupHasSeguro = group.items.some((item) => isSeguroPasseioLike(item as any));
@@ -692,7 +674,7 @@ function buildRoteiroHtml(roteiro: RoteiroParaPdf, settings: QuotePdfSettings, l
                })
                .join("");
              return `<div style="border:1px solid #d1d5db; padding:10px; margin-bottom:10px;">
-               <div style="font-size:13px; color:#334155; margin-bottom:6px;"><b>${escapeHtml(displayCidade || "Serviços")}</b></div>
+               <div style="font-size:12px; color:#1a2cc8; font-weight:bold; margin-bottom:6px;">\u25cf\u2002${escapeHtml(displayCidade || "Serviços")}</div>
                <table style="width:100%; font-size:10px;">
                  <thead>
                    <tr>
@@ -711,8 +693,8 @@ function buildRoteiroHtml(roteiro: RoteiroParaPdf, settings: QuotePdfSettings, l
 
   ${
     transportes.length > 0
-      ? `<h2 style="color:#1d4ed8; font-size:16px; margin:0 0 6px 0;">Passagem Aérea</h2>
-         <div style="border:1px solid #d1d5db; padding:10px; margin-bottom:10px;">
+      ? `<div style="border:1px solid #d1d5db; padding:12px 14px; margin-bottom:4px;"><div style="color:#1a2cc8; font-size:14px; font-weight:bold;">\u219d\u2002 Passagem A\u00e9rea</div></div>
+         <div style="border:1px solid #d1d5db; padding:10px; margin-bottom:12px;">
            <table style="width:100%; font-size:10px;">
              <thead>
                <tr>
@@ -752,8 +734,8 @@ function buildRoteiroHtml(roteiro: RoteiroParaPdf, settings: QuotePdfSettings, l
 
   ${
     investimentos.length > 0
-      ? `<h2 style="color:#1d4ed8; font-size:16px; margin:0 0 6px 0;">Investimento</h2>
-         <div style="border:1px solid #d1d5db; padding:10px; margin-bottom:10px;">
+      ? `<div style="border:1px solid #d1d5db; padding:12px 14px; margin-bottom:4px;"><div style="color:#1a2cc8; font-size:14px; font-weight:bold;">\u25ce\u2002 Investimento</div></div>
+         <div style="border:1px solid #d1d5db; padding:10px; margin-bottom:12px;">
            <table style="width:100%; font-size:10px;">
              <thead>
                <tr>
@@ -787,8 +769,8 @@ function buildRoteiroHtml(roteiro: RoteiroParaPdf, settings: QuotePdfSettings, l
 
   ${
     pagamentoGroups.length > 0
-      ? `<h2 style="color:#1d4ed8; font-size:16px; margin:0 0 6px 0;">Pagamento</h2>
-         <div style="border:1px solid #d1d5db; padding:10px; margin-bottom:10px;">
+      ? `<div style="border:1px solid #d1d5db; padding:12px 14px; margin-bottom:4px;"><div style="color:#1a2cc8; font-size:14px; font-weight:bold;">\u229f\u2002 Pagamento</div></div>
+         <div style="border:1px solid #d1d5db; padding:10px; margin-bottom:12px;">
            ${pagamentoGroups
              .map((group) => {
                const serviceTitle = group.servicos.join(" / ");
@@ -823,8 +805,8 @@ function buildRoteiroHtml(roteiro: RoteiroParaPdf, settings: QuotePdfSettings, l
 
   ${
     includeUnique.length > 0
-      ? `<h2 style="color:#1d4ed8; font-size:16px; margin:0 0 6px 0;">O que está incluído</h2>
-         <div style="border:1px solid #d1d5db; padding:10px; margin-bottom:10px;">
+      ? `<div style="border:1px solid #d1d5db; padding:12px 14px; margin-bottom:4px;"><div style="color:#1a2cc8; font-size:14px; font-weight:bold;">\u2611\u2002 O que est\u00e1 inclu\u00eddo:</div></div>
+         <div style="border:1px solid #d1d5db; padding:10px; margin-bottom:12px;">
            <ul>${includeUnique.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
          </div>`
       : ""
@@ -832,8 +814,8 @@ function buildRoteiroHtml(roteiro: RoteiroParaPdf, settings: QuotePdfSettings, l
 
   ${
     noIncludeItems.length > 0
-      ? `<h2 style="color:#1d4ed8; font-size:16px; margin:0 0 6px 0;">O que não está incluído</h2>
-         <div style="border:1px solid #d1d5db; padding:10px; margin-bottom:10px;">
+      ? `<div style="border:1px solid #d1d5db; padding:12px 14px; margin-bottom:4px;"><div style="color:#1a2cc8; font-size:14px; font-weight:bold;">\u2612\u2002 O que n\u00e3o est\u00e1 inclu\u00eddo</div></div>
+         <div style="border:1px solid #d1d5db; padding:10px; margin-bottom:12px;">
            <ul>${noIncludeItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
          </div>`
       : ""
@@ -841,8 +823,8 @@ function buildRoteiroHtml(roteiro: RoteiroParaPdf, settings: QuotePdfSettings, l
 
   ${
     infoItems.length > 0
-      ? `<h2 style="color:#1d4ed8; font-size:16px; margin:0 0 6px 0;">Informações Importantes</h2>
-         <div style="border:1px solid #d1d5db; padding:10px; margin-bottom:10px;">
+      ? `<div style="border:1px solid #d1d5db; padding:12px 14px; margin-bottom:4px;"><div style="color:#1a2cc8; font-size:14px; font-weight:bold;">\u2139\u2002 Informa\u00e7\u00f5es Importantes</div></div>
+         <div style="border:1px solid #d1d5db; padding:10px; margin-bottom:12px;">
            <ul>${infoItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
          </div>`
       : ""
@@ -911,14 +893,72 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
     const html = buildRoteiroHtml(roteiro, settings as QuotePdfSettings, logoDataUrl || null);
     const content = htmlToPdfmake(html, { window });
 
+    const filialLines = [
+      (settings as any).filial_nome,
+      (settings as any).endereco_linha1,
+      (settings as any).endereco_linha2,
+      (settings as any).endereco_linha3,
+    ].filter(Boolean) as string[];
+
+    const consultorLines = [
+      (settings as any).consultor_nome ? `Consultor: ${(settings as any).consultor_nome}` : null,
+      (settings as any).telefone ? `Telefone: ${(settings as any).telefone}` : null,
+      (settings as any).whatsapp ? `WhatsApp: ${(settings as any).whatsapp}` : null,
+      (settings as any).email ? `E-mail:` : null,
+      (settings as any).email || null,
+    ].filter(Boolean) as string[];
+
+    const headerLogoDataUrl = logoDataUrl;
+
     const docDefinition = {
       pageSize: "A4",
-      pageMargins: [22, 20, 22, 28],
+      pageMargins: [22, 82, 22, 28],
       defaultStyle: {
         font: defaultFont,
         fontSize: 10,
         color: "#0f172a",
         lineHeight: 1.2,
+      },
+      header: (_currentPage: number, _pageCount: number, pageSize: any) => {
+        const logoCol: any[] = headerLogoDataUrl
+          ? [{ image: headerLogoDataUrl, width: 52, margin: [0, 0, 6, 0] }]
+          : [];
+        const filialStack = filialLines.map((line) => ({ text: line, fontSize: 8, color: "#334155" }));
+        const leftInner = filialStack.length > 0
+          ? { stack: filialStack }
+          : { text: "" };
+        return {
+          margin: [22, 10, 22, 0],
+          stack: [
+            {
+              columns: [
+                {
+                  columns: logoCol.length > 0 ? [...logoCol, leftInner] : [leftInner],
+                  columnGap: 6,
+                  width: "48%",
+                },
+                {
+                  stack: [
+                    { text: "Aponte para o QR Code abaixo e chame o consultor:", fontSize: 7, color: "#94a3b8", margin: [0, 0, 0, 2] },
+                    ...consultorLines.map((line) => ({ text: line, fontSize: 8, color: "#334155" })),
+                  ],
+                  width: "*",
+                },
+              ],
+              columnGap: 10,
+            },
+            {
+              canvas: [{
+                type: "line",
+                x1: 0, y1: 6,
+                x2: pageSize.width - 44, y2: 6,
+                lineWidth: 0.5,
+                lineColor: "#d1d5db",
+              }],
+              margin: [0, 2, 0, 0],
+            },
+          ],
+        };
       },
       content: Array.isArray(content) ? content : [content],
       footer: (currentPage: number, pageCount: number) => ({
