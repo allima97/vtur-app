@@ -575,14 +575,30 @@ function makeCard(body: any, marginBottom = 14): any {
   };
 }
 
-const SECTION_SEPARATOR = {
-  canvas: [{ type: "line", x1: 0, y1: 0, x2: 800, y2: 0, lineWidth: 0.5, lineColor: "#e2e8f0" }],
-  margin: [0, 8, 0, 10],
+const sectionCardLayout = {
+  hLineWidth: (i: number) => (i === 0 || i === 2) ? 0.8 : 0.4,
+  vLineWidth: () => 0.8,
+  hLineColor: (i: number) => i === 1 ? "#e2e8f0" : CARD_BORDER_CLR,
+  vLineColor: () => CARD_BORDER_CLR,
+  paddingLeft: () => 14,
+  paddingRight: () => 14,
+  paddingTop: () => 10,
+  paddingBottom: () => 10,
 };
 
 function makeSectionCard(title: string, kind: IconKind, body: any | any[], marginBottom = 14): any {
-  const items = Array.isArray(body) ? body : [body];
-  return makeCard([sectionHeaderContent(title, kind), SECTION_SEPARATOR, ...items], marginBottom);
+  const contentCell = Array.isArray(body) ? { stack: body } : body;
+  return {
+    table: {
+      widths: ["*"],
+      body: [
+        [sectionHeaderContent(title, kind)],
+        [contentCell],
+      ],
+    },
+    layout: sectionCardLayout,
+    margin: [0, 0, 0, marginBottom],
+  };
 }
 
 // ── Vector icons (ported from jsPDF drawIcon) ──────────────────────────────
