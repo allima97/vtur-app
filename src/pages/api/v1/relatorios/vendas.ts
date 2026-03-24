@@ -427,8 +427,8 @@ async function fetchMatchingBaseReceiptIds(params: {
       query = query.in("vendedor_id", vendedorIds);
     }
 
-    if (inicio) query = query.gte("vendas_recibos.data_venda", inicio);
-    if (fim) query = query.lte("vendas_recibos.data_venda", fim);
+    if (inicio) query = query.gte("data_venda", inicio);
+    if (fim) query = query.lte("data_venda", fim);
     if (status && status !== "todos") query = query.eq("status", status);
     if (clienteId) query = query.eq("cliente_id", clienteId);
     if (valorMin != null && Number.isFinite(valorMin)) query = query.gte("valor_total_bruto", valorMin);
@@ -671,8 +671,6 @@ export async function GET({ request }: { request: Request }) {
       }
     }
 
-    const hasPeriodo = Boolean(inicio || fim);
-
     let query = client
       .from("vendas")
       .select(
@@ -695,7 +693,7 @@ export async function GET({ request }: { request: Request }) {
         cliente:clientes!cliente_id (nome, cpf),
         destino_produto:produtos!destino_id (id, nome, tipo_produto, cidade_id),
         destino_cidade:cidades!destino_cidade_id (nome),
-        vendas_recibos${hasPeriodo ? "!inner" : ""} (
+        vendas_recibos (
           id,
           numero_recibo,
           data_venda,
@@ -720,9 +718,9 @@ export async function GET({ request }: { request: Request }) {
       query = query.in("vendedor_id", vendedorIds);
     }
 
-    // Competência por recibo: filtra pelo mês do recibo (não por vendas.data_venda).
-    if (inicio) query = query.gte("vendas_recibos.data_venda", inicio);
-    if (fim) query = query.lte("vendas_recibos.data_venda", fim);
+    // Competência por data da venda (Systur): filtra por vendas.data_venda
+    if (inicio) query = query.gte("data_venda", inicio);
+    if (fim) query = query.lte("data_venda", fim);
     if (status && status !== "todos") query = query.eq("status", status);
     if (clienteId) query = query.eq("cliente_id", clienteId);
 

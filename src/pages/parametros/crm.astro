@@ -1,0 +1,11 @@
+---
+import "../../styles/global.css";
+import DashboardLayout from "../../layouts/DashboardLayout";
+import CrmTemplatesIsland from "../../components/islands/CrmTemplatesIsland";
+
+const activePage = "parametros-crm";
+---
+
+<DashboardLayout title="Parâmetros • CRM" {activePage} module="CrmTemplates">
+  <CrmTemplatesIsland client:load />
+</DashboardLayout>
