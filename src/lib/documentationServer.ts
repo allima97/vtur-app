@@ -1,5 +1,3 @@
-import { randomUUID } from "node:crypto";
-
 import {
   type DocumentationSection,
   buildDocumentationMarkdownFromSections,
@@ -70,7 +68,7 @@ export async function persistDocumentationSections(params: {
         {
           ...item,
           slug,
-          id: isUuid(item?.id) ? item?.id : randomUUID(),
+          id: isUuid(item?.id) ? item?.id : crypto.randomUUID(),
         },
         index,
       )
