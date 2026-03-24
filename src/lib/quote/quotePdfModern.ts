@@ -1341,12 +1341,17 @@ function loadPdfmakeDeps() {
         throw new Error("html-to-pdfmake não disponível no ambiente do navegador.");
       }
 
+      // pdfmake 2.x: vfs nested under pdfMake.vfs or .vfs
+      // pdfmake 0.3.x: the module (or its default) IS the vfs object directly
+      const vfsFontsBase = typeof vfsFontsAny?.default === "object" && vfsFontsAny.default !== null
+        ? vfsFontsAny.default
+        : vfsFontsAny;
       const resolvedVfs =
         vfsFontsAny?.pdfMake?.vfs ||
         vfsFontsAny?.default?.pdfMake?.vfs ||
         vfsFontsAny?.vfs ||
         vfsFontsAny?.default?.vfs ||
-        null;
+        (typeof vfsFontsBase === "object" && vfsFontsBase !== null ? vfsFontsBase : null);
       if (resolvedVfs) {
         if (typeof (pdfMake as any).addVirtualFileSystem === "function") {
           (pdfMake as any).addVirtualFileSystem(resolvedVfs);

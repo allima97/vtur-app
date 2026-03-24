@@ -64,12 +64,22 @@ function loadPdfModernDeps(): Promise<PdfModernDeps> {
       import("pdfmake/build/vfs_fonts"),
     ]).then(async ([pdfmakeMod, vfsFontsMod]) => {
       const pdfMake = ((pdfmakeMod as any).default || pdfmakeMod) as PdfMakeLike;
-      const vfsFonts = (vfsFontsMod as any).default || vfsFontsMod;
+      const vfsFontsAny = vfsFontsMod as any;
+      const vfsFonts = vfsFontsAny?.default ?? vfsFontsAny;
 
-      if (vfsFonts?.pdfMake?.vfs) {
-        pdfMake.vfs = vfsFonts.pdfMake.vfs;
-      } else if (vfsFonts?.vfs) {
-        pdfMake.vfs = vfsFonts.vfs;
+      // pdfmake 2.x: vfs nested under pdfMake.vfs or .vfs
+      // pdfmake 0.3.x: the module (or its default) IS the vfs object directly
+      const resolvedVfs: Record<string, string> | null =
+        vfsFonts?.pdfMake?.vfs ??
+        vfsFonts?.vfs ??
+        (typeof vfsFonts === "object" && vfsFonts !== null ? vfsFonts : null);
+
+      if (resolvedVfs) {
+        if (typeof (pdfMake as any).addVirtualFileSystem === "function") {
+          (pdfMake as any).addVirtualFileSystem(resolvedVfs);
+        } else {
+          try { pdfMake.vfs = resolvedVfs; } catch { /* readonly in 0.3.x */ }
+        }
       }
 
       pdfMake.fonts = {
