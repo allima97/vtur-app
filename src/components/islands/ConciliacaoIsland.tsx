@@ -866,6 +866,9 @@ export default function ConciliacaoIsland() {
   const [rankingFirst, setRankingFirst] = useState(0);
   const [alteracoesFirst, setAlteracoesFirst] = useState(0);
   const [vgFirst, setVgFirst] = useState(0);
+  const [importacaoFirst, setImportacaoFirst] = useState(0);
+  const [resumoFirst, setResumoFirst] = useState(0);
+  const [execucoesFirst, setExecucoesFirst] = useState(0);
 
   const [itensVisaoGeral, setItensVisaoGeral] = useState<ConciliacaoItem[]>([]);
   const [loadingVisaoGeral, setLoadingVisaoGeral] = useState(false);
@@ -2256,6 +2259,8 @@ export default function ConciliacaoIsland() {
   useEffect(() => { setRankingFirst(0); }, [itensRankingPendentes]);
   useEffect(() => { setAlteracoesFirst(0); }, [changeGroupsFiltrados]);
   useEffect(() => { setVgFirst(0); }, [itensVisaoGeralFiltrados]);
+  useEffect(() => { setImportacaoFirst(0); }, [parsedLinhas]);
+  useEffect(() => { setExecucoesFirst(0); }, [execucoes]);
 
   // dados paginados por tabela
   const itensPendentesPage = useMemo(
@@ -2277,6 +2282,14 @@ export default function ConciliacaoIsland() {
   const itensVgPage = useMemo(
     () => itensVisaoGeralFiltrados.slice(vgFirst, vgFirst + ROWS_PER_PAGE),
     [itensVisaoGeralFiltrados, vgFirst]
+  );
+  const parsedLinhasPage = useMemo(
+    () => parsedLinhas.slice(importacaoFirst, importacaoFirst + ROWS_PER_PAGE),
+    [parsedLinhas, importacaoFirst]
+  );
+  const execucoesPage = useMemo(
+    () => execucoes.slice(execucoesFirst, execucoesFirst + ROWS_PER_PAGE),
+    [execucoes, execucoesFirst]
   );
   const registrosEmTela = useMemo(() => {
     if (atalhoAtivo === "conciliados_sistema") {
@@ -2379,6 +2392,11 @@ export default function ConciliacaoIsland() {
   }, [produtoMetaUnico?.id]);
   const resumoMeses = resumo?.byMonth || [];
   const resumoDias = resumo?.byDay || [];
+  useEffect(() => { setResumoFirst(0); }, [resumoMeses]);
+  const resumoMesesPage = useMemo(
+    () => resumoMeses.slice(resumoFirst, resumoFirst + ROWS_PER_PAGE),
+    [resumoMeses, resumoFirst]
+  );
   const monthOptions = useMemo(
     () => buildRecentMonthOptions(monthFilter, resumoMeses.map((item) => item.month)),
     [monthFilter, resumoMeses]
@@ -2423,6 +2441,20 @@ export default function ConciliacaoIsland() {
   ]
     .filter(Boolean)
     .join(" • ");
+
+  function renderPaginator(first: number, total: number, onPageChange: (first: number) => void) {
+    if (total <= ROWS_PER_PAGE) return null;
+    return (
+      <div className="mt-3">
+        <Paginator
+          first={first}
+          rows={ROWS_PER_PAGE}
+          totalRecords={total}
+          onPageChange={(event) => onPageChange(event.first)}
+        />
+      </div>
+    );
+  }
 
   function limparAtalhosRegistros() {
     setAtalhoAtivo(null);
@@ -2670,7 +2702,7 @@ export default function ConciliacaoIsland() {
                         <td colSpan={7}>Sem resumo mensal disponível.</td>
                       </tr>
                     ) : (
-                      resumoMeses.map((item) => (
+                      resumoMesesPage.map((item) => (
                         <tr
                           key={item.month}
                           className="vtur-conciliacao-resumo-row"
@@ -2695,6 +2727,7 @@ export default function ConciliacaoIsland() {
                   </tbody>
                 </table>
               </div>
+              {renderPaginator(resumoFirst, resumoMeses.length, setResumoFirst)}
 
               {false && <div className="vtur-conciliacao-overview mt-3">
                 <div className="vtur-conciliacao-month-banner">
@@ -2879,7 +2912,7 @@ export default function ConciliacaoIsland() {
                         </td>
                       </tr>
                     ) : (
-                      execucoes.map((item) => (
+                      execucoesPage.map((item) => (
                         <tr key={item.id}>
                           <td data-label="Quando">{formatDateTime(item.created_at)}</td>
                           <td data-label="Origem">{item.actor === "user" ? "manual" : "cron"}</td>
@@ -2901,6 +2934,7 @@ export default function ConciliacaoIsland() {
                   </tbody>
                 </table>
               </div>
+              {renderPaginator(execucoesFirst, execucoes.length, setExecucoesFirst)}
             </AppCard>
 
         </>}
@@ -3062,7 +3096,8 @@ export default function ConciliacaoIsland() {
                 colSpan={13}
                 className="table-header-blue table-mobile-cards min-w-[1960px]"
               >
-                {parsedLinhas.map((linha, index) => {
+                {parsedLinhasPage.map((linha, pageIndex) => {
+                  const index = importacaoFirst + pageIndex;
                   const exigeAtribuicao = linhaExigeAtribuicaoRanking(linha);
                   const linhaKey = `${linha.documento}-${linha.descricao_chave || linha.status || "row"}-${index}`;
                   const rankingTooltip = getLinhaRankingTooltip({ status: linha.status, descricao: linha.descricao });
@@ -3201,6 +3236,7 @@ export default function ConciliacaoIsland() {
                 })}
               </DataTable>
             </div>
+            {renderPaginator(importacaoFirst, parsedLinhas.length, setImportacaoFirst)}
 
             <div className="vtur-quote-top-actions mt-3">
               <AppButton
@@ -3399,7 +3435,7 @@ export default function ConciliacaoIsland() {
               colSpan={20}
               className="table-header-green table-mobile-cards min-w-[2040px]"
             >
-              {itensVisaoGeralFiltrados.map((row) => {
+              {itensVgPage.map((row) => {
                 const rowSaving = savingAssignmentId === row.id;
                 const rowLocked = isRowLocked(row);
                 const exigeAtribuicaoRanking = registroExigeAtribuicaoRanking(row);
@@ -3514,6 +3550,7 @@ export default function ConciliacaoIsland() {
                 );
               })}
             </DataTable>
+            {renderPaginator(vgFirst, itensVisaoGeralFiltrados.length, setVgFirst)}
           </AppCard>
 
         </>}
@@ -3606,7 +3643,7 @@ export default function ConciliacaoIsland() {
               colSpan={15}
               className="table-header-green table-mobile-cards min-w-[1500px]"
             >
-              {itensPendentes.map((row) => {
+              {itensPendentesPage.map((row) => {
                 const statusNorm = String(row.status || "").toUpperCase();
                 const podeAtribuir = statusNorm === "BAIXA" || statusNorm === "OPFAX";
                 const exigeAtribuicaoRanking = registroExigeAtribuicaoRanking(row);
@@ -3729,6 +3766,7 @@ export default function ConciliacaoIsland() {
                 );
               })}
             </DataTable>
+            {renderPaginator(pendentesFirst, itensPendentes.length, setPendentesFirst)}
           </AppCard>
 
         </>}
@@ -3836,7 +3874,7 @@ export default function ConciliacaoIsland() {
               colSpan={20}
               className="table-header-green table-mobile-cards min-w-[2040px]"
             >
-              {itensConciliados.map((row) => (
+              {itensConciliadosPage.map((row) => (
                 <tr key={row.id}>
                   {(() => {
                     const rowLocked = isRowLocked(row);
@@ -4012,6 +4050,7 @@ export default function ConciliacaoIsland() {
                 </tr>
               ))}
             </DataTable>
+            {renderPaginator(conciliadosFirst, itensConciliados.length, setConciliadosFirst)}
           </AppCard>
 
         </>}
@@ -4089,7 +4128,7 @@ export default function ConciliacaoIsland() {
               colSpan={13}
               className="table-header-green table-mobile-cards min-w-[1400px]"
             >
-              {itensRankingPendentes.map((row) => {
+              {itensRankingPage.map((row) => {
                 // Nesta aba OPFAX também pode receber vendedor (pré-atribuição antes da baixa)
                 const statusNorm = String(row.status || "").toUpperCase();
                 const podeAtribuir = statusNorm === "BAIXA" || statusNorm === "OPFAX";
@@ -4186,6 +4225,7 @@ export default function ConciliacaoIsland() {
                 );
               })}
             </DataTable>
+            {renderPaginator(rankingFirst, itensRankingPendentes.length, setRankingFirst)}
           </AppCard>
 
         </>}
@@ -4342,7 +4382,7 @@ export default function ConciliacaoIsland() {
                 colSpan={9}
                 className="table-header-blue table-mobile-cards min-w-[920px]"
               >
-                {changeGroupsFiltrados.map((group) => {
+                {changeGroupsPage.map((group) => {
                   const hasPending = group.count_pendentes > 0;
                   const checked = selectedGroupKeys.has(group.key);
                   const origem = group.actor === "user" ? "manual" : "cron";
@@ -4381,6 +4421,7 @@ export default function ConciliacaoIsland() {
                 })}
               </DataTable>
             </div>
+            {renderPaginator(alteracoesFirst, changeGroupsFiltrados.length, setAlteracoesFirst)}
           </AppCard>
 
         </>}
