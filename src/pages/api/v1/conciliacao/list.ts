@@ -160,6 +160,8 @@ export const GET: APIRoute = async ({ request }) => {
     if (!companyId) return new Response(JSON.stringify([]), { status: 200 });
 
     const somentePendentes = url.searchParams.get("pending") === "1";
+    const somenteConciliados = url.searchParams.get("conciliado") === "1";
+    const rankingPending = url.searchParams.get("ranking_pending") === "1";
     const month = String(url.searchParams.get("month") || "").trim();
     const day = String(url.searchParams.get("day") || "").trim();
     const rankingStatus = String(url.searchParams.get("ranking_status") || "all").trim();
@@ -175,6 +177,7 @@ export const GET: APIRoute = async ({ request }) => {
       .limit(500);
 
     if (somentePendentes) query = query.eq("conciliado", false);
+    if (somenteConciliados) query = query.eq("conciliado", true);
     if (/^\d{4}-\d{2}$/.test(month)) {
       const [year, monthNum] = month.split("-").map(Number);
       const inicio = `${month}-01`;
@@ -189,6 +192,19 @@ export const GET: APIRoute = async ({ request }) => {
     if (error) throw error;
 
     let rows = dedupeConciliacaoRows(Array.isArray(data) ? data : []).map(normalizeComputedFields);
+
+    if (rankingPending) {
+      // Inclui BAIXA e OPFAX sem ranking atribuído. O dedup já garante que OPFAX
+      // desaparece quando existe BAIXA para o mesmo documento/data/status.
+      rows = rows.filter((row: any) => {
+        const status = String(row?.status || "").trim().toUpperCase();
+        const isEligivel = status === "BAIXA" || status === "OPFAX";
+        const semVenda = !String(row?.venda_id || "").trim();
+        const semRanking = !String(row?.ranking_vendedor_id || "").trim();
+        return isEligivel && semVenda && semRanking;
+      });
+    }
+
     if (rankingStatus === "pending") {
       rows = rows.filter((row: any) => {
         const vendaId = String(row?.venda_id || "").trim();

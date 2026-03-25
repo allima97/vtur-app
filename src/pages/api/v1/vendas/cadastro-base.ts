@@ -206,12 +206,27 @@ export async function GET({ request }: { request: Request }) {
 
     const canAssignVendedor = !usoIndividual && (papel === "GESTOR" || papel === "MASTER");
     let vendedoresEquipe: { id: string; nome_completo: string | null }[] = [];
-    if (papel === "GESTOR") {
-      const ids = await fetchGestorEquipeIdsComGestor(client, user.id);
+    if (papel === "GESTOR" && companyId) {
+      // IDs da equipe do gestor (via RPC) + todos os gestores da mesma empresa
+      const equipeIds = await fetchGestorEquipeIdsComGestor(client, user.id);
+
+      const { data: gestoresData } = await client
+        .from("users")
+        .select("id, user_types(name)")
+        .eq("company_id", companyId)
+        .eq("uso_individual", false);
+
+      const gestoresIds = ((gestoresData || []) as any[])
+        .filter((row) => isAllowedSellerTipo(row?.user_types?.name))
+        .map((row) => String(row?.id || "").trim())
+        .filter(Boolean);
+
+      const allIds = Array.from(new Set([...equipeIds, ...gestoresIds]));
+
       const { data: vendedoresData, error: vendErr } = await client
         .from("users")
         .select("id, nome_completo, user_types(name)")
-        .in("id", ids)
+        .in("id", allIds)
         .order("nome_completo");
       if (vendErr) throw vendErr;
       vendedoresEquipe = ((vendedoresData || []) as any[]).filter((row) =>

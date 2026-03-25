@@ -279,6 +279,41 @@ type ExistingImportRow = {
   created_at: string | null;
 };
 
+type FinancialSnapshot = {
+  valor_lancamentos: number | null;
+  valor_taxas: number | null;
+  valor_descontos: number | null;
+  valor_abatimentos: number | null;
+  valor_calculada_loja: number | null;
+  valor_visao_master: number | null;
+  valor_opfax: number | null;
+  valor_saldo: number | null;
+};
+
+/** Para cada campo financeiro: usa o valor novo se não-zero, senão herda o histórico não-zero. */
+function mergeFinancialValues(
+  incoming: Record<string, any>,
+  historical: FinancialSnapshot | null
+): FinancialSnapshot {
+  const pick = (key: string): number | null => {
+    const n = Number(incoming[key] ?? 0);
+    if (Math.abs(n) > 0.001) return n;
+    const h = Number(historical?.[key as keyof FinancialSnapshot] ?? 0);
+    if (Math.abs(h) > 0.001) return h;
+    return null;
+  };
+  return {
+    valor_lancamentos: pick("valor_lancamentos"),
+    valor_taxas: pick("valor_taxas"),
+    valor_descontos: pick("valor_descontos"),
+    valor_abatimentos: pick("valor_abatimentos"),
+    valor_calculada_loja: pick("valor_calculada_loja"),
+    valor_visao_master: pick("valor_visao_master"),
+    valor_opfax: pick("valor_opfax"),
+    valor_saldo: pick("valor_saldo"),
+  };
+}
+
 function scoreExistingCandidate(
   existing: ExistingImportRow,
   incoming: Record<string, any>
@@ -584,6 +619,50 @@ export const POST: APIRoute = async ({ request }) => {
       fallbackMap.set(fallbackKey, bucket);
     }
 
+    // Busca histórico financeiro cross-date: para documentos onde os valores vêm zerados
+    // (ex: BAIXA DE OPFAX no dia seguinte sem valores), herdar da importação anterior.
+    const docsComFinanceiroZero = Array.from(
+      new Set(
+        payload
+          .filter((row) => !Number(row.valor_lancamentos || 0) && !Number(row.valor_taxas || 0))
+          .map((row) => String(row.documento || "").trim())
+          .filter(Boolean)
+      )
+    );
+
+    const financialHistoryMap = new Map<string, FinancialSnapshot>();
+
+    if (docsComFinanceiroZero.length > 0) {
+      const { data: histRows } = await client
+        .from("conciliacao_recibos")
+        .select(
+          "documento, valor_lancamentos, valor_taxas, valor_descontos, valor_abatimentos, valor_calculada_loja, valor_visao_master, valor_opfax, valor_saldo"
+        )
+        .eq("company_id", companyId)
+        .in("documento", docsComFinanceiroZero)
+        .order("movimento_data", { ascending: false })
+        .limit(500);
+
+      for (const r of (histRows || []) as any[]) {
+        const doc = String(r?.documento || "").trim();
+        if (!doc || financialHistoryMap.has(doc)) continue;
+        const hasValues =
+          Math.abs(Number(r?.valor_lancamentos || 0)) > 0.001 ||
+          Math.abs(Number(r?.valor_taxas || 0)) > 0.001;
+        if (!hasValues) continue;
+        financialHistoryMap.set(doc, {
+          valor_lancamentos: r?.valor_lancamentos ?? null,
+          valor_taxas: r?.valor_taxas ?? null,
+          valor_descontos: r?.valor_descontos ?? null,
+          valor_abatimentos: r?.valor_abatimentos ?? null,
+          valor_calculada_loja: r?.valor_calculada_loja ?? null,
+          valor_visao_master: r?.valor_visao_master ?? null,
+          valor_opfax: r?.valor_opfax ?? null,
+          valor_saldo: r?.valor_saldo ?? null,
+        });
+      }
+    }
+
     const usedExistingIds = new Set<string>();
     const rowsToInsert: Array<Record<string, any>> = [];
 
@@ -617,14 +696,31 @@ export const POST: APIRoute = async ({ request }) => {
       }
 
       if (!existing) {
-        rowsToInsert.push(row);
+        const historical = financialHistoryMap.get(String(row.documento || "").trim()) ?? null;
+        const merged = mergeFinancialValues(row, historical);
+        rowsToInsert.push({ ...row, ...merged });
         continue;
       }
 
       usedExistingIds.add(existing.id);
 
+      // Herança: same-date existing tem prioridade, depois histórico cross-date
+      const historical = financialHistoryMap.get(String(row.documento || "").trim()) ?? null;
+      const existingAsSnapshot: FinancialSnapshot = {
+        valor_lancamentos: existing.valor_lancamentos,
+        valor_taxas: existing.valor_taxas,
+        valor_descontos: existing.valor_descontos,
+        valor_abatimentos: existing.valor_abatimentos,
+        valor_calculada_loja: null,
+        valor_visao_master: null,
+        valor_opfax: null,
+        valor_saldo: existing.valor_saldo,
+      };
+      const merged = mergeFinancialValues(row, existingAsSnapshot.valor_lancamentos ? existingAsSnapshot : historical);
+
       const updatePayload = {
         ...row,
+        ...merged,
         conciliado: false,
         match_total: null,
         match_taxas: null,

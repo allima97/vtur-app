@@ -10002,6 +10002,32 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   order: -10;
 }
 
+/* ── Badges de status (Ranking Sim/Não/—) ── */
+.vtur-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.vtur-badge-ok {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.vtur-badge-warn {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.vtur-badge-muted {
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+
 /* KPI cards clicáveis no histórico de alterações */
 .vtur-alteracoes-kpi-btn {
   background: transparent;
@@ -10148,6 +10174,59 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   font-weight: 700;
   line-height: 1;
   flex-shrink: 0;
+}
+
+/* ── Texto muted genérico ── */
+.vtur-muted-text {
+  color: var(--vtur-primer-muted, #52607a);
+  font-style: italic;
+  font-size: 0.8125rem;
+}
+
+/* ── Filtro inline (Mês + Dia + botões alinhados) ── */
+.vtur-inline-filter-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.vtur-inline-filter-row > .vtur-app-field {
+  flex: 1;
+  min-width: 160px;
+  max-width: 280px;
+  margin-bottom: 0;
+}
+
+.vtur-inline-filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 2px;
+  flex-shrink: 0;
+}
+
+.vtur-inline-filter-actions .vtur-btn {
+  white-space: nowrap;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+/* Strip de totais abaixo do filtro */
+.vtur-conciliacao-resumo-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  background: var(--vtur-section-config-bg, #fff7ed);
+  border: 1px solid var(--vtur-section-config-border, #fed7aa);
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  color: var(--vtur-primer-ink, #09112e);
+}
+
+.vtur-conciliacao-resumo-strip strong {
+  color: var(--vtur-section-config-title, #c2410c);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

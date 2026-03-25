@@ -58,7 +58,22 @@ export async function fetchConciliacaoRankingOptions(params: {
 
   let allowedIds: string[] = [];
   if (scope.papel === "GESTOR" && !scope.isAdmin) {
-    allowedIds = await fetchGestorEquipeIds(client, scope.userId);
+    // IDs da equipe do gestor (inclui o próprio gestor)
+    const equipeIds = await fetchGestorEquipeIds(client, scope.userId);
+
+    // Também incluir todos os gestores da mesma empresa (gestores podem se atribuir mutuamente)
+    const { data: gestoresData } = await client
+      .from("users")
+      .select("id, user_types(name)")
+      .eq("company_id", companyId)
+      .eq("uso_individual", false);
+
+    const gestoresIds = ((gestoresData || []) as any[])
+      .filter((row) => isAllowedRankingTipo(row?.user_types?.name))
+      .map((row) => String(row?.id || "").trim())
+      .filter(Boolean);
+
+    allowedIds = Array.from(new Set([...equipeIds, ...gestoresIds]));
   }
 
   let usersQuery = client

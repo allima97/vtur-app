@@ -18,6 +18,7 @@ import {
   isConciliacaoEfetivada,
   isConciliacaoImportavel,
   normalizeConciliacaoDescricaoKey,
+  resolveConciliacaoStatus,
 } from "../../lib/conciliacao/business";
 
 type Papel = "ADMIN" | "MASTER" | "GESTOR" | "VENDEDOR" | "OUTRO";
@@ -142,7 +143,7 @@ function currentMonthValue() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-type ConciliacaoSection = "registros" | "resumo" | "importacao" | "alteracoes";
+type ConciliacaoSection = "registros" | "resumo" | "importacao" | "alteracoes" | "pendentes" | "pendentes_ranking";
 type ConciliacaoShortcut =
   | "importados"
   | "pendentes_conciliacao"
@@ -213,6 +214,8 @@ type LinhaInput = {
   is_seguro_viagem?: boolean | null;
   ranking_vendedor_id?: string | null;
   ranking_produto_id?: string | null;
+  venda_recibo_id?: string | null;
+  venda_id?: string | null;
   origem?: string | null;
   raw?: any;
 };
@@ -310,17 +313,30 @@ function parseMovimentoDateFromTxt(text: string): string | null {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+const MONTH_PT: Record<string, string> = {
+  jan: "01", fev: "02", mar: "03", abr: "04", mai: "05", jun: "06",
+  jul: "07", ago: "08", set: "09", out: "10", nov: "11", dez: "12",
+};
+
 function parseMovimentoDateFromFileName(fileName: string): string | null {
   const raw = String(fileName || "");
-  const match = raw.match(/(\d{2})-(\d{2})-(\d{2,4})/);
-  if (!match) return null;
-
-  const dd = match[1];
-  const mm = match[2];
-  const yy = match[3];
-  const yyyy = yy.length === 2 ? `20${yy}` : yy;
-  if (!dd || !mm || !yyyy) return null;
-  return `${yyyy}-${mm}-${dd}`;
+  // Numeric: dd-mm-yyyy or dd-mm-yy
+  const m = raw.match(/(\d{1,2})-(\d{2})-(\d{2,4})/);
+  if (m) {
+    const dd = m[1].padStart(2, "0");
+    const yyyy = m[3].length === 2 ? `20${m[3]}` : m[3];
+    return `${yyyy}-${m[2]}-${dd}`;
+  }
+  // Text month: dd-mmm-yyyy  (e.g. 18-fev-2026)
+  const mt = raw.match(/(\d{1,2})-([a-z\u00e0-\u00fc]{2,4})-(\d{2,4})/i);
+  if (mt) {
+    const mm = MONTH_PT[mt[2].toLowerCase().slice(0, 3)];
+    if (!mm) return null;
+    const dd = mt[1].padStart(2, "0");
+    const yyyy = mt[3].length === 2 ? `20${mt[3]}` : mt[3];
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  return null;
 }
 
 function enrichLinha(base: LinhaInput): LinhaInput {
@@ -491,9 +507,18 @@ async function parseConciliacaoXls(file: File, origem: string): Promise<Concilia
     .flat()
     .map((cell) => String(cell || "").trim())
     .find((cell) => /Movimenta[cç][aã]o\s+do\s+Dia:/i.test(cell));
-  const movimentoData =
-    (movimentoDateCell ? parseMovimentoDateFromTxt(movimentoDateCell) : null) ||
-    parseMovimentoDateFromFileName(origem);
+  const movimentoDataFromCell = movimentoDateCell ? parseMovimentoDateFromTxt(movimentoDateCell) : null;
+  const movimentoDataFromFile = parseMovimentoDateFromFileName(origem);
+  let movimentoData = movimentoDataFromCell || movimentoDataFromFile;
+  if (!movimentoData) {
+    // Fallback: file may be HTML saved as .xls — date is in <h2> outside tables
+    try {
+      const rawText = new TextDecoder("iso-8859-1").decode(arrayBuffer);
+      movimentoData = parseMovimentoDateFromTxt(rawText) || null;
+    } catch {
+      // ignore decode errors
+    }
+  }
 
   const headerIdx = selectedSheet.headerIdx;
 
@@ -711,7 +736,8 @@ function isOperacionalLinha(params: { status?: string | null; descricao?: string
 }
 
 function linhaExigeAtribuicaoRanking(linha: LinhaInput) {
-  return isOperacionalLinha({ status: linha.status, descricao: linha.descricao });
+  const status = resolveConciliacaoStatus({ status: linha.status, descricao: linha.descricao });
+  return status === "BAIXA" || status === "OPFAX";
 }
 
 function isLinhaPendenteEmOpfax(params: { status?: string | null; descricao?: string | null }) {
@@ -824,6 +850,13 @@ export default function ConciliacaoIsland() {
   const [showPendingDetails, setShowPendingDetails] = useState(false);
   const [atalhoAtivo, setAtalhoAtivo] = useState<ConciliacaoShortcut | null>(null);
   const [resumoDetalheAberto, setResumoDetalheAberto] = useState(false);
+
+  const [itensPendentes, setItensPendentes] = useState<ConciliacaoItem[]>([]);
+  const [loadingPendentes, setLoadingPendentes] = useState(false);
+  const [itensConciliados, setItensConciliados] = useState<ConciliacaoItem[]>([]);
+  const [loadingConciliados, setLoadingConciliados] = useState(false);
+  const [itensRankingPendentes, setItensRankingPendentes] = useState<ConciliacaoItem[]>([]);
+  const [loadingRankingPendentes, setLoadingRankingPendentes] = useState(false);
 
   const [somenteAlteracoesPendentes, setSomenteAlteracoesPendentes] = useState(true);
   const [loadingChanges, setLoadingChanges] = useState(false);
@@ -949,6 +982,97 @@ export default function ConciliacaoIsland() {
     carregarLista();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolvedCompanyId, somentePendentes, monthFilter, dayFilter, rankingStatusFilter]);
+
+  async function carregarPendentes() {
+    const companyId = resolvedCompanyId;
+    if (!companyId) {
+      setItensPendentes([]);
+      return;
+    }
+    try {
+      setLoadingPendentes(true);
+      const qs = new URLSearchParams();
+      qs.set("company_id", companyId);
+      qs.set("pending", "1");
+      if (monthFilter) qs.set("month", monthFilter);
+      if (dayFilter) qs.set("day", dayFilter);
+      const resp = await fetch(`/api/v1/conciliacao/list?${qs.toString()}`, {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+      const json = (await resp.json()) as ConciliacaoItem[];
+      setItensPendentes(Array.isArray(json) ? json : []);
+    } catch (e: any) {
+      console.error(e);
+    } finally {
+      setLoadingPendentes(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!resolvedCompanyId) return;
+    if (secaoAtiva !== "pendentes") return;
+    carregarPendentes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolvedCompanyId, secaoAtiva, monthFilter, dayFilter]);
+
+  async function carregarConciliados() {
+    const companyId = resolvedCompanyId;
+    if (!companyId) { setItensConciliados([]); return; }
+    try {
+      setLoadingConciliados(true);
+      const qs = new URLSearchParams();
+      qs.set("company_id", companyId);
+      qs.set("conciliado", "1");
+      if (monthFilter) qs.set("month", monthFilter);
+      if (dayFilter) qs.set("day", dayFilter);
+      const resp = await fetch(`/api/v1/conciliacao/list?${qs.toString()}`, { credentials: "same-origin", cache: "no-store" });
+      if (!resp.ok) throw new Error(await resp.text());
+      const json = await resp.json();
+      setItensConciliados(Array.isArray(json) ? json : []);
+    } catch (e: any) {
+      console.error(e);
+    } finally {
+      setLoadingConciliados(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!resolvedCompanyId) return;
+    if (secaoAtiva !== "registros" && !(secaoAtiva === "resumo" && resumoDetalheAberto)) return;
+    carregarConciliados();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolvedCompanyId, secaoAtiva, resumoDetalheAberto, monthFilter, dayFilter]);
+
+  async function carregarRankingPendentes() {
+    const companyId = resolvedCompanyId;
+    if (!companyId) { setItensRankingPendentes([]); return; }
+    try {
+      setLoadingRankingPendentes(true);
+      const qs = new URLSearchParams();
+      qs.set("company_id", companyId);
+      qs.set("ranking_pending", "1");
+      if (monthFilter) qs.set("month", monthFilter);
+      if (dayFilter) qs.set("day", dayFilter);
+      const resp = await fetch(`/api/v1/conciliacao/list?${qs.toString()}`, { credentials: "same-origin", cache: "no-store" });
+      if (!resp.ok) throw new Error(await resp.text());
+      const json = await resp.json();
+      setItensRankingPendentes(Array.isArray(json) ? json : []);
+    } catch (e: any) {
+      console.error(e);
+    } finally {
+      setLoadingRankingPendentes(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!resolvedCompanyId) return;
+    if (secaoAtiva !== "pendentes_ranking") return;
+    carregarRankingPendentes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolvedCompanyId, secaoAtiva, monthFilter, dayFilter]);
 
   useEffect(() => {
     setComissaoDrafts((prev) => {
@@ -1175,48 +1299,50 @@ export default function ConciliacaoIsland() {
       if (!resp.ok) throw new Error(await resp.text());
       const json = (await resp.json()) as { item?: Partial<ConciliacaoItem> | null };
 
-      setItens((prev) =>
-        prev.map((item) => {
-          if (item.id !== row.id) return item;
-          const persisted = json?.item || null;
-          return {
-            ...item,
-            ranking_vendedor_id: (persisted?.ranking_vendedor_id as string | null | undefined) ?? rankingVendedorId ?? null,
-            ranking_produto_id: (persisted?.ranking_produto_id as string | null | undefined) ?? rankingProdutoId ?? null,
-            ranking_assigned_at:
-              (persisted?.ranking_assigned_at as string | null | undefined) ?? new Date().toISOString(),
-            valor_comissao_loja:
-              (persisted?.valor_comissao_loja as number | null | undefined) ?? valorComissaoLoja ?? null,
-            percentual_comissao_loja:
-              (persisted?.percentual_comissao_loja as number | null | undefined) ?? item.percentual_comissao_loja,
-            faixa_comissao:
-              (persisted?.faixa_comissao as string | null | undefined) ?? item.faixa_comissao,
-            is_seguro_viagem:
-              (persisted?.is_seguro_viagem as boolean | undefined) ?? item.is_seguro_viagem,
-            ranking_vendedor: (persisted?.ranking_vendedor as any) ?? (
-              rankingVendedorId
-                ? rankingAssignees.find((opt) => opt.id === rankingVendedorId)
-                  ? {
-                      id: rankingVendedorId,
-                      nome_completo:
-                        rankingAssignees.find((opt) => opt.id === rankingVendedorId)?.nome_completo || null,
-                    }
-                  : item.ranking_vendedor || null
-                : null
-            ),
-            ranking_produto: (persisted?.ranking_produto as any) ?? (
-              rankingProdutoId
-                ? rankingProdutosMeta.find((opt) => opt.id === rankingProdutoId)
-                  ? {
-                      id: rankingProdutoId,
-                      nome: rankingProdutosMeta.find((opt) => opt.id === rankingProdutoId)?.nome || null,
-                    }
-                  : item.ranking_produto || null
-                : null
-            ),
-          };
-        })
-      );
+      const mergeRankingUpdate = (item: ConciliacaoItem): ConciliacaoItem => {
+        if (item.id !== row.id) return item;
+        const persisted = json?.item || null;
+        return {
+          ...item,
+          ranking_vendedor_id: (persisted?.ranking_vendedor_id as string | null | undefined) ?? rankingVendedorId ?? null,
+          ranking_produto_id: (persisted?.ranking_produto_id as string | null | undefined) ?? rankingProdutoId ?? null,
+          ranking_assigned_at:
+            (persisted?.ranking_assigned_at as string | null | undefined) ?? new Date().toISOString(),
+          valor_comissao_loja:
+            (persisted?.valor_comissao_loja as number | null | undefined) ?? valorComissaoLoja ?? null,
+          percentual_comissao_loja:
+            (persisted?.percentual_comissao_loja as number | null | undefined) ?? item.percentual_comissao_loja,
+          faixa_comissao:
+            (persisted?.faixa_comissao as string | null | undefined) ?? item.faixa_comissao,
+          is_seguro_viagem:
+            (persisted?.is_seguro_viagem as boolean | undefined) ?? item.is_seguro_viagem,
+          ranking_vendedor: (persisted?.ranking_vendedor as any) ?? (
+            rankingVendedorId
+              ? rankingAssignees.find((opt) => opt.id === rankingVendedorId)
+                ? {
+                    id: rankingVendedorId,
+                    nome_completo:
+                      rankingAssignees.find((opt) => opt.id === rankingVendedorId)?.nome_completo || null,
+                  }
+                : item.ranking_vendedor || null
+              : null
+          ),
+          ranking_produto: (persisted?.ranking_produto as any) ?? (
+            rankingProdutoId
+              ? rankingProdutosMeta.find((opt) => opt.id === rankingProdutoId)
+                ? {
+                    id: rankingProdutoId,
+                    nome: rankingProdutosMeta.find((opt) => opt.id === rankingProdutoId)?.nome || null,
+                  }
+                : item.ranking_produto || null
+              : null
+          ),
+        };
+      };
+
+      setItens((prev) => prev.map(mergeRankingUpdate));
+      setItensConciliados((prev) => prev.map(mergeRankingUpdate));
+      setItensRankingPendentes((prev) => prev.map(mergeRankingUpdate));
       if (changes.valorComissaoLoja !== undefined) {
         setComissaoDrafts((prev) => ({
           ...prev,
@@ -1281,12 +1407,14 @@ export default function ConciliacaoIsland() {
   }
 
   async function salvarLinha(row: ConciliacaoItem) {
-    const rankingVendedorId = (rankingVendedorDrafts[row.id] || "").trim() || null;
-    const rankingProdutoId = (rankingProdutoDrafts[row.id] || "").trim() || null;
+    // Se o draft não foi inicializado para esta linha (ex: rows de itensConciliados),
+    // usa `undefined` para que salvarAtribuicaoRanking preserve o valor existente do row.
+    const vendedorDraft = rankingVendedorDrafts[row.id];
+    const produtoDraft = rankingProdutoDrafts[row.id];
 
     await salvarAtribuicaoRanking(row, {
-      rankingVendedorId,
-      rankingProdutoId,
+      rankingVendedorId: vendedorDraft != null ? (String(vendedorDraft).trim() || null) : undefined,
+      rankingProdutoId: produtoDraft != null ? (String(produtoDraft).trim() || null) : undefined,
     });
 
     setEditableRows((prev) => ({
@@ -1363,6 +1491,104 @@ export default function ConciliacaoIsland() {
     }
   }
 
+  async function carregarExistentes(linhas: LinhaInput[], cid: string, movimentoData: string | null) {
+    const documentos = linhas.map((l) => l.documento).filter(Boolean);
+    if (documentos.length === 0) {
+      void autoAtribuirVendedores(linhas, cid);
+      return;
+    }
+
+    setBuscandoVendedores(true);
+    try {
+      const res = await fetch("/api/v1/conciliacao/existing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ companyId: cid, documentos, movimentoData }),
+      });
+
+      type ExistingRec = {
+        ranking_vendedor_id: string | null;
+        ranking_produto_id: string | null;
+        venda_id: string | null;
+        venda_recibo_id: string | null;
+        conciliado: boolean;
+        valor_lancamentos: number | null;
+        valor_taxas: number | null;
+        valor_descontos: number | null;
+        valor_abatimentos: number | null;
+        valor_calculada_loja: number | null;
+        valor_visao_master: number | null;
+        valor_opfax: number | null;
+        valor_saldo: number | null;
+      };
+
+      let existingRecords: Record<string, ExistingRec> = {};
+
+      if (res.ok) {
+        const data = (await res.json()) as { records: typeof existingRecords };
+        existingRecords = data?.records ?? {};
+      }
+
+      /** Herda o valor histórico se o valor novo for zero/nulo */
+      const mergeNum = (newVal: number | null | undefined, histVal: number | null | undefined): number | null => {
+        if (Math.abs(Number(newVal ?? 0)) > 0.001) return Number(newVal);
+        if (Math.abs(Number(histVal ?? 0)) > 0.001) return Number(histVal);
+        return null;
+      };
+
+      const atribuidos: string[] = [];
+      const linhasAtualizadas = linhas.map((l) => {
+        const rec = existingRecords[l.documento];
+        if (!rec) return l;
+
+        const updates: Partial<LinhaInput> = {};
+
+        // Dados de atribuição
+        if (rec.ranking_vendedor_id && !String(l.ranking_vendedor_id || "").trim()) {
+          updates.ranking_vendedor_id = rec.ranking_vendedor_id;
+          atribuidos.push(l.documento);
+        }
+        if (rec.ranking_produto_id && !String(l.ranking_produto_id || "").trim()) {
+          updates.ranking_produto_id = rec.ranking_produto_id;
+        }
+        if (rec.venda_recibo_id && !String(l.venda_recibo_id || "").trim()) {
+          updates.venda_recibo_id = rec.venda_recibo_id;
+        }
+        if (rec.venda_id && !String(l.venda_id || "").trim()) {
+          updates.venda_id = rec.venda_id;
+        }
+
+        // Herança de valores financeiros: se o arquivo atual veio zerado, usa importação anterior
+        updates.valor_lancamentos = mergeNum(l.valor_lancamentos, rec.valor_lancamentos);
+        updates.valor_taxas = mergeNum(l.valor_taxas, rec.valor_taxas);
+        updates.valor_descontos = mergeNum(l.valor_descontos, rec.valor_descontos);
+        updates.valor_abatimentos = mergeNum(l.valor_abatimentos, rec.valor_abatimentos);
+        updates.valor_calculada_loja = mergeNum(l.valor_calculada_loja, rec.valor_calculada_loja);
+        updates.valor_visao_master = mergeNum(l.valor_visao_master, rec.valor_visao_master);
+        updates.valor_opfax = mergeNum(l.valor_opfax, rec.valor_opfax);
+        updates.valor_saldo = mergeNum(l.valor_saldo, rec.valor_saldo);
+
+        const merged = { ...l, ...updates };
+        // Re-enriquecer para recalcular valor_venda_real, comissão e % loja com os valores herdados
+        return enrichLinha(merged);
+      });
+
+      if (atribuidos.length > 0) {
+        showToast(`${atribuidos.length} registro(s) com dados do sistema carregados.`, "success");
+      }
+
+      // Update parsedLinhas with merged data, then run auto-assign for remaining without vendor
+      setParsedLinhas(linhasAtualizadas);
+      void autoAtribuirVendedores(linhasAtualizadas, cid);
+    } catch {
+      // Fallback: try auto-assign directly
+      void autoAtribuirVendedores(linhas, cid);
+    } finally {
+      setBuscandoVendedores(false);
+    }
+  }
+
   async function autoAtribuirVendedores(linhas: LinhaInput[], cid: string) {
     const candidatas = linhas.filter(
       (l) => isConciliacaoEfetivada({ status: l.status, descricao: l.descricao }) &&
@@ -1431,16 +1657,19 @@ export default function ConciliacaoIsland() {
       const origem = file.name || "import";
       const ext = origem.split(".").pop()?.toLowerCase() || "";
       let linhas: LinhaInput[] = [];
+      let parsedMovimentoDataValue: string | null = null;
 
       if (ext === "txt") {
         const text = await file.text();
         const parsed = parseConciliacaoTxt(text, origem);
+        parsedMovimentoDataValue = parsed.movimentoData;
         setParsedMovimentoData(parsed.movimentoData);
         setParsedLinhas(parsed.linhas);
         setParsedRodape(parsed.rodape);
         linhas = parsed.linhas;
       } else if (ext === "xls" || ext === "xlsx") {
         const parsed = await parseConciliacaoXls(file, origem);
+        parsedMovimentoDataValue = parsed.movimentoData;
         setParsedMovimentoData(parsed.movimentoData);
         setParsedLinhas(parsed.linhas);
         setParsedRodape(parsed.rodape);
@@ -1451,9 +1680,9 @@ export default function ConciliacaoIsland() {
 
       showToast(`Arquivo lido: ${file.name}`, "success");
 
-      // Auto-atribuir vendedores a partir das vendas já registradas no sistema
+      // Carregar dados já salvos no sistema para este arquivo (re-importação)
       if (linhas.length > 0 && resolvedCompanyId) {
-        void autoAtribuirVendedores(linhas, resolvedCompanyId);
+        void carregarExistentes(linhas, resolvedCompanyId, parsedMovimentoDataValue);
       }
     } catch (e: any) {
       console.error(e);
@@ -1623,6 +1852,8 @@ export default function ConciliacaoIsland() {
       const qs = new URLSearchParams();
       qs.set("company_id", resolvedCompanyId);
       if (somenteAlteracoesPendentes) qs.set("pending", "1");
+      if (monthFilter) qs.set("month", monthFilter);
+      if (dayFilter) qs.set("day", dayFilter);
 
       const resp = await fetch(`/api/v1/conciliacao/changes?${qs.toString()}`, {
         method: "GET",
@@ -1841,7 +2072,7 @@ export default function ConciliacaoIsland() {
     if (!resolvedCompanyId) return;
     carregarAlteracoes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolvedCompanyId, somenteAlteracoesPendentes]);
+  }, [resolvedCompanyId, somenteAlteracoesPendentes, monthFilter, dayFilter]);
 
   const conciliadosCount = useMemo(
     () => itens.filter((item) => item.conciliado).length,
@@ -2098,15 +2329,21 @@ export default function ConciliacaoIsland() {
       subtitle: "Carregue o arquivo e atribua vendedores antes de salvar e conciliar.",
     },
     {
-      id: "resumo",
-      label: "Resumo operacional",
-      subtitle: "Mês, execuções e pendências por período.",
+      id: "pendentes",
+      label: "Conciliação pendente",
+      subtitle: "Registros ainda não conciliados com as vendas.",
+      badge: pendentesCount > 0 ? pendentesCount : undefined,
     },
     {
       id: "registros",
       label: "Registros conciliados",
-      subtitle: "Comparativo entre o arquivo importado e os dados do sistema.",
-      badge: pendentesCount > 0 ? pendentesCount : undefined,
+      subtitle: "Registros já conciliados com as vendas do sistema.",
+    },
+    {
+      id: "pendentes_ranking",
+      label: "Pendentes ranking",
+      subtitle: "Recibos ainda sem atribuição de vendedor no ranking.",
+      badge: itensRankingPendentes.length > 0 ? itensRankingPendentes.length : undefined,
     },
     {
       id: "alteracoes",
@@ -2165,102 +2402,23 @@ export default function ConciliacaoIsland() {
           tone="config"
           className="mb-3 list-toolbar-sticky"
           title="Conciliacao financeira"
+          subtitle={resumoToolbar}
         >
-          <div className="vtur-commission-filters-grid vtur-conciliacao-filters-grid">
-            {isMaster ? (
-              <AppField
-                as="select"
-                label="Empresa"
-                wrapperClassName="vtur-conciliacao-filter-card"
-                value={empresaSelecionada}
-                onChange={(e) => setEmpresaSelecionada(e.target.value)}
-                options={[
-                  { label: "Selecione...", value: "all" },
-                  ...empresas.map((empresa) => ({
-                    label: empresa.nome_fantasia || empresa.id,
-                    value: empresa.id,
-                  })),
-                ]}
-              />
-            ) : null}
-
+          {isMaster ? (
             <AppField
               as="select"
-              label="Mês"
-              wrapperClassName="vtur-conciliacao-filter-card"
-              value={monthFilter}
-              onChange={(e) => {
-                setAtalhoAtivo(null);
-                setMonthFilter(e.target.value);
-                setDayFilter("");
-              }}
-              disabled={loadingLista || loadingResumo}
-              options={monthOptions}
-            />
-
-            <AppField
-              as="select"
-              label="Dia"
-              wrapperClassName="vtur-conciliacao-filter-card"
-              value={dayFilter || "all"}
-              onChange={(e) => {
-                setAtalhoAtivo(null);
-                setDayFilter(e.target.value === "all" ? "" : e.target.value);
-              }}
-              disabled={loadingLista || loadingResumo}
+              label="Empresa"
+              value={empresaSelecionada}
+              onChange={(e) => setEmpresaSelecionada(e.target.value)}
               options={[
-                { label: "Todos do mês", value: "all" },
-                ...resumoDias.map((item) => ({ label: formatDate(item.date), value: item.date })),
+                { label: "Selecione...", value: "all" },
+                ...empresas.map((empresa) => ({
+                  label: empresa.nome_fantasia || empresa.id,
+                  value: empresa.id,
+                })),
               ]}
             />
-
-            <AppField
-              as="select"
-              label="Pendência ranking"
-              wrapperClassName="vtur-conciliacao-filter-card"
-              value={rankingStatusFilter}
-              onChange={(e) => {
-                setAtalhoAtivo(null);
-                setRankingStatusFilter(e.target.value as any);
-              }}
-              disabled={loadingLista}
-              options={[
-                { label: "Pendentes de atribuição", value: "pending" },
-                { label: "Atribuídos manualmente", value: "assigned" },
-                { label: "Vindos do sistema", value: "system" },
-                { label: "Todos", value: "all" },
-              ]}
-            />
-
-            <AppField
-              as="select"
-              label="Registros"
-              wrapperClassName="vtur-conciliacao-filter-card"
-              value={somentePendentes ? "pendentes" : "todas"}
-              onChange={(e) => {
-                setAtalhoAtivo(null);
-                setSomentePendentes(e.target.value === "pendentes");
-              }}
-              disabled={loadingLista}
-              options={[
-                { label: "Somente pendentes", value: "pendentes" },
-                { label: "Todas", value: "todas" },
-              ]}
-            />
-
-            <div className="vtur-form-actions vtur-conciliacao-filter-card vtur-conciliacao-filter-action">
-              <AppButton
-                type="button"
-                variant="secondary"
-                className="vtur-conciliacao-filter-button"
-                disabled={loadingLista || precisaEmpresaMaster}
-                onClick={carregarLista}
-              >
-                {loadingLista ? "Atualizando..." : "Atualizar lista"}
-              </AppButton>
-            </div>
-          </div>
-
+          ) : null}
         </AppCard>
 
         <AppCard tone="config" className="mb-3 list-toolbar-sticky vtur-conciliacao-tab-card">
@@ -2290,6 +2448,21 @@ export default function ConciliacaoIsland() {
               title="Resumo operacional"
               subtitle="Clique em um mês para ver os registros conciliados daquele período abaixo."
             >
+              <div className="vtur-inline-filter-row mb-3">
+                <AppField
+                  as="select"
+                  label="Mês"
+                  value={monthFilter}
+                  onChange={(e) => { setAtalhoAtivo(null); setMonthFilter(e.target.value); setDayFilter(""); }}
+                  disabled={loadingResumo}
+                  options={monthOptions}
+                />
+                <div className="vtur-inline-filter-actions">
+                  <AppButton type="button" variant="secondary" disabled={loadingResumo || precisaEmpresaMaster} onClick={carregarResumo}>
+                    {loadingResumo ? "Atualizando..." : "Atualizar"}
+                  </AppButton>
+                </div>
+              </div>
               <div className="table-container">
                 <table className="table-default table-header-blue table-mobile-cards min-w-[760px]">
                   <thead>
@@ -2845,7 +3018,7 @@ export default function ConciliacaoIsland() {
               <AppButton
                 type="button"
                 variant="primary"
-                disabled={importando || conciliando || importacaoSalva || buscandoVendedores || precisaEmpresaMaster || parsedLinhas.length === 0}
+                disabled={importando || conciliando || importacaoSalva || buscandoVendedores || precisaEmpresaMaster || parsedLinhas.length === 0 || pendentesAtribuicaoImportacao > 0}
                 onClick={() => { void salvarImportacao(false); }}
               >
                 {importando ? "Salvando..." : importacaoSalva ? "Salvo" : "Salvar"}
@@ -2871,6 +3044,217 @@ export default function ConciliacaoIsland() {
             <p className="mt-3 text-sm text-slate-600">
               1. Escolha o arquivo · 2. Revise os valores · 3. <strong>Salvar</strong> · 4. <strong>Conciliar</strong>
             </p>
+          </AppCard>
+
+        </>}
+
+        {secaoAtiva === "pendentes" && <>
+
+          <AppCard
+            tone="config"
+            className="mb-3"
+            title="Conciliação pendente"
+            subtitle="Registros importados que ainda não foram conciliados com as vendas. Filtre por mês e dia para localizar pendências."
+            actions={
+              <div className="vtur-quote-top-actions">
+                <AppButton
+                  type="button"
+                  variant="primary"
+                  disabled={conciliando || precisaEmpresaMaster || itensPendentes.length === 0}
+                  onClick={conciliarPendentes}
+                >
+                  {conciliando ? "Conciliando..." : "Conciliar pendentes"}
+                </AppButton>
+              </div>
+            }
+          >
+            <div className="vtur-inline-filter-row mb-3">
+              <AppField
+                as="select"
+                label="Mês"
+                value={monthFilter}
+                onChange={(e) => { setAtalhoAtivo(null); setMonthFilter(e.target.value); setDayFilter(""); }}
+                disabled={loadingPendentes}
+                options={monthOptions}
+              />
+              <AppField
+                as="select"
+                label="Dia"
+                value={dayFilter || "all"}
+                onChange={(e) => { setAtalhoAtivo(null); setDayFilter(e.target.value === "all" ? "" : e.target.value); }}
+                disabled={loadingPendentes}
+                options={[
+                  { label: "Todos do mês", value: "all" },
+                  ...resumoDias.map((item) => ({ label: formatDate(item.date), value: item.date })),
+                ]}
+              />
+              <div className="vtur-inline-filter-actions">
+                <AppButton type="button" variant="secondary" disabled={loadingPendentes || precisaEmpresaMaster} onClick={carregarPendentes}>
+                  {loadingPendentes ? "Atualizando..." : "Atualizar lista"}
+                </AppButton>
+                <AppButton type="button" variant="ghost" disabled={loadingPendentes} onClick={() => { setAtalhoAtivo(null); setDayFilter(""); setMonthFilter(currentMonthValue()); }}>
+                  Limpar
+                </AppButton>
+              </div>
+            </div>
+            <div className="vtur-conciliacao-resumo-strip mb-3">
+              <span><strong>{itensPendentes.length}</strong> registro(s) pendente(s) {dayFilter ? `em ${formatDate(dayFilter)}` : `em ${formatMonthLabel(monthFilter)}`}</span>
+            </div>
+
+            <DataTable
+              headers={
+                <tr>
+                  <th>Data</th>
+                  <th>Documento</th>
+                  <th>Status</th>
+                  <th>Recibo encontrado</th>
+                  <th>Vendedor ranking</th>
+                  <th>Ranking</th>
+                  <th>Lançamentos</th>
+                  <th>Taxas</th>
+                  <th>Descontos</th>
+                  <th>Abatimentos</th>
+                  <th>Venda real</th>
+                  <th>Comissão loja</th>
+                  <th>% loja</th>
+                  <th>Conciliado</th>
+                  <th className="th-actions">Ações</th>
+                </tr>
+              }
+              loading={loadingPendentes}
+              empty={!loadingPendentes && itensPendentes.length === 0}
+              emptyMessage={
+                <EmptyState
+                  title={precisaEmpresaMaster ? "Selecione uma empresa" : "Nenhum registro pendente"}
+                  description={
+                    precisaEmpresaMaster
+                      ? "Escolha a empresa para liberar a listagem de pendências."
+                      : "Não há registros pendentes para o período selecionado."
+                  }
+                />
+              }
+              colSpan={15}
+              className="table-header-green table-mobile-cards min-w-[1500px]"
+            >
+              {itensPendentes.map((row) => {
+                const statusNorm = String(row.status || "").toUpperCase();
+                const podeAtribuir = statusNorm === "BAIXA" || statusNorm === "OPFAX";
+                const exigeAtribuicaoRanking = registroExigeAtribuicaoRanking(row);
+                const rankingTooltip = getLinhaRankingTooltip({ status: row.status, descricao: row.descricao });
+                const rowSaving = savingAssignmentId === row.id;
+                const rowEditing = Boolean(editableRows[row.id]);
+                const vendedorNome = row.ranking_vendedor?.nome_completo
+                  || rankingAssignees.find((a) => a.id === row.ranking_vendedor_id)?.nome_completo
+                  || null;
+                return (
+                  <tr key={row.id}>
+                    <td data-label="Data">{formatDate(row.movimento_data)}</td>
+                    <td data-label="Documento">{row.documento}</td>
+                    <td data-label="Status">
+                      {getLinhaStatusLabel({ status: row.status, descricao: row.descricao })}
+                    </td>
+                    <td data-label="Recibo encontrado">{row.venda_recibo_id ? "Sim" : "Não"}</td>
+                    <td data-label="Vendedor ranking">
+                      {podeAtribuir ? (
+                        rowEditing ? (
+                          <select
+                            className="form-select"
+                            value={rankingVendedorDrafts[row.id] ?? row.ranking_vendedor_id ?? ""}
+                            disabled={loadingOptions || rowSaving}
+                            onChange={(e) => updateRankingVendedorDraft(row.id, e.target.value)}
+                          >
+                            <option value="">Não atribuído</option>
+                            {rankingAssignees.map((opt) => (
+                              <option key={opt.id} value={opt.id}>
+                                {opt.nome_completo}
+                              </option>
+                            ))}
+                          </select>
+                        ) : vendedorNome ? (
+                          <span>{vendedorNome}</span>
+                        ) : (
+                          <span className="vtur-muted-text">Não atribuído</span>
+                        )
+                      ) : (
+                        <span
+                          className={rankingTooltip ? "vtur-hint-tooltip" : undefined}
+                          data-tooltip={rankingTooltip || undefined}
+                          tabIndex={rankingTooltip ? 0 : undefined}
+                        >
+                          {getLinhaRankingHint({ status: row.status, descricao: row.descricao })}
+                        </span>
+                      )}
+                    </td>
+                    <td data-label="Ranking">
+                      {exigeAtribuicaoRanking ? (
+                        registroTemRankingAtribuido(row) ? (
+                          <span className="vtur-badge vtur-badge-ok">Sim</span>
+                        ) : (
+                          <span className="vtur-badge vtur-badge-warn">Não</span>
+                        )
+                      ) : podeAtribuir ? (
+                        <span className="vtur-badge vtur-badge-warn">Não</span>
+                      ) : (
+                        <span className="vtur-badge vtur-badge-muted">—</span>
+                      )}
+                    </td>
+                    <td data-label="Lançamentos">{formatMoney(row.valor_lancamentos)}</td>
+                    <td data-label="Taxas">{formatMoney(row.valor_taxas)}</td>
+                    <td data-label="Descontos">{formatMoney(row.valor_descontos)}</td>
+                    <td data-label="Abatimentos">{formatMoney(row.valor_abatimentos)}</td>
+                    <td data-label="Venda real">{formatMoney(row.valor_venda_real)}</td>
+                    <td data-label="Comissão loja">{formatMoney(row.valor_comissao_loja)}</td>
+                    <td data-label="% loja">
+                      {row.percentual_comissao_loja != null
+                        ? `${Number(row.percentual_comissao_loja).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`
+                        : "-"}
+                    </td>
+                    <td data-label="Conciliado">
+                      <span className="vtur-badge vtur-badge-warn">Não</span>
+                    </td>
+                    <td className="th-actions" data-label="Ações">
+                      <div className="action-buttons vtur-table-actions">
+                        {podeAtribuir && (
+                          rowEditing ? (
+                            <AppButton
+                              type="button"
+                              variant="ghost"
+                              className="icon-action-btn vtur-table-action"
+                              icon={rowSaving ? "pi pi-spin pi-spinner" : "pi pi-save"}
+                              title={rowSaving ? "Salvando" : "Salvar"}
+                              aria-label={rowSaving ? "Salvando" : "Salvar"}
+                              disabled={rowSaving}
+                              onClick={() => salvarLinha(row)}
+                            />
+                          ) : (
+                            <AppButton
+                              type="button"
+                              variant="ghost"
+                              className="icon-action-btn vtur-table-action"
+                              icon="pi pi-pencil"
+                              title="Editar"
+                              aria-label="Editar"
+                              disabled={rowSaving || deletingItemId === row.id}
+                              onClick={() => habilitarEdicaoLinha(row.id)}
+                            />
+                          )
+                        )}
+                        <AppButton
+                          type="button"
+                          variant="danger"
+                          className="icon-action-btn vtur-table-action"
+                          icon={deletingItemId === row.id ? "pi pi-spin pi-spinner" : "pi pi-trash"}
+                          title={row.conciliado ? "Excluir desabilitado para recibos conciliados" : deletingItemId === row.id ? "Excluindo" : "Excluir"}
+                          aria-label={row.conciliado ? "Excluir desabilitado para recibos conciliados" : "Excluir"}
+                          disabled={row.conciliado || rowSaving || deletingItemId === row.id}
+                          onClick={() => excluirLinha(row)}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </DataTable>
           </AppCard>
 
         </>}
@@ -2906,29 +3290,37 @@ export default function ConciliacaoIsland() {
               </div>
             }
           >
-            <div className="vtur-conciliacao-focus-strip mb-3">
-              <div className="vtur-conciliacao-focus-copy">
-                <span className="vtur-quote-summary-label">Mostrando agora</span>
-                <strong>{resumoRegistros}</strong>
-                <span>
-                  {Number(resumoTotais.pendentesConciliacao || 0) > 0
-                    ? `${resumoTotais.pendentesConciliacao || 0} registro(s) do mês ainda aguardam conciliação.`
-                    : "Nenhuma pendência de conciliação no recorte atual."}
-                </span>
-              </div>
-              <div className="vtur-conciliacao-focus-actions">
-                {dayFilter ? (
-                  <AppButton type="button" variant="ghost" onClick={() => {
-                    setAtalhoAtivo(null);
-                    setDayFilter("");
-                  }}>
-                    Limpar dia
-                  </AppButton>
-                ) : null}
-                <AppButton type="button" variant="secondary" disabled={loadingLista || precisaEmpresaMaster} onClick={carregarLista}>
-                  {loadingLista ? "Atualizando..." : "Atualizar lista"}
+            <div className="vtur-inline-filter-row mb-3">
+              <AppField
+                as="select"
+                label="Mês"
+                value={monthFilter}
+                onChange={(e) => { setAtalhoAtivo(null); setMonthFilter(e.target.value); setDayFilter(""); }}
+                disabled={loadingConciliados}
+                options={monthOptions}
+              />
+              <AppField
+                as="select"
+                label="Dia"
+                value={dayFilter || "all"}
+                onChange={(e) => { setAtalhoAtivo(null); setDayFilter(e.target.value === "all" ? "" : e.target.value); }}
+                disabled={loadingConciliados}
+                options={[
+                  { label: "Todos do mês", value: "all" },
+                  ...resumoDias.map((item) => ({ label: formatDate(item.date), value: item.date })),
+                ]}
+              />
+              <div className="vtur-inline-filter-actions">
+                <AppButton type="button" variant="secondary" disabled={loadingConciliados || precisaEmpresaMaster} onClick={carregarConciliados}>
+                  {loadingConciliados ? "Atualizando..." : "Atualizar lista"}
+                </AppButton>
+                <AppButton type="button" variant="ghost" disabled={loadingConciliados} onClick={() => { setAtalhoAtivo(null); setDayFilter(""); setMonthFilter(currentMonthValue()); }}>
+                  Limpar
                 </AppButton>
               </div>
+            </div>
+            <div className="vtur-conciliacao-resumo-strip mb-3">
+              <span><strong>{itensConciliados.length}</strong> registro(s) conciliado(s) {dayFilter ? `em ${formatDate(dayFilter)}` : `em ${formatMonthLabel(monthFilter)}`}</span>
             </div>
             <DataTable
               headers={
@@ -2938,6 +3330,7 @@ export default function ConciliacaoIsland() {
                   <th>Status</th>
                   <th>Recibo encontrado</th>
                   <th>Vendedor ranking</th>
+                  <th>Ranking</th>
                   <th>Meta dif.</th>
                   <th>Lançamentos</th>
                   <th>Taxas (arq)</th>
@@ -2954,28 +3347,31 @@ export default function ConciliacaoIsland() {
                   <th className="th-actions">Ações</th>
                 </tr>
               }
-              loading={loadingLista}
-              empty={!loadingLista && registrosEmTela.length === 0}
+              loading={loadingConciliados}
+              empty={!loadingConciliados && itensConciliados.length === 0}
               emptyMessage={
                 <EmptyState
-                  title={precisaEmpresaMaster ? "Selecione uma empresa" : "Nenhum registro encontrado"}
+                  title={precisaEmpresaMaster ? "Selecione uma empresa" : "Nenhum registro conciliado"}
                   description={
                     precisaEmpresaMaster
-                      ? "Escolha a empresa para liberar a listagem e as acoes da conciliacao."
-                      : "Nao ha registros para o recorte atual. Ajuste os filtros, use os atalhos acima ou importe um novo arquivo."
+                      ? "Escolha a empresa para liberar a listagem."
+                      : "Não há registros conciliados para o período selecionado."
                   }
                 />
               }
-              colSpan={19}
+              colSpan={20}
               className="table-header-green table-mobile-cards min-w-[2040px]"
             >
-              {registrosEmTela.map((row) => (
+              {itensConciliados.map((row) => (
                 <tr key={row.id}>
                   {(() => {
                     const rowLocked = isRowLocked(row);
                     const rowSaving = savingAssignmentId === row.id;
                     const exigeAtribuicaoRanking = registroExigeAtribuicaoRanking(row);
                     const rankingTooltip = getLinhaRankingTooltip({ status: row.status, descricao: row.descricao });
+                    const vendedorNome = row.ranking_vendedor?.nome_completo
+                      || rankingAssignees.find((a) => a.id === row.ranking_vendedor_id)?.nome_completo
+                      || null;
                     return (
                       <>
                   <td data-label="Data">{formatDate(row.movimento_data)}</td>
@@ -2983,23 +3379,28 @@ export default function ConciliacaoIsland() {
                   <td data-label="Status">
                     {getLinhaStatusLabel({ status: row.status, descricao: row.descricao })}
                   </td>
-                  <td data-label="Recibo encontrado">{row.venda_recibo_id ? "Sim" : "Nao"}</td>
+                  <td data-label="Recibo encontrado">{row.venda_recibo_id ? "Sim" : "Não"}</td>
                   <td data-label="Vendedor ranking">
                     {exigeAtribuicaoRanking ? (
-                      <select
-                        className="form-select"
-                        value={rankingVendedorDrafts[row.id] ?? row.ranking_vendedor_id ?? ""}
-                        disabled={loadingOptions || rowSaving || rowLocked}
-                        onChange={(e) => updateRankingVendedorDraft(row.id, e.target.value)}
-                      >
-                        <option value="">Selecione...</option>
-                        {rankingAssignees.map((opt) => (
-                          <option key={opt.id} value={opt.id}>
-                            {opt.nome_completo}
-                            {opt.tipo ? ` (${opt.tipo})` : ""}
-                          </option>
-                        ))}
-                      </select>
+                      !rowLocked ? (
+                        <select
+                          className="form-select"
+                          value={rankingVendedorDrafts[row.id] ?? row.ranking_vendedor_id ?? ""}
+                          disabled={loadingOptions || rowSaving}
+                          onChange={(e) => updateRankingVendedorDraft(row.id, e.target.value)}
+                        >
+                          <option value="">Não atribuído</option>
+                          {rankingAssignees.map((opt) => (
+                            <option key={opt.id} value={opt.id}>
+                              {opt.nome_completo}
+                            </option>
+                          ))}
+                        </select>
+                      ) : vendedorNome ? (
+                        <span>{vendedorNome}</span>
+                      ) : (
+                        <span className="vtur-muted-text">Não atribuído</span>
+                      )
                     ) : (
                       <span
                         className={rankingTooltip ? "vtur-hint-tooltip" : undefined}
@@ -3010,14 +3411,34 @@ export default function ConciliacaoIsland() {
                       </span>
                     )}
                   </td>
+                  <td data-label="Ranking">
+                    {exigeAtribuicaoRanking ? (
+                      registroTemRankingAtribuido(row) ? (
+                        <span className="vtur-badge vtur-badge-ok">Sim</span>
+                      ) : (
+                        <span className="vtur-badge vtur-badge-warn">Não</span>
+                      )
+                    ) : (
+                      <span className="vtur-badge vtur-badge-muted">—</span>
+                    )}
+                  </td>
                   <td data-label="Meta dif.">
                     {rankingProdutosMeta.length === 0 ? (
                       <span>-</span>
+                    ) : rowLocked ? (
+                      (() => {
+                        const produtoNome = row.ranking_produto?.nome
+                          || rankingProdutosMeta.find((p) => p.id === row.ranking_produto_id)?.nome
+                          || null;
+                        return produtoNome
+                          ? <span>{produtoNome}</span>
+                          : <span className="vtur-muted-text">Não</span>;
+                      })()
                     ) : produtoMetaUnico ? (
                       <select
                         className="form-select"
                         value={(rankingProdutoDrafts[row.id] ?? row.ranking_produto_id ?? "") === produtoMetaUnico.id ? produtoMetaUnico.id : ""}
-                        disabled={loadingOptions || rowSaving || rowLocked}
+                        disabled={loadingOptions || rowSaving}
                         onChange={(e) => updateRankingProdutoDraft(row.id, e.target.value)}
                       >
                         <option value="">Nao</option>
@@ -3027,7 +3448,7 @@ export default function ConciliacaoIsland() {
                       <select
                         className="form-select"
                         value={rankingProdutoDrafts[row.id] ?? row.ranking_produto_id ?? ""}
-                        disabled={loadingOptions || rowSaving || rowLocked}
+                        disabled={loadingOptions || rowSaving}
                         onChange={(e) => updateRankingProdutoDraft(row.id, e.target.value)}
                       >
                         <option value="">Nao</option>
@@ -3057,7 +3478,11 @@ export default function ConciliacaoIsland() {
                   <td data-label="Taxas (sist)">{formatMoney(row.sistema_valor_taxas)}</td>
                   <td data-label="Diff total">{formatMoney(row.diff_total)}</td>
                   <td data-label="Diff taxas">{formatMoney(row.diff_taxas)}</td>
-                  <td data-label="Conciliado">{row.conciliado ? "Sim" : "Nao"}</td>
+                  <td data-label="Conciliado">
+                    {row.conciliado
+                      ? <span className="vtur-badge vtur-badge-ok">Sim</span>
+                      : <span className="vtur-badge vtur-badge-warn">Não</span>}
+                  </td>
                   <td className="th-actions" data-label="Ações">
                     <div className="action-buttons vtur-table-actions">
                       {rowLocked ? (
@@ -3112,6 +3537,176 @@ export default function ConciliacaoIsland() {
                   })()}
                 </tr>
               ))}
+            </DataTable>
+          </AppCard>
+
+        </>}
+
+        {secaoAtiva === "pendentes_ranking" && <>
+
+          <AppCard
+            tone="config"
+            className="mb-3"
+            title="Pendentes ranking"
+            subtitle="Recibos BAIXA e OPFAX que ainda não foram atribuídos a um vendedor no ranking. Recibos OPFAX saem da lista após a importação da BAIXA correspondente."
+          >
+            <div className="vtur-inline-filter-row mb-3">
+              <AppField
+                as="select"
+                label="Mês"
+                value={monthFilter}
+                onChange={(e) => { setAtalhoAtivo(null); setMonthFilter(e.target.value); setDayFilter(""); }}
+                disabled={loadingRankingPendentes}
+                options={monthOptions}
+              />
+              <AppField
+                as="select"
+                label="Dia"
+                value={dayFilter || "all"}
+                onChange={(e) => { setAtalhoAtivo(null); setDayFilter(e.target.value === "all" ? "" : e.target.value); }}
+                disabled={loadingRankingPendentes}
+                options={[
+                  { label: "Todos do mês", value: "all" },
+                  ...resumoDias.map((item) => ({ label: formatDate(item.date), value: item.date })),
+                ]}
+              />
+              <div className="vtur-inline-filter-actions">
+                <AppButton type="button" variant="secondary" disabled={loadingRankingPendentes || precisaEmpresaMaster} onClick={carregarRankingPendentes}>
+                  {loadingRankingPendentes ? "Atualizando..." : "Atualizar lista"}
+                </AppButton>
+                <AppButton type="button" variant="ghost" disabled={loadingRankingPendentes} onClick={() => { setAtalhoAtivo(null); setDayFilter(""); setMonthFilter(currentMonthValue()); }}>
+                  Limpar
+                </AppButton>
+              </div>
+            </div>
+            <div className="vtur-conciliacao-resumo-strip mb-3">
+              <span><strong>{itensRankingPendentes.length}</strong> recibo(s) aguardando atribuição de ranking {dayFilter ? `em ${formatDate(dayFilter)}` : `em ${formatMonthLabel(monthFilter)}`}</span>
+            </div>
+            <DataTable
+              headers={
+                <tr>
+                  <th>Data</th>
+                  <th>Documento</th>
+                  <th>Status</th>
+                  <th>Recibo encontrado</th>
+                  <th>Vendedor ranking</th>
+                  <th>Ranking</th>
+                  <th>Lançamentos</th>
+                  <th>Taxas</th>
+                  <th>Venda real</th>
+                  <th>Comissão loja</th>
+                  <th>% loja</th>
+                  <th>Conciliado</th>
+                  <th className="th-actions">Ações</th>
+                </tr>
+              }
+              loading={loadingRankingPendentes}
+              empty={!loadingRankingPendentes && itensRankingPendentes.length === 0}
+              emptyMessage={
+                <EmptyState
+                  title={precisaEmpresaMaster ? "Selecione uma empresa" : "Nenhum pendente de ranking"}
+                  description={
+                    precisaEmpresaMaster
+                      ? "Escolha a empresa para liberar a listagem."
+                      : "Todos os recibos do período já foram atribuídos ao ranking."
+                  }
+                />
+              }
+              colSpan={13}
+              className="table-header-green table-mobile-cards min-w-[1400px]"
+            >
+              {itensRankingPendentes.map((row) => {
+                // Nesta aba OPFAX também pode receber vendedor (pré-atribuição antes da baixa)
+                const statusNorm = String(row.status || "").toUpperCase();
+                const podeAtribuir = statusNorm === "BAIXA" || statusNorm === "OPFAX";
+                const rowSaving = savingAssignmentId === row.id;
+                const rowEditing = Boolean(editableRows[row.id]);
+                const vendedorAtualId = rankingVendedorDrafts[row.id] ?? row.ranking_vendedor_id ?? "";
+                const vendedorNome = row.ranking_vendedor?.nome_completo
+                  || rankingAssignees.find((a) => a.id === row.ranking_vendedor_id)?.nome_completo
+                  || null;
+                return (
+                  <tr key={row.id}>
+                    <td data-label="Data">{formatDate(row.movimento_data)}</td>
+                    <td data-label="Documento">{row.documento}</td>
+                    <td data-label="Status">
+                      {getLinhaStatusLabel({ status: row.status, descricao: row.descricao })}
+                    </td>
+                    <td data-label="Recibo encontrado">{row.venda_recibo_id ? "Sim" : "Não"}</td>
+                    <td data-label="Vendedor ranking">
+                      {podeAtribuir ? (
+                        rowEditing ? (
+                          <select
+                            className="form-select"
+                            value={vendedorAtualId}
+                            disabled={loadingOptions || rowSaving}
+                            onChange={(e) => updateRankingVendedorDraft(row.id, e.target.value)}
+                          >
+                            <option value="">Não atribuído</option>
+                            {rankingAssignees.map((opt) => (
+                              <option key={opt.id} value={opt.id}>
+                                {opt.nome_completo}{opt.tipo ? ` (${opt.tipo})` : ""}
+                              </option>
+                            ))}
+                          </select>
+                        ) : vendedorNome ? (
+                          <span>{vendedorNome}</span>
+                        ) : (
+                          <span className="vtur-muted-text">Não atribuído</span>
+                        )
+                      ) : (
+                        <span>—</span>
+                      )}
+                    </td>
+                    <td data-label="Ranking">
+                      {row.ranking_vendedor_id
+                        ? <span className="vtur-badge vtur-badge-warn">Pendente</span>
+                        : <span className="vtur-badge vtur-badge-warn">Não atribuído</span>}
+                    </td>
+                    <td data-label="Lançamentos">{formatMoney(row.valor_lancamentos)}</td>
+                    <td data-label="Taxas">{formatMoney(row.valor_taxas)}</td>
+                    <td data-label="Venda real">{formatMoney(row.valor_venda_real)}</td>
+                    <td data-label="Comissão loja">{formatMoney(row.valor_comissao_loja)}</td>
+                    <td data-label="% loja">
+                      {row.percentual_comissao_loja != null
+                        ? `${Number(row.percentual_comissao_loja).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`
+                        : "-"}
+                    </td>
+                    <td data-label="Conciliado">
+                      {row.conciliado
+                        ? <span className="vtur-badge vtur-badge-ok">Sim</span>
+                        : <span className="vtur-badge vtur-badge-warn">Não</span>}
+                    </td>
+                    <td className="th-actions" data-label="Ações">
+                      <div className="action-buttons vtur-table-actions">
+                        {rowEditing ? (
+                          <AppButton
+                            type="button"
+                            variant="ghost"
+                            className="icon-action-btn vtur-table-action"
+                            icon={rowSaving ? "pi pi-spin pi-spinner" : "pi pi-save"}
+                            title={rowSaving ? "Salvando" : "Salvar"}
+                            aria-label={rowSaving ? "Salvando" : "Salvar"}
+                            disabled={rowSaving}
+                            onClick={() => salvarLinha(row)}
+                          />
+                        ) : (
+                          <AppButton
+                            type="button"
+                            variant="ghost"
+                            className="icon-action-btn vtur-table-action"
+                            icon="pi pi-pencil"
+                            title="Editar"
+                            aria-label="Editar"
+                            disabled={rowSaving}
+                            onClick={() => habilitarEdicaoLinha(row.id)}
+                          />
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </DataTable>
           </AppCard>
 
@@ -3188,7 +3783,26 @@ export default function ConciliacaoIsland() {
               </button>
             </div>
 
-            <div className="mt-3">
+            <div className="vtur-inline-filter-row mt-3 mb-3">
+              <AppField
+                as="select"
+                label="Mês"
+                value={monthFilter}
+                onChange={(e) => { setMonthFilter(e.target.value); setDayFilter(""); }}
+                disabled={loadingChanges}
+                options={monthOptions}
+              />
+              <AppField
+                as="select"
+                label="Dia"
+                value={dayFilter || "all"}
+                onChange={(e) => setDayFilter(e.target.value === "all" ? "" : e.target.value)}
+                disabled={loadingChanges}
+                options={[
+                  { label: "Todos do mês", value: "all" },
+                  ...resumoDias.map((item) => ({ label: formatDate(item.date), value: item.date })),
+                ]}
+              />
               <AppField
                 as="select"
                 label="Alterações"
@@ -3196,10 +3810,18 @@ export default function ConciliacaoIsland() {
                 onChange={(e) => setSomenteAlteracoesPendentes(e.target.value === "pendentes")}
                 disabled={loadingChanges}
                 options={[
-                  { label: "Somente nao revertidas", value: "pendentes" },
+                  { label: "Somente não revertidas", value: "pendentes" },
                   { label: "Todas", value: "todas" },
                 ]}
               />
+              <div className="vtur-inline-filter-actions">
+                <AppButton type="button" variant="secondary" disabled={loadingChanges || precisaEmpresaMaster} onClick={carregarAlteracoes}>
+                  {loadingChanges ? "Atualizando..." : "Atualizar lista"}
+                </AppButton>
+                <AppButton type="button" variant="ghost" disabled={loadingChanges} onClick={() => { setDayFilter(""); setMonthFilter(currentMonthValue()); setSomenteAlteracoesPendentes(true); }}>
+                  Limpar
+                </AppButton>
+              </div>
             </div>
 
             <div className="mt-3" ref={tabelaAlteracoesRef}>

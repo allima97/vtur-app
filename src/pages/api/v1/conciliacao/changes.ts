@@ -35,6 +35,8 @@ export const GET: APIRoute = async ({ request }) => {
     if (!companyId) return new Response(JSON.stringify([]), { status: 200 });
 
     const somentePendentes = url.searchParams.get("pending") === "1";
+    const month = url.searchParams.get("month") || null; // "YYYY-MM"
+    const day = url.searchParams.get("day") || null;     // "YYYY-MM-DD"
 
     let query = client
       .from("conciliacao_recibo_changes")
@@ -46,6 +48,14 @@ export const GET: APIRoute = async ({ request }) => {
       .limit(500);
 
     if (somentePendentes) query = query.is("reverted_at", null);
+    if (day) {
+      query = query.gte("changed_at", `${day}T00:00:00`).lte("changed_at", `${day}T23:59:59`);
+    } else if (month) {
+      const [y, m] = month.split("-");
+      const start = `${y}-${m}-01T00:00:00`;
+      const nextMonth = Number(m) === 12 ? `${Number(y) + 1}-01-01T00:00:00` : `${y}-${String(Number(m) + 1).padStart(2, "0")}-01T00:00:00`;
+      query = query.gte("changed_at", start).lt("changed_at", nextMonth);
+    }
 
     const { data, error } = await query;
     if (error) throw error;
