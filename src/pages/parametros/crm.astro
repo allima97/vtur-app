@@ -1,10 +1,11 @@
 ---
 import "../../styles/global.css";
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import CrmIsland from "../../components/islands/CrmIsland";
 
-const activePage = "parametros-crm";
+const activePage = "parametros-avisos";
 ---
 
-<DashboardLayout title="Parâmetros • CRM" {activePage} module="CrmTemplates">
-  <p>Em construção.</p>
+<DashboardLayout title="CRM — Cartões de Relacionamento" {activePage} module="CrmTemplates">
+  <CrmIsland client:load />
 </DashboardLayout>

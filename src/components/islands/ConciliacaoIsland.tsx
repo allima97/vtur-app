@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { ProgressSpinner } from "primereact/progressspinner";
 import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
@@ -622,7 +623,7 @@ function formatMonthLabel(value: string | null | undefined) {
     "dezembro",
   ];
   const monthLabel = monthNames[monthIndex] || month;
-  return `${monthLabel}-${year.slice(-2)}`;
+  return `${monthLabel}-${year}`;
 }
 
 function buildRecentMonthOptions(current: string, fromResumo: string[]) {
@@ -785,6 +786,7 @@ export default function ConciliacaoIsland() {
 
   const [arquivo, setArquivo] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const tabelaAlteracoesRef = useRef<HTMLDivElement>(null);
 
   const [parsedLinhas, setParsedLinhas] = useState<LinhaInput[]>([]);
   const [parsedRodape, setParsedRodape] = useState<LinhaRodapeImportacao[]>([]);
@@ -807,6 +809,8 @@ export default function ConciliacaoIsland() {
 
   const [importando, setImportando] = useState(false);
   const [conciliando, setConciliando] = useState(false);
+  const [importacaoSalva, setImportacaoSalva] = useState(false);
+  const [buscandoVendedores, setBuscandoVendedores] = useState(false);
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [savingAssignmentId, setSavingAssignmentId] = useState<string | null>(null);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
@@ -819,6 +823,7 @@ export default function ConciliacaoIsland() {
   const [rankingProdutosMeta, setRankingProdutosMeta] = useState<RankingProdutoOption[]>([]);
   const [showPendingDetails, setShowPendingDetails] = useState(false);
   const [atalhoAtivo, setAtalhoAtivo] = useState<ConciliacaoShortcut | null>(null);
+  const [resumoDetalheAberto, setResumoDetalheAberto] = useState(false);
 
   const [somenteAlteracoesPendentes, setSomenteAlteracoesPendentes] = useState(true);
   const [loadingChanges, setLoadingChanges] = useState(false);
@@ -1074,6 +1079,7 @@ export default function ConciliacaoIsland() {
     setParsedRodape([]);
     setParsedMoneyDrafts({});
     setParsedMovimentoData(null);
+    setImportacaoSalva(false);
     if (fileRef.current) fileRef.current.value = "";
   }
 
@@ -1357,6 +1363,61 @@ export default function ConciliacaoIsland() {
     }
   }
 
+  async function autoAtribuirVendedores(linhas: LinhaInput[], cid: string) {
+    const candidatas = linhas.filter(
+      (l) => isConciliacaoEfetivada({ status: l.status, descricao: l.descricao }) &&
+             !String(l.ranking_vendedor_id || "").trim()
+    );
+    if (candidatas.length === 0) return;
+
+    setBuscandoVendedores(true);
+    try {
+      const documentos = candidatas.map((l) => ({
+        documento: l.documento,
+        valor_lancamentos: l.valor_lancamentos ?? null,
+        valor_taxas: l.valor_taxas ?? null,
+      }));
+
+      const res = await fetch("/api/v1/conciliacao/lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ companyId: cid, documentos }),
+      });
+
+      if (!res.ok) return;
+
+      const data = (await res.json()) as {
+        matches: Record<string, { vendedor_id: string } | null>;
+      };
+
+      const novosVendedores: Record<string, string> = {};
+      for (const linha of candidatas) {
+        const match = data.matches[linha.documento];
+        if (match?.vendedor_id) {
+          novosVendedores[linha.documento] = match.vendedor_id;
+        }
+      }
+
+      if (Object.keys(novosVendedores).length > 0) {
+        // Atualiza o draft de ranking_vendedor usando o id único da linha como chave
+        setParsedLinhas((prev) =>
+          prev.map((l) => {
+            if (novosVendedores[l.documento] && !String(l.ranking_vendedor_id || "").trim()) {
+              return { ...l, ranking_vendedor_id: novosVendedores[l.documento] };
+            }
+            return l;
+          })
+        );
+        const atribuidos = Object.keys(novosVendedores).length;
+        showToast(`${atribuidos} vendedor(es) atribuído(s) automaticamente.`, "success");
+      }
+    } catch {
+      // silencioso — auto-atribuição é best-effort
+    } finally {
+      setBuscandoVendedores(false);
+    }
+  }
+
   async function onPickFile(file: File | null) {
     setArquivo(file);
     setParsedLinhas([]);
@@ -1369,6 +1430,7 @@ export default function ConciliacaoIsland() {
     try {
       const origem = file.name || "import";
       const ext = origem.split(".").pop()?.toLowerCase() || "";
+      let linhas: LinhaInput[] = [];
 
       if (ext === "txt") {
         const text = await file.text();
@@ -1376,16 +1438,23 @@ export default function ConciliacaoIsland() {
         setParsedMovimentoData(parsed.movimentoData);
         setParsedLinhas(parsed.linhas);
         setParsedRodape(parsed.rodape);
+        linhas = parsed.linhas;
       } else if (ext === "xls" || ext === "xlsx") {
         const parsed = await parseConciliacaoXls(file, origem);
         setParsedMovimentoData(parsed.movimentoData);
         setParsedLinhas(parsed.linhas);
         setParsedRodape(parsed.rodape);
+        linhas = parsed.linhas;
       } else {
         throw new Error("Formato não suportado. Use TXT ou XLS/XLSX.");
       }
 
       showToast(`Arquivo lido: ${file.name}`, "success");
+
+      // Auto-atribuir vendedores a partir das vendas já registradas no sistema
+      if (linhas.length > 0 && resolvedCompanyId) {
+        void autoAtribuirVendedores(linhas, resolvedCompanyId);
+      }
     } catch (e: any) {
       console.error(e);
       showToast(e?.message || "Erro ao ler arquivo.", "error");
@@ -1448,19 +1517,25 @@ export default function ConciliacaoIsland() {
         setDayFilter(parsedMovimentoData);
       }
 
-      setSecaoAtiva("registros");
-
       await carregarLista();
       await carregarResumo();
       await carregarExecucoes();
       await carregarAlteracoes();
 
-      showToast(
-        runReconcile
-          ? `Salvo e conciliado. Importados: ${json?.imported || 0}. Conciliados: ${json?.reconciled || 0}.`
-          : `Importação salva. Importados: ${json?.imported || 0}. Agora revise em Registros conciliados e clique em Conciliar quando desejar.`,
-        "success"
-      );
+      if (runReconcile) {
+        showToast(
+          `Salvo e conciliado. Importados: ${json?.imported || 0}. Conciliados: ${json?.reconciled || 0}.`,
+          "success"
+        );
+        limparImportacao();
+        setSecaoAtiva("registros");
+      } else {
+        setImportacaoSalva(true);
+        showToast(
+          `Importação salva (${json?.imported || 0} registros). Clique em Conciliar para processar.`,
+          "success"
+        );
+      }
       return true;
     } catch (e: any) {
       console.error(e);
@@ -1468,6 +1543,38 @@ export default function ConciliacaoIsland() {
       return false;
     } finally {
       setImportando(false);
+    }
+  }
+
+  async function conciliarAposImport() {
+    if (!resolvedCompanyId) {
+      showToast("Selecione uma empresa.", "error");
+      return;
+    }
+    try {
+      setConciliando(true);
+      const resp = await fetch("/api/v1/conciliacao/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ companyId: resolvedCompanyId, limit: 200 }),
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+      const json = (await resp.json()) as any;
+      showToast(
+        `Conciliado. Checados: ${json?.checked || 0}. Conciliados: ${json?.reconciled || 0}.`,
+        "success"
+      );
+      await carregarLista();
+      await carregarResumo();
+      await carregarExecucoes();
+      limparImportacao();
+      setSecaoAtiva("registros");
+    } catch (e: any) {
+      console.error(e);
+      showToast(e?.message || "Erro ao conciliar.", "error");
+    } finally {
+      setConciliando(false);
     }
   }
 
@@ -1486,9 +1593,12 @@ export default function ConciliacaoIsland() {
       });
       if (!resp.ok) throw new Error(await resp.text());
       const json = (await resp.json()) as any;
+      const erros = Number(json?.updateErrors || 0);
       showToast(
-        `Checados: ${json?.checked || 0}. Conciliados: ${json?.reconciled || 0}. Taxas atualizadas: ${json?.updatedTaxes || 0}.`,
-        "success"
+        erros > 0
+          ? `Conciliados: ${json?.reconciled || 0}. Taxas atualizadas: ${json?.updatedTaxes || 0}. Falhas ao salvar: ${erros} — verifique os logs do servidor.`
+          : `Checados: ${json?.checked || 0}. Conciliados: ${json?.reconciled || 0}. Taxas atualizadas: ${json?.updatedTaxes || 0}.`,
+        erros > 0 ? "error" : "success"
       );
       await carregarLista();
       await carregarResumo();
@@ -1728,10 +1838,10 @@ export default function ConciliacaoIsland() {
   }
 
   useEffect(() => {
-    if (secaoAtiva !== "alteracoes" || !resolvedCompanyId) return;
+    if (!resolvedCompanyId) return;
     carregarAlteracoes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [secaoAtiva, resolvedCompanyId, somenteAlteracoesPendentes]);
+  }, [resolvedCompanyId, somenteAlteracoesPendentes]);
 
   const conciliadosCount = useMemo(
     () => itens.filter((item) => item.conciliado).length,
@@ -1981,30 +2091,28 @@ export default function ConciliacaoIsland() {
     await carregarLista(nextFilters);
   }
 
-  const navSections: Array<{ id: ConciliacaoSection; label: string; value: string | number; hint: string }> = [
+  const navSections: Array<{ id: ConciliacaoSection; label: string; subtitle: string; badge?: string | number }> = [
     {
       id: "importacao",
-      label: "Importação",
-      value: parsedLinhas.length,
-      hint: "Importe o arquivo e valide o preview",
+      label: "Importar arquivo",
+      subtitle: "Carregue o arquivo e atribua vendedores antes de salvar e conciliar.",
     },
     {
       id: "resumo",
-      label: "Resumo",
-      value: loadingResumo ? "..." : resumoTotais.pendentesConciliacao || 0,
-      hint: "Mês, dias pendentes e execuções",
+      label: "Resumo operacional",
+      subtitle: "Mês, execuções e pendências por período.",
     },
     {
       id: "registros",
-      label: "Registros",
-      value: pendentesCount,
-      hint: `${conciliadosCount} conciliados no recorte atual`,
+      label: "Registros conciliados",
+      subtitle: "Comparativo entre o arquivo importado e os dados do sistema.",
+      badge: pendentesCount > 0 ? pendentesCount : undefined,
     },
     {
       id: "alteracoes",
-      label: "Alterações",
-      value: alteracoesPendentesCount,
-      hint: "Taxas alteradas e reversões",
+      label: "Histórico de alterações",
+      subtitle: "Controle alterações de taxas e reverta ajustes pendentes.",
+      badge: alteracoesPendentesCount > 0 ? alteracoesPendentesCount : undefined,
     },
   ];
 
@@ -2034,6 +2142,22 @@ export default function ConciliacaoIsland() {
 
   return (
     <AppPrimerProvider>
+      {(conciliando || buscandoVendedores) && (
+        <div className="vtur-conciliacao-overlay">
+          <div className="vtur-conciliacao-overlay-box">
+            <ProgressSpinner
+              style={{ width: "56px", height: "56px" }}
+              strokeWidth="4"
+              animationDuration="0.9s"
+            />
+            <span className="vtur-conciliacao-overlay-msg">
+              {buscandoVendedores
+                ? "Por favor aguarde enquanto verifico se já existe vendedor para os recibos importados..."
+                : "Por favor aguarde o fim da conciliação..."}
+            </span>
+          </div>
+        </div>
+      )}
       <div className="conciliacao-page page-content-wrap">
         <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
@@ -2041,7 +2165,6 @@ export default function ConciliacaoIsland() {
           tone="config"
           className="mb-3 list-toolbar-sticky"
           title="Conciliacao financeira"
-          subtitle={resumoToolbar}
         >
           <div className="vtur-commission-filters-grid vtur-conciliacao-filters-grid">
             {isMaster ? (
@@ -2138,168 +2261,36 @@ export default function ConciliacaoIsland() {
             </div>
           </div>
 
-          <div className="vtur-quote-summary-grid" style={{ marginTop: 16 }}>
-            <AppButton
-              type="button"
-              variant="ghost"
-              className={`vtur-quote-summary-item vtur-quote-summary-action${atalhoAtivo === "importados" ? " active" : ""}`}
-              disabled={loadingResumo || precisaEmpresaMaster}
-              onClick={() => abrirAtalho("importados")}
-            >
-              <span className="vtur-quote-summary-label">Importados</span>
-              <strong>{loadingResumo ? "..." : resumoTotais.importados || 0}</strong>
-            </AppButton>
-            <AppButton
-              type="button"
-              variant="ghost"
-              className={`vtur-quote-summary-item vtur-quote-summary-action${atalhoAtivo === "pendentes_conciliacao" ? " active" : ""}`}
-              disabled={loadingResumo || precisaEmpresaMaster}
-              onClick={() => abrirAtalho("pendentes_conciliacao")}
-            >
-              <span className="vtur-quote-summary-label">Pendentes conciliação</span>
-              <strong>{loadingResumo ? "..." : resumoTotais.pendentesConciliacao || 0}</strong>
-            </AppButton>
-            <AppButton
-              type="button"
-              variant="ghost"
-              className={`vtur-quote-summary-item vtur-quote-summary-action${atalhoAtivo === "dias_pendentes_importacao" ? " active" : ""}`}
-              disabled={loadingResumo || precisaEmpresaMaster}
-              onClick={() => abrirAtalho("dias_pendentes_importacao")}
-            >
-              <span className="vtur-quote-summary-label">Dias pendentes importação</span>
-              <strong>{loadingResumo ? "..." : resumoTotais.pendentesImportacao || 0}</strong>
-            </AppButton>
-            <AppButton
-              type="button"
-              variant="ghost"
-              className={`vtur-quote-summary-item vtur-quote-summary-action${atalhoAtivo === "pendentes_ranking" ? " active" : ""}`}
-              disabled={loadingResumo || precisaEmpresaMaster}
-              onClick={() => abrirAtalho("pendentes_ranking")}
-            >
-              <span className="vtur-quote-summary-label">Pendentes ranking</span>
-              <strong>{loadingResumo ? "..." : resumoTotais.pendentesRanking || 0}</strong>
-            </AppButton>
-            <AppButton
-              type="button"
-              variant="ghost"
-              className={`vtur-quote-summary-item vtur-quote-summary-action${atalhoAtivo === "conciliados_sistema" ? " active" : ""}`}
-              disabled={loadingResumo || precisaEmpresaMaster}
-              onClick={() => abrirAtalho("conciliados_sistema")}
-            >
-              <span className="vtur-quote-summary-label">Conciliados sist.</span>
-              <strong>{loadingResumo ? "..." : resumoTotais.conciliadosSistema || 0}</strong>
-            </AppButton>
-            <AppButton
-              type="button"
-              variant="ghost"
-              className={`vtur-quote-summary-item vtur-quote-summary-action${atalhoAtivo === "atribuidos_ranking" ? " active" : ""}`}
-              disabled={loadingResumo || precisaEmpresaMaster}
-              onClick={() => abrirAtalho("atribuidos_ranking")}
-            >
-              <span className="vtur-quote-summary-label">Atribuídos ranking</span>
-              <strong>{loadingResumo ? "..." : resumoTotais.atribuidosRanking || 0}</strong>
-            </AppButton>
-          </div>
+        </AppCard>
 
-          <div className="vtur-conciliacao-focus-strip" style={{ marginTop: 16 }}>
-            <div className="vtur-conciliacao-focus-copy">
-              <span className="vtur-quote-summary-label">O que falta fazer</span>
-              <strong>
-                {Number(resumoTotais.pendentesImportacao || 0) > 0
-                  ? `${resumoTotais.pendentesImportacao || 0} dia(s) aguardando importação`
-                  : Number(resumoTotais.pendentesConciliacao || 0) > 0
-                    ? `${resumoTotais.pendentesConciliacao || 0} registro(s) aguardando conciliação`
-                    : Number(resumoTotais.pendentesRanking || 0) > 0
-                      ? `${resumoTotais.pendentesRanking || 0} registro(s) aguardando ranking`
-                      : "Mês organizado: sem pendências críticas no momento"}
-              </strong>
-              <span>
-                {Number(resumoTotais.pendentesImportacao || 0) > 0
-                  ? `Dias: ${formatPendingDayList(diasPendentesImportacao)}`
-                  : Number(resumoTotais.pendentesConciliacao || 0) > 0
-                    ? "Abra os pendentes de conciliação para revisar e use o botão de conciliar na listagem."
-                    : Number(resumoTotais.pendentesRanking || 0) > 0
-                      ? "Abra as pendências de ranking para atribuir o vendedor antes do fechamento."
-                      : "Você pode usar os atalhos acima para revisar importados, conciliados e atribuições."}
-              </span>
-            </div>
-            <div className="vtur-conciliacao-focus-actions">
-              {Number(resumoTotais.pendentesImportacao || 0) > 0 ? (
-                <AppButton type="button" variant="secondary" disabled={precisaEmpresaMaster} onClick={() => abrirAtalho("dias_pendentes_importacao")}>
-                  Ver dias pendentes
-                </AppButton>
-              ) : null}
-              {Number(resumoTotais.pendentesConciliacao || 0) > 0 ? (
-                <AppButton type="button" variant="secondary" disabled={precisaEmpresaMaster} onClick={() => abrirAtalho("pendentes_conciliacao")}>
-                  Ir para conciliação
-                </AppButton>
-              ) : null}
-              {Number(resumoTotais.pendentesRanking || 0) > 0 ? (
-                <AppButton type="button" variant="secondary" disabled={precisaEmpresaMaster} onClick={() => abrirAtalho("pendentes_ranking")}>
-                  Ir para ranking
-                </AppButton>
-              ) : null}
-            </div>
+        <AppCard tone="config" className="mb-3 list-toolbar-sticky vtur-conciliacao-tab-card">
+          <div className="vtur-conciliacao-tab-nav">
+            {navSections.map((sec) => (
+              <button
+                key={sec.id}
+                type="button"
+                className={["vtur-conciliacao-tab-btn", secaoAtiva === sec.id ? "is-active" : ""].filter(Boolean).join(" ")}
+                onClick={() => { setSecaoAtiva(sec.id); setResumoDetalheAberto(false); }}
+              >
+                <span className="vtur-conciliacao-tab-btn-label">
+                  {sec.label}
+                  {sec.badge != null ? <span className="vtur-conciliacao-tab-btn-badge">{sec.badge}</span> : null}
+                </span>
+                <span className="vtur-conciliacao-tab-btn-sub">{sec.subtitle}</span>
+              </button>
+            ))}
           </div>
         </AppCard>
 
-        <div className="vtur-conciliacao-nav-grid mb-3">
-          {navSections.map((section) => {
-            const active = secaoAtiva === section.id;
-            return (
-              <AppButton
-                key={section.id}
-                type="button"
-                variant="ghost"
-                className={`vtur-conciliacao-nav-card${active ? " active" : ""}`}
-                aria-pressed={active}
-                onClick={() => {
-                  setAtalhoAtivo(null);
-                  setSecaoAtiva(section.id);
-                }}
-              >
-                <span className="vtur-quote-summary-label">{section.label}</span>
-                <strong>{section.value}</strong>
-                <span className="vtur-conciliacao-nav-hint">{section.hint}</span>
-              </AppButton>
-            );
-          })}
-        </div>
+        {secaoAtiva === "resumo" && <>
 
-        {erro ? (
-          <AlertMessage variant="error" className="mb-3">
-            {erro}
-          </AlertMessage>
-        ) : null}
-
-        {secaoAtiva === "resumo" ? (
-          <>
             <AppCard
               tone="config"
               className="mb-3"
               title="Resumo operacional"
-              subtitle="Acompanhe pendências por mês e por dia sem carregar a listagem completa de recibos."
+              subtitle="Clique em um mês para ver os registros conciliados daquele período abaixo."
             >
-              <div className="vtur-quote-summary-grid">
-                <div className="vtur-quote-summary-item">
-                  <span className="vtur-quote-summary-label">Mês filtrado</span>
-                  <strong>{monthFilter || "-"}</strong>
-                </div>
-                <div className="vtur-quote-summary-item">
-                  <span className="vtur-quote-summary-label">Em tela</span>
-                  <strong>{itens.length}</strong>
-                </div>
-                <div className="vtur-quote-summary-item">
-                  <span className="vtur-quote-summary-label">Pendentes em tela</span>
-                  <strong>{pendentesCount}</strong>
-                </div>
-                <div className="vtur-quote-summary-item">
-                  <span className="vtur-quote-summary-label">Divergências em tela</span>
-                  <strong>{divergenciasCount}</strong>
-                </div>
-              </div>
-
-              <div className="mt-3 table-container">
+              <div className="table-container">
                 <table className="table-default table-header-blue table-mobile-cards min-w-[760px]">
                   <thead>
                     <tr>
@@ -2319,8 +2310,18 @@ export default function ConciliacaoIsland() {
                       </tr>
                     ) : (
                       resumoMeses.map((item) => (
-                        <tr key={item.month}>
-                          <td data-label="Mês">{item.month}</td>
+                        <tr
+                          key={item.month}
+                          className="vtur-conciliacao-resumo-row"
+                          title={`Filtrar por ${formatMonthLabel(item.month)}`}
+                          onClick={() => {
+                            setMonthFilter(item.month);
+                            setDayFilter("");
+                            setAtalhoAtivo(null);
+                            setResumoDetalheAberto(true);
+                          }}
+                        >
+                          <td data-label="Mês">{formatMonthLabel(item.month)}</td>
                           <td data-label="Total">{item.total}</td>
                           <td data-label="Conciliados sist.">{item.conciliadosSistema}</td>
                           <td data-label="Pendentes conciliação">{item.pendentesConciliacao}</td>
@@ -2334,7 +2335,7 @@ export default function ConciliacaoIsland() {
                 </table>
               </div>
 
-              <div className="vtur-conciliacao-overview mt-3">
+              {false && <div className="vtur-conciliacao-overview mt-3">
                 <div className="vtur-conciliacao-month-banner">
                   <span className="vtur-quote-summary-label">Mês em exibição</span>
                   <strong>{formatMonthLabel(monthFilter)}</strong>
@@ -2462,56 +2463,7 @@ export default function ConciliacaoIsland() {
                     ) : null}
                   </div>
                 </div>
-              </div>
-
-              {showPendingDetails ? (
-                <div className="mt-3 table-container">
-                  <table className="table-default table-header-blue table-mobile-cards min-w-[860px]">
-                    <thead>
-                      <tr>
-                        <th>Data pendente</th>
-                        <th>Tipo</th>
-                        <th>Dias pendentes importação</th>
-                        <th>Pendentes conciliação</th>
-                        <th>Pendentes ranking</th>
-                        <th>Total do dia</th>
-                        <th>Ação</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {resumoDiasPendentes.length === 0 ? (
-                        <tr>
-                          <td colSpan={7}>Nenhuma data pendente para o mês selecionado.</td>
-                        </tr>
-                      ) : (
-                        resumoDiasPendentes.map((item) => (
-                          <tr key={`pend-${item.date}`}>
-                            <td data-label="Data pendente">{formatDate(item.date)}</td>
-                            <td data-label="Tipo">{getResumoDiaLabel(item)}</td>
-                            <td data-label="Dias pendentes importação">{item.pendentesImportacao || 0}</td>
-                            <td data-label="Pendentes conciliação">{item.pendentesConciliacao}</td>
-                            <td data-label="Pendentes ranking">{item.pendentesRanking}</td>
-                            <td data-label="Total do dia">{item.total}</td>
-                            <td data-label="Ação">
-                              <AppButton
-                                type="button"
-                                variant="ghost"
-                                onClick={() => {
-                                  setAtalhoAtivo(null);
-                                  setDayFilter(item.date);
-                                  setSecaoAtiva("registros");
-                                }}
-                              >
-                                Filtrar dia
-                              </AppButton>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              ) : null}
+              </div>}
             </AppCard>
 
             <AppCard
@@ -2589,11 +2541,12 @@ export default function ConciliacaoIsland() {
                 </table>
               </div>
             </AppCard>
-          </>
-        ) : null}
 
-        {secaoAtiva === "importacao" ? (
-          <AppCard
+        </>}
+
+        {secaoAtiva === "importacao" && <>
+
+        <AppCard
             tone="config"
             className="mb-3"
             id="conciliacao-importacao"
@@ -2664,6 +2617,12 @@ export default function ConciliacaoIsland() {
                 </div>
               </div>
             </div>
+
+            {buscandoVendedores ? (
+              <AlertMessage variant="info" className="mt-3 vtur-conciliacao-inline-alert">
+                <span>Buscando vendedores automaticamente nas vendas registradas no sistema...</span>
+              </AlertMessage>
+            ) : null}
 
             {linhasIgnoradasImportacao.length > 0 ? (
               <AlertMessage variant="warning" className="mt-3 vtur-conciliacao-inline-alert">
@@ -2886,22 +2845,18 @@ export default function ConciliacaoIsland() {
               <AppButton
                 type="button"
                 variant="primary"
-                disabled={importando || conciliando || precisaEmpresaMaster || parsedLinhas.length === 0}
-                onClick={() => {
-                  void salvarImportacao(false);
-                }}
+                disabled={importando || conciliando || importacaoSalva || buscandoVendedores || precisaEmpresaMaster || parsedLinhas.length === 0}
+                onClick={() => { void salvarImportacao(false); }}
               >
-                {importando ? "Salvando..." : "Salvar"}
+                {importando ? "Salvando..." : importacaoSalva ? "Salvo" : "Salvar"}
               </AppButton>
               <AppButton
                 type="button"
-                variant="secondary"
-                disabled={importando || conciliando || precisaEmpresaMaster || parsedLinhas.length === 0}
-                onClick={() => {
-                  void salvarImportacao(true);
-                }}
+                variant={importacaoSalva ? "primary" : "secondary"}
+                disabled={!importacaoSalva || conciliando || importando || precisaEmpresaMaster}
+                onClick={() => { void conciliarAposImport(); }}
               >
-                {conciliando ? "Conciliando..." : importando ? "Salvando..." : "Conciliar"}
+                {conciliando ? "Conciliando..." : "Conciliar"}
               </AppButton>
               <AppButton
                 type="button"
@@ -2914,14 +2869,21 @@ export default function ConciliacaoIsland() {
             </div>
 
             <p className="mt-3 text-sm text-slate-600">
-              Fluxo sugerido: revise os valores, clique em <strong>Salvar</strong> para gravar a importação no sistema
-              sem conciliar, ou em <strong>Conciliar</strong> para salvar e iniciar a conciliação em seguida.
+              1. Escolha o arquivo · 2. Revise os valores · 3. <strong>Salvar</strong> · 4. <strong>Conciliar</strong>
             </p>
           </AppCard>
+
+        </>}
+
+        {(secaoAtiva === "registros" || (secaoAtiva === "resumo" && resumoDetalheAberto)) && <>
+
+        {erro ? (
+          <AlertMessage variant="error" className="mb-3">
+            {erro}
+          </AlertMessage>
         ) : null}
 
-        {secaoAtiva === "registros" ? (
-          <AppCard
+        <AppCard
             tone="config"
             className="mb-3"
             title="Registros conciliados"
@@ -3152,10 +3114,12 @@ export default function ConciliacaoIsland() {
               ))}
             </DataTable>
           </AppCard>
-        ) : null}
 
-        {secaoAtiva === "alteracoes" ? (
-          <AppCard
+        </>}
+
+        {secaoAtiva === "alteracoes" && <>
+
+        <AppCard
             tone="config"
             className="mb-3"
             title="Historico de alteracoes"
@@ -3182,18 +3146,46 @@ export default function ConciliacaoIsland() {
             }
           >
             <div className="vtur-quote-summary-grid">
-              <div className="vtur-quote-summary-item">
+              <button
+                type="button"
+                className="vtur-quote-summary-item vtur-alteracoes-kpi-btn"
+                title="Ver todos os grupos"
+                onClick={() => {
+                  setSomenteAlteracoesPendentes(false);
+                  setTimeout(() => tabelaAlteracoesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+                }}
+              >
                 <span className="vtur-quote-summary-label">Grupos</span>
                 <strong>{changeGroups.length}</strong>
-              </div>
-              <div className="vtur-quote-summary-item">
+              </button>
+              <button
+                type="button"
+                className="vtur-quote-summary-item vtur-alteracoes-kpi-btn"
+                title="Filtrar somente pendentes"
+                onClick={() => {
+                  setSomenteAlteracoesPendentes(true);
+                  setTimeout(() => tabelaAlteracoesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+                }}
+              >
                 <span className="vtur-quote-summary-label">Pendentes</span>
                 <strong>{alteracoesPendentesCount}</strong>
-              </div>
-              <div className="vtur-quote-summary-item">
+              </button>
+              <button
+                type="button"
+                className="vtur-quote-summary-item vtur-alteracoes-kpi-btn"
+                title="Selecionar todos os pendentes"
+                onClick={() => {
+                  const pendentesKeys = changeGroups
+                    .filter((g) => g.count_pendentes > 0)
+                    .map((g) => g.key);
+                  setSelectedGroupKeys(new Set(pendentesKeys));
+                  setSomenteAlteracoesPendentes(true);
+                  setTimeout(() => tabelaAlteracoesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+                }}
+              >
                 <span className="vtur-quote-summary-label">Selecionadas</span>
                 <strong>{selectedPendingCount}</strong>
-              </div>
+              </button>
             </div>
 
             <div className="mt-3">
@@ -3210,7 +3202,7 @@ export default function ConciliacaoIsland() {
               />
             </div>
 
-            <div className="mt-3">
+            <div className="mt-3" ref={tabelaAlteracoesRef}>
               <DataTable
                 headers={
                   <tr>
@@ -3280,7 +3272,8 @@ export default function ConciliacaoIsland() {
               </DataTable>
             </div>
           </AppCard>
-        ) : null}
+
+        </>}
       </div>
       <ConfirmDialog
         open={Boolean(deleteConfirmRow)}

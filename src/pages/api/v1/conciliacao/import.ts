@@ -12,6 +12,7 @@ import {
   isConciliacaoEfetivada,
   isConciliacaoImportavel,
   normalizeConciliacaoStatus,
+  resolveConciliacaoStatus,
 } from "../../../../lib/conciliacao/business";
 import {
   resolveConciliacaoBandRule,
@@ -446,7 +447,7 @@ export const POST: APIRoute = async ({ request }) => {
           company_id: companyId,
           documento,
           movimento_data: l?.movimento_data || movimentoData,
-          status: normalizeConciliacaoStatus(l?.status || descricao || null),
+          status: resolveConciliacaoStatus({ status: l?.status ?? null, descricao: descricao }),
           descricao,
           descricao_chave: l?.descricao_chave || metrics.descricaoChave,
           valor_lancamentos: valorLancamentos,

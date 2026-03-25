@@ -387,6 +387,15 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
           canShow: true,
         },
         {
+          key: "admin-crm",
+          section: "admin",
+          href: "/admin/crm",
+          active: "admin-crm",
+          icon: "pi pi-share-alt",
+          label: "CRM — Templates",
+          canShow: true,
+        },
+        {
           key: "admin-email",
           section: "admin",
           href: "/admin/email",
@@ -748,7 +757,7 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
     entries.push({
       key: "parametros-avisos",
       section: "parametros",
-      href: "/parametros/avisos",
+      href: "/parametros/crm",
       active: "parametros-avisos",
       icon: "pi pi-share-alt",
       label: "CRM",

@@ -1,0 +1,10 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import CrmAdminIsland from "../../components/islands/CrmAdminIsland";
+---
+
+<DashboardLayout title="CRM — Gerenciar Templates" activePage="admin-crm">
+  <div class="page-content-wrap">
+    <CrmAdminIsland client:only="react" />
+  </div>
+</DashboardLayout>

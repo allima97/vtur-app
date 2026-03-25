@@ -109,6 +109,7 @@ type ReconcileResult = {
   reconciled: number;
   updatedTaxes: number;
   stillPending: number;
+  updateErrors: number;
 };
 
 async function persistExecutionLog(params: {
@@ -324,10 +325,9 @@ async function reconcilePendentesCompany(params: {
   let query = dbClient
     .from("conciliacao_recibos")
     .select(
-      "id, company_id, documento, movimento_data, status, descricao, valor_lancamentos, valor_taxas, valor_descontos, valor_abatimentos, valor_venda_real, ranking_vendedor_id, conciliado"
+      "id, company_id, documento, movimento_data, status, descricao, valor_lancamentos, valor_taxas, valor_descontos, valor_abatimentos, valor_venda_real, ranking_vendedor_id, conciliado, venda_recibo_id, venda_id"
     )
     .eq("conciliado", false)
-    .in("status", ["BAIXA", "OPFAX"] as any)
     .eq("company_id", companyId)
     .order("movimento_data", { ascending: false })
     .limit(limit);
@@ -338,6 +338,7 @@ async function reconcilePendentesCompany(params: {
   let checked = 0;
   let reconciled = 0;
   let updatedTaxes = 0;
+  let updateErrors = 0;
 
   for (const row of (pendentes || []).filter((item: any) =>
     isConciliacaoEfetivada({ status: item?.status, descricao: item?.descricao })
@@ -363,13 +364,48 @@ async function reconcilePendentesCompany(params: {
       continue;
     }
 
-    const found = await findReciboByNumero({
-      numero: documento,
-      companyId: cid,
-      valorLancamento: valorComparacao,
-      valorTaxas,
-      client: dbClient,
-    });
+    // Se o import já vinculou o recibo, usá-lo diretamente (mais confiável que busca por número)
+    const existingReciboId = String((row as any).venda_recibo_id || "").trim() || null;
+    let found: Awaited<ReturnType<typeof findReciboByNumero>> = null;
+
+    if (existingReciboId) {
+      const { data: reciboRow } = await dbClient
+        .from("vendas_recibos")
+        .select("id, venda_id, numero_recibo, valor_total, valor_taxas, data_venda")
+        .eq("id", existingReciboId)
+        .maybeSingle();
+
+      if (reciboRow) {
+        const { data: vendaRow } = await dbClient
+          .from("vendas")
+          .select("id, company_id, vendedor_id")
+          .eq("id", String((reciboRow as any).venda_id || ""))
+          .maybeSingle();
+
+        found = {
+          recibo: {
+            id: String((reciboRow as any).id),
+            venda_id: String((reciboRow as any).venda_id || ""),
+            vendedor_id: String((vendaRow as any)?.vendedor_id || "").trim() || null,
+            numero_recibo: (reciboRow as any).numero_recibo ?? null,
+            valor_total: (reciboRow as any).valor_total ?? null,
+            valor_taxas: (reciboRow as any).valor_taxas ?? null,
+            data_venda: (reciboRow as any).data_venda ?? null,
+          },
+          vendaCompanyId: String((vendaRow as any)?.company_id || "").trim() || null,
+        };
+      }
+    }
+
+    if (!found) {
+      found = await findReciboByNumero({
+        numero: documento,
+        companyId: cid,
+        valorLancamento: valorComparacao,
+        valorTaxas,
+        client: dbClient,
+      });
+    }
 
     if (!found) {
       await dbClient
@@ -391,61 +427,56 @@ async function reconcilePendentesCompany(params: {
     const rankingVendedorAtual = String((row as any).ranking_vendedor_id || "").trim() || null;
     const rankingVendedorResolvido = rankingVendedorAtual || found.recibo.vendedor_id || null;
 
-    // Atualiza taxas do recibo no sistema quando o total bate, mas taxas divergem.
-    // (isso é o que viabiliza comissionamento com taxas reais)
-    if (matchTotal && !matchTaxas) {
+    // O arquivo importado é o mestre: sobrescreve valor_total e valor_taxas em vendas_recibos.
+    // Também atualiza data_venda se divergir. Todas as divergências ficam auditadas em conciliacao_recibo_changes.
+    const reciboUpdate: Record<string, any> = {};
+    if (!matchTotal) reciboUpdate.valor_total = valorComparacao;
+    if (!matchTaxas) reciboUpdate.valor_taxas = valorTaxas;
+    if (shouldUpdateDataVenda) reciboUpdate.data_venda = movimentoData;
+
+    if (Object.keys(reciboUpdate).length > 0) {
       const { error: upErr } = await dbClient
         .from("vendas_recibos")
-        .update({ valor_taxas: valorTaxas })
+        .update(reciboUpdate)
         .eq("id", found.recibo.id);
+
       if (!upErr) {
-        updatedTaxes += 1;
+        if (!matchTaxas) updatedTaxes += 1;
 
-        const { error: auditErr } = await dbClient
-          .from("conciliacao_recibo_changes")
-          .insert({
-            company_id: cid,
-            conciliacao_recibo_id: id,
-            venda_id: found.recibo.venda_id,
-            venda_recibo_id: found.recibo.id,
-            numero_recibo: documento,
-            field: "valor_taxas",
-            old_value: sistemaTaxas,
-            new_value: valorTaxas,
-            actor,
-            changed_by: actorUserId,
-          } as any);
+        // Auditoria para cada campo alterado
+        const auditFields: Array<{ field: string; old: number; new: number }> = [];
+        if (!matchTotal) auditFields.push({ field: "valor_total", old: sistemaTotal, new: valorComparacao });
+        if (!matchTaxas) auditFields.push({ field: "valor_taxas", old: sistemaTaxas, new: valorTaxas });
 
-        if (auditErr) {
-          console.error("CONCILIACAO_AUDIT_ERROR", {
-            message: (auditErr as any)?.message ?? String(auditErr),
-            venda_recibo_id: found.recibo.id,
-            conciliacao_recibo_id: id,
-          });
+        for (const af of auditFields) {
+          const { error: auditErr } = await dbClient
+            .from("conciliacao_recibo_changes")
+            .insert({
+              company_id: cid,
+              conciliacao_recibo_id: id,
+              venda_id: found.recibo.venda_id,
+              venda_recibo_id: found.recibo.id,
+              numero_recibo: documento,
+              field: af.field,
+              old_value: af.old,
+              new_value: af.new,
+              actor,
+              changed_by: actorUserId,
+            } as any);
+
+          if (auditErr) {
+            console.error("CONCILIACAO_AUDIT_ERROR", {
+              message: (auditErr as any)?.message ?? String(auditErr),
+              field: af.field,
+              venda_recibo_id: found.recibo.id,
+              conciliacao_recibo_id: id,
+            });
+          }
         }
       }
     }
 
-    if (matchTotal && shouldUpdateDataVenda) {
-      const { error: dataErr } = await dbClient
-        .from("vendas_recibos")
-        .update({ data_venda: movimentoData })
-        .eq("id", found.recibo.id);
-
-      if (dataErr) {
-        console.error("CONCILIACAO_DATA_VENDA_UPDATE_ERROR", {
-          message: (dataErr as any)?.message ?? String(dataErr),
-          venda_recibo_id: found.recibo.id,
-          conciliacao_recibo_id: id,
-          movimento_data: movimentoData,
-        });
-      }
-    }
-
-    const conciliado = matchTotal; // total precisa bater; taxa pode ser ajustada
-
-    if (conciliado) reconciled += 1;
-
+    // Recibo encontrado → sempre conciliado; diff_* e match_* ficam para auditoria
     const updatePayload: Record<string, any> = {
       venda_id: found.recibo.venda_id,
       venda_recibo_id: found.recibo.id,
@@ -456,22 +487,50 @@ async function reconcilePendentesCompany(params: {
       diff_total: diffTotal,
       diff_taxas: diffTaxas,
       ranking_vendedor_id: rankingVendedorResolvido,
-      conciliado,
-      conciliado_em: conciliado ? new Date().toISOString() : null,
+      conciliado: true,
+      conciliado_em: new Date().toISOString(),
       last_checked_at: new Date().toISOString(),
     };
     if (!rankingVendedorAtual && rankingVendedorResolvido) {
       updatePayload.ranking_assigned_at = new Date().toISOString();
     }
 
-    await dbClient
+    const { error: conciliadoErr, count: conciliadoCount } = await dbClient
       .from("conciliacao_recibos")
       .update(updatePayload)
-      .eq("id", id);
+      .eq("id", id)
+      .select("id", { count: "exact", head: true });
+
+    if (conciliadoErr) {
+      console.error("CONCILIACAO_UPDATE_ERROR", {
+        id,
+        documento,
+        company_id: cid,
+        venda_recibo_id: found.recibo.id,
+        message: conciliadoErr.message,
+        code: (conciliadoErr as any).code,
+        hint: (conciliadoErr as any).hint,
+      });
+      updateErrors += 1;
+      continue;
+    }
+
+    if (!conciliadoCount || conciliadoCount < 1) {
+      console.warn("CONCILIACAO_UPDATE_NO_ROWS", {
+        id,
+        documento,
+        company_id: cid,
+        message: "UPDATE retornou 0 linhas — possível bloqueio de RLS ou ID inexistente",
+      });
+      updateErrors += 1;
+      continue;
+    }
+
+    reconciled += 1;
   }
 
   const stillPending = Math.max(0, (pendentes || []).length - reconciled);
-  return { checked, reconciled, updatedTaxes, stillPending };
+  return { checked, reconciled, updatedTaxes, stillPending, updateErrors };
 }
 
 export async function reconcilePendentes(params: {
@@ -488,7 +547,7 @@ export async function reconcilePendentes(params: {
   const dbClient = hasServiceRoleKey ? supabaseServer : params.client || null;
 
   if (!dbClient) {
-    return { checked: 0, reconciled: 0, updatedTaxes: 0, stillPending: 0 };
+    return { checked: 0, reconciled: 0, updatedTaxes: 0, stillPending: 0, updateErrors: 0 };
   }
 
   if (companyId) {
@@ -519,7 +578,7 @@ export async function reconcilePendentes(params: {
         actorUserId,
         status: "error",
         errorMessage: (error as any)?.message ?? String(error),
-        result: { checked: 0, reconciled: 0, updatedTaxes: 0, stillPending: 0 },
+        result: { checked: 0, reconciled: 0, updatedTaxes: 0, stillPending: 0, updateErrors: 0 },
       });
       throw error;
     }
@@ -532,7 +591,7 @@ export async function reconcilePendentes(params: {
     .limit(5000);
   if (companiesErr) throw companiesErr;
 
-  const totals: ReconcileResult = { checked: 0, reconciled: 0, updatedTaxes: 0, stillPending: 0 };
+  const totals: ReconcileResult = { checked: 0, reconciled: 0, updatedTaxes: 0, stillPending: 0, updateErrors: 0 };
 
   for (const row of companies || []) {
     const nextCompanyId = String((row as any)?.id || "").trim();
@@ -559,6 +618,7 @@ export async function reconcilePendentes(params: {
       totals.reconciled += result.reconciled;
       totals.updatedTaxes += result.updatedTaxes;
       totals.stillPending += result.stillPending;
+      totals.updateErrors += result.updateErrors;
     } catch (error) {
       await persistExecutionLog({
         client: dbClient,
@@ -567,7 +627,7 @@ export async function reconcilePendentes(params: {
         actorUserId,
         status: "error",
         errorMessage: (error as any)?.message ?? String(error),
-        result: { checked: 0, reconciled: 0, updatedTaxes: 0, stillPending: 0 },
+        result: { checked: 0, reconciled: 0, updatedTaxes: 0, stillPending: 0, updateErrors: 0 },
       });
       console.error("CONCILIACAO_COMPANY_RECONCILE_ERROR", {
         message: (error as any)?.message ?? String(error),
