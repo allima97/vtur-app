@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ProgressSpinner } from "primereact/progressspinner";
+import { Paginator } from "primereact/paginator";
 import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
@@ -143,7 +144,7 @@ function currentMonthValue() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-type ConciliacaoSection = "registros" | "resumo" | "importacao" | "alteracoes" | "pendentes" | "pendentes_ranking";
+type ConciliacaoSection = "registros" | "resumo" | "importacao" | "alteracoes" | "pendentes" | "pendentes_ranking" | "visao_geral";
 type ConciliacaoShortcut =
   | "importados"
   | "pendentes_conciliacao"
@@ -795,6 +796,8 @@ function getShortcutTitle(shortcut: ConciliacaoShortcut | null) {
   return "Recorte atual";
 }
 
+const ROWS_PER_PAGE = 50;
+
 export default function ConciliacaoIsland() {
   const { can, loading: loadingPerms, ready, userType } = usePermissoesStore();
   const loadingPerm = loadingPerms || !ready;
@@ -858,7 +861,125 @@ export default function ConciliacaoIsland() {
   const [itensRankingPendentes, setItensRankingPendentes] = useState<ConciliacaoItem[]>([]);
   const [loadingRankingPendentes, setLoadingRankingPendentes] = useState(false);
 
+  const [pendentesFirst, setPendentesFirst] = useState(0);
+  const [conciliadosFirst, setConciliadosFirst] = useState(0);
+  const [rankingFirst, setRankingFirst] = useState(0);
+  const [alteracoesFirst, setAlteracoesFirst] = useState(0);
+  const [vgFirst, setVgFirst] = useState(0);
+
+  const [itensVisaoGeral, setItensVisaoGeral] = useState<ConciliacaoItem[]>([]);
+  const [loadingVisaoGeral, setLoadingVisaoGeral] = useState(false);
+  const [vgFiltroDocumento, setVgFiltroDocumento] = useState("");
+  const [vgFiltroVendedor, setVgFiltroVendedor] = useState("all");
+  const [vgFiltroStatus, setVgFiltroStatus] = useState("all");
+  const [vgFiltroMes, setVgFiltroMes] = useState("all");
+  const [vgFiltroDia, setVgFiltroDia] = useState("all");
+  const [vgFiltroReciboEncontrado, setVgFiltroReciboEncontrado] = useState("all");
+  const [vgFiltroRanking, setVgFiltroRanking] = useState("all");
+  const [vgFiltroConciliado, setVgFiltroConciliado] = useState("all");
+
+  const itensVisaoGeralComputados = useMemo(
+    () =>
+      itensVisaoGeral.map((row) => ({
+        ...row,
+        _recibo_encontrado: Boolean(row.venda_recibo_id),
+        _ranking_ok: registroExigeAtribuicaoRanking(row)
+          ? registroTemRankingAtribuido(row)
+          : null,
+        _status_label: getLinhaStatusLabel({ status: row.status, descricao: row.descricao }),
+        _vendedor_nome:
+          (row.ranking_vendedor as any)?.nome_completo ||
+          rankingAssignees.find((a) => a.id === row.ranking_vendedor_id)?.nome_completo ||
+          null,
+        _produto_nome:
+          (row.ranking_produto as any)?.nome ||
+          rankingProdutosMeta.find((p) => p.id === row.ranking_produto_id)?.nome ||
+          null,
+      })),
+    [itensVisaoGeral, rankingAssignees, rankingProdutosMeta]
+  );
+
+  const vgStatusOptions = useMemo(
+    () => Array.from(new Set(itensVisaoGeralComputados.map((r) => r._status_label).filter(Boolean))).sort() as string[],
+    [itensVisaoGeralComputados]
+  );
+
+  const vgVendedorOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(itensVisaoGeralComputados.map((r) => r._vendedor_nome).filter((v): v is string => Boolean(v)))
+      ).sort(),
+    [itensVisaoGeralComputados]
+  );
+
+  const vgMesOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          itensVisaoGeralComputados
+            .map((r) => (r.movimento_data ? r.movimento_data.slice(0, 7) : ""))
+            .filter(Boolean)
+        )
+      )
+        .sort()
+        .reverse(),
+    [itensVisaoGeralComputados]
+  );
+
+  const vgDiaOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          itensVisaoGeralComputados
+            .filter((r) => vgFiltroMes === "all" || (r.movimento_data || "").startsWith(vgFiltroMes))
+            .map((r) => r.movimento_data || "")
+            .filter(Boolean)
+        )
+      )
+        .sort()
+        .reverse(),
+    [itensVisaoGeralComputados, vgFiltroMes]
+  );
+
+  const itensVisaoGeralFiltrados = useMemo(() => {
+    const docSearch = vgFiltroDocumento.trim().toLowerCase();
+    return itensVisaoGeralComputados.filter((row) => {
+      if (docSearch && !String(row.documento || "").toLowerCase().includes(docSearch)) return false;
+      if (vgFiltroVendedor !== "all" && row._vendedor_nome !== vgFiltroVendedor) return false;
+      if (vgFiltroStatus !== "all" && row._status_label !== vgFiltroStatus) return false;
+      if (vgFiltroMes !== "all") {
+        const mesRow = (row.movimento_data || "").slice(0, 7);
+        if (mesRow !== vgFiltroMes) return false;
+      }
+      if (vgFiltroDia !== "all" && row.movimento_data !== vgFiltroDia) return false;
+      if (vgFiltroReciboEncontrado !== "all") {
+        if (vgFiltroReciboEncontrado === "sim" && !row._recibo_encontrado) return false;
+        if (vgFiltroReciboEncontrado === "nao" && row._recibo_encontrado) return false;
+      }
+      if (vgFiltroRanking !== "all") {
+        if (vgFiltroRanking === "sim" && row._ranking_ok !== true) return false;
+        if (vgFiltroRanking === "nao" && row._ranking_ok !== false) return false;
+      }
+      if (vgFiltroConciliado !== "all") {
+        if (vgFiltroConciliado === "sim" && !row.conciliado) return false;
+        if (vgFiltroConciliado === "nao" && row.conciliado) return false;
+      }
+      return true;
+    });
+  }, [
+    itensVisaoGeralComputados,
+    vgFiltroDocumento,
+    vgFiltroVendedor,
+    vgFiltroStatus,
+    vgFiltroMes,
+    vgFiltroDia,
+    vgFiltroReciboEncontrado,
+    vgFiltroRanking,
+    vgFiltroConciliado,
+  ]);
+
   const [somenteAlteracoesPendentes, setSomenteAlteracoesPendentes] = useState(true);
+  const [alteracoesFiltroRecibo, setAlteracoesFiltroRecibo] = useState("");
   const [loadingChanges, setLoadingChanges] = useState(false);
   const [changes, setChanges] = useState<ConciliacaoChange[]>([]);
   const [selectedGroupKeys, setSelectedGroupKeys] = useState<Set<string>>(() => new Set());
@@ -1073,6 +1194,31 @@ export default function ConciliacaoIsland() {
     carregarRankingPendentes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolvedCompanyId, secaoAtiva, monthFilter, dayFilter]);
+
+  async function carregarVisaoGeral() {
+    const companyId = resolvedCompanyId;
+    if (!companyId) { setItensVisaoGeral([]); return; }
+    try {
+      setLoadingVisaoGeral(true);
+      const qs = new URLSearchParams();
+      qs.set("company_id", companyId);
+      const resp = await fetch(`/api/v1/conciliacao/list?${qs.toString()}`, { credentials: "same-origin", cache: "no-store" });
+      if (!resp.ok) throw new Error(await resp.text());
+      const json = await resp.json();
+      setItensVisaoGeral(Array.isArray(json) ? json : []);
+    } catch (e: any) {
+      console.error(e);
+    } finally {
+      setLoadingVisaoGeral(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!resolvedCompanyId) return;
+    if (secaoAtiva !== "visao_geral") return;
+    carregarVisaoGeral();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolvedCompanyId, secaoAtiva]);
 
   useEffect(() => {
     setComissaoDrafts((prev) => {
@@ -2095,6 +2241,43 @@ export default function ConciliacaoIsland() {
     () => changeGroups.reduce((total, group) => total + group.count_pendentes, 0),
     [changeGroups]
   );
+
+  const changeGroupsFiltrados = useMemo(() => {
+    const search = alteracoesFiltroRecibo.trim().toLowerCase();
+    if (!search) return changeGroups;
+    return changeGroups.filter((g) =>
+      String(g.numero_recibo || "").toLowerCase().includes(search)
+    );
+  }, [changeGroups, alteracoesFiltroRecibo]);
+
+  // reset de página quando os dados mudam
+  useEffect(() => { setPendentesFirst(0); }, [itensPendentes]);
+  useEffect(() => { setConciliadosFirst(0); }, [itensConciliados]);
+  useEffect(() => { setRankingFirst(0); }, [itensRankingPendentes]);
+  useEffect(() => { setAlteracoesFirst(0); }, [changeGroupsFiltrados]);
+  useEffect(() => { setVgFirst(0); }, [itensVisaoGeralFiltrados]);
+
+  // dados paginados por tabela
+  const itensPendentesPage = useMemo(
+    () => itensPendentes.slice(pendentesFirst, pendentesFirst + ROWS_PER_PAGE),
+    [itensPendentes, pendentesFirst]
+  );
+  const itensConciliadosPage = useMemo(
+    () => itensConciliados.slice(conciliadosFirst, conciliadosFirst + ROWS_PER_PAGE),
+    [itensConciliados, conciliadosFirst]
+  );
+  const itensRankingPage = useMemo(
+    () => itensRankingPendentes.slice(rankingFirst, rankingFirst + ROWS_PER_PAGE),
+    [itensRankingPendentes, rankingFirst]
+  );
+  const changeGroupsPage = useMemo(
+    () => changeGroupsFiltrados.slice(alteracoesFirst, alteracoesFirst + ROWS_PER_PAGE),
+    [changeGroupsFiltrados, alteracoesFirst]
+  );
+  const itensVgPage = useMemo(
+    () => itensVisaoGeralFiltrados.slice(vgFirst, vgFirst + ROWS_PER_PAGE),
+    [itensVisaoGeralFiltrados, vgFirst]
+  );
   const registrosEmTela = useMemo(() => {
     if (atalhoAtivo === "conciliados_sistema") {
       return itens.filter((item) => item.conciliado);
@@ -2327,6 +2510,11 @@ export default function ConciliacaoIsland() {
       id: "importacao",
       label: "Importar arquivo",
       subtitle: "Carregue o arquivo e atribua vendedores antes de salvar e conciliar.",
+    },
+    {
+      id: "visao_geral",
+      label: "Visão geral",
+      subtitle: "Todos os registros importados com filtros diretos na tabela.",
     },
     {
       id: "pendentes",
@@ -3048,6 +3236,288 @@ export default function ConciliacaoIsland() {
 
         </>}
 
+        {secaoAtiva === "visao_geral" && <>
+
+          <AppCard
+            tone="config"
+            className="mb-3"
+            title="Visão geral"
+            subtitle="Todos os registros importados. Aplique filtros acima da tabela para localizar registros."
+            actions={
+              <AppButton type="button" variant="secondary" disabled={loadingVisaoGeral || precisaEmpresaMaster} onClick={carregarVisaoGeral}>
+                {loadingVisaoGeral ? "Atualizando..." : "Atualizar lista"}
+              </AppButton>
+            }
+          >
+            <div className="vtur-inline-filter-row mb-3">
+              <AppField
+                as="input"
+                label="Recibo"
+                value={vgFiltroDocumento}
+                onChange={(e) => setVgFiltroDocumento((e as React.ChangeEvent<HTMLInputElement>).target.value)}
+                placeholder="Buscar..."
+              />
+              <AppField
+                as="select"
+                label="Status"
+                value={vgFiltroStatus}
+                onChange={(e) => setVgFiltroStatus((e as React.ChangeEvent<HTMLSelectElement>).target.value)}
+                options={[
+                  { label: "Todos", value: "all" },
+                  ...vgStatusOptions.map((s) => ({ label: s, value: s })),
+                ]}
+              />
+              <AppField
+                as="select"
+                label="Vendedor ranking"
+                value={vgFiltroVendedor}
+                onChange={(e) => setVgFiltroVendedor((e as React.ChangeEvent<HTMLSelectElement>).target.value)}
+                options={[
+                  { label: "Todos", value: "all" },
+                  ...vgVendedorOptions.map((v) => ({ label: v, value: v })),
+                ]}
+              />
+              <AppField
+                as="select"
+                label="Mês"
+                value={vgFiltroMes}
+                onChange={(e) => {
+                  setVgFiltroMes((e as React.ChangeEvent<HTMLSelectElement>).target.value);
+                  setVgFiltroDia("all");
+                }}
+                options={[
+                  { label: "Todos", value: "all" },
+                  ...vgMesOptions.map((m) => ({ label: formatMonthLabel(m), value: m })),
+                ]}
+              />
+              <AppField
+                as="select"
+                label="Dia"
+                value={vgFiltroDia}
+                onChange={(e) => setVgFiltroDia((e as React.ChangeEvent<HTMLSelectElement>).target.value)}
+                disabled={vgFiltroMes === "all"}
+                options={[
+                  { label: "Todos do mês", value: "all" },
+                  ...vgDiaOptions.map((d) => ({ label: formatDate(d), value: d })),
+                ]}
+              />
+              <AppField
+                as="select"
+                label="Recibo encontrado"
+                value={vgFiltroReciboEncontrado}
+                onChange={(e) => setVgFiltroReciboEncontrado((e as React.ChangeEvent<HTMLSelectElement>).target.value)}
+                options={[
+                  { label: "Todos", value: "all" },
+                  { label: "Sim", value: "sim" },
+                  { label: "Não", value: "nao" },
+                ]}
+              />
+              <AppField
+                as="select"
+                label="Ranking"
+                value={vgFiltroRanking}
+                onChange={(e) => setVgFiltroRanking((e as React.ChangeEvent<HTMLSelectElement>).target.value)}
+                options={[
+                  { label: "Todos", value: "all" },
+                  { label: "Sim", value: "sim" },
+                  { label: "Não", value: "nao" },
+                ]}
+              />
+              <AppField
+                as="select"
+                label="Conciliado"
+                value={vgFiltroConciliado}
+                onChange={(e) => setVgFiltroConciliado((e as React.ChangeEvent<HTMLSelectElement>).target.value)}
+                options={[
+                  { label: "Todos", value: "all" },
+                  { label: "Sim", value: "sim" },
+                  { label: "Não", value: "nao" },
+                ]}
+              />
+              <div className="vtur-inline-filter-actions">
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setVgFiltroDocumento("");
+                    setVgFiltroVendedor("all");
+                    setVgFiltroStatus("all");
+                    setVgFiltroMes("all");
+                    setVgFiltroDia("all");
+                    setVgFiltroReciboEncontrado("all");
+                    setVgFiltroRanking("all");
+                    setVgFiltroConciliado("all");
+                  }}
+                >
+                  Limpar
+                </AppButton>
+              </div>
+            </div>
+            <div className="vtur-conciliacao-resumo-strip mb-3">
+              <span>
+                <strong>{itensVisaoGeralFiltrados.length}</strong> de{" "}
+                <strong>{itensVisaoGeralComputados.length}</strong> registro(s)
+              </span>
+            </div>
+            <DataTable
+              headers={
+                <tr>
+                  <th>Data</th>
+                  <th>Documento</th>
+                  <th>Status</th>
+                  <th>Recibo encontrado</th>
+                  <th>Vendedor ranking</th>
+                  <th>Ranking</th>
+                  <th>Meta dif.</th>
+                  <th>Lançamentos</th>
+                  <th>Taxas (arq)</th>
+                  <th>Descontos</th>
+                  <th>Abatimentos</th>
+                  <th>Venda real</th>
+                  <th>Comissão loja</th>
+                  <th>% loja</th>
+                  <th>Total (sist)</th>
+                  <th>Taxas (sist)</th>
+                  <th>Diff total</th>
+                  <th>Diff taxas</th>
+                  <th>Conciliado</th>
+                  <th className="th-actions">Ações</th>
+                </tr>
+              }
+              loading={loadingVisaoGeral}
+              empty={!loadingVisaoGeral && itensVisaoGeralFiltrados.length === 0}
+              emptyMessage={
+                <EmptyState
+                  title={precisaEmpresaMaster ? "Selecione uma empresa" : "Nenhum registro encontrado"}
+                  description={
+                    precisaEmpresaMaster
+                      ? "Escolha a empresa para liberar a listagem."
+                      : "Não há registros para os filtros selecionados."
+                  }
+                />
+              }
+              colSpan={20}
+              className="table-header-green table-mobile-cards min-w-[2040px]"
+            >
+              {itensVisaoGeralFiltrados.map((row) => {
+                const rowSaving = savingAssignmentId === row.id;
+                const rowLocked = isRowLocked(row);
+                const exigeAtribuicaoRanking = registroExigeAtribuicaoRanking(row);
+                const rankingTooltip = getLinhaRankingTooltip({ status: row.status, descricao: row.descricao });
+                return (
+                  <tr key={row.id}>
+                    <td data-label="Data">{formatDate(row.movimento_data)}</td>
+                    <td data-label="Documento">{row.documento}</td>
+                    <td data-label="Status">
+                      {getLinhaStatusLabel({ status: row.status, descricao: row.descricao })}
+                    </td>
+                    <td data-label="Recibo encontrado">
+                      {row._recibo_encontrado ? (
+                        <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
+                      ) : (
+                        <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
+                      )}
+                    </td>
+                    <td data-label="Vendedor ranking">
+                      {row._vendedor_nome ? (
+                        <span>{row._vendedor_nome}</span>
+                      ) : exigeAtribuicaoRanking ? (
+                        <span className="vtur-muted-text">Não atribuído</span>
+                      ) : (
+                        <span
+                          className={rankingTooltip ? "vtur-hint-tooltip" : undefined}
+                          data-tooltip={rankingTooltip || undefined}
+                          tabIndex={rankingTooltip ? 0 : undefined}
+                        >
+                          {getLinhaRankingHint({ status: row.status, descricao: row.descricao })}
+                        </span>
+                      )}
+                    </td>
+                    <td data-label="Ranking">
+                      {exigeAtribuicaoRanking ? (
+                        row._ranking_ok ? (
+                          <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
+                        ) : (
+                          <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
+                        )
+                      ) : (
+                        <span className="vtur-badge vtur-badge-muted">—</span>
+                      )}
+                    </td>
+                    <td data-label="Meta dif.">
+                      {row._produto_nome ? (
+                        <span>{row._produto_nome}</span>
+                      ) : (
+                        <span className="vtur-muted-text">—</span>
+                      )}
+                    </td>
+                    <td data-label="Lançamentos">{formatMoney(row.valor_lancamentos)}</td>
+                    <td data-label="Taxas (arq)">{formatMoney(row.valor_taxas)}</td>
+                    <td data-label="Descontos">{formatMoney(row.valor_descontos)}</td>
+                    <td data-label="Abatimentos">{formatMoney(row.valor_abatimentos)}</td>
+                    <td data-label="Venda real">{formatMoney(row.valor_venda_real)}</td>
+                    <td data-label="Comissão loja">{formatMoney(row.valor_comissao_loja)}</td>
+                    <td data-label="% loja">
+                      {row.percentual_comissao_loja != null
+                        ? `${Number(row.percentual_comissao_loja).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`
+                        : "—"}
+                    </td>
+                    <td data-label="Total (sist)">{formatMoney(row.sistema_valor_total)}</td>
+                    <td data-label="Taxas (sist)">{formatMoney(row.sistema_valor_taxas)}</td>
+                    <td data-label="Diff total">{formatMoney(row.diff_total)}</td>
+                    <td data-label="Diff taxas">{formatMoney(row.diff_taxas)}</td>
+                    <td data-label="Conciliado">
+                      {row.conciliado ? (
+                        <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
+                      ) : (
+                        <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
+                      )}
+                    </td>
+                    <td className="th-actions" data-label="Ações">
+                      <div className="action-buttons vtur-table-actions">
+                        {rowLocked ? (
+                          <AppButton
+                            type="button"
+                            variant="ghost"
+                            className="icon-action-btn vtur-table-action"
+                            icon="pi pi-pencil"
+                            title="Editar"
+                            aria-label="Editar"
+                            disabled={rowSaving || deletingItemId === row.id}
+                            onClick={() => habilitarEdicaoLinha(row.id)}
+                          />
+                        ) : (
+                          <AppButton
+                            type="button"
+                            variant="ghost"
+                            className="icon-action-btn vtur-table-action"
+                            icon={rowSaving ? "pi pi-spin pi-spinner" : "pi pi-save"}
+                            title={rowSaving ? "Salvando" : "Salvar"}
+                            aria-label={rowSaving ? "Salvando" : "Salvar"}
+                            disabled={rowSaving || deletingItemId === row.id}
+                            onClick={() => salvarLinha(row)}
+                          />
+                        )}
+                        <AppButton
+                          type="button"
+                          variant="danger"
+                          className="icon-action-btn vtur-table-action"
+                          icon={deletingItemId === row.id ? "pi pi-spin pi-spinner" : "pi pi-trash"}
+                          title={row.conciliado ? "Excluir desabilitado para recibos conciliados" : deletingItemId === row.id ? "Excluindo" : "Excluir"}
+                          aria-label={row.conciliado ? "Excluir desabilitado" : "Excluir"}
+                          disabled={row.conciliado || rowSaving || deletingItemId === row.id}
+                          onClick={() => excluirLinha(row)}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </DataTable>
+          </AppCard>
+
+        </>}
+
         {secaoAtiva === "pendentes" && <>
 
           <AppCard
@@ -3153,7 +3623,11 @@ export default function ConciliacaoIsland() {
                     <td data-label="Status">
                       {getLinhaStatusLabel({ status: row.status, descricao: row.descricao })}
                     </td>
-                    <td data-label="Recibo encontrado">{row.venda_recibo_id ? "Sim" : "Não"}</td>
+                    <td data-label="Recibo encontrado">
+                      {row.venda_recibo_id
+                        ? <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
+                        : <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />}
+                    </td>
                     <td data-label="Vendedor ranking">
                       {podeAtribuir ? (
                         rowEditing ? (
@@ -3188,12 +3662,12 @@ export default function ConciliacaoIsland() {
                     <td data-label="Ranking">
                       {exigeAtribuicaoRanking ? (
                         registroTemRankingAtribuido(row) ? (
-                          <span className="vtur-badge vtur-badge-ok">Sim</span>
+                          <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
                         ) : (
-                          <span className="vtur-badge vtur-badge-warn">Não</span>
+                          <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
                         )
                       ) : podeAtribuir ? (
-                        <span className="vtur-badge vtur-badge-warn">Não</span>
+                        <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
                       ) : (
                         <span className="vtur-badge vtur-badge-muted">—</span>
                       )}
@@ -3210,7 +3684,7 @@ export default function ConciliacaoIsland() {
                         : "-"}
                     </td>
                     <td data-label="Conciliado">
-                      <span className="vtur-badge vtur-badge-warn">Não</span>
+                      <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
                     </td>
                     <td className="th-actions" data-label="Ações">
                       <div className="action-buttons vtur-table-actions">
@@ -3414,9 +3888,9 @@ export default function ConciliacaoIsland() {
                   <td data-label="Ranking">
                     {exigeAtribuicaoRanking ? (
                       registroTemRankingAtribuido(row) ? (
-                        <span className="vtur-badge vtur-badge-ok">Sim</span>
+                        <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
                       ) : (
-                        <span className="vtur-badge vtur-badge-warn">Não</span>
+                        <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
                       )
                     ) : (
                       <span className="vtur-badge vtur-badge-muted">—</span>
@@ -3480,8 +3954,8 @@ export default function ConciliacaoIsland() {
                   <td data-label="Diff taxas">{formatMoney(row.diff_taxas)}</td>
                   <td data-label="Conciliado">
                     {row.conciliado
-                      ? <span className="vtur-badge vtur-badge-ok">Sim</span>
-                      : <span className="vtur-badge vtur-badge-warn">Não</span>}
+                      ? <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
+                      : <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />}
                   </td>
                   <td className="th-actions" data-label="Ações">
                     <div className="action-buttons vtur-table-actions">
@@ -3632,7 +4106,11 @@ export default function ConciliacaoIsland() {
                     <td data-label="Status">
                       {getLinhaStatusLabel({ status: row.status, descricao: row.descricao })}
                     </td>
-                    <td data-label="Recibo encontrado">{row.venda_recibo_id ? "Sim" : "Não"}</td>
+                    <td data-label="Recibo encontrado">
+                      {row.venda_recibo_id
+                        ? <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
+                        : <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />}
+                    </td>
                     <td data-label="Vendedor ranking">
                       {podeAtribuir ? (
                         rowEditing ? (
@@ -3674,8 +4152,8 @@ export default function ConciliacaoIsland() {
                     </td>
                     <td data-label="Conciliado">
                       {row.conciliado
-                        ? <span className="vtur-badge vtur-badge-ok">Sim</span>
-                        : <span className="vtur-badge vtur-badge-warn">Não</span>}
+                        ? <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
+                        : <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />}
                     </td>
                     <td className="th-actions" data-label="Ações">
                       <div className="action-buttons vtur-table-actions">
@@ -3785,6 +4263,14 @@ export default function ConciliacaoIsland() {
 
             <div className="vtur-inline-filter-row mt-3 mb-3">
               <AppField
+                as="input"
+                label="Recibo"
+                value={alteracoesFiltroRecibo}
+                onChange={(e) => setAlteracoesFiltroRecibo((e as React.ChangeEvent<HTMLInputElement>).target.value)}
+                placeholder="Buscar..."
+                disabled={loadingChanges}
+              />
+              <AppField
                 as="select"
                 label="Mês"
                 value={monthFilter}
@@ -3818,7 +4304,7 @@ export default function ConciliacaoIsland() {
                 <AppButton type="button" variant="secondary" disabled={loadingChanges || precisaEmpresaMaster} onClick={carregarAlteracoes}>
                   {loadingChanges ? "Atualizando..." : "Atualizar lista"}
                 </AppButton>
-                <AppButton type="button" variant="ghost" disabled={loadingChanges} onClick={() => { setDayFilter(""); setMonthFilter(currentMonthValue()); setSomenteAlteracoesPendentes(true); }}>
+                <AppButton type="button" variant="secondary" disabled={loadingChanges} onClick={() => { setDayFilter(""); setMonthFilter(currentMonthValue()); setSomenteAlteracoesPendentes(true); setAlteracoesFiltroRecibo(""); }}>
                   Limpar
                 </AppButton>
               </div>
@@ -3840,13 +4326,15 @@ export default function ConciliacaoIsland() {
                   </tr>
                 }
                 loading={loadingChanges}
-                empty={!loadingChanges && changeGroups.length === 0}
+                empty={!loadingChanges && changeGroupsFiltrados.length === 0}
                 emptyMessage={
                   <EmptyState
                     title={precisaEmpresaMaster ? "Selecione uma empresa" : "Nenhuma alteracao registrada"}
                     description={
                       precisaEmpresaMaster
                         ? "Escolha a empresa para consultar o historico de alteracoes."
+                        : alteracoesFiltroRecibo
+                        ? "Nenhum registro encontrado para o recibo informado."
                         : "Nao ha alteracoes para o recorte atual."
                     }
                   />
@@ -3854,7 +4342,7 @@ export default function ConciliacaoIsland() {
                 colSpan={9}
                 className="table-header-blue table-mobile-cards min-w-[920px]"
               >
-                {changeGroups.map((group) => {
+                {changeGroupsFiltrados.map((group) => {
                   const hasPending = group.count_pendentes > 0;
                   const checked = selectedGroupKeys.has(group.key);
                   const origem = group.actor === "user" ? "manual" : "cron";

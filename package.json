@@ -46,6 +46,7 @@
     "lucide-react": "^0.556.0",
     "mailparser": "^3.7.2",
     "mammoth": "^1.11.0",
+    "node": "^25.8.2",
     "nodemailer": "^6.10.1",
     "pdfjs-dist": "^4.10.38",
     "pdfmake": "^0.3.7",
