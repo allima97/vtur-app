@@ -3562,7 +3562,7 @@ export default function ConciliacaoIsland() {
                 <AppButton type="button" variant="secondary" disabled={loadingPendentes || precisaEmpresaMaster} onClick={carregarPendentes}>
                   {loadingPendentes ? "Atualizando..." : "Atualizar lista"}
                 </AppButton>
-                <AppButton type="button" variant="ghost" disabled={loadingPendentes} onClick={() => { setAtalhoAtivo(null); setDayFilter(""); setMonthFilter(currentMonthValue()); }}>
+                <AppButton type="button" variant="secondary" disabled={loadingPendentes} onClick={() => { setAtalhoAtivo(null); setDayFilter(""); setMonthFilter(currentMonthValue()); }}>
                   Limpar
                 </AppButton>
               </div>
@@ -3788,7 +3788,7 @@ export default function ConciliacaoIsland() {
                 <AppButton type="button" variant="secondary" disabled={loadingConciliados || precisaEmpresaMaster} onClick={carregarConciliados}>
                   {loadingConciliados ? "Atualizando..." : "Atualizar lista"}
                 </AppButton>
-                <AppButton type="button" variant="ghost" disabled={loadingConciliados} onClick={() => { setAtalhoAtivo(null); setDayFilter(""); setMonthFilter(currentMonthValue()); }}>
+                <AppButton type="button" variant="secondary" disabled={loadingConciliados} onClick={() => { setAtalhoAtivo(null); setDayFilter(""); setMonthFilter(currentMonthValue()); }}>
                   Limpar
                 </AppButton>
               </div>
@@ -4048,7 +4048,7 @@ export default function ConciliacaoIsland() {
                 <AppButton type="button" variant="secondary" disabled={loadingRankingPendentes || precisaEmpresaMaster} onClick={carregarRankingPendentes}>
                   {loadingRankingPendentes ? "Atualizando..." : "Atualizar lista"}
                 </AppButton>
-                <AppButton type="button" variant="ghost" disabled={loadingRankingPendentes} onClick={() => { setAtalhoAtivo(null); setDayFilter(""); setMonthFilter(currentMonthValue()); }}>
+                <AppButton type="button" variant="secondary" disabled={loadingRankingPendentes} onClick={() => { setAtalhoAtivo(null); setDayFilter(""); setMonthFilter(currentMonthValue()); }}>
                   Limpar
                 </AppButton>
               </div>
