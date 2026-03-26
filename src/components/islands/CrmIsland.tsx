@@ -3,8 +3,10 @@ import { supabaseBrowser } from "../../lib/supabase-browser";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppButton from "../ui/primer/AppButton";
+import TableActions from "../ui/TableActions";
 import { Steps } from "primereact/steps";
 import { ToastStack, useToastQueue } from "../ui/Toast";
+import { renderSvgUrlToPngBlob, validarPngServidor } from "../../lib/cards/browserPng";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -1433,38 +1435,95 @@ export default function CrmIsland() {
     return `${window.location.origin}${raw.startsWith("/") ? raw : `/${raw}`}`;
   }
 
-  function compartilharWhatsApp() {
+  async function resolveBestShareImageUrl(previewSvgUrl: string) {
+    const absoluteSvgUrl = resolveAbsolutePreviewUrl(previewSvgUrl);
+    const absolutePngUrl = resolveAbsolutePreviewUrl(buildPngPreviewUrl(previewSvgUrl));
+    try {
+      const pngStatus = await validarPngServidor(absolutePngUrl);
+      if (pngStatus.ok) return { url: absolutePngUrl, isPng: true };
+    } catch {
+      // fallback para SVG abaixo
+    }
+    return { url: absoluteSvgUrl, isPng: false };
+  }
+
+  async function compartilharWhatsApp() {
     if (!previewUrl || !primeiroNome) return;
-    const absoluteImg = resolveAbsolutePreviewUrl(buildPngPreviewUrl(previewUrl));
+    const imageTarget = await resolveBestShareImageUrl(previewUrl);
+    if (!imageTarget.isPng) {
+      showToast("PNG indisponível no servidor. Link compartilhado em SVG.", "warning");
+    }
     const texto = encodeURIComponent(
       `${greeting ? greeting + "\n\n" : ""}${mensagem ? mensagem + "\n\n" : ""}${assinatura.linha1 ? assinatura.linha1 + "\n" : ""}${assinatura.linha2 || ""}`
     );
-    window.open(`https://wa.me/?text=${texto}%0A%0A${encodeURIComponent(absoluteImg)}`, "_blank");
+    window.open(`https://wa.me/?text=${texto}%0A%0A${encodeURIComponent(imageTarget.url)}`, "_blank");
   }
 
-  function copiarLinkPreview() {
+  async function copiarLinkPreview() {
     if (!previewUrl) return;
-    const url = resolveAbsolutePreviewUrl(buildPngPreviewUrl(previewUrl));
-    navigator.clipboard
-      .writeText(url)
-      .then(() => showToast("Link PNG copiado.", "success"))
-      .catch(() => showToast("Não foi possível copiar o link.", "warning"));
+    try {
+      const imageTarget = await resolveBestShareImageUrl(previewUrl);
+      await navigator.clipboard.writeText(imageTarget.url);
+      showToast(imageTarget.isPng ? "Link PNG copiado." : "Link SVG copiado (fallback).", "success");
+    } catch {
+      showToast("Não foi possível copiar o link.", "warning");
+    }
+  }
+
+  async function abrirPreviewPng() {
+    if (!previewUrl) return;
+    const absoluteSvgUrl = resolveAbsolutePreviewUrl(previewUrl);
+    const absolutePngUrl = resolveAbsolutePreviewUrl(buildPngPreviewUrl(previewUrl));
+    try {
+      const pngStatus = await validarPngServidor(absolutePngUrl);
+      if (pngStatus.ok) {
+        window.open(absolutePngUrl, "_blank");
+        return;
+      }
+      const blob = await renderSvgUrlToPngBlob(absoluteSvgUrl);
+      const objectUrl = URL.createObjectURL(blob);
+      window.open(objectUrl, "_blank");
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 20_000);
+      showToast("PNG indisponível no servidor. Prévia aberta com fallback local.", "warning");
+    } catch {
+      window.open(absoluteSvgUrl, "_blank");
+      showToast("PNG indisponível. Prévia aberta em SVG.", "warning");
+    }
   }
 
   async function baixarPngFinal() {
     if (!previewUrl) return;
+    const absoluteSvgUrl = resolveAbsolutePreviewUrl(previewUrl);
     const pngPath = buildPngPreviewUrl(previewUrl);
     const absolutePngUrl = resolveAbsolutePreviewUrl(pngPath);
     try {
-      const response = await fetch(absolutePngUrl, { credentials: "include" });
-      if (!response.ok) {
-        throw new Error(`Falha ao gerar PNG (${response.status}).`);
+      let blob: Blob | null = null;
+      let successMessage = "PNG gerado com sucesso.";
+
+      try {
+        const pngStatus = await validarPngServidor(absolutePngUrl);
+        if (pngStatus.ok) {
+          const response = await fetch(absolutePngUrl, {
+            credentials: "include",
+            headers: { Accept: "image/png" },
+          });
+          if (!response.ok) {
+            throw new Error(`Falha ao baixar PNG (${response.status}).`);
+          }
+          blob = await response.blob();
+        } else {
+          blob = await renderSvgUrlToPngBlob(absoluteSvgUrl);
+          successMessage = "PNG gerado no navegador (fallback local).";
+        }
+      } catch {
+        blob = await renderSvgUrlToPngBlob(absoluteSvgUrl);
+        successMessage = "PNG gerado no navegador (fallback local).";
       }
-      const contentType = String(response.headers.get("content-type") || "").toLowerCase();
-      if (!contentType.includes("image/png")) {
-        throw new Error("PNG indisponível neste ambiente.");
+
+      if (!blob) {
+        throw new Error("Não foi possível gerar o PNG neste momento.");
       }
-      const blob = await response.blob();
+
       const objectUrl = URL.createObjectURL(blob);
       const safeThemeName = String(selectedTheme?.nome || "cartao")
         .trim()
@@ -1479,7 +1538,7 @@ export default function CrmIsland() {
       anchor.click();
       anchor.remove();
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 20_000);
-      showToast("PNG gerado com sucesso.", "success");
+      showToast(successMessage, "success");
     } catch (err: any) {
       showToast(err?.message || "Não foi possível gerar o PNG agora.", "warning");
     }
@@ -2195,13 +2254,15 @@ export default function CrmIsland() {
               <AppButton
                 type="button"
                 variant="primary"
+                size="small"
+                className="crm-step-nav-btn"
                 icon="pi pi-arrow-right"
                 iconPos="right"
                 onClick={() => goToWizardStep(1)}
                 disabled={!showComposer}
                 title={!showComposer ? "Selecione um template para continuar." : ""}
               >
-                Continuar para mensagem
+                Próxima etapa
               </AppButton>
             </div>
           </div>
@@ -2495,19 +2556,23 @@ export default function CrmIsland() {
               <AppButton
                 type="button"
                 variant="secondary"
+                size="small"
+                className="crm-step-nav-btn"
                 icon="pi pi-arrow-left"
                 onClick={() => goToWizardStep(0)}
               >
-                Voltar para template
+                Voltar
               </AppButton>
               <AppButton
                 type="button"
                 variant="primary"
+                size="small"
+                className="crm-step-nav-btn"
                 icon="pi pi-arrow-right"
                 iconPos="right"
                 onClick={() => goToWizardStep(2)}
               >
-                Ir para arte final
+                Próxima etapa
               </AppButton>
             </div>
           </div>
@@ -2558,7 +2623,7 @@ export default function CrmIsland() {
                     type="button"
                     variant="secondary"
                     icon="pi pi-external-link"
-                    onClick={() => window.open(buildPngPreviewUrl(previewUrl), "_blank")}
+                    onClick={abrirPreviewPng}
                   >
                     Ver PNG
                   </AppButton>
@@ -2603,14 +2668,18 @@ export default function CrmIsland() {
               <AppButton
                 type="button"
                 variant="secondary"
+                size="small"
+                className="crm-step-nav-btn"
                 icon="pi pi-arrow-left"
                 onClick={() => goToWizardStep(1)}
               >
-                Voltar para mensagem
+                Voltar
               </AppButton>
               <AppButton
                 type="button"
                 variant="secondary"
+                size="small"
+                className="crm-step-nav-btn"
                 icon="pi pi-images"
                 onClick={() => goToWizardStep(0)}
               >
@@ -2685,50 +2754,49 @@ export default function CrmIsland() {
                             </td>
                             <td>{canManage ? "Meu" : "Somente leitura"}</td>
                             <td className="crm-td-actions">
-                              <div className="crm-admin-table-actions">
-                                <AppButton
-                                  type="button"
-                                  variant="secondary"
-                                  size="small"
-                                  icon="pi pi-eye"
-                                  onClick={() => window.open(theme.asset_url, "_blank")}
-                                >
-                                  Visualizar
-                                </AppButton>
-                                <AppButton
-                                  type="button"
-                                  variant="secondary"
-                                  size="small"
-                                  icon="pi pi-pencil"
-                                  onClick={() => openEditTheme(theme)}
-                                  disabled={!canManage || deleting}
-                                  title={!canManage ? "Somente o autor pode editar." : ""}
-                                >
-                                  Editar
-                                </AppButton>
-                                <AppButton
-                                  type="button"
-                                  variant="ghost"
-                                  size="small"
-                                  icon={theme.ativo !== false ? "pi pi-times-circle" : "pi pi-check-circle"}
-                                  onClick={() => void toggleThemeActive(theme)}
-                                  disabled={!canManage || deleting}
-                                  title={!canManage ? "Somente o autor pode alterar o status." : ""}
-                                >
-                                  {theme.ativo !== false ? "Desativar" : "Ativar"}
-                                </AppButton>
-                                <AppButton
-                                  type="button"
-                                  variant="danger"
-                                  size="small"
-                                  icon={deleting ? "pi pi-spin pi-spinner" : "pi pi-trash"}
-                                  onClick={() => void deleteTheme(theme)}
-                                  disabled={!canManage || deleting}
-                                  title={!canManage ? "Somente o autor pode excluir." : ""}
-                                >
-                                  Excluir
-                                </AppButton>
-                              </div>
+                              <TableActions
+                                className="crm-admin-table-actions"
+                                actions={[
+                                  {
+                                    key: "view",
+                                    label: "Visualizar template",
+                                    icon: "pi pi-eye",
+                                    onClick: () => window.open(theme.asset_url, "_blank"),
+                                    disabled: deleting,
+                                  },
+                                  {
+                                    key: "edit",
+                                    label: "Editar template",
+                                    icon: "pi pi-pencil",
+                                    onClick: () => openEditTheme(theme),
+                                    disabled: !canManage || deleting,
+                                    title: !canManage ? "Somente o autor pode editar." : "Editar template",
+                                  },
+                                  {
+                                    key: "toggle",
+                                    label: theme.ativo !== false ? "Desativar template" : "Ativar template",
+                                    icon: theme.ativo !== false ? "pi pi-times-circle" : "pi pi-check-circle",
+                                    variant: "ghost",
+                                    onClick: () => void toggleThemeActive(theme),
+                                    disabled: !canManage || deleting,
+                                    title:
+                                      !canManage
+                                        ? "Somente o autor pode alterar o status."
+                                        : theme.ativo !== false
+                                          ? "Desativar template"
+                                          : "Ativar template",
+                                  },
+                                  {
+                                    key: "delete",
+                                    label: "Excluir template",
+                                    icon: deleting ? "pi pi-spin pi-spinner" : "pi pi-trash",
+                                    variant: "danger",
+                                    onClick: () => void deleteTheme(theme),
+                                    disabled: !canManage || deleting,
+                                    title: !canManage ? "Somente o autor pode excluir." : "Excluir template",
+                                  },
+                                ]}
+                              />
                             </td>
                           </tr>
                         );
@@ -2799,50 +2867,49 @@ export default function CrmIsland() {
                             </td>
                             <td>{canManage ? "Minha" : "Somente leitura"}</td>
                             <td className="crm-td-actions">
-                              <div className="crm-admin-table-actions">
-                                <AppButton
-                                  type="button"
-                                  variant="secondary"
-                                  size="small"
-                                  icon="pi pi-eye"
-                                  onClick={() => setPreviewMessageTemplate(template)}
-                                >
-                                  Visualizar
-                                </AppButton>
-                                <AppButton
-                                  type="button"
-                                  variant="secondary"
-                                  size="small"
-                                  icon="pi pi-pencil"
-                                  onClick={() => openEditMessage(template)}
-                                  disabled={!canManage || deleting}
-                                  title={!canManage ? "Somente o autor pode editar." : ""}
-                                >
-                                  Editar
-                                </AppButton>
-                                <AppButton
-                                  type="button"
-                                  variant="ghost"
-                                  size="small"
-                                  icon={template.ativo !== false ? "pi pi-times-circle" : "pi pi-check-circle"}
-                                  onClick={() => void toggleMessageActive(template)}
-                                  disabled={!canManage || deleting}
-                                  title={!canManage ? "Somente o autor pode alterar o status." : ""}
-                                >
-                                  {template.ativo !== false ? "Desativar" : "Ativar"}
-                                </AppButton>
-                                <AppButton
-                                  type="button"
-                                  variant="danger"
-                                  size="small"
-                                  icon={deleting ? "pi pi-spin pi-spinner" : "pi pi-trash"}
-                                  onClick={() => void deleteMessageTemplate(template)}
-                                  disabled={!canManage || deleting}
-                                  title={!canManage ? "Somente o autor pode excluir." : ""}
-                                >
-                                  Excluir
-                                </AppButton>
-                              </div>
+                              <TableActions
+                                className="crm-admin-table-actions"
+                                actions={[
+                                  {
+                                    key: "view",
+                                    label: "Visualizar mensagem",
+                                    icon: "pi pi-eye",
+                                    onClick: () => setPreviewMessageTemplate(template),
+                                    disabled: deleting,
+                                  },
+                                  {
+                                    key: "edit",
+                                    label: "Editar mensagem",
+                                    icon: "pi pi-pencil",
+                                    onClick: () => openEditMessage(template),
+                                    disabled: !canManage || deleting,
+                                    title: !canManage ? "Somente o autor pode editar." : "Editar mensagem",
+                                  },
+                                  {
+                                    key: "toggle",
+                                    label: template.ativo !== false ? "Desativar mensagem" : "Ativar mensagem",
+                                    icon: template.ativo !== false ? "pi pi-times-circle" : "pi pi-check-circle",
+                                    variant: "ghost",
+                                    onClick: () => void toggleMessageActive(template),
+                                    disabled: !canManage || deleting,
+                                    title:
+                                      !canManage
+                                        ? "Somente o autor pode alterar o status."
+                                        : template.ativo !== false
+                                          ? "Desativar mensagem"
+                                          : "Ativar mensagem",
+                                  },
+                                  {
+                                    key: "delete",
+                                    label: "Excluir mensagem",
+                                    icon: deleting ? "pi pi-spin pi-spinner" : "pi pi-trash",
+                                    variant: "danger",
+                                    onClick: () => void deleteMessageTemplate(template),
+                                    disabled: !canManage || deleting,
+                                    title: !canManage ? "Somente o autor pode excluir." : "Excluir mensagem",
+                                  },
+                                ]}
+                              />
                             </td>
                           </tr>
                         );
