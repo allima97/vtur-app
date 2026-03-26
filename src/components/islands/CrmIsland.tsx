@@ -504,6 +504,27 @@ function buildPreviewParams(params: {
   return `/api/v1/cards/render.svg?${q.toString()}`;
 }
 
+function buildPngPreviewUrl(svgPreviewUrl?: string | null) {
+  const raw = String(svgPreviewUrl || "").trim();
+  if (!raw) return "";
+
+  const [pathPart, queryPart] = raw.split("?");
+  if (!pathPart) return raw;
+
+  if (pathPart.endsWith("/render.svg") || pathPart.endsWith(".svg")) {
+    return `${pathPart.slice(0, -4)}.png${queryPart ? `?${queryPart}` : ""}`;
+  }
+
+  if (pathPart.endsWith("/render")) {
+    const query = new URLSearchParams(queryPart || "");
+    query.set("format", "png");
+    const queryText = query.toString();
+    return `${pathPart}${queryText ? `?${queryText}` : ""}`;
+  }
+
+  return raw;
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function ThumbCard({
@@ -634,8 +655,7 @@ export default function CrmIsland() {
   // ── Form fields ──────────────────────────────────────────────────
   const [greeting, setGreeting] = useState("");
   const [clienteNome, setClienteNome] = useState(""); // full name selected from client list
-  const [clienteNomeCustom, setClienteNomeCustom] = useState(""); // override first name
-  const [useCustomNome, setUseCustomNome] = useState(false);
+  const [clienteNomeCustom, setClienteNomeCustom] = useState(""); // nome exibido no cartão (editável livremente)
   const [mensagem, setMensagem] = useState("");
   const [assinatura, setAssinatura] = useState<AssinaturaForm>({ ...DEFAULT_ASSINATURA });
   const [textColor, setTextColor] = useState("");
@@ -729,7 +749,7 @@ export default function CrmIsland() {
   }, []);
 
   // ── Derived ──────────────────────────────────────────────────────
-  const primeiroNome = useCustomNome ? clienteNomeCustom.trim() : clienteNome.trim();
+  const primeiroNome = clienteNomeCustom.trim() || getPrimeiroNome(clienteNome);
   const palavras = countWords(mensagem);
   const maxPalavras = selectedTheme?.mensagem_max_palavras ?? 50;
   const maxLinhas = selectedTheme?.mensagem_max_linhas ?? 6;
@@ -750,6 +770,16 @@ export default function CrmIsland() {
     return map;
   }, [categories]);
 
+  const activeThemes = useMemo(
+    () => themes.filter((theme) => theme?.ativo !== false),
+    [themes]
+  );
+
+  const activeMessageLibrary = useMemo(
+    () => messageLibrary.filter((message) => message?.ativo !== false),
+    [messageLibrary]
+  );
+
   const temaFilterOptions = useMemo(() => {
     const options = [...CRM_TEMA_FILTER_BASE_OPTIONS];
     const knownBuckets = new Set(options.map((option) => option.value));
@@ -769,14 +799,14 @@ export default function CrmIsland() {
 
   const filteredThemes = useMemo(
     () =>
-      themes.filter((t) => {
+      activeThemes.filter((t) => {
         const matchScope = scopeFilter === "all" ? true : normalizeScopeValue(t.scope) === scopeFilter;
         const categoryName = categoryNameById.get(String(t.categoria_id || "").trim()) || String(t.categoria || "").trim();
         const normalizedThemeText = normalizeText(`${t.nome || ""} ${categoryName || ""}`);
         const matchTema = matchesTemaFilter(temaFilter, normalizedThemeText, t.categoria_id);
         return matchScope && matchTema;
       }),
-    [themes, scopeFilter, temaFilter, categoryNameById]
+    [activeThemes, scopeFilter, temaFilter, categoryNameById]
   );
 
   const totalThemePages = Math.max(1, Math.ceil(filteredThemes.length / CRM_THEMES_PER_PAGE));
@@ -798,7 +828,7 @@ export default function CrmIsland() {
       : "";
     const selectedCategory = normalizeCategory(selectedCategoryRaw);
 
-    return [...messageLibrary]
+    return [...activeMessageLibrary]
       .map((message) => {
         const messageCategory = normalizeCategory(message.categoria);
         let categoryRank = 1;
@@ -831,7 +861,7 @@ export default function CrmIsland() {
         return String(a.message.nome || "").localeCompare(String(b.message.nome || ""), "pt-BR");
       })
       .map((entry) => entry.message);
-  }, [messageLibrary, selectedTheme, categoryNameById, currentUserId]);
+  }, [activeMessageLibrary, selectedTheme, categoryNameById, currentUserId]);
 
   const titleDropdownOptions = useMemo(() => {
     const options = [{ label: "Selecione o título", value: "" }];
@@ -848,12 +878,12 @@ export default function CrmIsland() {
 
   const templatesByScope = useMemo(() => {
     return {
-      system: themes.filter((theme) => normalizeScopeValue(theme.scope) === "system").length,
-      master: themes.filter((theme) => normalizeScopeValue(theme.scope) === "master").length,
-      gestor: themes.filter((theme) => normalizeScopeValue(theme.scope) === "gestor").length,
-      user: themes.filter((theme) => normalizeScopeValue(theme.scope) === "user").length,
+      system: activeThemes.filter((theme) => normalizeScopeValue(theme.scope) === "system").length,
+      master: activeThemes.filter((theme) => normalizeScopeValue(theme.scope) === "master").length,
+      gestor: activeThemes.filter((theme) => normalizeScopeValue(theme.scope) === "gestor").length,
+      user: activeThemes.filter((theme) => normalizeScopeValue(theme.scope) === "user").length,
     };
-  }, [themes]);
+  }, [activeThemes]);
 
   const availableScopeOptions = useMemo(
     () => getAvailableScopeOptions(currentUserRole, isAdmin),
@@ -867,10 +897,9 @@ export default function CrmIsland() {
 
   const canManageRecord = useCallback(
     (userId?: string | null) => {
-      if (isAdmin) return true;
       return String(userId || "").trim() === String(currentUserId || "").trim();
     },
-    [isAdmin, currentUserId]
+    [currentUserId]
   );
 
   const todayLabel = useMemo(
@@ -1095,7 +1124,6 @@ export default function CrmIsland() {
         setCategories((payload?.categories || []) as Category[]);
         setThemes(
           ((payload?.themes || []) as Theme[])
-            .filter((theme: any) => theme?.ativo !== false)
             .map((theme) => ({
               ...theme,
               scope: normalizeScopeValue(theme.scope),
@@ -1103,7 +1131,6 @@ export default function CrmIsland() {
         );
         setMessageLibrary(
           ((payload?.messages || []) as MessageTemplate[])
-            .filter((message: any) => message?.ativo !== false)
             .map((message) => ({
               ...message,
               scope: normalizeScopeValue(message.scope),
@@ -1174,7 +1201,6 @@ export default function CrmIsland() {
           setCategories((catResp.data || []) as Category[]);
           setThemes(
             ((themeResp.data || []) as Theme[])
-              .filter((theme: any) => theme?.ativo !== false)
               .map((theme) => ({
               ...theme,
               scope: normalizeScopeValue(theme.scope),
@@ -1182,7 +1208,6 @@ export default function CrmIsland() {
           );
           setMessageLibrary(
             ((msgResp.data || []) as MessageTemplate[])
-              .filter((message: any) => message?.ativo !== false)
               .map((message) => ({
               ...message,
               scope: normalizeScopeValue(message.scope),
@@ -1303,8 +1328,7 @@ export default function CrmIsland() {
     setSelectedBirthdayId(item.id);
     setClienteNome(nome);
     setClienteBusca(nome);
-    setUseCustomNome(false);
-    setClienteNomeCustom("");
+    setClienteNomeCustom(getPrimeiroNome(nome));
   }
 
   useEffect(() => {
@@ -1402,9 +1426,16 @@ export default function CrmIsland() {
   }
 
   // ── WhatsApp share ───────────────────────────────────────────────
+  function resolveAbsolutePreviewUrl(pathOrUrl: string) {
+    const raw = String(pathOrUrl || "").trim();
+    if (!raw) return "";
+    if (/^https?:\/\//i.test(raw)) return raw;
+    return `${window.location.origin}${raw.startsWith("/") ? raw : `/${raw}`}`;
+  }
+
   function compartilharWhatsApp() {
     if (!previewUrl || !primeiroNome) return;
-    const absoluteImg = `${window.location.origin}${previewUrl.replace(".svg", ".png")}`;
+    const absoluteImg = resolveAbsolutePreviewUrl(buildPngPreviewUrl(previewUrl));
     const texto = encodeURIComponent(
       `${greeting ? greeting + "\n\n" : ""}${mensagem ? mensagem + "\n\n" : ""}${assinatura.linha1 ? assinatura.linha1 + "\n" : ""}${assinatura.linha2 || ""}`
     );
@@ -1413,8 +1444,45 @@ export default function CrmIsland() {
 
   function copiarLinkPreview() {
     if (!previewUrl) return;
-    const url = `${window.location.origin}${previewUrl}`;
-    navigator.clipboard.writeText(url).catch(() => {});
+    const url = resolveAbsolutePreviewUrl(buildPngPreviewUrl(previewUrl));
+    navigator.clipboard
+      .writeText(url)
+      .then(() => showToast("Link PNG copiado.", "success"))
+      .catch(() => showToast("Não foi possível copiar o link.", "warning"));
+  }
+
+  async function baixarPngFinal() {
+    if (!previewUrl) return;
+    const pngPath = buildPngPreviewUrl(previewUrl);
+    const absolutePngUrl = resolveAbsolutePreviewUrl(pngPath);
+    try {
+      const response = await fetch(absolutePngUrl, { credentials: "include" });
+      if (!response.ok) {
+        throw new Error(`Falha ao gerar PNG (${response.status}).`);
+      }
+      const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+      if (!contentType.includes("image/png")) {
+        throw new Error("PNG indisponível neste ambiente.");
+      }
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const safeThemeName = String(selectedTheme?.nome || "cartao")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "cartao";
+      const filename = `crm-${safeThemeName}-${Date.now()}.png`;
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 20_000);
+      showToast("PNG gerado com sucesso.", "success");
+    } catch (err: any) {
+      showToast(err?.message || "Não foi possível gerar o PNG agora.", "warning");
+    }
   }
 
   async function reloadCategories() {
@@ -1438,7 +1506,6 @@ export default function CrmIsland() {
     }
     setThemes(
       ((data || []) as Theme[])
-        .filter((theme: any) => theme?.ativo !== false)
         .map((theme) => ({
           ...theme,
           scope: normalizeScopeValue(theme.scope),
@@ -1457,7 +1524,6 @@ export default function CrmIsland() {
     }
     setMessageLibrary(
       ((data || []) as MessageTemplate[])
-        .filter((message: any) => message?.ativo !== false)
         .map((message) => ({
           ...message,
           scope: normalizeScopeValue(message.scope),
@@ -1815,6 +1881,30 @@ export default function CrmIsland() {
     }
   }
 
+  async function toggleThemeActive(theme: Theme) {
+    if (!canManageRecord(theme.user_id)) {
+      showToast("Você só pode alterar o status de templates criados por você.", "warning");
+      return;
+    }
+
+    setDeletingThemeId(theme.id);
+    try {
+      const nextActive = theme.ativo === false;
+      const { error } = await supabaseBrowser
+        .from("user_message_template_themes")
+        .update({ ativo: nextActive, updated_at: new Date().toISOString() })
+        .eq("id", theme.id)
+        .eq("user_id", currentUserId);
+      if (error) throw error;
+      showToast(nextActive ? "Template ativado." : "Template desativado.", "success");
+      await reloadThemes();
+    } catch (err: any) {
+      showToast(err?.message || "Erro ao alterar status do template.", "error");
+    } finally {
+      setDeletingThemeId(null);
+    }
+  }
+
   async function deleteMessageTemplate(template: MessageTemplate) {
     if (!canManageRecord(template.user_id)) {
       showToast("Você só pode excluir mensagens criadas por você.", "warning");
@@ -1841,6 +1931,30 @@ export default function CrmIsland() {
       await reloadMessages();
     } catch (err: any) {
       showToast(err?.message || "Erro ao excluir mensagem.", "error");
+    } finally {
+      setDeletingMessageId(null);
+    }
+  }
+
+  async function toggleMessageActive(template: MessageTemplate) {
+    if (!canManageRecord(template.user_id)) {
+      showToast("Você só pode alterar o status de mensagens criadas por você.", "warning");
+      return;
+    }
+
+    setDeletingMessageId(template.id);
+    try {
+      const nextActive = template.ativo === false;
+      const { error } = await supabaseBrowser
+        .from("user_message_templates")
+        .update({ ativo: nextActive, updated_at: new Date().toISOString() })
+        .eq("id", template.id)
+        .eq("user_id", currentUserId);
+      if (error) throw error;
+      showToast(nextActive ? "Mensagem ativada." : "Mensagem desativada.", "success");
+      await reloadMessages();
+    } catch (err: any) {
+      showToast(err?.message || "Erro ao alterar status da mensagem.", "error");
     } finally {
       setDeletingMessageId(null);
     }
@@ -2187,8 +2301,13 @@ export default function CrmIsland() {
                       type="text"
                       className="form-input"
                       value={clienteBusca}
-                      onChange={(e) => setClienteBusca(e.target.value)}
-                      placeholder="Buscar cliente…"
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setClienteBusca(value);
+                        setClienteNome(value);
+                        setSelectedBirthdayId(null);
+                      }}
+                      placeholder="Buscar cliente (opcional)…"
                     />
                     {clienteResults.length > 0 && (
                       <div className="crm-client-dropdown">
@@ -2201,8 +2320,8 @@ export default function CrmIsland() {
                               setClienteNome(c.nome);
                               setClienteBusca(c.nome);
                               setClienteResults([]);
-                              setUseCustomNome(false);
-                              setClienteNomeCustom("");
+                              setClienteNomeCustom(getPrimeiroNome(c.nome));
+                              setSelectedBirthdayId(null);
                             }}
                           >
                             {c.nome}
@@ -2214,42 +2333,32 @@ export default function CrmIsland() {
                   </div>
                 </div>
 
-                {(clienteNome || useCustomNome) && (
-                  <div className="crm-nome-preview">
-                    <span className="crm-nome-preview__text">
-                      Nome exibido no cartão: <strong>{primeiroNome || "—"}</strong>
-                    </span>
-                    {!useCustomNome ? (
-                      <button
-                        type="button"
-                        className="crm-link-btn"
-                        onClick={() => {
-                          setUseCustomNome(true);
-                          setClienteNomeCustom(primeiroNome || getPrimeiroNome(clienteNome));
-                        }}
-                      >
-                        Personalizar nome
-                      </button>
-                    ) : (
-                      <div className="crm-nome-custom-row">
-                        <input
-                          type="text"
-                          className="form-input crm-nome-custom-input"
-                          value={clienteNomeCustom}
-                          onChange={(e) => setClienteNomeCustom(e.target.value)}
-                          placeholder="Nome a exibir"
-                        />
-                        <button
-                          type="button"
-                          className="crm-link-btn"
-                          onClick={() => { setUseCustomNome(false); setClienteNomeCustom(""); }}
-                        >
-                          Usar nome original
-                        </button>
-                      </div>
-                    )}
+                <div className="crm-field">
+                  <label className="crm-label">
+                    Nome exibido no cartão
+                    <span className="crm-hint-inline">editável manualmente, mesmo sem cadastro</span>
+                  </label>
+                  <div className="crm-nome-custom-row">
+                    <input
+                      type="text"
+                      className="form-input crm-nome-custom-input"
+                      value={clienteNomeCustom}
+                      onChange={(e) => setClienteNomeCustom(e.target.value)}
+                      placeholder={getPrimeiroNome(clienteNome) || "Digite o nome do cliente"}
+                    />
+                    <button
+                      type="button"
+                      className="crm-link-btn"
+                      onClick={() => setClienteNomeCustom("")}
+                      disabled={!clienteNomeCustom.trim()}
+                    >
+                      Limpar
+                    </button>
                   </div>
-                )}
+                  <span className="crm-hint">
+                    Prévia do nome no cartão: <strong>{primeiroNome || "—"}</strong>
+                  </span>
+                </div>
               </div>
 
               <div className="crm-field">
@@ -2449,9 +2558,17 @@ export default function CrmIsland() {
                     type="button"
                     variant="secondary"
                     icon="pi pi-external-link"
-                    onClick={() => window.open(previewUrl, "_blank")}
+                    onClick={() => window.open(buildPngPreviewUrl(previewUrl), "_blank")}
                   >
-                    Ver em tela cheia
+                    Ver PNG
+                  </AppButton>
+                  <AppButton
+                    type="button"
+                    variant="secondary"
+                    icon="pi pi-download"
+                    onClick={baixarPngFinal}
+                  >
+                    Baixar PNG
                   </AppButton>
                   <AppButton
                     type="button"
@@ -2459,7 +2576,7 @@ export default function CrmIsland() {
                     icon="pi pi-link"
                     onClick={copiarLinkPreview}
                   >
-                    Copiar link
+                    Copiar link PNG
                   </AppButton>
                 </div>
               )}
@@ -2535,6 +2652,7 @@ export default function CrmIsland() {
                       <th>Template</th>
                       <th>Categoria</th>
                       <th>Escopo</th>
+                      <th>Status</th>
                       <th>Origem</th>
                       <th />
                     </tr>
@@ -2555,6 +2673,15 @@ export default function CrmIsland() {
                             <td>{categoryName}</td>
                             <td>
                               <span className={getScopeTone(theme.scope)}>{getScopeLabel(theme.scope)}</span>
+                            </td>
+                            <td>
+                              <span
+                                className={`status-badge ${
+                                  theme.ativo !== false ? "status-badge--active" : "status-badge--inactive"
+                                }`}
+                              >
+                                {theme.ativo !== false ? "Ativo" : "Inativo"}
+                              </span>
                             </td>
                             <td>{canManage ? "Meu" : "Somente leitura"}</td>
                             <td className="crm-td-actions">
@@ -2578,6 +2705,17 @@ export default function CrmIsland() {
                                   title={!canManage ? "Somente o autor pode editar." : ""}
                                 >
                                   Editar
+                                </AppButton>
+                                <AppButton
+                                  type="button"
+                                  variant="ghost"
+                                  size="small"
+                                  icon={theme.ativo !== false ? "pi pi-times-circle" : "pi pi-check-circle"}
+                                  onClick={() => void toggleThemeActive(theme)}
+                                  disabled={!canManage || deleting}
+                                  title={!canManage ? "Somente o autor pode alterar o status." : ""}
+                                >
+                                  {theme.ativo !== false ? "Desativar" : "Ativar"}
                                 </AppButton>
                                 <AppButton
                                   type="button"
@@ -2631,6 +2769,7 @@ export default function CrmIsland() {
                       <th>Ocasião</th>
                       <th>Título</th>
                       <th>Escopo</th>
+                      <th>Status</th>
                       <th>Origem</th>
                       <th />
                     </tr>
@@ -2648,6 +2787,15 @@ export default function CrmIsland() {
                             <td>{template.titulo}</td>
                             <td>
                               <span className={getScopeTone(template.scope)}>{getScopeLabel(template.scope)}</span>
+                            </td>
+                            <td>
+                              <span
+                                className={`status-badge ${
+                                  template.ativo !== false ? "status-badge--active" : "status-badge--inactive"
+                                }`}
+                              >
+                                {template.ativo !== false ? "Ativa" : "Inativa"}
+                              </span>
                             </td>
                             <td>{canManage ? "Minha" : "Somente leitura"}</td>
                             <td className="crm-td-actions">
@@ -2671,6 +2819,17 @@ export default function CrmIsland() {
                                   title={!canManage ? "Somente o autor pode editar." : ""}
                                 >
                                   Editar
+                                </AppButton>
+                                <AppButton
+                                  type="button"
+                                  variant="ghost"
+                                  size="small"
+                                  icon={template.ativo !== false ? "pi pi-times-circle" : "pi pi-check-circle"}
+                                  onClick={() => void toggleMessageActive(template)}
+                                  disabled={!canManage || deleting}
+                                  title={!canManage ? "Somente o autor pode alterar o status." : ""}
+                                >
+                                  {template.ativo !== false ? "Desativar" : "Ativar"}
                                 </AppButton>
                                 <AppButton
                                   type="button"

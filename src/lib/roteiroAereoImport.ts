@@ -66,16 +66,145 @@ const DATE_CLASS_RE =
   /^(?:[a-zA-ZÀ-ÿ]{2,7},?\s*)?(\d{1,2})\s+de\s+([a-zA-ZçÇãÃáÁàÀéÉêÊíÍóÓôÔõÕúÚ]+)\s*-\s*(.+)$/i;
 const PROVIDER2_DATE_TIME_RE = /^(\d{2})\/(\d{2})\/(\d{4})\s*-\s*(\d{2}:\d{2})$/;
 const PROVIDER_CARD_MARKERS = new Set(["aereo", "selecionado", "excluir", "detalhes", "multitrecho"]);
+const AIRPORT_NOISE_WORDS_RE =
+  /\b(aeroporto|aeropuerto|airport|internacional|international|intl|terminal|internat(?:ional)?|aerodrome)\b/gi;
 
 const KNOWN_AIRPORT_ALIASES: AirportAliasEntry[] = [
   { code: "GRU", city: "São Paulo", aliases: ["gru", "guarulhos", "sao paulo - guarulhos", "sao paulo guarulhos"] },
+  { code: "CGH", city: "São Paulo", aliases: ["cgh", "congonhas", "sao paulo - congonhas", "sao paulo congonhas"] },
+  { code: "VCP", city: "Campinas", aliases: ["vcp", "viracopos", "campinas - viracopos", "campinas viracopos"] },
+  { code: "SDU", city: "Rio de Janeiro", aliases: ["sdu", "santos dumont", "rio de janeiro - santos dumont", "rio de janeiro santos dumont"] },
   { code: "SCL", city: "Santiago", aliases: ["scl", "santiago", "comodoro arturo merino benitez", "santiago - comodoro arturo", "santiago - comodoro arturo merino benitez"] },
   { code: "FTE", city: "Calafate", aliases: ["fte", "el calafate", "calafate", "comandante armando tola", "el calafate comandante armando tola"] },
   { code: "USH", city: "Ushuaia", aliases: ["ush", "ushuaia", "malvinas argentinas", "ushuaia malvinas argentinas"] },
   { code: "GIG", city: "Rio de Janeiro", aliases: ["gig", "galeao", "galeão", "rio de janeiro - galeao", "rio de janeiro - galeão"] },
+  { code: "BSB", city: "Brasília", aliases: ["bsb", "brasilia", "presidente juscelino kubitschek"] },
+  { code: "CNF", city: "Belo Horizonte", aliases: ["cnf", "confins", "tancredo neves", "belo horizonte - confins"] },
+  { code: "REC", city: "Recife", aliases: ["rec", "recife", "guararapes", "gilberto freyre"] },
+  { code: "SSA", city: "Salvador", aliases: ["ssa", "salvador", "deputado luis eduardo magalhaes"] },
+  { code: "FOR", city: "Fortaleza", aliases: ["for", "fortaleza", "pinto martins"] },
+  { code: "POA", city: "Porto Alegre", aliases: ["poa", "porto alegre", "salgado filho"] },
+  { code: "CWB", city: "Curitiba", aliases: ["cwb", "curitiba", "afonso pena"] },
+  { code: "FLN", city: "Florianópolis", aliases: ["fln", "florianopolis", "hercilio luz"] },
   { code: "AEP", city: "Buenos Aires", aliases: ["aep", "aeroparque", "jorge newbery", "buenos aires - aeroparque"] },
   { code: "EZE", city: "Buenos Aires", aliases: ["eze", "ezeiza", "ministro pistarini", "buenos aires - ezeiza"] },
+  { code: "MVD", city: "Montevidéu", aliases: ["mvd", "montevideo", "montevideu", "carrasco"] },
+  { code: "LIM", city: "Lima", aliases: ["lim", "lima", "jorge chavez", "jorge chávez"] },
+  { code: "NYC", city: "Nova Iorque", aliases: ["nyc", "new york", "new york city", "nova york", "nova iorque"] },
+  { code: "JFK", city: "Nova Iorque", aliases: ["jfk", "john f kennedy", "john f. kennedy", "kennedy international", "new york - john f kennedy", "nova iorque - john f kennedy"] },
+  { code: "LGA", city: "Nova Iorque", aliases: ["lga", "laguardia", "new york - laguardia", "nova iorque - laguardia"] },
+  { code: "EWR", city: "Nova Iorque", aliases: ["ewr", "newark", "newark liberty", "newark liberty international"] },
+  { code: "WAS", city: "Washington", aliases: ["was", "washington", "washington dc", "washington d.c", "washington d c"] },
+  { code: "IAD", city: "Washington", aliases: ["iad", "dulles", "washington dulles"] },
+  { code: "DCA", city: "Washington", aliases: ["dca", "ronald reagan", "reagan national", "washington reagan"] },
+  { code: "BWI", city: "Washington", aliases: ["bwi", "baltimore washington", "baltimore/washington", "thurgood marshall"] },
+  { code: "MIA", city: "Miami", aliases: ["mia", "miami"] },
+  { code: "MCO", city: "Orlando", aliases: ["mco", "orlando"] },
+  { code: "LAX", city: "Los Angeles", aliases: ["lax", "los angeles"] },
+  { code: "SFO", city: "São Francisco", aliases: ["sfo", "san francisco", "sao francisco"] },
+  { code: "ORD", city: "Chicago", aliases: ["ord", "o'hare", "ohare", "chicago"] },
+  { code: "ATL", city: "Atlanta", aliases: ["atl", "atlanta", "hartsfield jackson"] },
+  { code: "LHR", city: "Londres", aliases: ["lhr", "heathrow", "london heathrow", "londres heathrow", "london"] },
+  { code: "CDG", city: "Paris", aliases: ["cdg", "charles de gaulle", "paris - charles de gaulle"] },
+  { code: "AMS", city: "Amsterdã", aliases: ["ams", "amsterdam", "schiphol"] },
+  { code: "MAD", city: "Madri", aliases: ["mad", "madrid", "barajas"] },
+  { code: "LIS", city: "Lisboa", aliases: ["lis", "lisbon", "lisboa"] },
+  { code: "FCO", city: "Roma", aliases: ["fco", "fiumicino", "rome fiumicino", "roma fiumicino", "rome", "roma"] },
+  { code: "MXP", city: "Milão", aliases: ["mxp", "milan malpensa", "milao malpensa", "milan", "milao"] },
+  { code: "LIN", city: "Milão", aliases: ["lin", "milan linate", "milao linate"] },
+  { code: "BCN", city: "Barcelona", aliases: ["bcn", "barcelona", "el prat"] },
+  { code: "FRA", city: "Frankfurt", aliases: ["fra", "frankfurt"] },
+  { code: "MUC", city: "Munique", aliases: ["muc", "munich", "munique"] },
+  { code: "ZRH", city: "Zurique", aliases: ["zrh", "zurich", "zurique"] },
+  { code: "GVA", city: "Genebra", aliases: ["gva", "geneva", "genebra"] },
+  { code: "OPO", city: "Porto", aliases: ["opo", "porto portugal", "francisco sa carneiro"] },
+  { code: "DUB", city: "Dublin", aliases: ["dub", "dublin"] },
+  { code: "IST", city: "Istambul", aliases: ["ist", "istanbul", "istambul"] },
+  { code: "DXB", city: "Dubai", aliases: ["dxb", "dubai"] },
+  { code: "DOH", city: "Doha", aliases: ["doh", "doha"] },
+  { code: "AUH", city: "Abu Dhabi", aliases: ["auh", "abu dhabi"] },
+  { code: "SIN", city: "Singapura", aliases: ["sin", "singapore", "singapura", "changi"] },
+  { code: "HKG", city: "Hong Kong", aliases: ["hkg", "hong kong"] },
+  { code: "NRT", city: "Tóquio", aliases: ["nrt", "narita", "tokyo narita", "toquio narita"] },
+  { code: "HND", city: "Tóquio", aliases: ["hnd", "haneda", "tokyo haneda", "toquio haneda"] },
+  { code: "BOS", city: "Boston", aliases: ["bos", "boston", "logan"] },
+  { code: "DFW", city: "Dallas", aliases: ["dfw", "dallas fort worth", "dallas/fort worth"] },
+  { code: "IAH", city: "Houston", aliases: ["iah", "houston", "george bush intercontinental"] },
+  { code: "SEA", city: "Seattle", aliases: ["sea", "seattle", "sea tac", "seatac"] },
+  { code: "LAS", city: "Las Vegas", aliases: ["las", "las vegas", "mccarran", "harry reid"] },
+  { code: "DEN", city: "Denver", aliases: ["den", "denver"] },
+  { code: "PHL", city: "Filadélfia", aliases: ["phl", "philadelphia", "filadelfia"] },
+  { code: "DTW", city: "Detroit", aliases: ["dtw", "detroit"] },
+  { code: "MSP", city: "Minneapolis", aliases: ["msp", "minneapolis", "saint paul"] },
+  { code: "YYZ", city: "Toronto", aliases: ["yyz", "toronto", "pearson"] },
+  { code: "YUL", city: "Montreal", aliases: ["yul", "montreal", "trudeau"] },
+  { code: "YVR", city: "Vancouver", aliases: ["yvr", "vancouver"] },
+  { code: "MEX", city: "Cidade do México", aliases: ["mex", "mexico city", "cidade do mexico", "benito juarez", "benito juárez"] },
+  { code: "CUN", city: "Cancún", aliases: ["cun", "cancun", "cancún"] },
+  { code: "PTY", city: "Cidade do Panamá", aliases: ["pty", "panama city", "cidade do panama", "tocumen"] },
+  { code: "BOG", city: "Bogotá", aliases: ["bog", "bogota", "el dorado"] },
+  { code: "MDE", city: "Medellín", aliases: ["mde", "medellin", "jose maria cordova", "jose maría cordova"] },
+  { code: "UIO", city: "Quito", aliases: ["uio", "quito", "mariscal sucre"] },
+  { code: "GYE", city: "Guayaquil", aliases: ["gye", "guayaquil", "jose joaquin de olmedo", "jose joaquín de olmedo"] },
+  { code: "SJO", city: "San José", aliases: ["sjo", "san jose", "juan santamaria", "juan santamaría"] },
+  { code: "BEL", city: "Belém", aliases: ["bel", "belem", "val de cans", "val de cans julio cesar ribeiro"] },
+  { code: "MAO", city: "Manaus", aliases: ["mao", "manaus", "eduardo gomes"] },
+  { code: "NAT", city: "Natal", aliases: ["nat", "natal", "sao goncalo do amarante", "são gonçalo do amarante"] },
+  { code: "AJU", city: "Aracaju", aliases: ["aju", "aracaju", "santa maria"] },
+  { code: "MCZ", city: "Maceió", aliases: ["mcz", "maceio", "zumbi dos palmares"] },
+  { code: "JOI", city: "Joinville", aliases: ["joi", "joinville", "lauro carneiro de loyola"] },
 ];
+
+const CITY_ALIAS_LOOKUP: Record<string, string> = {
+  "new york": "Nova Iorque",
+  "new york city": "Nova Iorque",
+  "nova york": "Nova Iorque",
+  "nova iorque": "Nova Iorque",
+  "washington dc": "Washington",
+  "washington d c": "Washington",
+  "washington d.c": "Washington",
+  "san francisco": "São Francisco",
+  "sao francisco": "São Francisco",
+  "mexico city": "Cidade do México",
+  "cidade do mexico": "Cidade do México",
+  "cidade do panama": "Cidade do Panamá",
+  "panama city": "Cidade do Panamá",
+  "abu dhabi": "Abu Dhabi",
+  "las vegas": "Las Vegas",
+  philadelphia: "Filadélfia",
+  filadelfia: "Filadélfia",
+  bogota: "Bogotá",
+  medellin: "Medellín",
+  cancun: "Cancún",
+  montreal: "Montreal",
+  munich: "Munique",
+  istanbul: "Istambul",
+  tokyo: "Tóquio",
+  "sao jose": "San José",
+  "san jose": "San José",
+  quito: "Quito",
+  guayaquil: "Guayaquil",
+  belem: "Belém",
+  maceio: "Maceió",
+  "belo horizonte": "Belo Horizonte",
+  "porto alegre": "Porto Alegre",
+  curitiba: "Curitiba",
+  florianopolis: "Florianópolis",
+  amsterdam: "Amsterdã",
+  madrid: "Madri",
+  lisbon: "Lisboa",
+  paris: "Paris",
+  rome: "Roma",
+  milan: "Milão",
+  zurich: "Zurique",
+  geneva: "Genebra",
+  frankfurt: "Frankfurt",
+  dublin: "Dublin",
+  singapore: "Singapura",
+  london: "Londres",
+  "rio de janeiro": "Rio de Janeiro",
+  "sao paulo": "São Paulo",
+};
 
 function normalizeText(value?: string | null) {
   return String(value || "")
@@ -88,6 +217,86 @@ function normalizeText(value?: string | null) {
 
 function normalizeLine(value?: string | null) {
   return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function normalizeCityLabel(value?: string | null) {
+  const raw = normalizeLine(value);
+  if (!raw) return "";
+  const normalized = normalizeText(raw)
+    .replace(/[^a-z0-9.\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!normalized) return "";
+  const direct = CITY_ALIAS_LOOKUP[normalized];
+  if (direct) return direct;
+  for (const [alias, city] of Object.entries(CITY_ALIAS_LOOKUP)) {
+    if (normalized.includes(alias)) return city;
+  }
+  return toTitleCase(raw);
+}
+
+function findAirportAliasByCode(code?: string | null, runtimeAliases: AirportAliasEntry[] = []) {
+  const normalizedCode = normalizeLine(code).toUpperCase();
+  if (!/^[A-Z]{3}$/.test(normalizedCode)) return null;
+  return runtimeAliases.find((item) => item.code === normalizedCode) || KNOWN_AIRPORT_ALIASES.find((item) => item.code === normalizedCode) || null;
+}
+
+function extractAirportCodeFromLabel(value?: string | null) {
+  const raw = normalizeLine(value);
+  if (!raw) return "";
+  const exact = raw.match(/^[A-Za-z]{3}$/);
+  if (exact) return exact[0].toUpperCase();
+
+  const parenthesized = raw.match(/\(([A-Za-z]{3})\)/);
+  if (parenthesized?.[1]) return parenthesized[1].toUpperCase();
+
+  const bracketed = raw.match(/\[([A-Za-z]{3})\]/);
+  if (bracketed?.[1]) return bracketed[1].toUpperCase();
+
+  const leading = raw.match(/^([A-Za-z]{3})(?:\s*[-/]|$)/);
+  if (leading?.[1]) return leading[1].toUpperCase();
+
+  const trailing = raw.match(/(?:[-/]\s*)([A-Za-z]{3})$/);
+  if (trailing?.[1]) return trailing[1].toUpperCase();
+
+  return "";
+}
+
+function inferCityFromAirportLabel(value?: string | null, airportCode?: string | null) {
+  const raw = normalizeLine(value);
+  if (!raw) return "";
+
+  const code = normalizeLine(airportCode).toUpperCase();
+  let cleaned = raw
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/\[[^\]]*\]/g, " ");
+  if (/^[A-Z]{3}$/.test(code)) {
+    cleaned = cleaned.replace(new RegExp(`\\b${code}\\b`, "gi"), " ");
+  }
+  cleaned = cleaned
+    .replace(AIRPORT_NOISE_WORDS_RE, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned) return "";
+
+  const candidates = cleaned
+    .split(/\s*[-,/|]\s*/)
+    .map((part) =>
+      normalizeLine(part)
+        .replace(AIRPORT_NOISE_WORDS_RE, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+    )
+    .filter(Boolean);
+
+  for (const candidate of candidates) {
+    const mapped = normalizeCityLabel(candidate);
+    const isMapped = mapped !== toTitleCase(candidate);
+    if (isMapped) return mapped;
+  }
+
+  const firstCandidate = candidates[0] || cleaned.split("-")[0] || cleaned;
+  return normalizeCityLabel(firstCandidate);
 }
 
 function parseMoney(value?: string | null): number {
@@ -173,7 +382,7 @@ function toTitleCase(value?: string | null) {
 function buildAirportAliasStorageValue(alias: string, code: string, city: string) {
   const aliasValue = normalizeLine(alias);
   const codeValue = normalizeLine(code).toUpperCase();
-  const cityValue = toTitleCase(city || codeValue);
+  const cityValue = normalizeCityLabel(city || codeValue) || codeValue;
   if (!aliasValue || !codeValue) return "";
   return `${aliasValue}|${codeValue}|${cityValue}`;
 }
@@ -187,7 +396,7 @@ function parseAirportAliasStorageValue(value?: string | null): AirportAliasEntry
       const parsed = JSON.parse(raw);
       const alias = normalizeLine(parsed?.alias || "");
       const code = normalizeLine(parsed?.code || "").toUpperCase();
-      const city = toTitleCase(parsed?.city || "");
+      const city = normalizeCityLabel(parsed?.city || "");
       if (!alias || !code) return null;
       return {
         code,
@@ -202,7 +411,7 @@ function parseAirportAliasStorageValue(value?: string | null): AirportAliasEntry
   const parts = raw.split("|").map((part) => normalizeLine(part)).filter(Boolean);
   if (parts.length < 3) return null;
   const [alias, code, ...cityParts] = parts;
-  const city = toTitleCase(cityParts.join(" "));
+  const city = normalizeCityLabel(cityParts.join(" "));
   const codeValue = code.toUpperCase();
   if (!alias || !/^[A-Z]{3}$/.test(codeValue)) return null;
   return {
@@ -409,22 +618,24 @@ function inferArrivalDateByTimes(departureDate?: string | null, departureTime?: 
 function resolveAirportMatch(value?: string | null, runtimeAliases: AirportAliasEntry[] = []) {
   const normalized = normalizeText(value);
   if (!normalized) return null;
-  const exactCode = normalizeLine(value || "").match(/^[A-Z]{3}$/);
-  if (exactCode) {
-    const existing =
-      runtimeAliases.find((item) => item.code === exactCode[0]) ||
-      KNOWN_AIRPORT_ALIASES.find((item) => item.code === exactCode[0]);
+
+  const explicitCode = extractAirportCodeFromLabel(value);
+  if (explicitCode) {
+    const existing = findAirportAliasByCode(explicitCode, runtimeAliases);
+    const inferredCity = normalizeCityLabel(existing?.city || inferCityFromAirportLabel(value, explicitCode));
     return {
-      code: exactCode[0],
-      city: existing?.city || exactCode[0],
+      code: explicitCode,
+      city: inferredCity || explicitCode,
     };
   }
+
   const sources = [...runtimeAliases, ...KNOWN_AIRPORT_ALIASES];
   for (const item of sources) {
     if (item.aliases.some((alias) => normalized.includes(normalizeText(alias)))) {
-      return { code: item.code, city: item.city };
+      return { code: item.code, city: normalizeCityLabel(item.city) || item.city };
     }
   }
+
   return null;
 }
 
@@ -436,11 +647,13 @@ function normalizeAirportField(value?: string | null, runtimeAliases: AirportAli
 
 function resolveCityFromAirportLabel(value?: string | null, runtimeAliases: AirportAliasEntry[] = []) {
   const match = resolveAirportMatch(value, runtimeAliases);
-  if (match?.city) return match.city;
+  if (match?.city) return normalizeCityLabel(match.city) || match.city;
   const raw = normalizeLine(value);
   if (!raw) return "";
+  const inferred = inferCityFromAirportLabel(raw, extractAirportCodeFromLabel(raw));
+  if (inferred) return inferred;
   const city = raw.split("-")[0] || raw;
-  return toTitleCase(city);
+  return normalizeCityLabel(city) || toTitleCase(city);
 }
 
 function parseFlightTypeFromStops(value?: string | null) {

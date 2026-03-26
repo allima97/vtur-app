@@ -254,7 +254,6 @@ export async function GET({ request }: { request: Request }) {
     }
 
     const visibleThemes = ((themesResp.data || []) as ThemeRow[]).filter((row) => {
-      if (row.ativo === false) return false;
       const rowScope = normalizeScope(row.scope);
       if (isAdmin) return true;
       if (String(row.user_id || "") === userId) return true;
@@ -270,7 +269,6 @@ export async function GET({ request }: { request: Request }) {
     });
 
     const visibleMessages = ((messagesResp.data || []) as MessageRow[]).filter((row) => {
-      if (row.ativo === false) return false;
       const rowScope = normalizeScope(row.scope);
       if (isAdmin) return true;
       if (String(row.user_id || "") === userId) return true;

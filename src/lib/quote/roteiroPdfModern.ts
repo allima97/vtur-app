@@ -263,8 +263,17 @@ function formatBudgetItemText(value?: string | null) {
 function formatFlightPlace(city?: string | null, airport?: string | null) {
   const cityValue = formatBudgetItemText(city);
   const airportValue = textValue(airport).toUpperCase();
-  if (cityValue && /^[A-Z]{3}$/.test(airportValue)) return `${cityValue} (${airportValue})`;
-  return cityValue || airportValue;
+  if (!cityValue && !airportValue) return "";
+  if (!/^[A-Z]{3}$/.test(airportValue)) return cityValue || airportValue;
+  if (!cityValue) return airportValue;
+  if (new RegExp(`\\(${airportValue}\\)\\s*$`, "i").test(cityValue)) return cityValue;
+  const normalizedCity = cityValue
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Za-z]/g, "")
+    .toUpperCase();
+  if (normalizedCity === airportValue) return airportValue;
+  return `${cityValue} (${airportValue})`;
 }
 
 function splitTrechoCities(trecho?: string | null) {

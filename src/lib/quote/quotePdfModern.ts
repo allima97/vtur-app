@@ -473,8 +473,17 @@ function getItemRawImports(item: QuotePdfItem): ItemRawImport {
 function formatAeroLocation(city?: string | null, airportCode?: string | null) {
   const cityLabel = formatBudgetItemText(city);
   const code = textValue(airportCode).toUpperCase();
-  if (cityLabel && code) return `${cityLabel} (${code})`;
-  return cityLabel || code || "-";
+  if (!cityLabel && !code) return "-";
+  if (!/^[A-Z]{3}$/.test(code)) return cityLabel || code || "-";
+  if (!cityLabel) return code;
+  if (new RegExp(`\\(${code}\\)\\s*$`, "i").test(cityLabel)) return cityLabel;
+  const normalizedCity = cityLabel
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Za-z]/g, "")
+    .toUpperCase();
+  if (normalizedCity === code) return code;
+  return `${cityLabel} (${code})`;
 }
 
 function parseDirectionDateToIso(dateText?: string | null) {
