@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabaseBrowser } from "../../lib/supabase-browser";
 import AppCard from "../ui/primer/AppCard";
+import AppField from "../ui/primer/AppField";
+import AppButton from "../ui/primer/AppButton";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -79,19 +81,65 @@ function normalizeText(value?: string | null) {
     .toLowerCase();
 }
 
+function cleanAssetUrl(value?: string | null) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  const lowered = raw.toLowerCase();
+  if (lowered === "null" || lowered === "undefined") return null;
+  return raw;
+}
+
+function extractStoragePath(value?: string | null) {
+  if (!value) return null;
+  const marker = "/quotes/";
+  const index = value.indexOf(marker);
+  if (index === -1) return null;
+  return value.slice(index + marker.length);
+}
+
+async function resolveLogoUrlFromSettings(settings?: { logo_url?: string | null; logo_path?: string | null } | null) {
+  const persistedUrl = cleanAssetUrl(settings?.logo_url);
+  const logoPath = String(settings?.logo_path || extractStoragePath(persistedUrl) || "").trim();
+  if (!logoPath) return persistedUrl;
+
+  try {
+    const signed = await supabaseBrowser.storage.from("quotes").createSignedUrl(logoPath, 3600);
+    const signedUrl = cleanAssetUrl(signed.data?.signedUrl);
+    if (signedUrl) return signedUrl;
+  } catch {
+    // Fallback para URL pública/legada abaixo.
+  }
+
+  try {
+    const publicUrl = cleanAssetUrl(supabaseBrowser.storage.from("quotes").getPublicUrl(logoPath).data.publicUrl);
+    if (publicUrl) return publicUrl;
+  } catch {
+    // Sem fallback adicional.
+  }
+
+  return persistedUrl;
+}
+
 function resolveGreetingByTheme(theme?: Pick<Theme, "nome" | "categoria" | "greeting_text"> | null) {
   const explicit = String(theme?.greeting_text || "").trim();
   if (explicit) return explicit;
   const source = `${theme?.nome || ""} ${theme?.categoria || ""}`;
   const normalized = normalizeText(source);
-  if (normalized.includes("anivers")) return "Feliz Aniversário!";
-  if (normalized.includes("pascoa")) return "Feliz Páscoa!";
-  if (normalized.includes("natal")) return "Feliz Natal!";
-  if (normalized.includes("ano novo") || normalized.includes("ano-novo") || normalized.includes("anonovo")) return "Feliz Ano Novo!";
-  if (normalized.includes("dia das maes")) return "Feliz Dia das Mães!";
-  if (normalized.includes("dia dos pais")) return "Feliz Dia dos Pais!";
-  if (normalized.includes("dia da mulher")) return "Feliz Dia da Mulher!";
-  if (normalized.includes("viajant")) return "Boas viagens e muitas conquistas!";
+  if (normalized.includes("anivers") || normalized.includes("birthday")) return "Feliz Aniversário!";
+  if (normalized.includes("pascoa") || normalized.includes("easter")) return "Feliz Páscoa!";
+  if (normalized.includes("natal") || normalized.includes("christmas")) return "Feliz Natal!";
+  if (
+    normalized.includes("ano novo") ||
+    normalized.includes("ano-novo") ||
+    normalized.includes("anonovo") ||
+    normalized.includes("new year")
+  ) {
+    return "Feliz Ano Novo!";
+  }
+  if (normalized.includes("dia das maes") || normalized.includes("mother")) return "Feliz Dia das Mães!";
+  if (normalized.includes("dia dos pais") || normalized.includes("father")) return "Feliz Dia dos Pais!";
+  if (normalized.includes("dia da mulher") || normalized.includes("women")) return "Feliz Dia da Mulher!";
+  if (normalized.includes("viajant") || normalized.includes("travel")) return "Boas viagens e muitas conquistas!";
   return "";
 }
 
@@ -107,6 +155,56 @@ function stripLegacyGreeting(message: string) {
     first.includes("{nome}");
   if (!looksLikeLegacy) return raw;
   return lines.slice(1).join("\n").trimStart();
+}
+
+type TemaFilterValue = string;
+
+const CRM_TEMA_FILTER_BASE_OPTIONS: Array<{ label: string; value: string }> = [
+  { label: "Todos", value: "all" },
+  { label: "Aniversário", value: "aniversario" },
+  { label: "Natal", value: "natal" },
+  { label: "Páscoa", value: "pascoa" },
+  { label: "Ano Novo", value: "ano_novo" },
+  { label: "Dia das Mães", value: "dia_das_maes" },
+  { label: "Dia dos Pais", value: "dia_dos_pais" },
+  { label: "Dia da Mulher", value: "dia_da_mulher" },
+  { label: "Dia do Viajante", value: "dia_do_viajante" },
+  { label: "Geral", value: "geral" },
+];
+
+function resolveTemaBucket(normalizedThemeText: string): string | null {
+  if (!normalizedThemeText) return null;
+  if (normalizedThemeText.includes("anivers") || normalizedThemeText.includes("birthday")) return "aniversario";
+  if (normalizedThemeText.includes("natal") || normalizedThemeText.includes("christmas")) return "natal";
+  if (normalizedThemeText.includes("pascoa") || normalizedThemeText.includes("easter")) return "pascoa";
+  if (
+    normalizedThemeText.includes("ano novo") ||
+    normalizedThemeText.includes("ano_novo") ||
+    normalizedThemeText.includes("reveillon") ||
+    normalizedThemeText.includes("new year")
+  ) {
+    return "ano_novo";
+  }
+  if (normalizedThemeText.includes("dia das maes") || normalizedThemeText.includes("mother")) return "dia_das_maes";
+  if (normalizedThemeText.includes("dia dos pais") || normalizedThemeText.includes("father")) return "dia_dos_pais";
+  if (normalizedThemeText.includes("dia da mulher") || normalizedThemeText.includes("women")) return "dia_da_mulher";
+  if (normalizedThemeText.includes("viajant") || normalizedThemeText.includes("travel")) return "dia_do_viajante";
+  if (normalizedThemeText.includes("geral") || normalizedThemeText.includes("general")) return "geral";
+  return null;
+}
+
+function matchesTemaFilter(
+  temaFilter: TemaFilterValue,
+  normalizedThemeText: string,
+  categoryId?: string | null,
+) {
+  if (temaFilter === "all") return true;
+  const categoryFilterPrefix = "cat:";
+  if (temaFilter.startsWith(categoryFilterPrefix)) {
+    const selectedCategoryId = temaFilter.slice(categoryFilterPrefix.length);
+    return selectedCategoryId && selectedCategoryId === String(categoryId || "");
+  }
+  return resolveTemaBucket(normalizedThemeText) === temaFilter;
 }
 
 function getScopeLabel(scope?: string | null) {
@@ -283,7 +381,6 @@ export default function CrmIsland() {
   const [savedSigId, setSavedSigId] = useState<string | null>(null);
 
   // ── Selection / navigation ───────────────────────────────────────
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedTheme, setSelectedTheme] = useState<Theme | null>(null);
 
   // ── Form fields ──────────────────────────────────────────────────
@@ -295,6 +392,7 @@ export default function CrmIsland() {
   const [assinatura, setAssinatura] = useState<AssinaturaForm>({ ...DEFAULT_ASSINATURA });
   const [savingSig, setSavingSig] = useState(false);
   const [sigSaved, setSigSaved] = useState(false);
+  const [selectedMessageTemplateId, setSelectedMessageTemplateId] = useState("");
 
   // ── Client search ────────────────────────────────────────────────
   const [clienteBusca, setClienteBusca] = useState("");
@@ -302,10 +400,8 @@ export default function CrmIsland() {
   const [searchingClientes, setSearchingClientes] = useState(false);
   const clienteRef = useRef<HTMLDivElement>(null);
 
-  // ── Message library picker ───────────────────────────────────────
-  const [showMsgPicker, setShowMsgPicker] = useState(false);
-  const [msgPickerSearch, setMsgPickerSearch] = useState("");
   const [scopeFilter, setScopeFilter] = useState<"all" | "system" | "master" | "gestor" | "user">("all");
+  const [temaFilter, setTemaFilter] = useState<TemaFilterValue>("all");
 
   // ── Preview ──────────────────────────────────────────────────────
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -319,14 +415,41 @@ export default function CrmIsland() {
   const palavrasExcedido = palavras > maxPalavras;
   const linhasExcedido = mensagem.split("\n").length > maxLinhas;
 
+  const categoryNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    categories.forEach((cat) => {
+      map.set(cat.id, String(cat.nome || "").trim());
+    });
+    return map;
+  }, [categories]);
+
+  const temaFilterOptions = useMemo(() => {
+    const options = [...CRM_TEMA_FILTER_BASE_OPTIONS];
+    const knownBuckets = new Set(options.map((option) => option.value));
+
+    categories.forEach((cat) => {
+      const id = String(cat.id || "").trim();
+      const nome = String(cat.nome || "").trim();
+      if (!id || !nome) return;
+      const normalized = normalizeText(nome);
+      const fixedBucket = resolveTemaBucket(normalized);
+      if (fixedBucket && knownBuckets.has(fixedBucket)) return;
+      options.push({ label: nome, value: `cat:${id}` });
+    });
+
+    return options;
+  }, [categories]);
+
   const filteredThemes = useMemo(
     () =>
       themes.filter((t) => {
-        const matchCategory = selectedCategoryId ? t.categoria_id === selectedCategoryId : true;
         const matchScope = scopeFilter === "all" ? true : normalizeScopeValue(t.scope) === scopeFilter;
-        return matchCategory && matchScope;
+        const categoryName = categoryNameById.get(String(t.categoria_id || "").trim()) || String(t.categoria || "").trim();
+        const normalizedThemeText = normalizeText(`${t.nome || ""} ${categoryName || ""}`);
+        const matchTema = matchesTemaFilter(temaFilter, normalizedThemeText, t.categoria_id);
+        return matchScope && matchTema;
       }),
-    [themes, selectedCategoryId, scopeFilter]
+    [themes, scopeFilter, temaFilter, categoryNameById]
   );
 
   const filteredMessages = useMemo(() => {
@@ -344,14 +467,18 @@ export default function CrmIsland() {
     });
   }, [messageLibrary, selectedTheme, currentUserId]);
 
-  const libraryMessages = useMemo(() => {
-    const search = normalizeText(msgPickerSearch);
-    if (!search) return filteredMessages;
-    return filteredMessages.filter((item) => {
-      const haystack = normalizeText(`${item.nome} ${item.corpo} ${item.titulo || ""} ${item.categoria || ""}`);
-      return haystack.includes(search);
+  const titleDropdownOptions = useMemo(() => {
+    const options = [{ label: "Selecione o título", value: "" }];
+    filteredMessages.forEach((message) => {
+      const titulo = String(message.titulo || message.nome || "").trim();
+      if (!titulo) return;
+      options.push({
+        label: titulo,
+        value: message.id,
+      });
     });
-  }, [filteredMessages, msgPickerSearch]);
+    return options;
+  }, [filteredMessages]);
 
   const templatesByScope = useMemo(() => {
     return {
@@ -361,6 +488,12 @@ export default function CrmIsland() {
       user: themes.filter((theme) => normalizeScopeValue(theme.scope) === "user").length,
     };
   }, [themes]);
+
+  useEffect(() => {
+    if (!temaFilter.startsWith("cat:")) return;
+    const exists = categories.some((cat) => `cat:${String(cat.id || "").trim()}` === temaFilter);
+    if (!exists) setTemaFilter("all");
+  }, [temaFilter, categories]);
 
   // ── Load data ────────────────────────────────────────────────────
   useEffect(() => {
@@ -393,7 +526,7 @@ export default function CrmIsland() {
         );
 
         const settings = payload?.settings || null;
-        const resolvedLogo = String(settings?.logo_url || "").trim() || null;
+        const resolvedLogo = await resolveLogoUrlFromSettings(settings);
         setLogoUrl(resolvedLogo);
         setLogoMissing(!resolvedLogo);
 
@@ -417,8 +550,9 @@ export default function CrmIsland() {
       } catch (err) {
         console.error("[CRM] Erro no endpoint /api/v1/crm/library, tentando fallback direto:", err);
         try {
-          const [authResp, catResp, themeResp, msgResp, sigResp, settingsResp] = await Promise.all([
-            supabaseBrowser.auth.getUser(),
+          const authResp = await supabaseBrowser.auth.getUser();
+          const fallbackUserId = authResp.data?.user?.id || "";
+          const [catResp, themeResp, msgResp, sigResp, settingsResp] = await Promise.all([
             supabaseBrowser
               .from("crm_template_categories")
               .select("id, nome, icone, sort_order")
@@ -441,12 +575,12 @@ export default function CrmIsland() {
               .maybeSingle(),
             supabaseBrowser
               .from("quote_print_settings")
-              .select("logo_url, consultor_nome")
-              .eq("owner_user_id", authResp.data?.user?.id || "")
+              .select("logo_url, logo_path, consultor_nome")
+              .eq("owner_user_id", fallbackUserId)
               .maybeSingle(),
           ]);
 
-          setCurrentUserId(authResp.data?.user?.id || "");
+          setCurrentUserId(fallbackUserId);
           setCategories((catResp.data || []) as Category[]);
           setThemes(
             ((themeResp.data || []) as Theme[])
@@ -465,8 +599,16 @@ export default function CrmIsland() {
             }))
           );
 
-          const settings = settingsResp.data as any;
-          const resolvedLogo = settings?.logo_url || null;
+          let settings = settingsResp.data as any;
+          if (!settings && settingsResp.error) {
+            const legacySettingsResp = await supabaseBrowser
+              .from("quote_print_settings")
+              .select("logo_url, consultor_nome")
+              .eq("owner_user_id", fallbackUserId)
+              .maybeSingle();
+            settings = legacySettingsResp.data as any;
+          }
+          const resolvedLogo = await resolveLogoUrlFromSettings(settings);
           setLogoUrl(resolvedLogo);
           setLogoMissing(!resolvedLogo);
 
@@ -530,14 +672,49 @@ export default function CrmIsland() {
   }, []);
 
   // ── Select theme ─────────────────────────────────────────────────
+  function applyTemplateById(templateId: string) {
+    const selected = filteredMessages.find((message) => message.id === templateId);
+    if (!selected) return;
+    const selectedTitle = String(selected.titulo || selected.nome || "").trim();
+    if (selectedTitle) {
+      setGreeting(selectedTitle);
+    }
+    setMensagem(stripLegacyGreeting(selected.corpo));
+  }
+
   function selectTheme(theme: Theme) {
     setSelectedTheme(theme);
+    setSelectedMessageTemplateId("");
     setGreeting(resolveGreetingByTheme(theme));
     setMensagem("");
-    setShowMsgPicker(false);
-    setMsgPickerSearch("");
     setPreviewUrl(null);
   }
+
+  useEffect(() => {
+    if (!selectedTheme) return;
+    if (!filteredMessages.length) {
+      setSelectedMessageTemplateId("");
+      return;
+    }
+    if (selectedMessageTemplateId && filteredMessages.some((message) => message.id === selectedMessageTemplateId)) {
+      return;
+    }
+
+    const greetingByTheme = resolveGreetingByTheme(selectedTheme);
+    const normalizedGreetingByTheme = normalizeText(greetingByTheme);
+    const matched =
+      filteredMessages.find((message) => {
+        const messageTitle = normalizeText(String(message.titulo || message.nome || ""));
+        if (!messageTitle || !normalizedGreetingByTheme) return false;
+        return messageTitle.includes(normalizedGreetingByTheme) || normalizedGreetingByTheme.includes(messageTitle);
+      }) || filteredMessages[0];
+
+    if (!matched) return;
+    setSelectedMessageTemplateId(matched.id);
+    const matchedTitle = String(matched.titulo || matched.nome || "").trim();
+    setGreeting(matchedTitle || greetingByTheme);
+    setMensagem(stripLegacyGreeting(matched.corpo));
+  }, [selectedTheme, filteredMessages, selectedMessageTemplateId]);
 
   // ── Build preview (debounced) ────────────────────────────────────
   useEffect(() => {
@@ -662,42 +839,41 @@ export default function CrmIsland() {
             title="Modelos"
             subtitle="Filtre por escopo e ocasião para escolher a arte."
           >
-            <div className="crm-scope-overview">
-              <button type="button" className={`crm-scope-chip${scopeFilter === "all" ? " active" : ""}`} onClick={() => setScopeFilter("all")}>
-                Todos
-              </button>
-              <button type="button" className={`crm-scope-chip${scopeFilter === "system" ? " active" : ""}`} onClick={() => setScopeFilter("system")}>
-                Sistema {templatesByScope.system > 0 ? `(${templatesByScope.system})` : ""}
-              </button>
-              <button type="button" className={`crm-scope-chip${scopeFilter === "master" ? " active" : ""}`} onClick={() => setScopeFilter("master")}>
-                Master {templatesByScope.master > 0 ? `(${templatesByScope.master})` : ""}
-              </button>
-              <button type="button" className={`crm-scope-chip${scopeFilter === "gestor" ? " active" : ""}`} onClick={() => setScopeFilter("gestor")}>
-                Gestor {templatesByScope.gestor > 0 ? `(${templatesByScope.gestor})` : ""}
-              </button>
-              <button type="button" className={`crm-scope-chip${scopeFilter === "user" ? " active" : ""}`} onClick={() => setScopeFilter("user")}>
-                Meus {templatesByScope.user > 0 ? `(${templatesByScope.user})` : ""}
-              </button>
-            </div>
-
-            <div className="crm-category-tabs">
-              <button
-                type="button"
-                className={`crm-category-tab${!selectedCategoryId ? " active" : ""}`}
-                onClick={() => setSelectedCategoryId(null)}
-              >
-                Todos
-              </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
+            <div className="vtur-inline-filter-row crm-filter-row">
+              <AppField
+                as="select"
+                label="Escopo"
+                value={scopeFilter}
+                onChange={(e) =>
+                  setScopeFilter((e as React.ChangeEvent<HTMLSelectElement>).target.value as "all" | "system" | "master" | "gestor" | "user")
+                }
+                options={[
+                  { label: "Todos", value: "all" },
+                  { label: `Sistema (${templatesByScope.system})`, value: "system" },
+                  { label: `Master (${templatesByScope.master})`, value: "master" },
+                  { label: `Gestor (${templatesByScope.gestor})`, value: "gestor" },
+                  { label: `Meus (${templatesByScope.user})`, value: "user" },
+                ]}
+              />
+              <AppField
+                as="select"
+                label="Tema"
+                value={temaFilter}
+                onChange={(e) => setTemaFilter((e as React.ChangeEvent<HTMLSelectElement>).target.value as TemaFilterValue)}
+                options={temaFilterOptions}
+              />
+              <div className="vtur-inline-filter-actions">
+                <AppButton
                   type="button"
-                  className={`crm-category-tab${selectedCategoryId === cat.id ? " active" : ""}`}
-                  onClick={() => setSelectedCategoryId(cat.id)}
+                  variant="secondary"
+                  onClick={() => {
+                    setScopeFilter("all");
+                    setTemaFilter("all");
+                  }}
                 >
-                  <i className={cat.icone} /> {cat.nome}
-                </button>
-              ))}
+                  Limpar
+                </AppButton>
+              </div>
             </div>
 
             {filteredThemes.length === 0 ? (
@@ -746,16 +922,27 @@ export default function CrmIsland() {
                 <div className="crm-field">
                   <label className="crm-label">
                     Título / saudação
-                    <span className="crm-hint-inline">ex.: Feliz Aniversário!</span>
+                    <span className="crm-hint-inline">escolha um título da biblioteca</span>
                   </label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={greeting}
-                    onChange={(e) => setGreeting(e.target.value)}
-                    placeholder="Feliz Aniversário!"
-                    maxLength={80}
-                  />
+                  <select
+                    className="form-select"
+                    value={selectedMessageTemplateId}
+                    onChange={(e) => {
+                      const templateId = e.target.value;
+                      setSelectedMessageTemplateId(templateId);
+                      if (!templateId) {
+                        setGreeting(resolveGreetingByTheme(selectedTheme));
+                        return;
+                      }
+                      applyTemplateById(templateId);
+                    }}
+                  >
+                    {titleDropdownOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* Client name */}
@@ -794,7 +981,7 @@ export default function CrmIsland() {
                     </div>
                   </div>
 
-                  {/* First name preview + override */}
+                  {/* Nome exibido + personalização */}
                   {(clienteNome || useCustomNome) && (
                     <div className="crm-nome-preview">
                       <span className="crm-nome-preview__text">
@@ -835,78 +1022,18 @@ export default function CrmIsland() {
 
                 {/* Message */}
                 <div className="crm-field">
-                  <div className="crm-label-row">
-                    <label className="crm-label">
-                      Mensagem principal
-                      <span className="crm-hint-inline">
-                        máx. {maxLinhas} linhas · {maxPalavras} palavras
-                      </span>
-                    </label>
-                    {filteredMessages.length > 0 && (
-                      <button
-                        type="button"
-                        className="crm-link-btn"
-                        onClick={() => {
-                          setShowMsgPicker((v) => !v);
-                          setMsgPickerSearch("");
-                        }}
-                      >
-                        <i className="pi pi-book" /> Biblioteca
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Message library picker */}
-                  {showMsgPicker && (
-                    <div className="crm-msg-picker">
-                      <div className="crm-msg-picker__header">
-                        <span>Biblioteca de mensagens</span>
-                        <button type="button" className="crm-link-btn" onClick={() => setShowMsgPicker(false)}>
-                          <i className="pi pi-times" />
-                        </button>
-                      </div>
-                      <div className="crm-msg-picker__filters">
-                        <input
-                          type="text"
-                          className="form-input"
-                          value={msgPickerSearch}
-                          onChange={(e) => setMsgPickerSearch(e.target.value)}
-                          placeholder="Buscar por nome, categoria ou conteúdo..."
-                        />
-                      </div>
-                      <div className="crm-msg-picker__list">
-                        {libraryMessages.length > 0 ? (
-                          libraryMessages.map((m) => (
-                            <button
-                              key={m.id}
-                              type="button"
-                              className="crm-msg-item"
-                              onClick={() => {
-                                setMensagem(stripLegacyGreeting(m.corpo));
-                                setShowMsgPicker(false);
-                              }}
-                            >
-                              <div className="crm-msg-item__top">
-                                <strong>{m.nome}</strong>
-                                <small className={getScopeTone(m.scope)}>{getScopeLabel(m.scope)}</small>
-                              </div>
-                              <span>{m.corpo.slice(0, 140)}{m.corpo.length > 140 ? "…" : ""}</span>
-                            </button>
-                          ))
-                        ) : (
-                          <div className="crm-msg-picker__empty">
-                            Nenhuma mensagem encontrada para esse filtro.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  <label className="crm-label">
+                    Mensagem principal
+                    <span className="crm-hint-inline">
+                      máx. {maxLinhas} linhas · {maxPalavras} palavras
+                    </span>
+                  </label>
 
                   <textarea
                     className={`form-textarea crm-mensagem${palavrasExcedido || linhasExcedido ? " crm-mensagem--over" : ""}`}
                     value={mensagem}
                     onChange={(e) => setMensagem(e.target.value)}
-                    placeholder="Digite a mensagem ou selecione uma da biblioteca…"
+                    placeholder="Mensagem preenchida automaticamente pelo título selecionado."
                     rows={6}
                   />
                   <div className={`crm-counter${palavrasExcedido ? " crm-counter--over" : ""}`}>
@@ -932,9 +1059,11 @@ export default function CrmIsland() {
                   </div>
                   <AssinaturaEditor value={assinatura} onChange={setAssinatura} />
                   <div className="crm-sig-actions">
-                    <button
+                    <AppButton
                       type="button"
-                      className={`btn btn-secondary btn-sm${sigSaved ? " btn--success" : ""}`}
+                      variant={sigSaved ? "primary" : "secondary"}
+                      size="small"
+                      className={sigSaved ? "btn--success" : ""}
                       onClick={salvarAssinatura}
                       disabled={savingSig || !assinatura.linha2.trim()}
                       title={!assinatura.linha2.trim() ? "Informe o nome do consultor na linha 2." : ""}
@@ -946,7 +1075,7 @@ export default function CrmIsland() {
                       ) : (
                         <><i className="pi pi-save" /> Salvar como padrão</>
                       )}
-                    </button>
+                    </AppButton>
                   </div>
                 </div>
               </AppCard>
@@ -977,29 +1106,32 @@ export default function CrmIsland() {
 
                 {previewUrl && (
                   <div className="crm-preview-actions">
-                    <button
+                    <AppButton
                       type="button"
-                      className="btn btn-primary"
+                      variant="primary"
+                      icon="pi pi-whatsapp"
                       onClick={compartilharWhatsApp}
                       disabled={!primeiroNome || !assinatura.linha2.trim()}
                       title={!primeiroNome ? "Informe o nome do cliente" : !assinatura.linha2.trim() ? "Informe o nome do consultor na assinatura." : ""}
                     >
-                      <i className="pi pi-whatsapp" /> Compartilhar no WhatsApp
-                    </button>
-                    <button
+                      Compartilhar no WhatsApp
+                    </AppButton>
+                    <AppButton
                       type="button"
-                      className="btn btn-secondary"
+                      variant="secondary"
+                      icon="pi pi-external-link"
                       onClick={() => window.open(previewUrl, "_blank")}
                     >
-                      <i className="pi pi-external-link" /> Ver em tela cheia
-                    </button>
-                    <button
+                      Ver em tela cheia
+                    </AppButton>
+                    <AppButton
                       type="button"
-                      className="btn btn-secondary"
+                      variant="secondary"
+                      icon="pi pi-link"
                       onClick={copiarLinkPreview}
                     >
-                      <i className="pi pi-link" /> Copiar link
-                    </button>
+                      Copiar link
+                    </AppButton>
                   </div>
                 )}
 

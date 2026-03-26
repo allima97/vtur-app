@@ -30,7 +30,7 @@ export function renderTemplateText(
     : getPrimeiroNome(nomeCompleto) || nomeCompleto || "Cliente";
   const assinatura = (vars.assinatura || vars.consultor || "").trim();
   const consultor = assinatura;
-  const cargoConsultor = (vars.cargoConsultor || "Consultor(a) de viagens").trim();
+  const cargoConsultor = (vars.cargoConsultor || "").trim();
   const saudacao = getSaudacaoPorHora();
   const empresa = (vars.empresa || "").trim();
   const origem = (vars.origem || "").trim();

@@ -2,6 +2,7 @@ import { supabaseServer, hasServiceRoleKey } from "../../../../lib/supabaseServe
 import { buildAuthClient, getUserScope } from "../vendas/_utils";
 
 type ScopeValue = "system" | "master" | "gestor" | "user";
+const LOGO_BUCKET = "quotes";
 
 type ThemeRow = {
   id: string;
@@ -43,6 +44,12 @@ type MessageRow = {
   ativo: boolean | null;
 };
 
+type BrandingSettingsRow = {
+  logo_url?: string | null;
+  logo_path?: string | null;
+  consultor_nome?: string | null;
+} | null;
+
 function normalizeScope(value?: string | null): ScopeValue {
   const scope = String(value || "").trim().toLowerCase();
   if (scope === "system" || scope === "master" || scope === "gestor" || scope === "user") return scope;
@@ -53,6 +60,62 @@ function normalizeScope(value?: string | null): ScopeValue {
 function inCompany(companyId: string | null, allowed: Set<string>) {
   const key = String(companyId || "").trim();
   return key ? allowed.has(key) : false;
+}
+
+function extractStoragePath(value?: string | null) {
+  if (!value) return null;
+  const marker = "/quotes/";
+  const index = value.indexOf(marker);
+  if (index === -1) return null;
+  return value.slice(index + marker.length);
+}
+
+function cleanUrl(value?: string | null) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  const lowered = raw.toLowerCase();
+  if (lowered === "null" || lowered === "undefined") return null;
+  return raw;
+}
+
+async function resolveBrandingLogo(client: any, settings: BrandingSettingsRow) {
+  if (!settings) return null;
+  const rawUrl = cleanUrl(settings.logo_url);
+  const logoPath = String(settings.logo_path || extractStoragePath(rawUrl) || "").trim();
+
+  if (logoPath) {
+    try {
+      const signed = await client.storage.from(LOGO_BUCKET).createSignedUrl(logoPath, 3600);
+      const signedUrl = cleanUrl(signed.data?.signedUrl);
+      if (signedUrl) {
+        return {
+          ...settings,
+          logo_url: signedUrl,
+          logo_path: logoPath,
+        };
+      }
+    } catch {
+      // Fallback silencioso para URL já persistida.
+    }
+    try {
+      const publicUrl = cleanUrl(client.storage.from(LOGO_BUCKET).getPublicUrl(logoPath).data.publicUrl);
+      if (publicUrl) {
+        return {
+          ...settings,
+          logo_url: publicUrl,
+          logo_path: logoPath,
+        };
+      }
+    } catch {
+      // Fallback silencioso para URL já persistida.
+    }
+  }
+
+  return {
+    ...settings,
+    logo_url: rawUrl,
+    logo_path: logoPath || null,
+  };
 }
 
 export async function GET({ request }: { request: Request }) {
@@ -111,7 +174,7 @@ export async function GET({ request }: { request: Request }) {
         .maybeSingle(),
       authClient
         .from("quote_print_settings")
-        .select("logo_url, consultor_nome")
+        .select("logo_url, logo_path, consultor_nome")
         .eq("owner_user_id", userId)
         .maybeSingle(),
     ]);
@@ -164,6 +227,23 @@ export async function GET({ request }: { request: Request }) {
       return false;
     });
 
+    let settingsRow = (settingsResp.data || null) as BrandingSettingsRow;
+    if (settingsResp.error) {
+      const legacySettingsResp = await authClient
+        .from("quote_print_settings")
+        .select("logo_url, consultor_nome")
+        .eq("owner_user_id", userId)
+        .maybeSingle();
+      if (!legacySettingsResp.error && legacySettingsResp.data) {
+        settingsRow = {
+          ...legacySettingsResp.data,
+          logo_path: null,
+        };
+      }
+    }
+
+    const resolvedSettings = await resolveBrandingLogo(authClient, settingsRow);
+
     return new Response(
       JSON.stringify({
         userId,
@@ -172,7 +252,7 @@ export async function GET({ request }: { request: Request }) {
         themes: visibleThemes,
         messages: visibleMessages,
         signature: sigResp.data || null,
-        settings: settingsResp.data || null,
+        settings: resolvedSettings,
       }),
       {
         status: 200,

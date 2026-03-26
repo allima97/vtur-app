@@ -334,7 +334,7 @@ export default function CrmAdminIsland() {
     try {
       const payload = {
         user_id: currentUserId,
-        company_id: currentCompanyId,
+        company_id: (themeForm.scope || "system") === "system" ? null : currentCompanyId,
         nome: themeForm.nome.trim(),
         categoria_id: themeForm.categoria_id || null,
         asset_url: themeForm.asset_url.trim(),
@@ -433,7 +433,7 @@ export default function CrmAdminIsland() {
     try {
       const payload = {
         user_id: currentUserId,
-        company_id: currentCompanyId,
+        company_id: (messageForm.scope || "system") === "system" ? null : currentCompanyId,
         nome: messageForm.nome.trim(),
         categoria: messageForm.categoria?.trim() || null,
         assunto: messageForm.titulo.trim(),

@@ -185,7 +185,7 @@ function resolveTemplateStyleState(theme: Theme | null, template?: MessageTempla
 
 const STYLE_SECTION_SAMPLE: Record<CardStyleSectionKey, string> = {
   title: "Feliz Natal!",
-  clientName: "Prezado(a) Helena,",
+  clientName: "Helena,",
   body: "Mensagem principal",
   footerLead: DEFAULT_CARD_FOOTER_LEAD,
   consultant: "André Lima",
@@ -1369,7 +1369,7 @@ export default function ParametrosAvisosIsland() {
             <div className="form-group">
               <label className="form-label">Campos automáticos do layout</label>
               <div className="vtur-surface-panel card-blue" style={{ padding: 12, color: "#475569" }}>
-                <div>Saudação: `Prezado(a) Nome,`</div>
+                <div>Nome do cliente: `Nome,`</div>
                 <div>Assinatura inicial: {DEFAULT_CARD_FOOTER_LEAD}</div>
                 <div>Cargo: {DEFAULT_CARD_CONSULTANT_ROLE}</div>
                 <div>Logo: branding da conta</div>

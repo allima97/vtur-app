@@ -11,7 +11,6 @@ import { resolveCardStyleMap } from "../../../../lib/cards/styleConfig";
 import { renderTemplateText } from "../../../../lib/messageTemplates";
 import {
   buildCardClientGreeting,
-  DEFAULT_CARD_CONSULTANT_ROLE,
   DEFAULT_CARD_FOOTER_LEAD,
 } from "../../../../lib/cards/templateRuntime";
 import { getSupabaseEnv } from "../../users";
@@ -42,8 +41,8 @@ const MASTER_WIDTH = 1080;
 const MASTER_HEIGHT = 1080;
 const MASTER_LAYOUT_KEY = "master-card-v1";
 const DEFAULT_LOGO_SLOT_MASTER = {
-  x: 918,
-  y: 846,
+  x: 848,
+  y: 856,
   width: 120,
   height: 120,
 };
@@ -118,17 +117,21 @@ function wrapText(text: string, style: CardStyle) {
   const maxWidth = Number(style.maxWidth || style.width || 860);
   const maxChars = Math.max(8, Math.floor(maxWidth / Math.max(fontSize * 0.55, 8)));
 
-  // Se o usuário definiu as quebras manualmente com Enter, respeita a linha digitada.
-  if (safeText.includes("\n")) {
-    return safeText.split("\n").map((line) => line.trim());
-  }
-
-  const paragraphs = safeText.split(/\n+/);
+  // Respeita quebras manuais, mas também faz wrap de cada linha para não estourar a área técnica.
+  const paragraphs = safeText.split("\n");
   const lines: string[] = [];
-  paragraphs.forEach((p, idx) => {
-    const wrapped = splitParagraph(p, maxChars);
+  paragraphs.forEach((p) => {
+    const trimmed = p.trim();
+    if (!trimmed) {
+      lines.push("");
+      return;
+    }
+    const wrapped = splitParagraph(trimmed, maxChars);
+    if (!wrapped.length) {
+      lines.push("");
+      return;
+    }
     wrapped.forEach((line) => lines.push(line));
-    if (idx < paragraphs.length - 1) lines.push("");
   });
   return lines;
 }
@@ -274,7 +277,10 @@ function resolveLogoSlot(
   width: number,
   height: number,
 ): CardThemeLogoSlot {
-  if (themeLayout?.logo) {
+  // Metodologia técnica padronizada: logo sempre no slot técnico master.
+  // Se no futuro for necessário liberar exceções por tema, basta alterar este flag.
+  const useThemeLogoSlot = false;
+  if (useThemeLogoSlot && themeLayout?.logo) {
     return scaleLogoSlot(themeLayout.logo, themeLayout.canvas, width, height);
   }
   const scaleX = width / MASTER_WIDTH;
@@ -396,6 +402,41 @@ function absoluteAssetUrl(origin: string, assetUrl: string) {
   return `${origin}/${raw.replace(/^\.?\//, "")}`;
 }
 
+function toBase64(buffer: ArrayBuffer) {
+  const bytes = new Uint8Array(buffer);
+  if (typeof Buffer !== "undefined") {
+    return Buffer.from(bytes).toString("base64");
+  }
+
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    const chunk = bytes.subarray(offset, Math.min(offset + chunkSize, bytes.length));
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+}
+
+async function resolveInlineImageHref(sourceUrl: string) {
+  const raw = String(sourceUrl || "").trim();
+  if (!raw) return "";
+  if (raw.startsWith("data:")) return raw;
+  if (!/^https?:/i.test(raw)) return raw;
+
+  try {
+    const resp = await fetch(raw);
+    if (!resp.ok) return raw;
+    const contentType = String(resp.headers.get("content-type") || "").toLowerCase();
+    if (!contentType.startsWith("image/")) return raw;
+    const payload = await resp.arrayBuffer();
+    if (!payload.byteLength) return raw;
+    const base64 = toBase64(payload);
+    return `data:${contentType};base64,${base64}`;
+  } catch {
+    return raw;
+  }
+}
+
 export async function renderCardSvg(request: Request): Promise<CardRenderResult> {
   const url = new URL(request.url);
   const client = buildAuthClient(request);
@@ -405,6 +446,7 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
   const tituloRaw = String(url.searchParams.get("titulo") || "").trim();
   const corpoRaw = String(url.searchParams.get("corpo") || "").trim();
   const hasFooterLeadParam = url.searchParams.has("footer_lead");
+  const hasCargoConsultorParam = url.searchParams.has("cargo_consultor");
   const footerLeadRaw = String(url.searchParams.get("footer_lead") || "").trim();
   const assinaturaRaw = String(url.searchParams.get("assinatura") || "").trim();
   const consultorRaw = String(url.searchParams.get("consultor") || "").trim();
@@ -511,8 +553,11 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
     : hasFooterLeadConfig
       ? footerLeadConfig
       : DEFAULT_CARD_FOOTER_LEAD;
-  const cargoConsultor =
-    cargoConsultorRaw || (hasConsultantRoleConfig ? consultantRoleConfig : DEFAULT_CARD_CONSULTANT_ROLE);
+  const cargoConsultor = hasCargoConsultorParam
+    ? cargoConsultorRaw
+    : hasConsultantRoleConfig
+      ? consultantRoleConfig
+      : "";
 
   const renderVars = {
     nomeCompleto: nome,
@@ -562,7 +607,7 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
   const hideClientName = Boolean(showPhoto && themeLayout?.photo?.hideClientNameWhenPhoto);
   const hideBody = Boolean(showPhoto && themeLayout?.photo?.hideBodyWhenPhoto);
   const visibility = themeLayout?.visibility;
-  const logoUrl = absoluteAssetUrl(url.origin, logoUrlRaw);
+  const logoUrl = await resolveInlineImageHref(absoluteAssetUrl(url.origin, logoUrlRaw));
   const logoSlot = resolveLogoSlot(themeLayout, width, height);
 
   const backgroundUrl = absoluteAssetUrl(
