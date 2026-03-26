@@ -17,9 +17,14 @@ import { fetchReferenceData } from "../../lib/referenceData";
 import { matchesCpfSearch } from "../../lib/searchNormalization";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import { renderTemplateText } from "../../lib/messageTemplates";
-import { resolveThemeAssetMeta } from "../../lib/cards/officialLibrary";
 import { renderSvgUrlToPngObjectUrl, validarPngServidor } from "../../lib/cards/browserPng";
 import { resolveCardStyleMap } from "../../lib/cards/styleConfig";
+import { resolveThemeAssetMeta } from "../../lib/cards/themeAssetMeta";
+import {
+  buildCardClientGreeting,
+  DEFAULT_CARD_CONSULTANT_ROLE,
+  DEFAULT_CARD_FOOTER_LEAD,
+} from "../../lib/cards/templateRuntime";
 import AlertMessage from "../ui/AlertMessage";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import DataTable from "../ui/DataTable";
@@ -429,21 +434,19 @@ export default function ClientesIsland() {
         const uid = authData?.user?.id;
         if (!uid) return;
         const { data, error } = await supabase
-          .from("user_message_templates")
-          .select("id, nome, categoria, assunto, titulo, corpo, assinatura, theme_id, title_style, body_style, signature_style, ativo")
-          .eq("user_id", uid)
-          .eq("ativo", true)
-          .order("nome");
+      .from("user_message_templates")
+      .select("id, nome, categoria, assunto, titulo, corpo, assinatura, theme_id, title_style, body_style, signature_style, ativo")
+      .eq("ativo", true)
+      .order("nome");
         if (error) throw error;
         if (mounted) setTemplatesAviso((data || []) as any[]);
 
         const themeResp = await supabase
-          .from("user_message_template_themes")
-          .select("id, nome, categoria, asset_url, width_px, height_px, title_style, body_style, signature_style")
-          .eq("user_id", uid)
-          .eq("ativo", true)
-          .order("categoria")
-          .order("nome");
+      .from("user_message_template_themes")
+      .select("id, nome, categoria, asset_url, width_px, height_px, title_style, body_style, signature_style")
+      .eq("ativo", true)
+      .order("categoria")
+      .order("nome");
         if (themeResp.error) throw themeResp.error;
         if (mounted) setThemesAviso((themeResp.data || []) as any[]);
       } catch (e) {
@@ -823,15 +826,14 @@ export default function ClientesIsland() {
       ).trim();
     const cardParams = new URLSearchParams({
       nome: nomeCard,
-      cliente_nome: nomeCard,
-      cliente_nome_literal: nomeCard,
+      cliente_nome: buildCardClientGreeting(nomeCard),
       titulo: tpl.titulo || "",
       corpo: tpl.corpo || "",
-      footer_lead: signatureTextConfig.hasFooterLead ? signatureTextConfig.footerLead : "Com carinho",
+      footer_lead: signatureTextConfig.hasFooterLead ? signatureTextConfig.footerLead : DEFAULT_CARD_FOOTER_LEAD,
       assinatura,
       cargo_consultor: signatureTextConfig.hasConsultantRole
-        ? signatureTextConfig.consultantRole || "Consultor de viagens"
-        : "Consultor de viagens",
+        ? signatureTextConfig.consultantRole || DEFAULT_CARD_CONSULTANT_ROLE
+        : DEFAULT_CARD_CONSULTANT_ROLE,
       style_overrides: JSON.stringify(resolvedStyleMap),
       v: String(Date.now()),
     });

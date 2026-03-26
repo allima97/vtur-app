@@ -2,8 +2,8 @@
 
 ## Contexto Rápido
 Projeto: sgtur (Astro/React + Supabase).
-Objetivo atual: convites corporativos (sem e-mail do Supabase), privacidade/escopo por empresa, e migrações de RLS.
-Última atualização: 2026-03-15.
+Objetivo atual: convites corporativos (sem e-mail do Supabase), privacidade/escopo por empresa, migrações de RLS e novo CRM com templates técnicos hierárquicos.
+Última atualização: 2026-03-25.
 
 ## O que foi feito (resumo)
 - **Controle SAC e Viagens (desktop)**: botões agora usam `mobile-stack-buttons` (desktop em linha, mobile empilha).
@@ -46,6 +46,20 @@ Objetivo atual: convites corporativos (sem e-mail do Supabase), privacidade/esco
 - **Importação de vendas / clientes**: nova RPC `clientes_resolve_import` para resolver/criar cliente sem depender de `insert` direto sob RLS; a API `/api/v1/clientes/resolve-import` agora tenta essa RPC antes do fallback antigo.
   - `database/migrations/20260315_clientes_resolve_import_rpc.sql`
   - `src/pages/api/v1/clientes/resolve-import.ts`
+- **CRM técnico / templates hierárquicos**: o módulo CRM agora trabalha com arte limpa + layout técnico fixo, preenchimento automático de greeting/saudação/mensagem/assinatura/cargo/logo, suporte hierárquico `system/master/gestor/user`, UI moderna com badges de origem, e gestão de textos padrão por ocasião no admin.
+  - `src/lib/cards/templateRuntime.ts`
+  - `src/lib/cards/themeAssetMeta.ts`
+  - `src/lib/cards/styleConfig.ts`
+  - `src/pages/api/v1/cards/_render.ts`
+  - `src/pages/api/clientes/templates/send.ts`
+  - `src/components/islands/ClientesIsland.tsx`
+  - `src/components/islands/ParametrosAvisosIsland.tsx`
+  - `src/components/islands/CrmIsland.tsx`
+  - `src/components/islands/CrmAdminIsland.tsx`
+  - `src/styles/global.css`
+  - `database/migrations/20260325_crm_template_scope_rls_hierarchy.sql`
+  - `database/migrations/20260325_crm_scope_column_hotfix.sql`
+  - `database/migrations/20260327_crm_categories_and_scope.sql`
 
 ## Migrações pendentes (aplicar na ordem)
 1. `database/migrations/20260205_clientes_privacidade.sql`
@@ -69,11 +83,17 @@ Objetivo atual: convites corporativos (sem e-mail do Supabase), privacidade/esco
 19. `database/migrations/20260312_rls_gestor_vendedor_master_scope.sql`
 20. `database/migrations/20260312_rls_escalas_master_company_match.sql`
 21. `database/migrations/20260312_rls_escala_horario_usuario_master_company_match.sql`
+22. `database/migrations/20260322_message_template_themes_and_render_styles.sql`
+23. `database/migrations/20260325_crm_scope_column_hotfix.sql` (aplique se o ambiente já acusou erro de coluna `scope` inexistente)
+24. `database/migrations/20260325_crm_template_scope_rls_hierarchy.sql` (agora já cria `scope` antes das policies)
+25. `database/migrations/20260326_template_master_layout_lock.sql`
+26. `database/migrations/20260327_crm_categories_and_scope.sql`
 
 ## Pendências conhecidas
 - Confirmar e aplicar migrations no Supabase (SQL Editor ou CLI).
 - Se “Clientes” não salva e der 500/`42P17`, aplicar o hotfix: `20260304_clientes_rls_recursion_hotfix.sql`.
 - Se a importação de vendas exibir a mensagem para cadastrar o cliente manualmente por causa de RLS, aplicar `20260315_clientes_resolve_import_rpc.sql`.
+- Se o CRM acusar `column "scope" does not exist`, aplicar primeiro `20260325_crm_scope_column_hotfix.sql` e depois seguir com `20260325_crm_template_scope_rls_hierarchy.sql` e `20260327_crm_categories_and_scope.sql`.
 - Validar se outras telas de relatório precisam filtrar por `company_id` no front (o RLS cobre, mas pode otimizar).
 - Garantir `SUPABASE_SERVICE_ROLE_KEY` configurada no ambiente do servidor (necessário para gerar links de convite).
 - Aplicar a migration de correção de RLS da tabela `gestor_vendedor` para permitir gestão de equipe no módulo Master.
@@ -85,6 +105,8 @@ Objetivo atual: convites corporativos (sem e-mail do Supabase), privacidade/esco
 - A competência (mês) de vendas/relatórios/comissões deve ser determinada por `vendas.data_venda` (Systur). Se os relatórios agregados por cliente/destino/produto estiverem “puxando mês pelo lançamento”, aplique `20260213_relatorios_competencia_data_venda.sql`.
 - Usuários corporativos devem ficar vinculados à empresa via `company_id`.
 - O fluxo de convite evita o rate limit de e-mails do Supabase (o sistema envia o e-mail; o Supabase só valida o link).
+- No CRM novo, as artes devem ser `1080x1080`, limpas, e o sistema preenche automaticamente título, saudação do cliente, mensagem principal, assinatura, cargo do consultor e logo nas áreas fixas do template técnico.
+- A migration `20260325_crm_template_scope_rls_hierarchy.sql` dependia da coluna `scope`; por isso o hotfix `20260325_crm_scope_column_hotfix.sql` foi adicionado para ambientes que aplicaram a ordem errada.
 
 ## Como continuar em outra máquina
 1. Abra este repositório.

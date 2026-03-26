@@ -12,6 +12,7 @@ type Category = {
 
 type Theme = {
   id: string;
+  user_id?: string | null;
   nome: string;
   categoria: string | null;
   categoria_id: string | null;
@@ -26,10 +27,12 @@ type Theme = {
 
 type MessageTemplate = {
   id: string;
+  user_id?: string | null;
   nome: string;
   titulo: string;
   corpo: string;
   categoria: string | null;
+  scope?: string | null;
 };
 
 type Cliente = {
@@ -57,6 +60,22 @@ function getPrimeiroNome(nome: string) {
 
 function countWords(text: string) {
   return (text || "").trim().split(/\s+/).filter(Boolean).length;
+}
+
+function getScopeLabel(scope?: string | null) {
+  const normalized = String(scope || "").trim().toLowerCase();
+  if (normalized === "system") return "Sistema";
+  if (normalized === "master") return "Master";
+  if (normalized === "gestor") return "Gestor";
+  return "Usuário";
+}
+
+function getScopeTone(scope?: string | null) {
+  const normalized = String(scope || "").trim().toLowerCase();
+  if (normalized === "system") return "crm-badge crm-badge--system";
+  if (normalized === "master") return "crm-badge crm-badge--master";
+  if (normalized === "gestor") return "crm-badge crm-badge--gestor";
+  return "crm-badge crm-badge--user";
 }
 
 function buildPreviewParams(params: {
@@ -111,6 +130,7 @@ function ThumbCard({
         className="crm-thumb__img"
       />
       <span className="crm-thumb__label">{theme.nome}</span>
+      <span className={getScopeTone(theme.scope)}>{getScopeLabel(theme.scope)}</span>
       {selected && <span className="crm-thumb__check">✓</span>}
     </button>
   );
@@ -193,6 +213,7 @@ const DEFAULT_ASSINATURA: AssinaturaForm = {
 export default function CrmIsland() {
   // ── Data ────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState("");
   const [categories, setCategories] = useState<Category[]>([]);
   const [themes, setThemes] = useState<Theme[]>([]);
   const [messageLibrary, setMessageLibrary] = useState<MessageTemplate[]>([]);
@@ -223,6 +244,7 @@ export default function CrmIsland() {
 
   // ── Message library picker ───────────────────────────────────────
   const [showMsgPicker, setShowMsgPicker] = useState(false);
+  const [scopeFilter, setScopeFilter] = useState<"all" | "system" | "master" | "gestor" | "user">("all");
 
   // ── Preview ──────────────────────────────────────────────────────
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -238,10 +260,12 @@ export default function CrmIsland() {
 
   const filteredThemes = useMemo(
     () =>
-      selectedCategoryId
-        ? themes.filter((t) => t.categoria_id === selectedCategoryId)
-        : themes,
-    [themes, selectedCategoryId]
+      themes.filter((t) => {
+        const matchCategory = selectedCategoryId ? t.categoria_id === selectedCategoryId : true;
+        const matchScope = scopeFilter === "all" ? true : t.scope === scopeFilter;
+        return matchCategory && matchScope;
+      }),
+    [themes, selectedCategoryId, scopeFilter]
   );
 
   const filteredMessages = useMemo(() => {
@@ -252,15 +276,30 @@ export default function CrmIsland() {
       if (catId && m.categoria) return true; // show all if same category
       const mCat = (m.categoria || "").toLowerCase();
       return !mCat || mCat === catNome || mCat === "geral";
+    }).sort((a, b) => {
+      const ownA = a.user_id === currentUserId ? 1 : 0;
+      const ownB = b.user_id === currentUserId ? 1 : 0;
+      if (ownA !== ownB) return ownB - ownA;
+      return a.nome.localeCompare(b.nome);
     });
-  }, [messageLibrary, selectedTheme]);
+  }, [messageLibrary, selectedTheme, currentUserId]);
+
+  const templatesByScope = useMemo(() => {
+    return {
+      system: themes.filter((theme) => theme.scope === "system").length,
+      master: themes.filter((theme) => theme.scope === "master").length,
+      gestor: themes.filter((theme) => theme.scope === "gestor").length,
+      user: themes.filter((theme) => theme.scope === "user").length,
+    };
+  }, [themes]);
 
   // ── Load data ────────────────────────────────────────────────────
   useEffect(() => {
     async function load() {
       setLoading(true);
       try {
-        const [catResp, themeResp, msgResp, sigResp, settingsResp] = await Promise.all([
+        const [authResp, catResp, themeResp, msgResp, sigResp, settingsResp] = await Promise.all([
+          supabaseBrowser.auth.getUser(),
           supabaseBrowser
             .from("crm_template_categories")
             .select("id, nome, icone, sort_order")
@@ -269,13 +308,13 @@ export default function CrmIsland() {
           supabaseBrowser
             .from("user_message_template_themes")
             .select(
-              "id, nome, categoria, categoria_id, asset_url, greeting_text, mensagem_max_linhas, mensagem_max_palavras, assinatura_max_linhas, assinatura_max_palavras, scope"
+              "id, user_id, nome, categoria, categoria_id, asset_url, greeting_text, mensagem_max_linhas, mensagem_max_palavras, assinatura_max_linhas, assinatura_max_palavras, scope"
             )
             .eq("ativo", true)
             .order("nome"),
           supabaseBrowser
             .from("user_message_templates")
-            .select("id, nome, titulo, corpo, categoria")
+            .select("id, user_id, nome, titulo, corpo, categoria, scope")
             .eq("ativo", true)
             .order("nome"),
           supabaseBrowser
@@ -289,9 +328,10 @@ export default function CrmIsland() {
             .maybeSingle(),
         ]);
 
-        setCategories(catResp.data || []);
-        setThemes(themeResp.data || []);
-        setMessageLibrary(msgResp.data || []);
+        setCurrentUserId(authResp.data?.user?.id || "");
+        setCategories((catResp.data || []) as Category[]);
+        setThemes((themeResp.data || []) as Theme[]);
+        setMessageLibrary((msgResp.data || []) as MessageTemplate[]);
 
         const settings = settingsResp.data as any;
         const resolvedLogo = settings?.logo_url || null;
@@ -479,6 +519,24 @@ export default function CrmIsland() {
             </h2>
           </div>
 
+          <div className="crm-scope-overview">
+            <button type="button" className={`crm-scope-chip${scopeFilter === "all" ? " active" : ""}`} onClick={() => setScopeFilter("all")}>
+              Todos
+            </button>
+            <button type="button" className={`crm-scope-chip${scopeFilter === "system" ? " active" : ""}`} onClick={() => setScopeFilter("system")}>
+              Sistema {templatesByScope.system > 0 ? `(${templatesByScope.system})` : ""}
+            </button>
+            <button type="button" className={`crm-scope-chip${scopeFilter === "master" ? " active" : ""}`} onClick={() => setScopeFilter("master")}>
+              Master {templatesByScope.master > 0 ? `(${templatesByScope.master})` : ""}
+            </button>
+            <button type="button" className={`crm-scope-chip${scopeFilter === "gestor" ? " active" : ""}`} onClick={() => setScopeFilter("gestor")}>
+              Gestor {templatesByScope.gestor > 0 ? `(${templatesByScope.gestor})` : ""}
+            </button>
+            <button type="button" className={`crm-scope-chip${scopeFilter === "user" ? " active" : ""}`} onClick={() => setScopeFilter("user")}>
+              Meus {templatesByScope.user > 0 ? `(${templatesByScope.user})` : ""}
+            </button>
+          </div>
+
           {/* Category tabs */}
           <div className="crm-category-tabs">
             <button
@@ -535,6 +593,10 @@ export default function CrmIsland() {
                 <h3 className="crm-section-title">
                   <i className="pi pi-pencil" /> Personalizar cartão
                 </h3>
+                <div className="crm-template-meta">
+                  <span className={getScopeTone(selectedTheme.scope)}>{getScopeLabel(selectedTheme.scope)}</span>
+                  <span className="crm-template-meta__name">{selectedTheme.nome}</span>
+                </div>
 
                 {/* Greeting */}
                 <div className="crm-field">
@@ -673,6 +735,7 @@ export default function CrmIsland() {
                             }}
                           >
                             <strong>{m.nome}</strong>
+                            <small className={getScopeTone(m.scope)}>{getScopeLabel(m.scope)}</small>
                             <span>{m.corpo.slice(0, 100)}…</span>
                           </button>
                         ))}

@@ -7,8 +7,13 @@ import {
   resolveSmtpConfig,
 } from "../../../../lib/emailSettings";
 import { renderTemplateText } from "../../../../lib/messageTemplates";
-import { resolveThemeAssetMeta } from "../../../../lib/cards/officialLibrary";
 import { resolveCardStyleMap } from "../../../../lib/cards/styleConfig";
+import { resolveThemeAssetMeta } from "../../../../lib/cards/themeAssetMeta";
+import {
+  buildCardClientGreeting,
+  DEFAULT_CARD_CONSULTANT_ROLE,
+  DEFAULT_CARD_FOOTER_LEAD,
+} from "../../../../lib/cards/templateRuntime";
 import { getSupabaseEnv } from "../../users";
 
 type Body = {
@@ -128,7 +133,6 @@ export async function POST({ request }: { request: Request }) {
       .from("user_message_templates")
       .select("id, nome, assunto, titulo, corpo, assinatura, ativo, theme_id, title_style, body_style, signature_style")
       .eq("id", templateId)
-      .eq("user_id", userId)
       .maybeSingle();
     if (tplErr || !tpl) return new Response("Template não encontrado.", { status: 404 });
     if (!tpl.ativo) return new Response("Template inativo.", { status: 400 });
@@ -177,15 +181,14 @@ export async function POST({ request }: { request: Request }) {
     });
     const cardParams = new URLSearchParams({
       nome: nomeDestinatario,
-      cliente_nome: nomeDestinatario,
-      cliente_nome_literal: nomeDestinatario,
+      cliente_nome: buildCardClientGreeting(nomeDestinatario),
       titulo: String(tpl.titulo || ""),
       corpo: String(tpl.corpo || ""),
-      footer_lead: signatureTextConfig.hasFooterLead ? signatureTextConfig.footerLead : "Com carinho",
+      footer_lead: signatureTextConfig.hasFooterLead ? signatureTextConfig.footerLead : DEFAULT_CARD_FOOTER_LEAD,
       assinatura,
       cargo_consultor: signatureTextConfig.hasConsultantRole
-        ? signatureTextConfig.consultantRole || "Consultor de viagens"
-        : "Consultor de viagens",
+        ? signatureTextConfig.consultantRole || DEFAULT_CARD_CONSULTANT_ROLE
+        : DEFAULT_CARD_CONSULTANT_ROLE,
       style_overrides: JSON.stringify(resolvedStyleMap),
       v: String(Date.now()),
     });

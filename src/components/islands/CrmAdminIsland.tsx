@@ -26,6 +26,16 @@ type Theme = {
   ativo: boolean;
 };
 
+type MessageTemplate = {
+  id: string;
+  nome: string;
+  categoria: string | null;
+  titulo: string;
+  corpo: string;
+  scope: string;
+  ativo: boolean;
+};
+
 const STORAGE_BUCKET = "message-template-themes";
 
 const SCOPE_OPTIONS = [
@@ -69,10 +79,23 @@ function emptyTheme(): Omit<Theme, "id"> {
   };
 }
 
+function emptyMessageTemplate(): Omit<MessageTemplate, "id"> {
+  return {
+    nome: "",
+    categoria: "",
+    titulo: "",
+    corpo: "",
+    scope: "system",
+    ativo: true,
+  };
+}
+
 // ── Main component ─────────────────────────────────────────────────────────
 
 export default function CrmAdminIsland() {
   const [tab, setTab] = useState<"categorias" | "templates">("templates");
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [currentCompanyId, setCurrentCompanyId] = useState<string | null>(null);
 
   // ── Categories ──
   const [categories, setCategories] = useState<Category[]>([]);
@@ -92,13 +115,38 @@ export default function CrmAdminIsland() {
   const [uploadingArt, setUploadingArt] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Message templates ──
+  const [messageTemplates, setMessageTemplates] = useState<MessageTemplate[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(true);
+  const [messageForm, setMessageForm] = useState<Partial<MessageTemplate> & Omit<MessageTemplate, "id">>(emptyMessageTemplate());
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [savingMessage, setSavingMessage] = useState(false);
+
   // ── Filter ──
   const [filterCatId, setFilterCatId] = useState<string>("");
 
   const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
   // ── Load ──────────────────────────────────────────────────────────────────
-  useEffect(() => { loadCategories(); loadThemes(); }, []);
+  useEffect(() => {
+    void (async () => {
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id || "";
+      setCurrentUserId(userId);
+      if (userId) {
+        const { data: userData } = await supabase
+          .from("users")
+          .select("company_id")
+          .eq("id", userId)
+          .maybeSingle();
+        setCurrentCompanyId((userData as any)?.company_id || null);
+      }
+      loadCategories();
+      loadThemes();
+      loadMessages();
+    })();
+  }, []);
 
   async function loadCategories() {
     setLoadingCats(true);
@@ -120,6 +168,18 @@ export default function CrmAdminIsland() {
     if (error) showToast("Erro ao carregar templates.", "error");
     else setThemes(data || []);
     setLoadingThemes(false);
+  }
+
+  async function loadMessages() {
+    setLoadingMessages(true);
+    const { data, error } = await supabase
+      .from("user_message_templates")
+      .select("id, nome, categoria, titulo, corpo, scope, ativo")
+      .order("categoria")
+      .order("nome");
+    if (error) showToast("Erro ao carregar textos padrão.", "error");
+    else setMessageTemplates((data || []) as MessageTemplate[]);
+    setLoadingMessages(false);
   }
 
   // ── Category CRUD ─────────────────────────────────────────────────────────
@@ -219,6 +279,8 @@ export default function CrmAdminIsland() {
     setSavingTheme(true);
     try {
       const payload = {
+        user_id: currentUserId,
+        company_id: currentCompanyId,
         nome: themeForm.nome.trim(),
         categoria_id: themeForm.categoria_id || null,
         asset_url: themeForm.asset_url.trim(),
@@ -252,6 +314,67 @@ export default function CrmAdminIsland() {
   async function toggleThemeAtivo(theme: Theme) {
     await supabase.from("user_message_template_themes").update({ ativo: !theme.ativo }).eq("id", theme.id);
     loadThemes();
+  }
+
+  // ── Message template CRUD ───────────────────────────────────────────────
+  function openNewMessageTemplate() {
+    setEditingMessageId(null);
+    setMessageForm(emptyMessageTemplate());
+    setShowMessageModal(true);
+  }
+
+  function openEditMessageTemplate(template: MessageTemplate) {
+    setEditingMessageId(template.id);
+    setMessageForm({
+      nome: template.nome,
+      categoria: template.categoria || "",
+      titulo: template.titulo,
+      corpo: template.corpo,
+      scope: template.scope,
+      ativo: template.ativo,
+    });
+    setShowMessageModal(true);
+  }
+
+  async function saveMessageTemplate() {
+    if (!messageForm.nome?.trim()) { showToast("Informe o nome do texto padrão.", "error"); return; }
+    if (!messageForm.titulo?.trim()) { showToast("Informe o greeting/título.", "error"); return; }
+    if (!messageForm.corpo?.trim()) { showToast("Informe a mensagem principal.", "error"); return; }
+    setSavingMessage(true);
+    try {
+      const payload = {
+        user_id: currentUserId,
+        company_id: currentCompanyId,
+        nome: messageForm.nome.trim(),
+        categoria: messageForm.categoria?.trim() || null,
+        assunto: messageForm.titulo.trim(),
+        titulo: messageForm.titulo.trim(),
+        corpo: messageForm.corpo.trim(),
+        scope: messageForm.scope || "system",
+        ativo: messageForm.ativo !== false,
+        updated_at: new Date().toISOString(),
+      };
+      if (editingMessageId) {
+        const { error } = await supabase.from("user_message_templates").update(payload).eq("id", editingMessageId);
+        if (error) throw error;
+        showToast("Texto padrão atualizado.", "success");
+      } else {
+        const { error } = await supabase.from("user_message_templates").insert(payload);
+        if (error) throw error;
+        showToast("Texto padrão criado.", "success");
+      }
+      setShowMessageModal(false);
+      loadMessages();
+    } catch (err: any) {
+      showToast(err?.message || "Erro ao salvar texto padrão.", "error");
+    } finally {
+      setSavingMessage(false);
+    }
+  }
+
+  async function toggleMessageAtivo(template: MessageTemplate) {
+    await supabase.from("user_message_templates").update({ ativo: !template.ativo }).eq("id", template.id);
+    loadMessages();
   }
 
   // ── Filtered themes ──
@@ -363,6 +486,70 @@ export default function CrmAdminIsland() {
               })}
             </div>
           )}
+
+          <div className="crm-admin-subsection">
+            <div className="crm-admin-toolbar">
+              <h3 className="crm-admin-subsection__title">Textos padrão por ocasião</h3>
+              <button type="button" className="btn btn-primary btn-sm" onClick={openNewMessageTemplate}>
+                <i className="pi pi-plus" /> Novo texto
+              </button>
+            </div>
+
+            {loadingMessages ? (
+              <div className="crm-admin-loading"><span className="crm-spinner" /> Carregando…</div>
+            ) : messageTemplates.length === 0 ? (
+              <p className="crm-admin-empty">Nenhum texto padrão encontrado.</p>
+            ) : (
+              <table className="crm-admin-table">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Ocasião</th>
+                    <th>Greeting</th>
+                    <th>Escopo</th>
+                    <th>Status</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {messageTemplates.map((template) => (
+                    <tr key={template.id} className={template.ativo ? "" : "crm-row--inactive"}>
+                      <td>{template.nome}</td>
+                      <td>{template.categoria || "—"}</td>
+                      <td>{template.titulo}</td>
+                      <td>
+                        <span className={`crm-scope-badge crm-scope-badge--${template.scope}`}>
+                          {SCOPE_LABELS[template.scope] || template.scope}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`status-badge ${template.ativo ? "status-badge--active" : "status-badge--inactive"}`}>
+                          {template.ativo ? "Ativo" : "Inativo"}
+                        </span>
+                      </td>
+                      <td className="crm-td-actions">
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => openEditMessageTemplate(template)}
+                        >
+                          <i className="pi pi-pencil" />
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn btn-sm${template.ativo ? " btn-secondary" : " btn-primary"}`}
+                          onClick={() => toggleMessageAtivo(template)}
+                          title={template.ativo ? "Desativar" : "Ativar"}
+                        >
+                          <i className={`pi ${template.ativo ? "pi-eye-slash" : "pi-eye"}`} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       )}
 
@@ -703,6 +890,94 @@ export default function CrmAdminIsland() {
                 disabled={savingTheme || uploadingArt}
               >
                 {savingTheme ? <><span className="crm-spinner crm-spinner--sm" /> Salvando…</> : "Salvar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════ MODAL: Message template ══════════ */}
+      {showMessageModal && (
+        <div className="crm-admin-modal-overlay" onClick={() => setShowMessageModal(false)}>
+          <div className="crm-admin-modal crm-admin-modal--wide" onClick={(e) => e.stopPropagation()}>
+            <div className="crm-admin-modal__header">
+              <h3>{editingMessageId ? "Editar texto padrão" : "Novo texto padrão"}</h3>
+              <button type="button" className="crm-link-btn" onClick={() => setShowMessageModal(false)}>
+                <i className="pi pi-times" />
+              </button>
+            </div>
+            <div className="crm-admin-modal__body">
+              <div className="crm-field">
+                <label className="crm-label">Nome *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={messageForm.nome}
+                  onChange={(e) => setMessageForm((p) => ({ ...p, nome: e.target.value }))}
+                  placeholder="Ex.: Aniversário padrão"
+                  autoFocus
+                />
+              </div>
+              <div className="crm-field">
+                <label className="crm-label">Ocasião</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={messageForm.categoria || ""}
+                  onChange={(e) => setMessageForm((p) => ({ ...p, categoria: e.target.value }))}
+                  placeholder="Ex.: Aniversário"
+                />
+              </div>
+              <div className="crm-field">
+                <label className="crm-label">Escopo</label>
+                <select
+                  className="form-select"
+                  value={messageForm.scope}
+                  onChange={(e) => setMessageForm((p) => ({ ...p, scope: e.target.value }))}
+                >
+                  {SCOPE_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="crm-field">
+                <label className="crm-label">Greeting / título *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={messageForm.titulo}
+                  onChange={(e) => setMessageForm((p) => ({ ...p, titulo: e.target.value }))}
+                  placeholder="Ex.: Feliz Aniversário!"
+                />
+              </div>
+              <div className="crm-field">
+                <label className="crm-label">Mensagem principal *</label>
+                <textarea
+                  className="form-textarea"
+                  rows={8}
+                  value={messageForm.corpo}
+                  onChange={(e) => setMessageForm((p) => ({ ...p, corpo: e.target.value }))}
+                  placeholder="Texto padrão que será reaproveitado no card."
+                />
+              </div>
+              <div className="crm-field">
+                <label className="crm-label" style={{ cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={messageForm.ativo}
+                    onChange={(e) => setMessageForm((p) => ({ ...p, ativo: e.target.checked }))}
+                    style={{ marginRight: 6 }}
+                  />
+                  Texto ativo
+                </label>
+              </div>
+            </div>
+            <div className="crm-admin-modal__footer">
+              <button type="button" className="btn btn-secondary" onClick={() => setShowMessageModal(false)}>
+                Cancelar
+              </button>
+              <button type="button" className="btn btn-primary" onClick={saveMessageTemplate} disabled={savingMessage}>
+                {savingMessage ? <><span className="crm-spinner crm-spinner--sm" /> Salvando…</> : "Salvar"}
               </button>
             </div>
           </div>

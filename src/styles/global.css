@@ -10303,6 +10303,32 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   margin: 0;
 }
 
+.crm-scope-overview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.crm-scope-chip {
+  border: 1px solid #dbe3f0;
+  background: #fff;
+  color: #52607a;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.crm-scope-chip:hover,
+.crm-scope-chip.active {
+  border-color: #2563eb;
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
 /* ── Category tabs ── */
 .crm-category-tabs {
   display: flex;
@@ -10382,6 +10408,42 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.crm-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 1;
+  border: 1px solid transparent;
+}
+
+.crm-badge--system {
+  background: #ecfeff;
+  border-color: #a5f3fc;
+  color: #0f766e;
+}
+
+.crm-badge--master {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.crm-badge--gestor {
+  background: #eefbf3;
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+
+.crm-badge--user {
+  background: #faf5ff;
+  border-color: #e9d5ff;
+  color: #7e22ce;
 }
 .crm-thumb__check {
   position: absolute;
@@ -10473,6 +10535,20 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   align-items: center;
   gap: 6px;
   margin: 0 0 4px;
+}
+
+.crm-template-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: -4px;
+}
+
+.crm-template-meta__name {
+  font-size: 0.82rem;
+  color: #64748b;
+  font-weight: 600;
 }
 .crm-field {
   display: flex;
@@ -10646,6 +10722,11 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   font-size: 0.8rem;
   color: var(--text-primary, #1e293b);
 }
+
+.crm-msg-item small {
+  margin-top: 2px;
+}
+
 .crm-msg-item span {
   font-size: 0.75rem;
   color: var(--text-secondary, #64748b);
@@ -10934,6 +11015,22 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 .crm-admin-empty {
   color: var(--text-secondary, #64748b);
   font-size: 0.9rem;
+}
+
+.crm-admin-subsection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color, #e2e8f0);
+}
+
+.crm-admin-subsection__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
 }
 
 /* ── Theme grid ── */

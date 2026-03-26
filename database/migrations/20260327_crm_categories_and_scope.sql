@@ -48,10 +48,19 @@ alter table public.user_message_template_themes
   add column if not exists assinatura_max_linhas integer not null default 3,
   add column if not exists assinatura_max_palavras integer not null default 20;
 
+alter table public.user_message_templates
+  add column if not exists scope text not null default 'user';
+
 alter table public.user_message_template_themes
   drop constraint if exists crm_theme_scope_check;
 alter table public.user_message_template_themes
   add constraint crm_theme_scope_check
+    check (scope in ('system', 'master', 'gestor', 'user'));
+
+alter table public.user_message_templates
+  drop constraint if exists user_message_templates_scope_check;
+alter table public.user_message_templates
+  add constraint user_message_templates_scope_check
     check (scope in ('system', 'master', 'gestor', 'user'));
 
 -- ── 3) Assinaturas salvas por usuário ────────────────────────────

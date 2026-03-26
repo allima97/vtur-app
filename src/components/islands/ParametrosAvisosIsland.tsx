@@ -13,14 +13,6 @@ import FileUploadField from "../ui/primer/FileUploadField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import {
-  OFFICIAL_CARD_THEME_DELETE_NAMES,
-  OFFICIAL_CARD_THEME_NAMES,
-  OFFICIAL_CARD_TEMPLATE_DELETE_NAMES,
-  buildOfficialTemplateRows,
-  buildOfficialThemeRows,
-  resolveThemeAssetMeta,
-} from "../../lib/cards/officialLibrary";
-import {
   CARD_ALIGN_OPTIONS,
   CARD_FONT_OPTIONS,
   CARD_STYLE_SECTION_LABELS,
@@ -32,6 +24,12 @@ import {
   type CardStyleMap,
   type CardStyleSectionKey,
 } from "../../lib/cards/styleConfig";
+import { resolveThemeAssetMeta } from "../../lib/cards/themeAssetMeta";
+import {
+  buildCardClientGreeting,
+  DEFAULT_CARD_CONSULTANT_ROLE,
+  DEFAULT_CARD_FOOTER_LEAD,
+} from "../../lib/cards/templateRuntime";
 
 const STORAGE_BUCKET = "message-template-themes";
 const BRANDING_BUCKET = "quotes";
@@ -75,11 +73,13 @@ const OCASIOES_OFICIAIS = [
 
 type Theme = {
   id: string;
+  user_id?: string | null;
   nome: string;
   categoria: string;
   asset_url: string;
   width_px: number;
   height_px: number;
+  scope?: string | null;
   title_style?: Record<string, any> | null;
   body_style?: Record<string, any> | null;
   signature_style?: Record<string, any> | null;
@@ -88,12 +88,14 @@ type Theme = {
 
 type MessageTemplate = {
   id: string;
+  user_id?: string | null;
   nome: string;
   categoria: string | null;
   titulo: string;
   corpo: string;
   assinatura: string | null;
   theme_id: string | null;
+  scope?: string | null;
   title_style?: Record<string, any> | null;
   body_style?: Record<string, any> | null;
   signature_style?: Record<string, any> | null;
@@ -144,9 +146,9 @@ const initialTemplateForm: TemplateForm = {
   titulo: "",
   categoria: "",
   corpo: "",
-  footerLead: "Com carinho",
+  footerLead: DEFAULT_CARD_FOOTER_LEAD,
   assinatura: "",
-  consultantRole: "Consultor de viagens",
+  consultantRole: DEFAULT_CARD_CONSULTANT_ROLE,
   theme_id: "",
   ativo: true,
 };
@@ -183,11 +185,11 @@ function resolveTemplateStyleState(theme: Theme | null, template?: MessageTempla
 
 const STYLE_SECTION_SAMPLE: Record<CardStyleSectionKey, string> = {
   title: "Feliz Natal!",
-  clientName: "Helena,",
+  clientName: "Prezado(a) Helena,",
   body: "Mensagem principal",
-  footerLead: "Com carinho",
+  footerLead: DEFAULT_CARD_FOOTER_LEAD,
   consultant: "André Lima",
-  consultantRole: "Consultor de viagens",
+  consultantRole: DEFAULT_CARD_CONSULTANT_ROLE,
 };
 
 function normalizarCategoria(value?: string | null) {
@@ -204,6 +206,14 @@ function categoriasCoincidem(first?: string | null, second?: string | null) {
   const categoriaB = normalizarCategoria(second);
   if (!categoriaA || !categoriaB) return false;
   return categoriaA === categoriaB;
+}
+
+function getScopeLabel(scope?: string | null) {
+  const normalized = String(scope || "").trim().toLowerCase();
+  if (normalized === "system") return "Sistema";
+  if (normalized === "master") return "Master";
+  if (normalized === "gestor") return "Gestor";
+  return "Usuário";
 }
 
 function buildMensagemDisparo(
@@ -249,11 +259,11 @@ function extractSignatureTextConfig(signatureStyle?: unknown) {
   const consultantRoleRaw = content?.consultantRole;
 
   return {
-    footerLead: footerLeadRaw == null ? "Com carinho" : String(footerLeadRaw).trim(),
+    footerLead: footerLeadRaw == null ? DEFAULT_CARD_FOOTER_LEAD : String(footerLeadRaw).trim(),
     consultantRole:
       consultantRoleRaw == null
-        ? "Consultor de viagens"
-        : String(consultantRoleRaw).trim() || "Consultor de viagens",
+        ? DEFAULT_CARD_CONSULTANT_ROLE
+        : String(consultantRoleRaw).trim() || DEFAULT_CARD_CONSULTANT_ROLE,
   };
 }
 
@@ -291,6 +301,8 @@ export default function ParametrosAvisosIsland() {
   const [carregandoDados, setCarregandoDados] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState("");
+  const [scopePadrao, setScopePadrao] = useState<"system" | "master" | "gestor" | "user">("user");
   const [nomeUsuario, setNomeUsuario] = useState("");
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [themes, setThemes] = useState<Theme[]>([]);
@@ -307,7 +319,6 @@ export default function ParametrosAvisosIsland() {
   const [salvando, setSalvando] = useState(false);
   const [salvandoTheme, setSalvandoTheme] = useState(false);
   const [salvandoBrandLogo, setSalvandoBrandLogo] = useState(false);
-  const [carregandoPadrao, setCarregandoPadrao] = useState(false);
   const [mostrarFormularioTema, setMostrarFormularioTema] = useState(false);
   const [mostrarListaArtes, setMostrarListaArtes] = useState(false);
   const [filtroThemeTabelaId, setFiltroThemeTabelaId] = useState("");
@@ -325,13 +336,19 @@ export default function ParametrosAvisosIsland() {
       const { data: authData } = await supabase.auth.getUser();
       const userId = authData?.user?.id;
       if (!userId) return;
+      setCurrentUserId(userId);
 
       const { data: userData } = await supabase
         .from("users")
-        .select("nome_completo, company_id")
+        .select("nome_completo, company_id, user_types(name)")
         .eq("id", userId)
         .maybeSingle();
       setNomeUsuario(String(userData?.nome_completo || authData.user.user_metadata?.name || "").trim());
+      const tipo = String((userData as any)?.user_types?.name || "").toUpperCase();
+      if (tipo.includes("ADMIN")) setScopePadrao("system");
+      else if (tipo.includes("MASTER")) setScopePadrao("master");
+      else if (tipo.includes("GESTOR")) setScopePadrao("gestor");
+      else setScopePadrao("user");
 
       const { data: brandingData } = await supabase
         .from("quote_print_settings")
@@ -350,8 +367,7 @@ export default function ParametrosAvisosIsland() {
 
       const tplResp = await supabase
         .from("user_message_templates")
-        .select("id, nome, categoria, titulo, corpo, assinatura, theme_id, title_style, body_style, signature_style, ativo")
-        .eq("user_id", userId)
+        .select("id, user_id, nome, categoria, titulo, corpo, assinatura, theme_id, scope, title_style, body_style, signature_style, ativo")
         .order("categoria")
         .order("nome");
       if (tplResp.error) throw tplResp.error;
@@ -359,8 +375,7 @@ export default function ParametrosAvisosIsland() {
 
       const themesResp = await supabase
         .from("user_message_template_themes")
-        .select("id, nome, categoria, asset_url, width_px, height_px, title_style, body_style, signature_style, ativo")
-        .eq("user_id", userId)
+        .select("id, user_id, nome, categoria, asset_url, width_px, height_px, scope, title_style, body_style, signature_style, ativo")
         .order("categoria")
         .order("nome");
       if (themesResp.error) throw themesResp.error;
@@ -402,6 +417,11 @@ export default function ParametrosAvisosIsland() {
     () => themes.find((theme) => theme.id === form.theme_id) || null,
     [themes, form.theme_id],
   );
+  const selectedTemplateForForm = useMemo(
+    () => templates.find((template) => template.id === form.id) || null,
+    [templates, form.id],
+  );
+  const canEditSelectedTemplate = !selectedTemplateForForm?.user_id || selectedTemplateForForm.user_id === currentUserId;
 
   const filteredThemesByCategoria = useMemo(() => {
     const categoria = normalizarCategoria(selectedThemeForForm?.categoria || form.categoria);
@@ -446,13 +466,15 @@ export default function ParametrosAvisosIsland() {
 
   const bodyWordCount = useMemo(() => countWords(form.corpo), [form.corpo]);
   const signatureWordCount = useMemo(
-    () => countWords([form.footerLead, form.assinatura || nomeUsuario, form.consultantRole].filter(Boolean).join(" ")),
-    [form.footerLead, form.assinatura, form.consultantRole, nomeUsuario],
+    () =>
+      countWords([DEFAULT_CARD_FOOTER_LEAD, form.assinatura || nomeUsuario, DEFAULT_CARD_CONSULTANT_ROLE].filter(Boolean).join(" ")),
+    [form.assinatura, nomeUsuario],
   );
   const bodyManualLines = useMemo(() => countManualLines(form.corpo), [form.corpo]);
   const signatureManualLines = useMemo(
-    () => countManualLines([form.footerLead, form.assinatura || nomeUsuario, form.consultantRole].filter(Boolean).join("\n")),
-    [form.footerLead, form.assinatura, form.consultantRole, nomeUsuario],
+    () =>
+      countManualLines([DEFAULT_CARD_FOOTER_LEAD, form.assinatura || nomeUsuario, DEFAULT_CARD_CONSULTANT_ROLE].filter(Boolean).join("\n")),
+    [form.assinatura, nomeUsuario],
   );
 
   const previewBaseParams = useMemo(() => {
@@ -464,17 +486,17 @@ export default function ParametrosAvisosIsland() {
     const params = new URLSearchParams({
       theme_id: selectedThemeForForm.id,
       nome: previewNomeCliente,
+      cliente_nome: buildCardClientGreeting(previewNomeCliente),
       titulo: previewCardTitle,
       corpo: form.corpo,
-      footer_lead: form.footerLead,
+      footer_lead: DEFAULT_CARD_FOOTER_LEAD,
       assinatura,
-      cargo_consultor: form.consultantRole,
+      cargo_consultor: DEFAULT_CARD_CONSULTANT_ROLE,
       v: String(Date.now()),
     });
 
     if (nomeManual) {
-      params.set("cliente_nome", nomeManual);
-      params.set("cliente_nome_literal", nomeManual);
+      params.set("cliente_nome", buildCardClientGreeting(nomeManual));
     }
     if (resolvedThemeAsset.asset_url) params.set("theme_asset_url", resolvedThemeAsset.asset_url);
     if (resolvedThemeAsset.width_px) params.set("width", String(resolvedThemeAsset.width_px));
@@ -482,7 +504,7 @@ export default function ParametrosAvisosIsland() {
     if (activeBrandLogoUrl) params.set("logo_url", activeBrandLogoUrl);
     params.set("style_overrides", JSON.stringify(styleForm));
     return params;
-  }, [selectedThemeForForm, previewNomeCliente, previewCardTitle, form.corpo, form.footerLead, form.assinatura, form.consultantRole, nomeUsuario, styleForm, previewNomeClienteManual, activeBrandLogoUrl]);
+  }, [selectedThemeForForm, previewNomeCliente, previewCardTitle, form.corpo, form.assinatura, nomeUsuario, styleForm, previewNomeClienteManual, activeBrandLogoUrl]);
 
   const previewThemeSvgUrl = useMemo(() => {
     if (!previewBaseParams) return "";
@@ -673,6 +695,7 @@ export default function ParametrosAvisosIsland() {
         company_id: userData?.company_id || null,
         nome: themeForm.nome.trim(),
         categoria: themeForm.categoria.trim() || "Geral",
+        scope: scopePadrao,
         asset_url: uploadInfo.asset_url,
         storage_path: uploadInfo.storage_path,
         width_px: Number(themeForm.width_px || 1080),
@@ -747,7 +770,7 @@ export default function ParametrosAvisosIsland() {
   async function salvarConfiguracao(e: React.FormEvent) {
     e.preventDefault();
     if (!form.nome.trim() || !form.titulo.trim() || !form.corpo.trim() || !form.theme_id) {
-      setErro("Nome interno, título do card, arte e mensagem do WhatsApp são obrigatórios.");
+      setErro("Nome interno, greeting/título, arte e mensagem principal são obrigatórios.");
       return;
     }
 
@@ -769,8 +792,8 @@ export default function ParametrosAvisosIsland() {
       const titulo = form.titulo.trim() || form.nome.trim();
       const serializedStyles = serializeCardStyleMap(styleForm);
       const signatureTextConfig = {
-        footerLead: form.footerLead.trim(),
-        consultantRole: form.consultantRole.trim() || "Consultor de viagens",
+        footerLead: DEFAULT_CARD_FOOTER_LEAD,
+        consultantRole: DEFAULT_CARD_CONSULTANT_ROLE,
       };
       const payload = {
         user_id: userId,
@@ -781,6 +804,7 @@ export default function ParametrosAvisosIsland() {
         titulo,
         corpo: form.corpo.trim(),
         assinatura: form.assinatura.trim() || null,
+        scope: scopePadrao,
         template_base_url: null,
         theme_id: form.theme_id || null,
         title_style: serializedStyles.title_style,
@@ -792,7 +816,8 @@ export default function ParametrosAvisosIsland() {
         ativo: form.ativo,
       };
 
-      if (form.id) {
+      const shouldUpdate = Boolean(form.id) && canEditSelectedTemplate;
+      if (shouldUpdate) {
         const { error } = await supabase
           .from("user_message_templates")
           .update(payload)
@@ -804,7 +829,7 @@ export default function ParametrosAvisosIsland() {
         if (error) throw error;
       }
 
-      setMsg(form.id ? "Configuração atualizada." : "Configuração salva.");
+      setMsg(shouldUpdate ? "Configuração atualizada." : "Configuração salva.");
       resetForm();
       await carregar();
     } catch (e: any) {
@@ -822,9 +847,9 @@ export default function ParametrosAvisosIsland() {
       titulo: tpl.titulo || "",
       categoria: theme?.categoria || tpl.categoria || "",
       corpo: tpl.corpo || "",
-      footerLead: extractSignatureTextConfig(tpl.signature_style).footerLead,
+      footerLead: extractSignatureTextConfig(tpl.signature_style).footerLead || DEFAULT_CARD_FOOTER_LEAD,
       assinatura: tpl.assinatura || "",
-      consultantRole: extractSignatureTextConfig(tpl.signature_style).consultantRole,
+      consultantRole: extractSignatureTextConfig(tpl.signature_style).consultantRole || DEFAULT_CARD_CONSULTANT_ROLE,
       theme_id: tpl.theme_id || "",
       ativo: tpl.ativo,
     });
@@ -883,6 +908,7 @@ export default function ParametrosAvisosIsland() {
         titulo: tpl.titulo || tpl.nome,
         corpo: tpl.corpo || "",
         assinatura: tpl.assinatura || null,
+        scope: scopePadrao,
         template_base_url: null,
         theme_id: tpl.theme_id || null,
         title_style: tpl.title_style || {},
@@ -897,64 +923,6 @@ export default function ParametrosAvisosIsland() {
       await carregar();
     } catch (e: any) {
       setErro(e?.message || "Erro ao duplicar configuração.");
-    }
-  }
-
-  async function carregarBibliotecaPadrao() {
-    try {
-      setCarregandoPadrao(true);
-      setErro(null);
-      setMsg(null);
-      const { data: authData } = await supabase.auth.getUser();
-      const userId = authData?.user?.id;
-      if (!userId) throw new Error("Sessão inválida.");
-
-      const { data: userData } = await supabase
-        .from("users")
-        .select("company_id")
-        .eq("id", userId)
-        .maybeSingle();
-
-      const companyId = userData?.company_id || null;
-
-      const { error: deleteTemplatesError } = await supabase
-        .from("user_message_templates")
-        .delete()
-        .eq("user_id", userId)
-        .in("nome", OFFICIAL_CARD_TEMPLATE_DELETE_NAMES);
-      if (deleteTemplatesError) throw deleteTemplatesError;
-
-      const { error: deleteThemesError } = await supabase
-        .from("user_message_template_themes")
-        .delete()
-        .eq("user_id", userId)
-        .in("nome", OFFICIAL_CARD_THEME_DELETE_NAMES);
-      if (deleteThemesError) throw deleteThemesError;
-
-      const officialThemeRows = buildOfficialThemeRows(userId, companyId);
-      const { error: insertThemesError } = await supabase.from("user_message_template_themes").insert(officialThemeRows);
-      if (insertThemesError) throw insertThemesError;
-
-      const { data: insertedThemes, error: selectThemesError } = await supabase
-        .from("user_message_template_themes")
-        .select("id, nome")
-        .eq("user_id", userId)
-        .in("nome", OFFICIAL_CARD_THEME_NAMES);
-      if (selectThemesError) throw selectThemesError;
-
-      const themeIdByName = Object.fromEntries(
-        (insertedThemes || []).map((theme: any) => [String(theme.nome), String(theme.id)]),
-      );
-      const officialTemplateRows = buildOfficialTemplateRows(userId, companyId, themeIdByName);
-      const { error: insertTemplatesError } = await supabase.from("user_message_templates").insert(officialTemplateRows);
-      if (insertTemplatesError) throw insertTemplatesError;
-
-      setMsg(`${officialThemeRows.length} artes e ${officialTemplateRows.length} configurações padrão instaladas.`);
-      await carregar();
-    } catch (e: any) {
-      setErro(e?.message || "Erro ao instalar modelos padrão.");
-    } finally {
-      setCarregandoPadrao(false);
     }
   }
 
@@ -982,17 +950,12 @@ export default function ParametrosAvisosIsland() {
         <div style={{ marginTop: 10, color: "#334155", fontSize: 14 }}>
           Marcadores úteis na mensagem: <strong>[PRIMEIRO_NOME]</strong> e <strong>[CONSULTOR]</strong>.
         </div>
-        <details style={{ marginTop: 12 }}>
-          <summary style={{ cursor: "pointer", fontWeight: 600 }}>Ferramentas avançadas</summary>
-          <div style={{ marginTop: 10 }}>
-            <small style={{ color: "#475569", display: "block", marginBottom: 8 }}>
-              Use isso só para instalar ou reinstalar a biblioteca padrão do sistema. Não é necessário na operação diária.
-            </small>
-            <AppButton type="button" variant="secondary" onClick={carregarBibliotecaPadrao} disabled={carregandoPadrao}>
-              {carregandoPadrao ? "Instalando biblioteca..." : "Instalar modelos padrao vtur"}
-            </AppButton>
-          </div>
-        </details>
+        <div style={{ marginTop: 12, color: "#475569", fontSize: 13 }}>
+          O card agora segue um template técnico fixo. A arte deve vir limpa, e o sistema preenche automaticamente o greeting, a saudação do cliente, a mensagem principal, a assinatura, o cargo e a logo.
+        </div>
+        <div style={{ marginTop: 8, color: "#334155", fontSize: 13 }}>
+          Escopo padrão desta conta: <strong>{getScopeLabel(scopePadrao)}</strong>.
+        </div>
       </AppCard>
 
       {(erro || msg) && (
@@ -1010,7 +973,7 @@ export default function ParametrosAvisosIsland() {
       <AppCard tone="config" className="mb-3">
         <h4 style={{ marginBottom: 8 }}>1. Artes / Temas por ocasião</h4>
         <small style={{ color: "#64748b", display: "block", marginBottom: 12 }}>
-          A arte sobe praticamente pronta. O sistema só injeta o primeiro nome do cliente no ponto definido para o tema.
+          Envie a arte-base pronta e limpa, preferencialmente em `1080x1080`. Os campos automáticos sempre sairão nas mesmas áreas do template técnico.
         </small>
         <div className="mobile-stack-buttons" style={{ marginBottom: 12 }}>
           <AppButton
@@ -1146,6 +1109,7 @@ export default function ParametrosAvisosIsland() {
                 <tr>
                   <th>Nome</th>
                   <th>Categoria</th>
+                  <th>Escopo</th>
                   <th>Preview</th>
                   <th>Dimensão</th>
                   <th>Status</th>
@@ -1155,17 +1119,17 @@ export default function ParametrosAvisosIsland() {
               <tbody>
                 {carregandoDados && (
                   <tr>
-                    <td colSpan={6}>Carregando artes...</td>
+                    <td colSpan={7}>Carregando artes...</td>
                   </tr>
                 )}
                 {!carregandoDados && themes.length === 0 && (
                   <tr>
-                    <td colSpan={6}>Nenhuma arte cadastrada.</td>
+                    <td colSpan={7}>Nenhuma arte cadastrada.</td>
                   </tr>
                 )}
                 {!carregandoDados && themes.length > 0 && themesTabela.length === 0 && (
                   <tr>
-                    <td colSpan={6}>Nenhuma arte encontrada para o filtro selecionado.</td>
+                    <td colSpan={7}>Nenhuma arte encontrada para o filtro selecionado.</td>
                   </tr>
                 )}
                 {!carregandoDados && themesTabela.map((theme) => {
@@ -1174,6 +1138,7 @@ export default function ParametrosAvisosIsland() {
                     <tr key={theme.id}>
                       <td data-label="Nome">{theme.nome}</td>
                       <td data-label="Categoria">{theme.categoria}</td>
+                      <td data-label="Escopo">{getScopeLabel(theme.scope)}</td>
                       <td data-label="Preview">
                         <img
                           src={resolvedThemeAsset.asset_url || theme.asset_url}
@@ -1195,6 +1160,7 @@ export default function ParametrosAvisosIsland() {
                             onClick={() => editarTheme(theme)}
                             title="Editar arte"
                             aria-label="Editar arte"
+                            disabled={Boolean(theme.user_id) && theme.user_id !== currentUserId}
                           />
                           <AppButton
                             type="button"
@@ -1213,6 +1179,7 @@ export default function ParametrosAvisosIsland() {
                             onClick={() => void removerTheme(theme.id)}
                             title="Excluir arte"
                             aria-label="Excluir arte"
+                            disabled={Boolean(theme.user_id) && theme.user_id !== currentUserId}
                           />
                         </div>
                       </td>
@@ -1232,7 +1199,7 @@ export default function ParametrosAvisosIsland() {
       <AppCard tone="config" className="mb-3">
         <h4 style={{ marginBottom: 8 }}>2. Preview e mensagem de disparo</h4>
         <small style={{ color: "#64748b", display: "block", marginBottom: 12 }}>
-          Cada configuração liga uma arte a uma mensagem curta de WhatsApp. Essa configuração é a mesma usada no disparo pelo cadastro do cliente.
+          Cada configuração liga uma ocasião a uma arte e define apenas o greeting/título e a mensagem principal. Nome do cliente, assinatura, cargo e logo são automáticos.
         </small>
 
         <div className="form-row mobile-stack parametros-avisos-saved-config-row" style={{ gap: 12, gridTemplateColumns: "1fr" }}>
@@ -1254,7 +1221,7 @@ export default function ParametrosAvisosIsland() {
               { value: "", label: "Nova configuração" },
               ...templates.map((tpl) => ({
                 value: tpl.id,
-                label: `${tpl.categoria || "Sem ocasião"} • ${tpl.nome}`,
+                label: `${tpl.categoria || "Sem ocasião"} • ${tpl.nome} • ${getScopeLabel(tpl.scope)}`,
               })),
             ]}
           />
@@ -1355,7 +1322,7 @@ export default function ParametrosAvisosIsland() {
             <AppField
               as="textarea"
               wrapperClassName="form-group"
-              label="Título do card *"
+              label="Greeting / título automático *"
               className="form-textarea parametros-avisos-short-textarea"
               rows={3}
               value={form.titulo}
@@ -1367,7 +1334,7 @@ export default function ParametrosAvisosIsland() {
             <AppField
               as="textarea"
               wrapperClassName="form-group"
-              label="Mensagem padrão do WhatsApp *"
+              label="Mensagem principal *"
               className="form-textarea parametros-avisos-message-textarea"
               rows={8}
               value={form.corpo}
@@ -1378,46 +1345,33 @@ export default function ParametrosAvisosIsland() {
             />
           </div>
 
-          <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "1fr 1fr 1fr" }}>
+          <div className="form-row mobile-stack" style={{ gap: 12, gridTemplateColumns: "1fr 1fr" }}>
             <AppField
               as="textarea"
               wrapperClassName="form-group"
-              label="Linha antes da assinatura"
-              className="form-textarea parametros-avisos-short-textarea"
-              rows={2}
-              value={form.footerLead}
-              onChange={(e) => setForm((prev) => ({ ...prev, footerLead: e.target.value }))}
-              placeholder={"Ex.: Com carinho\nCom admiração"}
-              caption="Também aceita `Enter`. Se ficar vazio, essa linha some do card."
-            />
-            <AppField
-              as="textarea"
-              wrapperClassName="form-group"
-              label="Consultor / assinatura"
+              label="Nome do consultor / assinatura"
               className="form-textarea parametros-avisos-short-textarea"
               rows={3}
               value={form.assinatura}
               onChange={(e) => setForm((prev) => ({ ...prev, assinatura: e.target.value }))}
               placeholder={nomeUsuario || "Nome do consultor"}
-              caption="Pode quebrar em duas linhas com `Enter` se o nome precisar."
+              caption="Se ficar vazio, o sistema usa automaticamente o nome do usuário logado."
             />
-            <AppField
-              as="textarea"
-              wrapperClassName="form-group"
-              label="Cargo do consultor"
-              className="form-textarea parametros-avisos-short-textarea"
-              rows={2}
-              value={form.consultantRole}
-              onChange={(e) => setForm((prev) => ({ ...prev, consultantRole: e.target.value }))}
-              placeholder={"Ex.: Consultor de viagens\nEspecialista em turismo"}
-              caption="O layout da arte permanece fixo. Só o texto muda."
-            />
+            <div className="form-group">
+              <label className="form-label">Campos automáticos do layout</label>
+              <div className="vtur-surface-panel card-blue" style={{ padding: 12, color: "#475569" }}>
+                <div>Saudação: `Prezado(a) Nome,`</div>
+                <div>Assinatura inicial: {DEFAULT_CARD_FOOTER_LEAD}</div>
+                <div>Cargo: {DEFAULT_CARD_CONSULTANT_ROLE}</div>
+                <div>Logo: branding da conta</div>
+              </div>
+            </div>
           </div>
 
           <details style={{ marginBottom: 16 }}>
             <summary style={{ cursor: "pointer", fontWeight: 600 }}>Ajustes visuais do card (clique para exibir)</summary>
             <small style={{ color: "#64748b", display: "block", marginTop: 8 }}>
-              Ajuste fonte, cor, tamanho e posição de cada bloco. O preview abaixo reflete as mudanças antes de salvar.
+              Ajuste fonte, cor, tamanho e alinhamento. As posições seguem fixas pelo template técnico para todos os temas.
             </small>
             <div className="mobile-stack-buttons" style={{ marginTop: 12 }}>
               <AppButton
@@ -1465,7 +1419,7 @@ export default function ParametrosAvisosIsland() {
                           options={CARD_ALIGN_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
                         />
                       </div>
-                      <div className="form-row mobile-stack parametros-avisos-style-row parametros-avisos-style-row-4">
+                      <div className="form-row mobile-stack parametros-avisos-style-row parametros-avisos-style-row-1">
                         <AppField
                           type="number"
                           wrapperClassName="form-group parametros-avisos-style-group"
@@ -1474,33 +1428,6 @@ export default function ParametrosAvisosIsland() {
                           onChange={(e) => atualizarStyleSection(section, "fontSize", Number(e.target.value || 0))}
                           min={10}
                           max={180}
-                        />
-                        <AppField
-                          type="number"
-                          wrapperClassName="form-group parametros-avisos-style-group"
-                          label="X"
-                          value={Number(style.x || 0)}
-                          onChange={(e) => atualizarStyleSection(section, "x", Number(e.target.value || 0))}
-                          min={0}
-                          max={3000}
-                        />
-                        <AppField
-                          type="number"
-                          wrapperClassName="form-group parametros-avisos-style-group"
-                          label="Y"
-                          value={Number(style.y || 0)}
-                          onChange={(e) => atualizarStyleSection(section, "y", Number(e.target.value || 0))}
-                          min={0}
-                          max={3000}
-                        />
-                        <AppField
-                          type="number"
-                          wrapperClassName="form-group parametros-avisos-style-group"
-                          label="Largura"
-                          value={Number(style.maxWidth || style.width || 0)}
-                          onChange={(e) => atualizarStyleSection(section, "maxWidth", Number(e.target.value || 0))}
-                          min={40}
-                          max={3000}
                         />
                       </div>
                       <div className="form-row mobile-stack parametros-avisos-style-row parametros-avisos-style-row-3">
@@ -1540,7 +1467,7 @@ export default function ParametrosAvisosIsland() {
 
           <div className="mobile-stack-buttons">
             <AppButton variant="primary" type="submit" disabled={salvando}>
-              {salvando ? "Salvando..." : "Salvar configuração"}
+              {salvando ? "Salvando..." : canEditSelectedTemplate ? "Salvar configuração" : "Duplicar para editar"}
             </AppButton>
             <AppButton variant="secondary" type="button" onClick={resetForm} disabled={salvando}>
               Nova configuração
@@ -1558,7 +1485,7 @@ export default function ParametrosAvisosIsland() {
                 >
                   Duplicar
                 </AppButton>
-                <AppButton variant="secondary" type="button" onClick={() => void removerConfiguracao(form.id)} disabled={salvando}>
+                <AppButton variant="secondary" type="button" onClick={() => void removerConfiguracao(form.id)} disabled={salvando || !canEditSelectedTemplate}>
                   Excluir
                 </AppButton>
               </>

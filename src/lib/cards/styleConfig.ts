@@ -64,9 +64,9 @@ export const CARD_WEIGHT_OPTIONS = [
 const MASTER_SECTION_STYLES: CardStyleMap = {
   title: {
     x: 540,
-    y: 190,
-    maxWidth: 860,
-    fontSize: 88,
+    y: 160,
+    maxWidth: 760,
+    fontSize: 74,
     fontWeight: 700,
     color: "#8B1F4E",
     fontFamily: "Cormorant Garamond, Georgia, serif",
@@ -74,10 +74,10 @@ const MASTER_SECTION_STYLES: CardStyleMap = {
     lineHeight: 1.04,
   },
   clientName: {
-    x: 130,
-    y: 350,
-    maxWidth: 820,
-    fontSize: 62,
+    x: 150,
+    y: 280,
+    maxWidth: 780,
+    fontSize: 54,
     fontWeight: 600,
     color: "#31406B",
     fontFamily: "Cormorant Garamond, Georgia, serif",
@@ -85,49 +85,49 @@ const MASTER_SECTION_STYLES: CardStyleMap = {
     lineHeight: 1.05,
   },
   body: {
-    x: 130,
-    y: 440,
-    maxWidth: 820,
-    fontSize: 52,
+    x: 150,
+    y: 410,
+    maxWidth: 720,
+    fontSize: 42,
     fontWeight: 500,
     color: "#101010",
     fontFamily: "Alegreya Sans, Arial, sans-serif",
     align: "left",
-    lineHeight: 1.28,
+    lineHeight: 1.24,
   },
   footerLead: {
-    x: 130,
-    y: 900,
-    maxWidth: 520,
-    fontSize: 40,
+    x: 315,
+    y: 820,
+    maxWidth: 430,
+    fontSize: 36,
     fontWeight: 500,
     color: "#2B2B2B",
     fontFamily: "Alegreya Sans, Arial, sans-serif",
-    align: "left",
+    align: "center",
     lineHeight: 1.2,
     italic: true,
   },
   consultant: {
-    x: 130,
-    y: 960,
-    maxWidth: 560,
-    fontSize: 56,
+    x: 315,
+    y: 880,
+    maxWidth: 430,
+    fontSize: 44,
     fontWeight: 600,
     color: "#0A0A0A",
     fontFamily: "Alegreya Sans, Arial, sans-serif",
-    align: "left",
+    align: "center",
     lineHeight: 1.08,
     italic: false,
   },
   consultantRole: {
-    x: 130,
-    y: 1010,
-    maxWidth: 560,
-    fontSize: 38,
+    x: 315,
+    y: 935,
+    maxWidth: 430,
+    fontSize: 30,
     fontWeight: 500,
     color: "#1A1A1A",
     fontFamily: "Alegreya Sans, Arial, sans-serif",
-    align: "left",
+    align: "center",
     lineHeight: 1.1,
     italic: false,
   },
@@ -163,6 +163,15 @@ function sanitizeStyle(input: unknown): CardThemeStyle {
   if (Number.isFinite(Number(raw.lineHeight))) style.lineHeight = Number(raw.lineHeight);
   if (typeof raw.italic === "boolean") style.italic = raw.italic;
   if (raw.fontStyle === "normal" || raw.fontStyle === "italic") style.fontStyle = raw.fontStyle;
+  return style;
+}
+
+function sanitizeLockedStyle(input: unknown): CardThemeStyle {
+  const style = sanitizeStyle(input);
+  delete style.x;
+  delete style.y;
+  delete style.maxWidth;
+  delete style.width;
   return style;
 }
 
@@ -204,12 +213,12 @@ export function resolveCardStyleMap(params?: {
   const layout = getCardThemeLayout(params?.themeName);
 
   if (layout) {
-    if (layout.title) result.title = { ...result.title, ...sanitizeStyle(layout.title) };
-    if (layout.clientName) result.clientName = { ...result.clientName, ...sanitizeStyle(layout.clientName) };
-    if (layout.body) result.body = { ...result.body, ...sanitizeStyle(layout.body) };
-    if (layout.footerLead) result.footerLead = { ...result.footerLead, ...sanitizeStyle(layout.footerLead) };
-    if (layout.consultant) result.consultant = { ...result.consultant, ...sanitizeStyle(layout.consultant) };
-    if (layout.consultantRole) result.consultantRole = { ...result.consultantRole, ...sanitizeStyle(layout.consultantRole) };
+    if (layout.title) result.title = { ...result.title, ...sanitizeLockedStyle(layout.title) };
+    if (layout.clientName) result.clientName = { ...result.clientName, ...sanitizeLockedStyle(layout.clientName) };
+    if (layout.body) result.body = { ...result.body, ...sanitizeLockedStyle(layout.body) };
+    if (layout.footerLead) result.footerLead = { ...result.footerLead, ...sanitizeLockedStyle(layout.footerLead) };
+    if (layout.consultant) result.consultant = { ...result.consultant, ...sanitizeLockedStyle(layout.consultant) };
+    if (layout.consultantRole) result.consultantRole = { ...result.consultantRole, ...sanitizeLockedStyle(layout.consultantRole) };
   }
 
   const themeMap = extractStoredCardStyleMap(params?.themeBuckets);
@@ -218,9 +227,9 @@ export function resolveCardStyleMap(params?: {
   for (const section of CARD_STYLE_SECTION_ORDER) {
     result[section] = {
       ...result[section],
-      ...sanitizeStyle(themeMap[section]),
-      ...sanitizeStyle(templateMap[section]),
-      ...sanitizeStyle(params?.overrideMap?.[section]),
+      ...sanitizeLockedStyle(themeMap[section]),
+      ...sanitizeLockedStyle(templateMap[section]),
+      ...sanitizeLockedStyle(params?.overrideMap?.[section]),
     };
   }
 

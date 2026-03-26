@@ -1,6 +1,6 @@
 import { createServerClient } from "../../../../lib/supabaseServer";
-import { resolveThemeAssetMeta } from "../../../../lib/cards/officialLibrary";
 import { buildCardFontFaceCss } from "../../../../lib/cards/cardFonts";
+import { resolveThemeAssetMeta } from "../../../../lib/cards/themeAssetMeta";
 import {
   getCardThemeLayout,
   type CardThemeLogoSlot,
@@ -9,6 +9,11 @@ import {
 } from "../../../../lib/cards/themeLayouts";
 import { parseCardStyleOverrideParam, resolveCardStyleMap } from "../../../../lib/cards/styleConfig";
 import { renderTemplateText } from "../../../../lib/messageTemplates";
+import {
+  buildCardClientGreeting,
+  DEFAULT_CARD_CONSULTANT_ROLE,
+  DEFAULT_CARD_FOOTER_LEAD,
+} from "../../../../lib/cards/templateRuntime";
 import { getSupabaseEnv } from "../../users";
 
 export type CardStyle = {
@@ -443,12 +448,16 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
   }
 
   const activeThemeName = themeName || String(themeRow?.nome || "").trim();
-  const resolvedThemeAsset = resolveThemeAssetMeta(themeRow ? {
-    nome: themeRow.nome,
-    asset_url: themeRow.asset_url,
-    width_px: themeRow.width_px,
-    height_px: themeRow.height_px,
-  } : { nome: activeThemeName });
+  const resolvedThemeAsset = resolveThemeAssetMeta(
+    themeRow
+      ? {
+          nome: themeRow.nome,
+          asset_url: themeRow.asset_url,
+          width_px: themeRow.width_px,
+          height_px: themeRow.height_px,
+        }
+      : null,
+  );
   const themeLayout = getCardThemeLayout(activeThemeName);
   const width = parseNum(
     url.searchParams.get("width"),
@@ -529,8 +538,9 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
     ? footerLeadRaw
     : hasFooterLeadConfig
       ? footerLeadConfig
-      : "Com carinho";
-  const cargoConsultor = cargoConsultorRaw || (hasConsultantRoleConfig ? consultantRoleConfig : "Consultor de viagens");
+      : DEFAULT_CARD_FOOTER_LEAD;
+  const cargoConsultor =
+    cargoConsultorRaw || (hasConsultantRoleConfig ? consultantRoleConfig : DEFAULT_CARD_CONSULTANT_ROLE);
 
   const renderVars = {
     nomeCompleto: nome,
@@ -558,7 +568,7 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
       ? renderTemplateText(clientNameTemplate, renderVars, {
           useFullNameAsFirstName: true,
         })
-      : nome;
+      : buildCardClientGreeting(nome);
   const bodyTextRaw = renderTemplateText(corpo, {
     ...renderVars,
     mensagem: mensagemRaw || corpo,
