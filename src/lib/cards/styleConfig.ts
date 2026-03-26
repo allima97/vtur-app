@@ -74,7 +74,7 @@ const MASTER_SECTION_STYLES: CardStyleMap = {
     lineHeight: 1.02,
   },
   clientName: {
-    x: 328,
+    x: 215,
     y: 392,
     maxWidth: 640,
     fontSize: 54,
@@ -87,7 +87,7 @@ const MASTER_SECTION_STYLES: CardStyleMap = {
   body: {
     x: 215,
     y: 510,
-    maxWidth: 650,
+    maxWidth: 840,
     fontSize: 42,
     fontWeight: 500,
     color: "#101828",
