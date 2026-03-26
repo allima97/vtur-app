@@ -93,6 +93,15 @@ function parseNum(v: string | null | undefined, fallback: number) {
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
+function parseOffset(v: string | null | undefined, fallback = 0) {
+  if (v == null) return fallback;
+  const raw = String(v).trim();
+  if (!raw) return fallback;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(-240, Math.min(240, Math.round(n)));
+}
+
 function parseBooleanParam(v: string | null | undefined): boolean | undefined {
   if (v == null) return undefined;
   const raw = String(v).trim().toLowerCase();
@@ -466,6 +475,17 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
   const footerLeadItalic = parseBooleanParam(url.searchParams.get("footer_lead_italic"));
   const consultantItalic = parseBooleanParam(url.searchParams.get("consultant_italic"));
   const consultantRoleItalic = parseBooleanParam(url.searchParams.get("consultant_role_italic"));
+  const textColorRaw = String(url.searchParams.get("text_color") || "").trim();
+  const titleOffsetX = parseOffset(url.searchParams.get("title_offset_x"));
+  const titleOffsetY = parseOffset(url.searchParams.get("title_offset_y"));
+  const clientOffsetX = parseOffset(url.searchParams.get("client_offset_x"));
+  const clientOffsetY = parseOffset(url.searchParams.get("client_offset_y"));
+  const bodyOffsetX = parseOffset(url.searchParams.get("body_offset_x"));
+  const bodyOffsetY = parseOffset(url.searchParams.get("body_offset_y"));
+  const signatureOffsetX = parseOffset(url.searchParams.get("signature_offset_x"));
+  const signatureOffsetY = parseOffset(url.searchParams.get("signature_offset_y"));
+  const logoOffsetX = parseOffset(url.searchParams.get("logo_offset_x"));
+  const logoOffsetY = parseOffset(url.searchParams.get("logo_offset_y"));
   const empresaRaw = String(url.searchParams.get("empresa") || "").trim();
   const origemRaw = String(url.searchParams.get("origem") || "").trim();
   const destinoRaw = String(url.searchParams.get("destino") || "").trim();
@@ -554,6 +574,29 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
     queryItalic: consultantRoleItalic,
   });
 
+  const unifiedTextColor = normalizeColor(textColorRaw, "");
+  if (unifiedTextColor) {
+    titleStyle.color = unifiedTextColor;
+    clientNameStyle.color = unifiedTextColor;
+    bodyStyle.color = unifiedTextColor;
+    footerLeadStyle.color = unifiedTextColor;
+    consultantStyle.color = unifiedTextColor;
+    consultantRoleStyle.color = unifiedTextColor;
+  }
+
+  titleStyle.x = Number(titleStyle.x || 0) + titleOffsetX;
+  titleStyle.y = Number(titleStyle.y || 0) + titleOffsetY;
+  clientNameStyle.x = Number(clientNameStyle.x || 0) + clientOffsetX;
+  clientNameStyle.y = Number(clientNameStyle.y || 0) + clientOffsetY;
+  bodyStyle.x = Number(bodyStyle.x || 0) + bodyOffsetX;
+  bodyStyle.y = Number(bodyStyle.y || 0) + bodyOffsetY;
+  footerLeadStyle.x = Number(footerLeadStyle.x || 0) + signatureOffsetX;
+  footerLeadStyle.y = Number(footerLeadStyle.y || 0) + signatureOffsetY;
+  consultantStyle.x = Number(consultantStyle.x || 0) + signatureOffsetX;
+  consultantStyle.y = Number(consultantStyle.y || 0) + signatureOffsetY;
+  consultantRoleStyle.x = Number(consultantRoleStyle.x || 0) + signatureOffsetX;
+  consultantRoleStyle.y = Number(consultantRoleStyle.y || 0) + signatureOffsetY;
+
   const titulo = tituloRaw || templateRow?.titulo || `${nome}, feliz aniversário!`;
   const corpo =
     corpoRaw ||
@@ -629,7 +672,12 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
   const hideBody = Boolean(showPhoto && themeLayout?.photo?.hideBodyWhenPhoto);
   const visibility = themeLayout?.visibility;
   const logoUrl = await resolveInlineImageHref(absoluteAssetUrl(url.origin, logoUrlRaw));
-  const logoSlot = resolveLogoSlot(themeLayout, width, height);
+  const logoSlotBase = resolveLogoSlot(themeLayout, width, height);
+  const logoSlot = {
+    ...logoSlotBase,
+    x: Number(logoSlotBase.x || 0) + logoOffsetX,
+    y: Number(logoSlotBase.y || 0) + logoOffsetY,
+  };
 
   const backgroundUrl = absoluteAssetUrl(
     url.origin,

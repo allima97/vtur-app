@@ -3,6 +3,7 @@ import { supabaseBrowser } from "../../lib/supabase-browser";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppButton from "../ui/primer/AppButton";
+import { ToastStack, useToastQueue } from "../ui/Toast";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -20,6 +21,8 @@ type Theme = {
   categoria: string | null;
   categoria_id: string | null;
   asset_url: string;
+  logo_url?: string | null;
+  logo_path?: string | null;
   greeting_text: string | null;
   mensagem_max_linhas: number;
   mensagem_max_palavras: number;
@@ -55,10 +58,84 @@ type AssinaturaForm = {
   linha3_italic: boolean;
 };
 
+type CardPositionForm = {
+  title: { x: number; y: number };
+  clientName: { x: number; y: number };
+  body: { x: number; y: number };
+  signature: { x: number; y: number };
+  logo: { x: number; y: number };
+};
+
+type BirthdayItem = {
+  id: string;
+  nome: string;
+  nascimento: string | null;
+  telefone: string | null;
+  pessoa_tipo?: "cliente" | "acompanhante";
+  cliente_id?: string | null;
+};
+
+type ScopeValue = "system" | "master" | "gestor" | "user";
+
+type CategoryForm = {
+  nome: string;
+  icone: string;
+  sort_order: number;
+  ativo: boolean;
+};
+
+type ThemeForm = {
+  nome: string;
+  categoria_id: string | null;
+  asset_url: string;
+  logo_url: string;
+  scope: ScopeValue;
+  greeting_text: string;
+  mensagem_max_linhas: number;
+  mensagem_max_palavras: number;
+  assinatura_max_linhas: number;
+  assinatura_max_palavras: number;
+  ativo: boolean;
+};
+
+type MessageForm = {
+  nome: string;
+  categoria: string;
+  titulo: string;
+  corpo: string;
+  scope: ScopeValue;
+  ativo: boolean;
+};
+
+const CRM_THEMES_PER_PAGE = 12;
+const STORAGE_BUCKET = "message-template-themes";
+type LogoSourceMode = "default" | "custom";
+const THEME_SELECT_WITH_LOGO =
+  "id, user_id, nome, categoria, categoria_id, asset_url, logo_url, logo_path, greeting_text, mensagem_max_linhas, mensagem_max_palavras, assinatura_max_linhas, assinatura_max_palavras, scope, ativo";
+const THEME_SELECT_LEGACY =
+  "id, user_id, nome, categoria, categoria_id, asset_url, greeting_text, mensagem_max_linhas, mensagem_max_palavras, assinatura_max_linhas, assinatura_max_palavras, scope, ativo";
+
+const ICON_SUGGESTIONS = [
+  "pi pi-gift", "pi pi-star", "pi pi-sun", "pi pi-sparkles",
+  "pi pi-heart", "pi pi-map", "pi pi-tag", "pi pi-image",
+  "pi pi-calendar", "pi pi-globe", "pi pi-flag",
+];
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function getPrimeiroNome(nome: string) {
   return (nome || "").trim().split(/\s+/)[0] || "";
+}
+
+function isThemeLogoColumnMissingError(error: any) {
+  const message = String(error?.message || "").toLowerCase();
+  if (!message) return false;
+  return (
+    (message.includes("column") && message.includes("logo_url")) ||
+    (message.includes("column") && message.includes("logo_path")) ||
+    message.includes("logo_url does not exist") ||
+    message.includes("logo_path does not exist")
+  );
 }
 
 function countWords(text: string) {
@@ -118,6 +195,20 @@ async function resolveLogoUrlFromSettings(settings?: { logo_url?: string | null;
   }
 
   return persistedUrl;
+}
+
+function resolveThemeLogoUrl(theme?: Pick<Theme, "logo_url" | "logo_path"> | null) {
+  const persistedUrl = cleanAssetUrl(theme?.logo_url);
+  if (persistedUrl) return persistedUrl;
+
+  const logoPath = String(theme?.logo_path || "").trim();
+  if (!logoPath) return null;
+  try {
+    const publicUrl = cleanAssetUrl(supabaseBrowser.storage.from(STORAGE_BUCKET).getPublicUrl(logoPath).data.publicUrl);
+    return publicUrl;
+  } catch {
+    return null;
+  }
 }
 
 function resolveGreetingByTheme(theme?: Pick<Theme, "nome" | "categoria" | "greeting_text"> | null) {
@@ -223,6 +314,130 @@ function getScopeTone(scope?: string | null) {
   return "crm-badge crm-badge--user";
 }
 
+function getAvailableScopeOptions(userRole: string, isAdmin: boolean): Array<{ value: ScopeValue; label: string }> {
+  if (isAdmin) {
+    return [
+      { value: "system", label: "Sistema (todos os usuários)" },
+      { value: "master", label: "Master (empresas)" },
+      { value: "gestor", label: "Gestor (agência)" },
+      { value: "user", label: "Usuário (pessoal)" },
+    ];
+  }
+
+  const normalizedRole = String(userRole || "").trim().toUpperCase();
+  if (normalizedRole === "MASTER") {
+    return [
+      { value: "master", label: "Master (empresas)" },
+      { value: "gestor", label: "Gestor (agência)" },
+      { value: "user", label: "Usuário (pessoal)" },
+    ];
+  }
+  if (normalizedRole === "GESTOR") {
+    return [
+      { value: "gestor", label: "Gestor (agência)" },
+      { value: "user", label: "Usuário (pessoal)" },
+    ];
+  }
+  return [{ value: "user", label: "Usuário (pessoal)" }];
+}
+
+function emptyCategoryForm(): CategoryForm {
+  return { nome: "", icone: "pi pi-tag", sort_order: 0, ativo: true };
+}
+
+function emptyThemeForm(defaultScope: ScopeValue): ThemeForm {
+  return {
+    nome: "",
+    categoria_id: null,
+    asset_url: "",
+    logo_url: "",
+    scope: defaultScope,
+    greeting_text: "",
+    mensagem_max_linhas: 6,
+    mensagem_max_palavras: 50,
+    assinatura_max_linhas: 3,
+    assinatura_max_palavras: 20,
+    ativo: true,
+  };
+}
+
+function emptyMessageForm(defaultScope: ScopeValue): MessageForm {
+  return {
+    nome: "",
+    categoria: "",
+    titulo: "",
+    corpo: "",
+    scope: defaultScope,
+    ativo: true,
+  };
+}
+
+function getStoragePathFromPublicUrl(publicUrl?: string | null): string | null {
+  const raw = String(publicUrl || "").trim();
+  if (!raw) return null;
+  const marker = `/storage/v1/object/public/${STORAGE_BUCKET}/`;
+  const markerIndex = raw.indexOf(marker);
+  if (markerIndex >= 0) {
+    const value = raw.slice(markerIndex + marker.length).split("?")[0];
+    return value ? decodeURIComponent(value) : null;
+  }
+  try {
+    const url = new URL(raw);
+    const path = url.pathname || "";
+    const pathIndex = path.indexOf(marker);
+    if (pathIndex < 0) return null;
+    const value = path.slice(pathIndex + marker.length);
+    return value ? decodeURIComponent(value) : null;
+  } catch {
+    return null;
+  }
+}
+
+const CARD_TEXT_COLOR_PRESETS: Array<{ label: string; value: string }> = [
+  { label: "Padrão", value: "" },
+  { label: "Azul", value: "#1B4F9A" },
+  { label: "Grafite", value: "#0F172A" },
+  { label: "Preto suave", value: "#111827" },
+  { label: "Verde", value: "#166534" },
+  { label: "Rosa", value: "#BE185D" },
+  { label: "Vinho", value: "#7F1D1D" },
+  { label: "Roxo", value: "#581C87" },
+  { label: "Marrom", value: "#7C2D12" },
+];
+
+const DEFAULT_CARD_POSITION: CardPositionForm = {
+  title: { x: 0, y: 0 },
+  clientName: { x: 0, y: 0 },
+  body: { x: 0, y: 0 },
+  signature: { x: 0, y: 0 },
+  logo: { x: 0, y: 0 },
+};
+
+function clampPositionOffset(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(-240, Math.min(240, Math.round(value)));
+}
+
+function parseBirthDateParts(value?: string | null) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  const isoPrefix = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoPrefix) {
+    const month = Number(isoPrefix[2]);
+    const day = Number(isoPrefix[3]);
+    if (Number.isFinite(month) && Number.isFinite(day)) return { month, day };
+  }
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(raw)) {
+    const [dayRaw, monthRaw] = raw.split("/");
+    const month = Number(monthRaw);
+    const day = Number(dayRaw);
+    if (Number.isFinite(month) && Number.isFinite(day)) return { month, day };
+  }
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return { month: parsed.getMonth() + 1, day: parsed.getDate() };
+}
+
 function buildPreviewParams(params: {
   themeId: string;
   themeName?: string | null;
@@ -233,6 +448,8 @@ function buildPreviewParams(params: {
   mensagem: string;
   assinatura: AssinaturaForm;
   logoUrl: string | null;
+  textColor: string;
+  position: CardPositionForm;
 }) {
   const {
     themeId,
@@ -244,6 +461,8 @@ function buildPreviewParams(params: {
     mensagem,
     assinatura,
     logoUrl,
+    textColor,
+    position,
   } = params;
   const q = new URLSearchParams();
   q.set("theme_id", themeId);
@@ -267,6 +486,17 @@ function buildPreviewParams(params: {
   q.set("consultant_role_italic", assinatura.linha3_italic ? "1" : "0");
   // Compatibilidade com links antigos que usam apenas signature_font_size para a linha 2.
   q.set("signature_font_size", String(assinatura.linha2_font_size || 56));
+  if (textColor) q.set("text_color", textColor);
+  if (position.title.x) q.set("title_offset_x", String(position.title.x));
+  if (position.title.y) q.set("title_offset_y", String(position.title.y));
+  if (position.clientName.x) q.set("client_offset_x", String(position.clientName.x));
+  if (position.clientName.y) q.set("client_offset_y", String(position.clientName.y));
+  if (position.body.x) q.set("body_offset_x", String(position.body.x));
+  if (position.body.y) q.set("body_offset_y", String(position.body.y));
+  if (position.signature.x) q.set("signature_offset_x", String(position.signature.x));
+  if (position.signature.y) q.set("signature_offset_y", String(position.signature.y));
+  if (position.logo.x) q.set("logo_offset_x", String(position.logo.x));
+  if (position.logo.y) q.set("logo_offset_y", String(position.logo.y));
   if (logoUrl) q.set("logo_url", logoUrl);
   return `/api/v1/cards/render.svg?${q.toString()}`;
 }
@@ -343,7 +573,7 @@ function AssinaturaEditor({
             onChange={(e) => set(l.sizeKey, Number(e.target.value))}
             title="Tamanho da fonte"
           >
-            {[28, 32, 36, 40, 44, 48, 52, 56, 60, 64].map((s) => (
+            {[12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 36, 40, 44, 48, 52, 56, 60, 64].map((s) => (
               <option key={s} value={s}>{s}px</option>
             ))}
           </select>
@@ -380,12 +610,19 @@ export default function CrmIsland() {
   // ── Data ────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
+  const [currentUserRole, setCurrentUserRole] = useState("");
+  const [currentCompanyId, setCurrentCompanyId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [themes, setThemes] = useState<Theme[]>([]);
   const [messageLibrary, setMessageLibrary] = useState<MessageTemplate[]>([]);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [logoMissing, setLogoMissing] = useState(false);
+  const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(null);
+  const [companyLogoMissing, setCompanyLogoMissing] = useState(false);
+  const [logoSourceMode, setLogoSourceMode] = useState<LogoSourceMode>("default");
   const [savedSigId, setSavedSigId] = useState<string | null>(null);
+  const [birthdayItemsToday, setBirthdayItemsToday] = useState<BirthdayItem[]>([]);
+  const [loadingBirthdays, setLoadingBirthdays] = useState(false);
+  const [selectedBirthdayId, setSelectedBirthdayId] = useState<string | null>(null);
 
   // ── Selection / navigation ───────────────────────────────────────
   const [selectedTheme, setSelectedTheme] = useState<Theme | null>(null);
@@ -397,6 +634,8 @@ export default function CrmIsland() {
   const [useCustomNome, setUseCustomNome] = useState(false);
   const [mensagem, setMensagem] = useState("");
   const [assinatura, setAssinatura] = useState<AssinaturaForm>({ ...DEFAULT_ASSINATURA });
+  const [textColor, setTextColor] = useState("");
+  const [textPosition, setTextPosition] = useState<CardPositionForm>({ ...DEFAULT_CARD_POSITION });
   const [savingSig, setSavingSig] = useState(false);
   const [sigSaved, setSigSaved] = useState(false);
   const [selectedMessageTemplateId, setSelectedMessageTemplateId] = useState("");
@@ -409,10 +648,74 @@ export default function CrmIsland() {
 
   const [scopeFilter, setScopeFilter] = useState<"all" | "system" | "master" | "gestor" | "user">("all");
   const [temaFilter, setTemaFilter] = useState<TemaFilterValue>("all");
+  const [themePage, setThemePage] = useState(1);
+
+  // ── CRM library creation (template/category/message) ────────────
+  const [showCreateCategoryModal, setShowCreateCategoryModal] = useState(false);
+  const [showCreateThemeModal, setShowCreateThemeModal] = useState(false);
+  const [showCreateMessageModal, setShowCreateMessageModal] = useState(false);
+  const [categoryForm, setCategoryForm] = useState<CategoryForm>(() => emptyCategoryForm());
+  const [themeForm, setThemeForm] = useState<ThemeForm>(() => emptyThemeForm("user"));
+  const [messageForm, setMessageForm] = useState<MessageForm>(() => emptyMessageForm("user"));
+  const [savingCategory, setSavingCategory] = useState(false);
+  const [savingTheme, setSavingTheme] = useState(false);
+  const [savingMessage, setSavingMessage] = useState(false);
+  const [uploadingThemeArt, setUploadingThemeArt] = useState(false);
+  const [uploadingThemeLogo, setUploadingThemeLogo] = useState(false);
+  const themeFileInputRef = useRef<HTMLInputElement>(null);
+  const themeLogoInputRef = useRef<HTMLInputElement>(null);
 
   // ── Preview ──────────────────────────────────────────────────────
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
+
+  const queryThemesWithLogoFallback = useCallback(async () => {
+    const withLogo = await supabaseBrowser
+      .from("user_message_template_themes")
+      .select(THEME_SELECT_WITH_LOGO)
+      .order("nome");
+    if (!withLogo.error) {
+      return {
+        data: (withLogo.data || []) as Theme[],
+        error: null as any,
+        logoColumnsAvailable: true,
+      };
+    }
+
+    if (!isThemeLogoColumnMissingError(withLogo.error)) {
+      return {
+        data: [] as Theme[],
+        error: withLogo.error,
+        logoColumnsAvailable: false,
+      };
+    }
+
+    const legacy = await supabaseBrowser
+      .from("user_message_template_themes")
+      .select(THEME_SELECT_LEGACY)
+      .order("nome");
+    if (legacy.error) {
+      return {
+        data: [] as Theme[],
+        error: legacy.error,
+        logoColumnsAvailable: false,
+      };
+    }
+
+    const normalized = ((legacy.data || []) as any[]).map((row) => ({
+      ...row,
+      logo_url: null,
+      logo_path: null,
+    })) as Theme[];
+
+    return {
+      data: normalized,
+      error: null as any,
+      logoColumnsAvailable: false,
+    };
+  }, []);
 
   // ── Derived ──────────────────────────────────────────────────────
   const primeiroNome = useCustomNome ? clienteNomeCustom.trim() : clienteNome.trim();
@@ -421,6 +724,12 @@ export default function CrmIsland() {
   const maxLinhas = selectedTheme?.mensagem_max_linhas ?? 6;
   const palavrasExcedido = palavras > maxPalavras;
   const linhasExcedido = mensagem.split("\n").length > maxLinhas;
+  const selectedThemeCustomLogoUrl = useMemo(() => resolveThemeLogoUrl(selectedTheme), [selectedTheme]);
+  const hasSelectedThemeCustomLogo = Boolean(selectedThemeCustomLogoUrl);
+  const activeLogoUrl =
+    logoSourceMode === "custom" && hasSelectedThemeCustomLogo
+      ? selectedThemeCustomLogoUrl
+      : companyLogoUrl;
 
   const categoryNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -459,6 +768,13 @@ export default function CrmIsland() {
     [themes, scopeFilter, temaFilter, categoryNameById]
   );
 
+  const totalThemePages = Math.max(1, Math.ceil(filteredThemes.length / CRM_THEMES_PER_PAGE));
+
+  const pagedThemes = useMemo(() => {
+    const start = (themePage - 1) * CRM_THEMES_PER_PAGE;
+    return filteredThemes.slice(start, start + CRM_THEMES_PER_PAGE);
+  }, [filteredThemes, themePage]);
+
   const filteredMessages = useMemo(() => {
     if (!selectedTheme) return messageLibrary;
     const catNome = (selectedTheme.categoria || "").toLowerCase();
@@ -496,11 +812,191 @@ export default function CrmIsland() {
     };
   }, [themes]);
 
+  const availableScopeOptions = useMemo(
+    () => getAvailableScopeOptions(currentUserRole, isAdmin),
+    [currentUserRole, isAdmin]
+  );
+
+  const defaultCreationScope = useMemo<ScopeValue>(
+    () => availableScopeOptions[0]?.value || "user",
+    [availableScopeOptions]
+  );
+
+  const todayLabel = useMemo(
+    () =>
+      new Intl.DateTimeFormat("pt-BR", {
+        day: "2-digit",
+        month: "long",
+      }).format(new Date()),
+    []
+  );
+
+  const moveElement = useCallback(
+    (key: keyof CardPositionForm, axis: "x" | "y", delta: number) => {
+      setTextPosition((prev) => ({
+        ...prev,
+        [key]: {
+          ...prev[key],
+          [axis]: clampPositionOffset((prev[key][axis] || 0) + delta),
+        },
+      }));
+    },
+    []
+  );
+
+  const resetElementPosition = useCallback((key: keyof CardPositionForm) => {
+    setTextPosition((prev) => ({
+      ...prev,
+      [key]: { x: 0, y: 0 },
+    }));
+  }, []);
+
+  const resetTextFormatting = useCallback(() => {
+    setTextPosition({ ...DEFAULT_CARD_POSITION });
+    setTextColor("");
+  }, []);
+
+  const renderInlinePositionControl = useCallback(
+    (params: {
+      keyName: keyof CardPositionForm;
+      label: string;
+    }) => {
+      const pos = textPosition[params.keyName] || { x: 0, y: 0 };
+      const step = 6;
+      const titleBase = `Mover ${params.label}`;
+      return (
+        <div className="crm-position-inline" aria-label={`${titleBase} no cartão`}>
+          <button
+            type="button"
+            className="crm-position-btn"
+            onClick={() => moveElement(params.keyName, "y", -step)}
+            title={`${titleBase} para cima`}
+            aria-label={`${titleBase} para cima`}
+          >
+            <i className="pi pi-arrow-up" />
+          </button>
+          <button
+            type="button"
+            className="crm-position-btn"
+            onClick={() => moveElement(params.keyName, "x", -step)}
+            title={`${titleBase} para esquerda`}
+            aria-label={`${titleBase} para esquerda`}
+          >
+            <i className="pi pi-arrow-left" />
+          </button>
+          <button
+            type="button"
+            className="crm-position-btn"
+            onClick={() => moveElement(params.keyName, "x", step)}
+            title={`${titleBase} para direita`}
+            aria-label={`${titleBase} para direita`}
+          >
+            <i className="pi pi-arrow-right" />
+          </button>
+          <button
+            type="button"
+            className="crm-position-btn"
+            onClick={() => moveElement(params.keyName, "y", step)}
+            title={`${titleBase} para baixo`}
+            aria-label={`${titleBase} para baixo`}
+          >
+            <i className="pi pi-arrow-down" />
+          </button>
+          <button
+            type="button"
+            className="crm-position-btn"
+            onClick={() => resetElementPosition(params.keyName)}
+            title={`Zerar posição de ${params.label}`}
+            aria-label={`Zerar posição de ${params.label}`}
+          >
+            <i className="pi pi-refresh" />
+          </button>
+          <span className="crm-position-inline__value">
+            X:{pos.x >= 0 ? `+${pos.x}` : pos.x} · Y:{pos.y >= 0 ? `+${pos.y}` : pos.y}
+          </span>
+        </div>
+      );
+    },
+    [moveElement, resetElementPosition, textPosition]
+  );
+
   useEffect(() => {
     if (!temaFilter.startsWith("cat:")) return;
     const exists = categories.some((cat) => `cat:${String(cat.id || "").trim()}` === temaFilter);
     if (!exists) setTemaFilter("all");
   }, [temaFilter, categories]);
+
+  useEffect(() => {
+    setThemePage(1);
+  }, [scopeFilter, temaFilter]);
+
+  useEffect(() => {
+    if (themePage > totalThemePages) {
+      setThemePage(totalThemePages);
+    }
+  }, [themePage, totalThemePages]);
+
+  useEffect(() => {
+    if (logoSourceMode === "custom" && !hasSelectedThemeCustomLogo) {
+      setLogoSourceMode("default");
+    }
+  }, [logoSourceMode, hasSelectedThemeCustomLogo]);
+
+  useEffect(() => {
+    if (logoSourceMode === "default" && !companyLogoUrl && hasSelectedThemeCustomLogo) {
+      setLogoSourceMode("custom");
+    }
+  }, [logoSourceMode, companyLogoUrl, hasSelectedThemeCustomLogo]);
+
+  useEffect(() => {
+    setThemeForm((prev) => {
+      if (availableScopeOptions.some((option) => option.value === prev.scope)) return prev;
+      return { ...prev, scope: defaultCreationScope };
+    });
+    setMessageForm((prev) => {
+      if (availableScopeOptions.some((option) => option.value === prev.scope)) return prev;
+      return { ...prev, scope: defaultCreationScope };
+    });
+  }, [availableScopeOptions, defaultCreationScope]);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadTodayBirthdays() {
+      setLoadingBirthdays(true);
+      try {
+        const now = new Date();
+        const month = now.getMonth() + 1;
+        const day = now.getDate();
+        const resp = await fetch(`/api/v1/dashboard/aniversariantes?mode=geral&month=${month}`, {
+          credentials: "include",
+        });
+        if (!resp.ok) throw new Error(`Falha ao carregar aniversariantes (${resp.status}).`);
+        const payload = (await resp.json()) as any;
+        const items = ((payload?.items || []) as BirthdayItem[])
+          .filter((item) => {
+            const parts = parseBirthDateParts(item?.nascimento);
+            return Boolean(
+              parts &&
+                parts.month === month &&
+                parts.day === day &&
+                String(item?.pessoa_tipo || "cliente") !== "acompanhante"
+            );
+          })
+          .sort((a, b) => String(a?.nome || "").localeCompare(String(b?.nome || ""), "pt-BR"));
+        if (!mounted) return;
+        setBirthdayItemsToday(items);
+      } catch (err) {
+        console.error("[CRM] Falha ao carregar aniversariantes do dia:", err);
+        if (mounted) setBirthdayItemsToday([]);
+      } finally {
+        if (mounted) setLoadingBirthdays(false);
+      }
+    }
+    loadTodayBirthdays();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // ── Load data ────────────────────────────────────────────────────
   useEffect(() => {
@@ -514,6 +1010,9 @@ export default function CrmIsland() {
         const payload = (await resp.json()) as any;
 
         setCurrentUserId(String(payload?.userId || ""));
+        setCurrentUserRole(String(payload?.userRole || ""));
+        setCurrentCompanyId(String(payload?.currentCompanyId || "").trim() || null);
+        setIsAdmin(Boolean(payload?.isAdmin));
         setCategories((payload?.categories || []) as Category[]);
         setThemes(
           ((payload?.themes || []) as Theme[])
@@ -534,8 +1033,8 @@ export default function CrmIsland() {
 
         const settings = payload?.settings || null;
         const resolvedLogo = await resolveLogoUrlFromSettings(settings);
-        setLogoUrl(resolvedLogo);
-        setLogoMissing(!resolvedLogo);
+        setCompanyLogoUrl(resolvedLogo);
+        setCompanyLogoMissing(!resolvedLogo);
 
         const sig = payload?.signature || null;
         if (sig?.id) {
@@ -559,18 +1058,13 @@ export default function CrmIsland() {
         try {
           const authResp = await supabaseBrowser.auth.getUser();
           const fallbackUserId = authResp.data?.user?.id || "";
-          const [catResp, themeResp, msgResp, sigResp, settingsResp] = await Promise.all([
+          const [catResp, themeResp, msgResp, sigResp, settingsResp, userMetaResp] = await Promise.all([
             supabaseBrowser
               .from("crm_template_categories")
               .select("id, nome, icone, sort_order")
               .eq("ativo", true)
               .order("sort_order"),
-            supabaseBrowser
-              .from("user_message_template_themes")
-              .select(
-                "id, user_id, nome, categoria, categoria_id, asset_url, greeting_text, mensagem_max_linhas, mensagem_max_palavras, assinatura_max_linhas, assinatura_max_palavras, scope, ativo"
-              )
-              .order("nome"),
+            queryThemesWithLogoFallback(),
             supabaseBrowser
               .from("user_message_templates")
               .select("id, user_id, nome, titulo, corpo, categoria, scope, ativo")
@@ -585,9 +1079,19 @@ export default function CrmIsland() {
               .select("logo_url, logo_path, consultor_nome")
               .eq("owner_user_id", fallbackUserId)
               .maybeSingle(),
+            supabaseBrowser
+              .from("users")
+              .select("company_id, user_types(name)")
+              .eq("id", fallbackUserId)
+              .maybeSingle(),
           ]);
+          if (themeResp.error) throw themeResp.error;
 
+          const userMeta = (userMetaResp.data || null) as any;
           setCurrentUserId(fallbackUserId);
+          setCurrentUserRole(String(userMeta?.user_types?.name || ""));
+          setCurrentCompanyId(String(userMeta?.company_id || "").trim() || null);
+          setIsAdmin(String(userMeta?.user_types?.name || "").trim().toUpperCase() === "ADMIN");
           setCategories((catResp.data || []) as Category[]);
           setThemes(
             ((themeResp.data || []) as Theme[])
@@ -616,8 +1120,8 @@ export default function CrmIsland() {
             settings = legacySettingsResp.data as any;
           }
           const resolvedLogo = await resolveLogoUrlFromSettings(settings);
-          setLogoUrl(resolvedLogo);
-          setLogoMissing(!resolvedLogo);
+          setCompanyLogoUrl(resolvedLogo);
+          setCompanyLogoMissing(!resolvedLogo);
 
           const sig = sigResp.data as any;
           if (sig) {
@@ -689,12 +1193,33 @@ export default function CrmIsland() {
     setMensagem(stripLegacyGreeting(selected.corpo));
   }
 
-  function selectTheme(theme: Theme) {
+  const selectTheme = useCallback((theme: Theme) => {
     setSelectedTheme(theme);
     setSelectedMessageTemplateId("");
     setGreeting(resolveGreetingByTheme(theme));
     setMensagem("");
     setPreviewUrl(null);
+  }, []);
+
+  useEffect(() => {
+    if (filteredThemes.length === 0) {
+      if (selectedTheme) setSelectedTheme(null);
+      return;
+    }
+    if (selectedTheme && filteredThemes.some((theme) => theme.id === selectedTheme.id)) {
+      return;
+    }
+    selectTheme(filteredThemes[0]);
+  }, [filteredThemes, selectedTheme, selectTheme]);
+
+  function applyBirthdayCliente(item: BirthdayItem) {
+    const nome = String(item?.nome || "").trim();
+    if (!nome) return;
+    setSelectedBirthdayId(item.id);
+    setClienteNome(nome);
+    setClienteBusca(nome);
+    setUseCustomNome(false);
+    setClienteNomeCustom("");
   }
 
   useEffect(() => {
@@ -737,14 +1262,16 @@ export default function CrmIsland() {
         nomeCompleto: clienteNome || primeiroNome,
         mensagem,
         assinatura,
-        logoUrl,
+        logoUrl: activeLogoUrl,
+        textColor,
+        position: textPosition,
       });
       setPreviewUrl(url);
     }, 700);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [selectedTheme, greeting, primeiroNome, clienteNome, mensagem, assinatura, logoUrl]);
+  }, [selectedTheme, greeting, primeiroNome, clienteNome, mensagem, assinatura, activeLogoUrl, textColor, textPosition]);
 
   // ── Save signature ───────────────────────────────────────────────
   async function salvarAssinatura() {
@@ -805,6 +1332,273 @@ export default function CrmIsland() {
     navigator.clipboard.writeText(url).catch(() => {});
   }
 
+  async function reloadCategories() {
+    const { data, error } = await supabaseBrowser
+      .from("crm_template_categories")
+      .select("id, nome, icone, sort_order")
+      .eq("ativo", true)
+      .order("sort_order");
+    if (error) {
+      showToast(error.message || "Erro ao recarregar categorias.", "error");
+      return;
+    }
+    setCategories((data || []) as Category[]);
+  }
+
+  async function reloadThemes() {
+    const { data, error } = await queryThemesWithLogoFallback();
+    if (error) {
+      showToast(error.message || "Erro ao recarregar modelos.", "error");
+      return;
+    }
+    setThemes(
+      ((data || []) as Theme[])
+        .filter((theme: any) => theme?.ativo !== false)
+        .map((theme) => ({
+          ...theme,
+          scope: normalizeScopeValue(theme.scope),
+        }))
+    );
+  }
+
+  async function reloadMessages() {
+    const { data, error } = await supabaseBrowser
+      .from("user_message_templates")
+      .select("id, user_id, nome, titulo, corpo, categoria, scope, ativo")
+      .order("nome");
+    if (error) {
+      showToast(error.message || "Erro ao recarregar mensagens.", "error");
+      return;
+    }
+    setMessageLibrary(
+      ((data || []) as MessageTemplate[])
+        .filter((message: any) => message?.ativo !== false)
+        .map((message) => ({
+          ...message,
+          scope: normalizeScopeValue(message.scope),
+        }))
+    );
+  }
+
+  function openCreateCategory() {
+    setShowCreateThemeModal(false);
+    setShowCreateMessageModal(false);
+    setCategoryForm(emptyCategoryForm());
+    setShowCreateCategoryModal(true);
+  }
+
+  function openCreateTheme() {
+    setShowCreateCategoryModal(false);
+    setShowCreateMessageModal(false);
+    setThemeForm(emptyThemeForm(defaultCreationScope));
+    setShowCreateThemeModal(true);
+  }
+
+  function openCreateMessage() {
+    setShowCreateCategoryModal(false);
+    setShowCreateThemeModal(false);
+    setMessageForm(emptyMessageForm(defaultCreationScope));
+    setShowCreateMessageModal(true);
+  }
+
+  async function uploadThemeArt(file: File) {
+    if (!currentUserId) {
+      showToast("Sessão inválida para upload da arte.", "error");
+      return;
+    }
+    setUploadingThemeArt(true);
+    try {
+      const safeFileName = file.name.replace(/[^a-z0-9.\-_]/gi, "_");
+      const path = `users/${currentUserId}/${Date.now()}-${safeFileName}`;
+      const previousStoragePath = getStoragePathFromPublicUrl(themeForm.asset_url);
+      const { error: uploadError } = await supabaseBrowser.storage
+        .from(STORAGE_BUCKET)
+        .upload(path, file, { upsert: false, contentType: file.type });
+      if (uploadError) throw uploadError;
+
+      const publicUrl = supabaseBrowser.storage.from(STORAGE_BUCKET).getPublicUrl(path).data.publicUrl;
+      if (!publicUrl) throw new Error("Falha ao gerar URL pública da arte.");
+      setThemeForm((prev) => ({ ...prev, asset_url: publicUrl }));
+
+      if (previousStoragePath && previousStoragePath !== path) {
+        const { error: removeError } = await supabaseBrowser.storage.from(STORAGE_BUCKET).remove([previousStoragePath]);
+        if (removeError) {
+          console.warn("[CRM] Falha ao remover arte anterior do rascunho:", removeError);
+        }
+      }
+
+      showToast("Arte carregada com sucesso.", "success");
+    } catch (err: any) {
+      showToast(err?.message || "Erro ao carregar arte.", "error");
+    } finally {
+      setUploadingThemeArt(false);
+    }
+  }
+
+  async function uploadThemeLogo(file: File) {
+    if (!currentUserId) {
+      showToast("Sessão inválida para upload do logo.", "error");
+      return;
+    }
+    setUploadingThemeLogo(true);
+    try {
+      const safeFileName = file.name.replace(/[^a-z0-9.\-_]/gi, "_");
+      const path = `users/${currentUserId}/logos/${Date.now()}-${safeFileName}`;
+      const previousStoragePath = getStoragePathFromPublicUrl(themeForm.logo_url);
+      const { error: uploadError } = await supabaseBrowser.storage
+        .from(STORAGE_BUCKET)
+        .upload(path, file, { upsert: false, contentType: file.type });
+      if (uploadError) throw uploadError;
+
+      const publicUrl = supabaseBrowser.storage.from(STORAGE_BUCKET).getPublicUrl(path).data.publicUrl;
+      if (!publicUrl) throw new Error("Falha ao gerar URL pública do logo.");
+      setThemeForm((prev) => ({ ...prev, logo_url: publicUrl }));
+
+      if (previousStoragePath && previousStoragePath !== path) {
+        const { error: removeError } = await supabaseBrowser.storage.from(STORAGE_BUCKET).remove([previousStoragePath]);
+        if (removeError) {
+          console.warn("[CRM] Falha ao remover logo anterior do rascunho:", removeError);
+        }
+      }
+
+      showToast("Logo personalizado carregado com sucesso.", "success");
+    } catch (err: any) {
+      showToast(err?.message || "Erro ao carregar logo personalizado.", "error");
+    } finally {
+      setUploadingThemeLogo(false);
+    }
+  }
+
+  async function saveCategory() {
+    if (!categoryForm.nome.trim()) {
+      showToast("Informe o nome da categoria.", "error");
+      return;
+    }
+    setSavingCategory(true);
+    try {
+      const payload = {
+        nome: categoryForm.nome.trim(),
+        icone: categoryForm.icone || "pi pi-tag",
+        sort_order: Number(categoryForm.sort_order) || 0,
+        ativo: categoryForm.ativo !== false,
+        updated_at: new Date().toISOString(),
+      };
+      const { error } = await supabaseBrowser.from("crm_template_categories").insert(payload);
+      if (error) throw error;
+      showToast("Categoria criada com sucesso.", "success");
+      setShowCreateCategoryModal(false);
+      await reloadCategories();
+    } catch (err: any) {
+      showToast(err?.message || "Erro ao criar categoria.", "error");
+    } finally {
+      setSavingCategory(false);
+    }
+  }
+
+  async function saveTheme() {
+    if (!currentUserId) {
+      showToast("Sessão inválida.", "error");
+      return;
+    }
+    if (!themeForm.nome.trim()) {
+      showToast("Informe o nome do template.", "error");
+      return;
+    }
+    if (!themeForm.asset_url.trim()) {
+      showToast("Adicione a arte do template.", "error");
+      return;
+    }
+    setSavingTheme(true);
+    try {
+      const scope = themeForm.scope || defaultCreationScope;
+      const customLogoUrl = themeForm.logo_url.trim();
+      const payload = {
+        user_id: currentUserId,
+        company_id: scope === "system" ? null : currentCompanyId,
+        nome: themeForm.nome.trim(),
+        categoria_id: themeForm.categoria_id || null,
+        asset_url: themeForm.asset_url.trim(),
+        logo_url: customLogoUrl || null,
+        logo_path: customLogoUrl ? getStoragePathFromPublicUrl(customLogoUrl) : null,
+        scope,
+        greeting_text: themeForm.greeting_text?.trim() || null,
+        mensagem_max_linhas: Number(themeForm.mensagem_max_linhas) || 6,
+        mensagem_max_palavras: Number(themeForm.mensagem_max_palavras) || 50,
+        assinatura_max_linhas: Number(themeForm.assinatura_max_linhas) || 3,
+        assinatura_max_palavras: Number(themeForm.assinatura_max_palavras) || 20,
+        ativo: themeForm.ativo !== false,
+        updated_at: new Date().toISOString(),
+      };
+      let createdWithLegacyColumns = false;
+      let { error } = await supabaseBrowser.from("user_message_template_themes").insert(payload);
+      if (error && isThemeLogoColumnMissingError(error)) {
+        const { logo_url, logo_path, ...legacyPayload } = payload;
+        const legacyInsert = await supabaseBrowser.from("user_message_template_themes").insert(legacyPayload);
+        error = legacyInsert.error;
+        if (!error) {
+          createdWithLegacyColumns = true;
+        }
+      }
+      if (error) throw error;
+      showToast(
+        createdWithLegacyColumns
+          ? "Template criado, mas este ambiente ainda não suporta logo personalizado. Aplique a migration do CRM para habilitar."
+          : "Template criado com sucesso.",
+        createdWithLegacyColumns ? "warning" : "success"
+      );
+      setShowCreateThemeModal(false);
+      await reloadThemes();
+    } catch (err: any) {
+      showToast(err?.message || "Erro ao criar template.", "error");
+    } finally {
+      setSavingTheme(false);
+    }
+  }
+
+  async function saveMessageTemplate() {
+    if (!currentUserId) {
+      showToast("Sessão inválida.", "error");
+      return;
+    }
+    if (!messageForm.nome.trim()) {
+      showToast("Informe o nome da mensagem.", "error");
+      return;
+    }
+    if (!messageForm.titulo.trim()) {
+      showToast("Informe o título/greeting.", "error");
+      return;
+    }
+    if (!messageForm.corpo.trim()) {
+      showToast("Informe a mensagem principal.", "error");
+      return;
+    }
+    setSavingMessage(true);
+    try {
+      const scope = messageForm.scope || defaultCreationScope;
+      const payload = {
+        user_id: currentUserId,
+        company_id: scope === "system" ? null : currentCompanyId,
+        nome: messageForm.nome.trim(),
+        categoria: messageForm.categoria?.trim() || null,
+        assunto: messageForm.titulo.trim(),
+        titulo: messageForm.titulo.trim(),
+        corpo: messageForm.corpo.trim(),
+        scope,
+        ativo: messageForm.ativo !== false,
+        updated_at: new Date().toISOString(),
+      };
+      const { error } = await supabaseBrowser.from("user_message_templates").insert(payload);
+      if (error) throw error;
+      showToast("Mensagem criada com sucesso.", "success");
+      setShowCreateMessageModal(false);
+      await reloadMessages();
+    } catch (err: any) {
+      showToast(err?.message || "Erro ao criar mensagem.", "error");
+    } finally {
+      setSavingMessage(false);
+    }
+  }
+
   // ── Render ───────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -819,6 +1613,8 @@ export default function CrmIsland() {
 
   return (
     <div className="crm-root">
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
+
       <AppCard
         tone="info"
         title="CRM — Relacionamento com Cliente"
@@ -826,23 +1622,93 @@ export default function CrmIsland() {
       />
 
       {/* ── Logo missing alert ── */}
-      {logoMissing && (
+      {companyLogoMissing && (
         <div className="crm-alert crm-alert--warning">
           <i className="pi pi-image" />
           <span>
-            O logo da sua empresa ainda não está configurado.{" "}
-            <a href="/parametros/orcamentos">Clique aqui para configurar</a>{" "}
-            (ele aparecerá automaticamente no cartão, no canto inferior direito).
+            O logo padrão da sua empresa ainda não está configurado.{" "}
+            <a href="/parametros/orcamentos">Clique aqui para configurar</a>.{" "}
+            Você também pode usar logo personalizado por template, quando disponível.
           </span>
         </div>
       )}
+
+      <AppCard
+        tone="config"
+        className="crm-birthday-card"
+        title={`Aniversariantes de hoje (${todayLabel})`}
+        subtitle="Clique no cliente para preencher o nome no cartão e agilizar o envio."
+      >
+        {loadingBirthdays ? (
+          <div className="crm-birthday-loading">
+            <span className="crm-spinner crm-spinner--sm" />
+            <span>Carregando aniversariantes do dia...</span>
+          </div>
+        ) : birthdayItemsToday.length === 0 ? (
+          <p className="crm-birthday-empty">Nenhum aniversariante encontrado para hoje.</p>
+        ) : (
+          <div className="crm-birthday-list">
+            {birthdayItemsToday.map((item) => {
+              const selected = selectedBirthdayId === item.id;
+              const nome = String(item.nome || "").trim() || "Cliente";
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`crm-birthday-chip${selected ? " is-active" : ""}`}
+                  onClick={() => applyBirthdayCliente(item)}
+                  title={`Selecionar ${nome} para personalizar o cartão`}
+                >
+                  <i className="pi pi-gift" />
+                  <span>{nome}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </AppCard>
+
+      <AppCard tone="info" className="vtur-conciliacao-tab-card crm-admin-tab-card">
+        <div className="vtur-conciliacao-tab-nav">
+          <button
+            type="button"
+            className={["vtur-conciliacao-tab-btn", showCreateThemeModal ? "is-active" : ""].filter(Boolean).join(" ")}
+            onClick={openCreateTheme}
+          >
+            <span className="vtur-conciliacao-tab-btn-label">
+              <i className="pi pi-images" aria-hidden="true" /> Novo template
+            </span>
+            <span className="vtur-conciliacao-tab-btn-sub">Artes e configurações visuais.</span>
+          </button>
+          <button
+            type="button"
+            className={["vtur-conciliacao-tab-btn", showCreateCategoryModal ? "is-active" : ""].filter(Boolean).join(" ")}
+            onClick={openCreateCategory}
+          >
+            <span className="vtur-conciliacao-tab-btn-label">
+              <i className="pi pi-tags" aria-hidden="true" /> Nova categoria
+            </span>
+            <span className="vtur-conciliacao-tab-btn-sub">Organização e ordenação dos grupos.</span>
+          </button>
+          <button
+            type="button"
+            className={["vtur-conciliacao-tab-btn", showCreateMessageModal ? "is-active" : ""].filter(Boolean).join(" ")}
+            onClick={openCreateMessage}
+          >
+            <span className="vtur-conciliacao-tab-btn-label">
+              <i className="pi pi-file-edit" aria-hidden="true" /> Nova mensagem
+            </span>
+            <span className="vtur-conciliacao-tab-btn-sub">Mensagens reutilizáveis por tema.</span>
+          </button>
+        </div>
+      </AppCard>
 
       <div className={`crm-layout${showComposer ? " crm-layout--split" : ""}`}>
         {/* ════════════════ LEFT: Gallery ════════════════ */}
         <aside className="crm-gallery">
           <AppCard
             tone="info"
-            className="crm-panel-card"
+            className="crm-panel-card crm-equal-card crm-models-card"
             title="Modelos"
             subtitle="Filtre por escopo e ocasião para escolher a arte."
           >
@@ -886,15 +1752,43 @@ export default function CrmIsland() {
             {filteredThemes.length === 0 ? (
               <p className="crm-empty">Nenhum modelo encontrado para os filtros atuais.</p>
             ) : (
-              <div className="crm-theme-grid">
-                {filteredThemes.map((t) => (
-                  <ThumbCard
-                    key={t.id}
-                    theme={t}
-                    selected={selectedTheme?.id === t.id}
-                    onSelect={selectTheme}
-                  />
-                ))}
+              <div className="crm-theme-grid-wrap">
+                <div className="crm-theme-grid">
+                  {pagedThemes.map((t) => (
+                    <ThumbCard
+                      key={t.id}
+                      theme={t}
+                      selected={selectedTheme?.id === t.id}
+                      onSelect={selectTheme}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+            {filteredThemes.length > 0 && (
+              <div className="crm-theme-pagination">
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  icon="pi pi-angle-left"
+                  onClick={() => setThemePage((p) => Math.max(1, p - 1))}
+                  disabled={themePage <= 1}
+                >
+                  Anterior
+                </AppButton>
+                <span className="crm-theme-pagination__meta">
+                  Página {themePage} de {totalThemePages}
+                </span>
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  icon="pi pi-angle-right"
+                  iconPos="right"
+                  onClick={() => setThemePage((p) => Math.min(totalThemePages, p + 1))}
+                  disabled={themePage >= totalThemePages}
+                >
+                  Próxima
+                </AppButton>
               </div>
             )}
           </AppCard>
@@ -903,20 +1797,11 @@ export default function CrmIsland() {
         {/* ════════════════ RIGHT: Composer + Preview ════════════════ */}
         {showComposer && selectedTheme && (
           <div className="crm-composer-wrap">
-            {/* Back */}
-            <button
-              type="button"
-              className="crm-back-btn"
-              onClick={() => { setSelectedTheme(null); setPreviewUrl(null); }}
-            >
-              <i className="pi pi-arrow-left" /> Escolher outro template
-            </button>
-
             <div className="crm-composer-split">
               {/* ── Form ── */}
               <AppCard
                 tone="default"
-                className="crm-form crm-panel-card"
+                className="crm-form crm-panel-card crm-equal-card"
                 title="Personalizar cartão"
                 subtitle="Título, nome do cliente, mensagem e assinatura padronizados pelo mapa técnico."
               >
@@ -925,12 +1810,53 @@ export default function CrmIsland() {
                   <span className="crm-template-meta__name">{selectedTheme.nome}</span>
                 </div>
 
+                <div className="crm-text-color-box">
+                  <label className="crm-label">
+                    Cor do texto
+                    <span className="crm-hint-inline">uma cor única para todo o texto do cartão</span>
+                  </label>
+                  <div className="crm-color-palette" role="radiogroup" aria-label="Cor do texto do cartão">
+                    {CARD_TEXT_COLOR_PRESETS.map((color) => {
+                      const selected = textColor === color.value;
+                      const isDefault = !color.value;
+                      return (
+                        <button
+                          key={color.label}
+                          type="button"
+                          className={`crm-color-swatch${selected ? " is-active" : ""}${isDefault ? " is-default" : ""}`}
+                          style={isDefault ? undefined : { backgroundColor: color.value }}
+                          onClick={() => setTextColor(color.value)}
+                          title={
+                            isDefault
+                              ? "Usar as cores padrão do template"
+                              : `Aplicar ${color.label} em todo o texto`
+                          }
+                          aria-label={
+                            isDefault
+                              ? "Cor padrão do template"
+                              : `Cor ${color.label}`
+                          }
+                          aria-pressed={selected}
+                        >
+                          {isDefault && <span>Aa</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {/* Greeting */}
                 <div className="crm-field">
-                  <label className="crm-label">
-                    Título / saudação
-                    <span className="crm-hint-inline">escolha um título da biblioteca</span>
-                  </label>
+                  <div className="crm-label-row">
+                    <label className="crm-label">
+                      Título / saudação
+                      <span className="crm-hint-inline">escolha um título da biblioteca</span>
+                    </label>
+                    {renderInlinePositionControl({
+                      keyName: "title",
+                      label: "Título / saudação",
+                    })}
+                  </div>
                   <select
                     className="form-select"
                     value={selectedMessageTemplateId}
@@ -954,7 +1880,13 @@ export default function CrmIsland() {
 
                 {/* Client name */}
                 <div className="crm-field">
-                  <label className="crm-label">Nome do cliente</label>
+                  <div className="crm-label-row">
+                    <label className="crm-label">Nome do cliente</label>
+                    {renderInlinePositionControl({
+                      keyName: "clientName",
+                      label: "Nome do cliente",
+                    })}
+                  </div>
                   <div className="crm-client-row">
                     <div className="crm-client-search" ref={clienteRef}>
                       <input
@@ -1029,12 +1961,18 @@ export default function CrmIsland() {
 
                 {/* Message */}
                 <div className="crm-field">
-                  <label className="crm-label">
-                    Mensagem principal
-                    <span className="crm-hint-inline">
-                      máx. {maxLinhas} linhas · {maxPalavras} palavras
-                    </span>
-                  </label>
+                  <div className="crm-label-row">
+                    <label className="crm-label">
+                      Mensagem principal
+                      <span className="crm-hint-inline">
+                        máx. {maxLinhas} linhas · {maxPalavras} palavras
+                      </span>
+                    </label>
+                    {renderInlinePositionControl({
+                      keyName: "body",
+                      label: "Mensagem principal",
+                    })}
+                  </div>
 
                   <textarea
                     className={`form-textarea crm-mensagem${palavrasExcedido || linhasExcedido ? " crm-mensagem--over" : ""}`}
@@ -1063,34 +2001,100 @@ export default function CrmIsland() {
                       Assinatura
                       <span className="crm-hint-inline">linha 2 obrigatória · linhas 1 e 3 opcionais</span>
                     </label>
+                    {renderInlinePositionControl({
+                      keyName: "signature",
+                      label: "Assinatura",
+                    })}
                   </div>
                   <AssinaturaEditor value={assinatura} onChange={setAssinatura} />
-                  <div className="crm-sig-actions">
-                    <AppButton
-                      type="button"
-                      variant={sigSaved ? "primary" : "secondary"}
-                      size="small"
-                      className={sigSaved ? "btn--success" : ""}
-                      onClick={salvarAssinatura}
-                      disabled={savingSig || !assinatura.linha2.trim()}
-                      title={!assinatura.linha2.trim() ? "Informe o nome do consultor na linha 2." : ""}
-                    >
-                      {savingSig ? (
-                        <><span className="crm-spinner crm-spinner--sm" /> Salvando…</>
-                      ) : sigSaved ? (
-                        <><i className="pi pi-check" /> Assinatura salva!</>
-                      ) : (
-                        <><i className="pi pi-save" /> Salvar como padrão</>
-                      )}
-                    </AppButton>
+                </div>
+
+                <div className="crm-field">
+                  <div className="crm-label-row">
+                    <label className="crm-label">
+                      Logo da empresa
+                      <span className="crm-hint-inline">posicione o logo no cartão</span>
+                    </label>
+                    {renderInlinePositionControl({
+                      keyName: "logo",
+                      label: "Logo da empresa",
+                    })}
                   </div>
+                  <div className="crm-logo-source-switch" role="radiogroup" aria-label="Origem do logo do cartão">
+                    <button
+                      type="button"
+                      className={`crm-logo-source-btn${logoSourceMode === "default" ? " is-active" : ""}`}
+                      onClick={() => setLogoSourceMode("default")}
+                      aria-pressed={logoSourceMode === "default"}
+                    >
+                      Logo padrão da empresa
+                    </button>
+                    <button
+                      type="button"
+                      className={`crm-logo-source-btn${logoSourceMode === "custom" ? " is-active" : ""}`}
+                      onClick={() => setLogoSourceMode("custom")}
+                      disabled={!hasSelectedThemeCustomLogo}
+                      aria-pressed={logoSourceMode === "custom"}
+                      title={
+                        hasSelectedThemeCustomLogo
+                          ? "Usar o logo personalizado cadastrado neste template"
+                          : "Este template ainda não possui logo personalizado"
+                      }
+                    >
+                      Logo personalizado do template
+                    </button>
+                  </div>
+                  {hasSelectedThemeCustomLogo ? (
+                    <div className="crm-selected-logo-preview">
+                      <img src={selectedThemeCustomLogoUrl || ""} alt="Logo personalizado do template" />
+                      <span className="crm-hint">Logo personalizado disponível para este template.</span>
+                    </div>
+                  ) : (
+                    <p className="crm-hint">Este template não possui logo personalizado cadastrado.</p>
+                  )}
+                  <p className="crm-hint">
+                    {logoSourceMode === "custom" && hasSelectedThemeCustomLogo
+                      ? "Usando logo personalizado do template na pré-visualização."
+                      : companyLogoMissing
+                        ? "Sem logo padrão configurado."
+                        : "Usando logo padrão da empresa na pré-visualização."}
+                    {logoSourceMode !== "custom" && companyLogoMissing && (
+                      <>
+                        {" "}
+                        <a href="/parametros/orcamentos">Configurar logo padrão</a>.
+                      </>
+                    )}
+                  </p>
+                </div>
+
+                <div className="crm-sig-actions">
+                  <AppButton
+                    type="button"
+                    variant="primary"
+                    size="small"
+                    onClick={salvarAssinatura}
+                    loading={savingSig}
+                    disabled={savingSig || !assinatura.linha2.trim()}
+                    title={!assinatura.linha2.trim() ? "Informe o nome do consultor na linha 2." : ""}
+                  >
+                    {sigSaved ? "Assinatura salva!" : "Salvar como padrão"}
+                  </AppButton>
+                  <AppButton
+                    type="button"
+                    variant="secondary"
+                    size="small"
+                    onClick={resetTextFormatting}
+                    title="Zerar posicionamento e voltar para a cor padrão do template"
+                  >
+                    Limpar formatação
+                  </AppButton>
                 </div>
               </AppCard>
 
               {/* ── Preview panel ── */}
               <AppCard
                 tone="default"
-                className="crm-preview-panel crm-panel-card"
+                className="crm-preview-panel crm-panel-card crm-equal-card"
                 title="Pré-visualização"
                 subtitle="Saída final seguindo o template técnico."
               >
@@ -1145,14 +2149,16 @@ export default function CrmIsland() {
                 {/* Logo info */}
                 <div className="crm-logo-info">
                   <i className="pi pi-info-circle" />
-                  {logoMissing ? (
+                  {!activeLogoUrl ? (
                     <span>
-                      Sem logo configurado.{" "}
+                      Sem logo disponível para esta seleção.{" "}
                       <a href="/parametros/orcamentos">Configurar logo</a>
                     </span>
+                  ) : logoSourceMode === "custom" && hasSelectedThemeCustomLogo ? (
+                    <span>Usando logo personalizado do template selecionado.</span>
                   ) : (
                     <span>
-                      Logo da empresa no canto inferior direito.{" "}
+                      Usando logo padrão da empresa no canto inferior direito.{" "}
                       <a href="/parametros/orcamentos">Alterar</a>
                     </span>
                   )}
@@ -1172,6 +2178,401 @@ export default function CrmIsland() {
           </AppCard>
         )}
       </div>
+
+      {showCreateCategoryModal && (
+        <div className="crm-admin-modal-overlay" onClick={() => setShowCreateCategoryModal(false)}>
+          <div className="crm-admin-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="crm-admin-modal__header">
+              <h3>Nova categoria</h3>
+              <button type="button" className="crm-link-btn" onClick={() => setShowCreateCategoryModal(false)}>
+                <i className="pi pi-times" />
+              </button>
+            </div>
+            <div className="crm-admin-modal__body">
+              <div className="crm-field">
+                <label className="crm-label">Nome *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={categoryForm.nome}
+                  onChange={(event) => setCategoryForm((prev) => ({ ...prev, nome: event.target.value }))}
+                  placeholder="Ex.: Aniversário"
+                  autoFocus
+                />
+              </div>
+              <div className="crm-field">
+                <label className="crm-label">Ícone (classe PrimeIcons)</label>
+                <div className="crm-icon-row">
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={categoryForm.icone}
+                    onChange={(event) => setCategoryForm((prev) => ({ ...prev, icone: event.target.value }))}
+                    placeholder="pi pi-gift"
+                  />
+                  <i className={categoryForm.icone} style={{ fontSize: "1.4rem" }} />
+                </div>
+                <div className="crm-icon-suggestions">
+                  {ICON_SUGGESTIONS.map((iconClass) => (
+                    <button
+                      key={iconClass}
+                      type="button"
+                      className={`crm-icon-btn${categoryForm.icone === iconClass ? " active" : ""}`}
+                      onClick={() => setCategoryForm((prev) => ({ ...prev, icone: iconClass }))}
+                      title={iconClass}
+                    >
+                      <i className={iconClass} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="crm-field">
+                <label className="crm-label">Ordem de exibição</label>
+                <input
+                  type="number"
+                  className="form-input"
+                  value={categoryForm.sort_order}
+                  onChange={(event) => setCategoryForm((prev) => ({ ...prev, sort_order: Number(event.target.value) }))}
+                  min={0}
+                  style={{ width: 100 }}
+                />
+              </div>
+              <div className="crm-field">
+                <label className="crm-label" style={{ cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={categoryForm.ativo}
+                    onChange={(event) => setCategoryForm((prev) => ({ ...prev, ativo: event.target.checked }))}
+                    style={{ marginRight: 6 }}
+                  />
+                  Categoria ativa
+                </label>
+              </div>
+            </div>
+            <div className="crm-admin-modal__footer">
+              <AppButton type="button" variant="secondary" onClick={() => setShowCreateCategoryModal(false)}>
+                Cancelar
+              </AppButton>
+              <AppButton type="button" variant="primary" onClick={saveCategory} disabled={savingCategory}>
+                {savingCategory ? "Salvando..." : "Salvar"}
+              </AppButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCreateThemeModal && (
+        <div className="crm-admin-modal-overlay" onClick={() => setShowCreateThemeModal(false)}>
+          <div className="crm-admin-modal crm-admin-modal--wide" onClick={(event) => event.stopPropagation()}>
+            <div className="crm-admin-modal__header">
+              <h3>Novo template</h3>
+              <button type="button" className="crm-link-btn" onClick={() => setShowCreateThemeModal(false)}>
+                <i className="pi pi-times" />
+              </button>
+            </div>
+            <div className="crm-admin-modal__body crm-admin-modal__body--split">
+              <div className="crm-admin-modal__col">
+                <div className="crm-field">
+                  <label className="crm-label">Nome *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={themeForm.nome}
+                    onChange={(event) => setThemeForm((prev) => ({ ...prev, nome: event.target.value }))}
+                    placeholder="Ex.: Aniversário Azul"
+                    autoFocus
+                  />
+                </div>
+                <div className="crm-field">
+                  <label className="crm-label">Categoria</label>
+                  <select
+                    className="form-select"
+                    value={themeForm.categoria_id || ""}
+                    onChange={(event) => setThemeForm((prev) => ({ ...prev, categoria_id: event.target.value || null }))}
+                  >
+                    <option value="">Sem categoria</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>{category.nome}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="crm-field">
+                  <label className="crm-label">Escopo</label>
+                  <select
+                    className="form-select"
+                    value={themeForm.scope}
+                    onChange={(event) => setThemeForm((prev) => ({ ...prev, scope: event.target.value as ScopeValue }))}
+                  >
+                    {availableScopeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="crm-field">
+                  <label className="crm-label">Texto de saudação padrão</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={themeForm.greeting_text}
+                    onChange={(event) => setThemeForm((prev) => ({ ...prev, greeting_text: event.target.value }))}
+                    placeholder="Ex.: Feliz Aniversário!"
+                    maxLength={100}
+                  />
+                </div>
+                <div className="crm-admin-limits">
+                  <span className="crm-admin-limits__title">Limites da mensagem</span>
+                  <div className="crm-admin-limits__row">
+                    <label>Linhas</label>
+                    <input
+                      type="number"
+                      className="form-input"
+                      value={themeForm.mensagem_max_linhas}
+                      onChange={(event) =>
+                        setThemeForm((prev) => ({ ...prev, mensagem_max_linhas: Number(event.target.value) || 6 }))
+                      }
+                      min={1}
+                      max={20}
+                    />
+                    <label>Palavras</label>
+                    <input
+                      type="number"
+                      className="form-input"
+                      value={themeForm.mensagem_max_palavras}
+                      onChange={(event) =>
+                        setThemeForm((prev) => ({ ...prev, mensagem_max_palavras: Number(event.target.value) || 50 }))
+                      }
+                      min={1}
+                      max={500}
+                    />
+                  </div>
+                  <span className="crm-admin-limits__title" style={{ marginTop: 8 }}>Limites da assinatura</span>
+                  <div className="crm-admin-limits__row">
+                    <label>Linhas</label>
+                    <input
+                      type="number"
+                      className="form-input"
+                      value={themeForm.assinatura_max_linhas}
+                      onChange={(event) =>
+                        setThemeForm((prev) => ({ ...prev, assinatura_max_linhas: Number(event.target.value) || 3 }))
+                      }
+                      min={1}
+                      max={5}
+                    />
+                    <label>Palavras</label>
+                    <input
+                      type="number"
+                      className="form-input"
+                      value={themeForm.assinatura_max_palavras}
+                      onChange={(event) =>
+                        setThemeForm((prev) => ({ ...prev, assinatura_max_palavras: Number(event.target.value) || 20 }))
+                      }
+                      min={1}
+                      max={100}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="crm-admin-modal__col">
+                <div className="crm-field">
+                  <label className="crm-label">Arte do cartão *</label>
+                  <div
+                    className="crm-art-drop"
+                    onClick={() => themeFileInputRef.current?.click()}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      const file = event.dataTransfer.files?.[0];
+                      if (file) void uploadThemeArt(file);
+                    }}
+                  >
+                    {themeForm.asset_url ? (
+                      <img src={themeForm.asset_url} alt="Arte do template" className="crm-art-preview" />
+                    ) : uploadingThemeArt ? (
+                      <><span className="crm-spinner" /> Enviando…</>
+                    ) : (
+                      <>
+                        <i className="pi pi-upload" style={{ fontSize: "2rem", opacity: 0.4 }} />
+                        <span>Clique ou arraste a imagem</span>
+                        <span className="crm-hint">PNG, JPG, SVG — recomendado 1080x1080px</span>
+                      </>
+                    )}
+                    <input
+                      ref={themeFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (file) void uploadThemeArt(file);
+                      }}
+                    />
+                  </div>
+                  {themeForm.asset_url && !uploadingThemeArt && (
+                    <button type="button" className="crm-link-btn" onClick={() => themeFileInputRef.current?.click()}>
+                      <i className="pi pi-refresh" /> Trocar arte
+                    </button>
+                  )}
+                  <details style={{ marginTop: 8 }}>
+                    <summary className="crm-hint" style={{ cursor: "pointer" }}>Ou cole uma URL de imagem</summary>
+                    <input
+                      type="url"
+                      className="form-input"
+                      style={{ marginTop: 6 }}
+                      value={themeForm.asset_url}
+                      onChange={(event) => setThemeForm((prev) => ({ ...prev, asset_url: event.target.value }))}
+                      placeholder="https://..."
+                    />
+                  </details>
+                </div>
+
+                <div className="crm-field">
+                  <label className="crm-label">
+                    Logo personalizado do template
+                    <span className="crm-hint-inline">opcional</span>
+                  </label>
+                  <div
+                    className="crm-art-drop crm-art-drop--logo"
+                    onClick={() => themeLogoInputRef.current?.click()}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      const file = event.dataTransfer.files?.[0];
+                      if (file) void uploadThemeLogo(file);
+                    }}
+                  >
+                    {themeForm.logo_url ? (
+                      <img src={themeForm.logo_url} alt="Logo personalizado do template" className="crm-art-preview" />
+                    ) : uploadingThemeLogo ? (
+                      <><span className="crm-spinner" /> Enviando logo…</>
+                    ) : (
+                      <>
+                        <i className="pi pi-image" style={{ fontSize: "1.5rem", opacity: 0.4 }} />
+                        <span>Clique ou arraste o logo</span>
+                        <span className="crm-hint">PNG/SVG com fundo transparente</span>
+                      </>
+                    )}
+                    <input
+                      ref={themeLogoInputRef}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (file) void uploadThemeLogo(file);
+                      }}
+                    />
+                  </div>
+                  {themeForm.logo_url && !uploadingThemeLogo && (
+                    <button type="button" className="crm-link-btn" onClick={() => themeLogoInputRef.current?.click()}>
+                      <i className="pi pi-refresh" /> Trocar logo
+                    </button>
+                  )}
+                  <details style={{ marginTop: 8 }}>
+                    <summary className="crm-hint" style={{ cursor: "pointer" }}>Ou cole uma URL do logo</summary>
+                    <input
+                      type="url"
+                      className="form-input"
+                      style={{ marginTop: 6 }}
+                      value={themeForm.logo_url}
+                      onChange={(event) => setThemeForm((prev) => ({ ...prev, logo_url: event.target.value }))}
+                      placeholder="https://..."
+                    />
+                  </details>
+                </div>
+              </div>
+            </div>
+            <div className="crm-admin-modal__footer">
+              <AppButton type="button" variant="secondary" onClick={() => setShowCreateThemeModal(false)}>
+                Cancelar
+              </AppButton>
+              <AppButton type="button" variant="primary" onClick={saveTheme} disabled={savingTheme || uploadingThemeArt || uploadingThemeLogo}>
+                {savingTheme ? "Salvando..." : "Salvar"}
+              </AppButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCreateMessageModal && (
+        <div className="crm-admin-modal-overlay" onClick={() => setShowCreateMessageModal(false)}>
+          <div className="crm-admin-modal crm-admin-modal--wide" onClick={(event) => event.stopPropagation()}>
+            <div className="crm-admin-modal__header">
+              <h3>Nova mensagem</h3>
+              <button type="button" className="crm-link-btn" onClick={() => setShowCreateMessageModal(false)}>
+                <i className="pi pi-times" />
+              </button>
+            </div>
+            <div className="crm-admin-modal__body">
+              <div className="crm-field">
+                <label className="crm-label">Nome *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={messageForm.nome}
+                  onChange={(event) => setMessageForm((prev) => ({ ...prev, nome: event.target.value }))}
+                  placeholder="Ex.: Aniversário padrão"
+                  autoFocus
+                />
+              </div>
+              <div className="crm-field">
+                <label className="crm-label">Ocasião</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={messageForm.categoria}
+                  onChange={(event) => setMessageForm((prev) => ({ ...prev, categoria: event.target.value }))}
+                  placeholder="Ex.: Aniversário"
+                />
+              </div>
+              <div className="crm-field">
+                <label className="crm-label">Escopo</label>
+                <select
+                  className="form-select"
+                  value={messageForm.scope}
+                  onChange={(event) => setMessageForm((prev) => ({ ...prev, scope: event.target.value as ScopeValue }))}
+                >
+                  {availableScopeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="crm-field">
+                <label className="crm-label">Greeting / título *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={messageForm.titulo}
+                  onChange={(event) => setMessageForm((prev) => ({ ...prev, titulo: event.target.value }))}
+                  placeholder="Ex.: Feliz Aniversário!"
+                />
+              </div>
+              <div className="crm-field">
+                <label className="crm-label">Mensagem principal *</label>
+                <textarea
+                  className="form-textarea"
+                  rows={8}
+                  value={messageForm.corpo}
+                  onChange={(event) => setMessageForm((prev) => ({ ...prev, corpo: event.target.value }))}
+                  placeholder="Texto padrão que será reaproveitado no cartão."
+                />
+              </div>
+            </div>
+            <div className="crm-admin-modal__footer">
+              <AppButton type="button" variant="secondary" onClick={() => setShowCreateMessageModal(false)}>
+                Cancelar
+              </AppButton>
+              <AppButton type="button" variant="primary" onClick={saveMessageTemplate} disabled={savingMessage}>
+                {savingMessage ? "Salvando..." : "Salvar"}
+              </AppButton>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

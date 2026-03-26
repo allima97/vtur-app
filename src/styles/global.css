@@ -5255,6 +5255,16 @@ input[type="radio"] {
   box-shadow: 0 28px 64px rgba(15, 23, 42, 0.2);
 }
 
+.master-convite-modal {
+  max-width: 760px;
+}
+
+.master-convite-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 .vtur-todo-viewmode-field {
   min-width: 180px;
 }
@@ -10326,6 +10336,7 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .crm-root {
+  --crm-equal-card-height: min(74vh, 760px);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -10368,6 +10379,54 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   text-decoration: underline;
 }
 
+.crm-birthday-card .vtur-app-card-body {
+  gap: 10px;
+}
+
+.crm-birthday-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.crm-birthday-empty {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.crm-birthday-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.crm-birthday-chip {
+  border: 1px solid #dbe3f0;
+  background: #fff;
+  color: #1e293b;
+  border-radius: 999px;
+  padding: 7px 11px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.crm-birthday-chip:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.13);
+}
+
+.crm-birthday-chip.is-active {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
 /* ── Layout ── */
 .crm-layout {
   display: flex;
@@ -10382,11 +10441,11 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 
 /* ── Gallery (left panel) ── */
 .crm-gallery {
-  flex: 0 0 320px;
+  flex: 0 0 440px;
   min-width: 0;
 }
 .crm-layout--split .crm-gallery {
-  flex: 0 0 320px;
+  flex: 0 0 440px;
 }
 .crm-gallery__header {
   margin-bottom: 10px;
@@ -10422,11 +10481,32 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 /* ── Theme grid ── */
 .crm-theme-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
   gap: 12px;
 }
 .crm-layout--split .crm-theme-grid {
-  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+}
+
+.crm-theme-grid-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.crm-theme-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.crm-theme-pagination__meta {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 700;
 }
 
 /* ── Thumb card ── */
@@ -10556,29 +10636,37 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-.crm-back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-  color: var(--primary-color, #3b82f6);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-}
-.crm-back-btn:hover {
-  text-decoration: underline;
+  gap: 0;
 }
 
 /* ── Composer split (form + preview side by side) ── */
 .crm-composer-split {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.95fr);
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
   gap: 16px;
-  align-items: flex-start;
+  align-items: stretch;
+  height: var(--crm-equal-card-height);
+}
+
+.crm-composer-split > .vtur-app-card + .vtur-app-card {
+  margin-top: 0;
+}
+
+.crm-equal-card {
+  height: var(--crm-equal-card-height);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.crm-equal-card .vtur-app-card-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.crm-models-card .vtur-app-card-body {
+  overflow: hidden;
 }
 
 /* ── Form ── */
@@ -10611,6 +10699,17 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   color: #64748b;
   font-weight: 600;
 }
+
+.crm-text-color-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #dbe3f0;
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
 .crm-field {
   display: flex;
   flex-direction: column;
@@ -10631,7 +10730,7 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 }
 .crm-label-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
 }
@@ -10639,6 +10738,144 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   font-size: 0.75rem;
   color: var(--text-secondary, #94a3b8);
   margin: 2px 0 0;
+}
+
+.crm-hint a {
+  color: var(--primary-color, #3b82f6);
+  text-decoration: none;
+}
+
+.crm-hint a:hover {
+  text-decoration: underline;
+}
+
+.crm-color-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.crm-color-swatch {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 2px solid #cbd5e1;
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.crm-color-swatch:hover {
+  transform: translateY(-1px);
+}
+
+.crm-color-swatch.is-default {
+  background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.crm-color-swatch.is-active {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+}
+
+.crm-position-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #dbe3f0;
+  border-radius: 999px;
+  background: #f8fafc;
+  padding: 4px 6px;
+  flex-shrink: 0;
+}
+
+.crm-position-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #1e293b;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.crm-position-btn:hover {
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+
+.crm-position-inline__value {
+  min-width: 96px;
+  text-align: center;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.crm-logo-source-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.crm-logo-source-btn {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.25;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
+}
+
+.crm-logo-source-btn:hover:not(:disabled) {
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+
+.crm-logo-source-btn.is-active {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.crm-logo-source-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.crm-selected-logo-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border: 1px solid #dbe3f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.crm-selected-logo-preview img {
+  width: 64px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  padding: 3px;
 }
 
 /* Client search */
@@ -10873,12 +11110,12 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 
 /* ── Preview panel ── */
 .crm-preview-panel {
-  width: min(100%, 460px);
-  min-width: 340px;
-  max-width: 460px;
-  justify-self: end;
-  position: sticky;
-  top: 20px;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  justify-self: stretch;
+  position: static;
+  top: auto;
 }
 .crm-preview-panel .vtur-app-card-body {
   gap: 10px;
@@ -10918,7 +11155,7 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 }
 .crm-preview-actions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 .crm-preview-actions :is(.vtur-app-button, .p-button, .btn) {
@@ -10930,9 +11167,6 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 .crm-preview-actions :is(.vtur-app-button, .p-button, .btn) .p-button-label {
   white-space: normal;
   line-height: 1.2;
-}
-.crm-preview-actions :is(.vtur-app-button, .p-button, .btn):nth-child(3) {
-  grid-column: 1 / -1;
 }
 .crm-logo-info {
   display: flex;
@@ -10968,13 +11202,6 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   to { transform: rotate(360deg); }
 }
 
-/* ── Success button modifier ── */
-.btn--success {
-  background: #22c55e !important;
-  border-color: #22c55e !important;
-  color: #fff !important;
-}
-
 /* ── Responsive ── */
 @media (max-width: 900px) {
   .crm-layout--split {
@@ -10984,11 +11211,21 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
     flex: none;
     width: 100%;
   }
+  .crm-root {
+    --crm-equal-card-height: auto;
+  }
+  .crm-equal-card {
+    height: auto;
+  }
+  .crm-equal-card .vtur-app-card-body {
+    overflow: visible;
+  }
   .crm-layout--split .crm-theme-grid {
-    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   }
   .crm-composer-split {
     grid-template-columns: 1fr;
+    height: auto;
   }
   .crm-preview-panel {
     width: 100%;
@@ -11009,6 +11246,14 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 @media (max-width: 480px) {
   .crm-theme-grid {
     grid-template-columns: repeat(3, 1fr);
+  }
+  .crm-theme-pagination {
+    flex-wrap: wrap;
+  }
+  .crm-theme-pagination__meta {
+    width: 100%;
+    text-align: center;
+    order: -1;
   }
   .crm-preview-actions {
     grid-template-columns: 1fr;
@@ -11472,6 +11717,15 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 }
 .crm-art-drop:hover {
   border-color: var(--primary-color, #3b82f6);
+}
+
+.crm-art-drop--logo {
+  aspect-ratio: 16 / 8;
+}
+
+.crm-art-drop--logo .crm-art-preview {
+  object-fit: contain;
+  padding: 10px;
 }
 .crm-art-preview {
   width: 100%;

@@ -848,19 +848,40 @@ export default function MasterUsuariosIsland() {
       </AppCard>
 
       {createModalOpen && (
-        <div className="fixed inset-0 z-40 bg-black/50 flex justify-center items-center p-4">
+        <div
+          className="modal-backdrop modal-venda"
+          role="presentation"
+          onClick={() => {
+            if (!enviandoConvite) setCreateModalOpen(false);
+          }}
+        >
           <form
-            className="card-config w-full max-w-xl vtur-modal-form"
+            className="modal-panel vtur-modal-form master-convite-modal"
+            noValidate
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="master-convite-modal-title"
+            onClick={(event) => event.stopPropagation()}
             onSubmit={(e) => {
               e.preventDefault();
               setMensagemConvite(null);
-              if (!novoTipoUsuarioId || !novaEmpresaId) {
-                setMensagemConvite("Selecione a empresa e o cargo.");
+              const nomeCompleto = titleCaseWithExceptions(novoNomeCompleto || "").trim();
+              if (!nomeCompleto) {
+                setMensagemConvite("Informe o nome completo.");
                 return;
               }
               const emailNovo = novoEmail.trim().toLowerCase();
               if (!emailNovo) {
                 setMensagemConvite("Informe o e-mail.");
+                return;
+              }
+              const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNovo);
+              if (!emailValido) {
+                setMensagemConvite("Informe um e-mail válido.");
+                return;
+              }
+              if (!novoTipoUsuarioId || !novaEmpresaId) {
+                setMensagemConvite("Selecione a empresa e o cargo.");
                 return;
               }
               const convitePendente = convitesPendentes.some(
@@ -897,7 +918,7 @@ export default function MasterUsuariosIsland() {
                       email: emailNovo,
                       company_id: novaEmpresaId,
                       user_type_id: novoTipoUsuarioId,
-                      nome_completo: titleCaseWithExceptions(novoNomeCompleto) || null,
+                      nome_completo: nomeCompleto,
                       active: novoAtivo,
                     }),
                   });
@@ -923,8 +944,10 @@ export default function MasterUsuariosIsland() {
               })();
             }}
           >
-            <div className="flex justify-between items-center mb-3">
-              <h4 className="text-lg font-semibold">Cadastro de usuário corporativo</h4>
+            <div className="modal-header">
+              <h4 id="master-convite-modal-title" className="modal-title">
+                Cadastro de usuário corporativo
+              </h4>
               <AppButton
                 type="button"
                 variant="secondary"
@@ -935,64 +958,64 @@ export default function MasterUsuariosIsland() {
               </AppButton>
             </div>
 
-            {mensagemConvite && (
-              <AlertMessage variant="warning" className="mb-3">
-                {mensagemConvite}
-              </AlertMessage>
-            )}
+            <div className="modal-body master-convite-modal-body">
+              {mensagemConvite && (
+                <AlertMessage variant="warning">{mensagemConvite}</AlertMessage>
+              )}
 
-            <div className="vtur-card-form-grid vtur-form-grid-2">
-              <AppField
-                label="Nome completo"
-                value={novoNomeCompleto}
-                onChange={(e) => setNovoNomeCompleto(e.target.value)}
-                onBlur={(e) => setNovoNomeCompleto(titleCaseWithExceptions(e.target.value))}
-                required
-                placeholder="Nome do usuário"
-              />
-              <AppField
-                as="input"
-                type="email"
-                label="E-mail"
-                value={novoEmail}
-                onChange={(e) => setNovoEmail(e.target.value.toLowerCase())}
-                required
-                placeholder="usuario@empresa.com"
-                disabled={enviandoConvite}
-              />
-              <AppField
-                as="select"
-                label="Cargo"
-                value={novoTipoUsuarioId}
-                onChange={(e) => setNovoTipoUsuarioId(e.target.value)}
-                options={[
-                  { label: "Selecione", value: "" },
-                  ...userTypes.map((t) => ({ label: t.name, value: t.id })),
-                ]}
-              />
-              <AppField
-                as="select"
-                label="Empresa"
-                value={novaEmpresaId}
-                onChange={(e) => setNovaEmpresaId(e.target.value)}
-                options={[
-                  { label: "Selecione", value: "" },
-                  ...empresas.map((c) => ({ label: c.nome_fantasia, value: c.id })),
-                ]}
-              />
-              <AppField
-                as="select"
-                label="Ativo?"
-                value={novoAtivo ? "true" : "false"}
-                onChange={(e) => setNovoAtivo(e.target.value === "true")}
-                options={[
-                  { label: "Sim", value: "true" },
-                  { label: "Não", value: "false" },
-                ]}
-              />
+              <div className="vtur-card-form-grid vtur-form-grid-2">
+                <AppField
+                  label="Nome completo"
+                  value={novoNomeCompleto}
+                  onChange={(e) => setNovoNomeCompleto(e.target.value)}
+                  onBlur={(e) => setNovoNomeCompleto(titleCaseWithExceptions(e.target.value))}
+                  required
+                  placeholder="Nome do usuário"
+                />
+                <AppField
+                  as="input"
+                  type="email"
+                  label="E-mail"
+                  value={novoEmail}
+                  onChange={(e) => setNovoEmail(e.target.value.toLowerCase())}
+                  required
+                  placeholder="usuario@empresa.com"
+                  disabled={enviandoConvite}
+                />
+                <AppField
+                  as="select"
+                  label="Cargo"
+                  value={novoTipoUsuarioId}
+                  onChange={(e) => setNovoTipoUsuarioId(e.target.value)}
+                  options={[
+                    { label: "Selecione", value: "" },
+                    ...userTypes.map((t) => ({ label: t.name, value: t.id })),
+                  ]}
+                />
+                <AppField
+                  as="select"
+                  label="Empresa"
+                  value={novaEmpresaId}
+                  onChange={(e) => setNovaEmpresaId(e.target.value)}
+                  options={[
+                    { label: "Selecione", value: "" },
+                    ...empresas.map((c) => ({ label: c.nome_fantasia, value: c.id })),
+                  ]}
+                />
+                <AppField
+                  as="select"
+                  label="Ativo?"
+                  value={novoAtivo ? "true" : "false"}
+                  onChange={(e) => setNovoAtivo(e.target.value === "true")}
+                  options={[
+                    { label: "Sim", value: "true" },
+                    { label: "Não", value: "false" },
+                  ]}
+                />
+              </div>
             </div>
 
-            <div className="flex gap-2 flex-wrap mt-3 mobile-stack-buttons">
+            <div className="modal-footer">
               <AppButton
                 type="submit"
                 variant="primary"

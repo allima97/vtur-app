@@ -3,6 +3,10 @@ import { buildAuthClient, getUserScope } from "../vendas/_utils";
 
 type ScopeValue = "system" | "master" | "gestor" | "user";
 const LOGO_BUCKET = "quotes";
+const THEME_SELECT_WITH_LOGO =
+  "id, user_id, nome, categoria, categoria_id, asset_url, logo_url, logo_path, width_px, height_px, greeting_text, mensagem_max_linhas, mensagem_max_palavras, assinatura_max_linhas, assinatura_max_palavras, title_style, body_style, signature_style, scope, company_id, ativo";
+const THEME_SELECT_LEGACY =
+  "id, user_id, nome, categoria, categoria_id, asset_url, width_px, height_px, greeting_text, mensagem_max_linhas, mensagem_max_palavras, assinatura_max_linhas, assinatura_max_palavras, title_style, body_style, signature_style, scope, company_id, ativo";
 
 type ThemeRow = {
   id: string;
@@ -11,6 +15,8 @@ type ThemeRow = {
   categoria: string | null;
   categoria_id: string | null;
   asset_url: string;
+  logo_url: string | null;
+  logo_path: string | null;
   width_px: number | null;
   height_px: number | null;
   greeting_text: string | null;
@@ -76,6 +82,63 @@ function cleanUrl(value?: string | null) {
   const lowered = raw.toLowerCase();
   if (lowered === "null" || lowered === "undefined") return null;
   return raw;
+}
+
+function isThemeLogoColumnMissingError(error: any) {
+  const message = String(error?.message || "").toLowerCase();
+  if (!message) return false;
+  return (
+    (message.includes("column") && message.includes("logo_url")) ||
+    (message.includes("column") && message.includes("logo_path")) ||
+    message.includes("logo_url does not exist") ||
+    message.includes("logo_path does not exist")
+  );
+}
+
+async function fetchThemesWithLogoFallback(client: any) {
+  const withLogoResp = await client
+    .from("user_message_template_themes")
+    .select(THEME_SELECT_WITH_LOGO)
+    .order("nome");
+  if (!withLogoResp.error) {
+    return {
+      data: (withLogoResp.data || []) as ThemeRow[],
+      error: null as any,
+      logoColumnsAvailable: true,
+    };
+  }
+
+  if (!isThemeLogoColumnMissingError(withLogoResp.error)) {
+    return {
+      data: [] as ThemeRow[],
+      error: withLogoResp.error,
+      logoColumnsAvailable: false,
+    };
+  }
+
+  const legacyResp = await client
+    .from("user_message_template_themes")
+    .select(THEME_SELECT_LEGACY)
+    .order("nome");
+  if (legacyResp.error) {
+    return {
+      data: [] as ThemeRow[],
+      error: legacyResp.error,
+      logoColumnsAvailable: false,
+    };
+  }
+
+  const normalized = ((legacyResp.data || []) as any[]).map((row) => ({
+    ...row,
+    logo_url: null,
+    logo_path: null,
+  })) as ThemeRow[];
+
+  return {
+    data: normalized,
+    error: null as any,
+    logoColumnsAvailable: false,
+  };
 }
 
 async function resolveBrandingLogo(client: any, settings: BrandingSettingsRow) {
@@ -156,12 +219,7 @@ export async function GET({ request }: { request: Request }) {
         .select("id, nome, icone, sort_order")
         .eq("ativo", true)
         .order("sort_order"),
-      dataClient
-        .from("user_message_template_themes")
-        .select(
-          "id, user_id, nome, categoria, categoria_id, asset_url, width_px, height_px, greeting_text, mensagem_max_linhas, mensagem_max_palavras, assinatura_max_linhas, assinatura_max_palavras, title_style, body_style, signature_style, scope, company_id, ativo"
-        )
-        .order("nome"),
+      fetchThemesWithLogoFallback(dataClient),
       dataClient
         .from("user_message_templates")
         .select("id, user_id, nome, assunto, titulo, corpo, assinatura, theme_id, title_style, body_style, signature_style, categoria, scope, company_id, ativo")
@@ -247,12 +305,15 @@ export async function GET({ request }: { request: Request }) {
     return new Response(
       JSON.stringify({
         userId,
+        userRole: scope.papel || null,
+        isAdmin,
         currentCompanyId,
         categories: catsResp.data || [],
         themes: visibleThemes,
         messages: visibleMessages,
         signature: sigResp.data || null,
         settings: resolvedSettings,
+        themeLogoColumnsAvailable: Boolean(themesResp.logoColumnsAvailable),
       }),
       {
         status: 200,
