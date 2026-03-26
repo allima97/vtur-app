@@ -796,7 +796,7 @@ function getShortcutTitle(shortcut: ConciliacaoShortcut | null) {
   return "Recorte atual";
 }
 
-const ROWS_PER_PAGE = 50;
+const ROWS_PER_PAGE = 5;
 
 export default function ConciliacaoIsland() {
   const { can, loading: loadingPerms, ready, userType } = usePermissoesStore();
