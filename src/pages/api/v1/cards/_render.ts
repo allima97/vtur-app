@@ -93,6 +93,15 @@ function parseNum(v: string | null | undefined, fallback: number) {
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
+function parseBooleanParam(v: string | null | undefined): boolean | undefined {
+  if (v == null) return undefined;
+  const raw = String(v).trim().toLowerCase();
+  if (!raw) return undefined;
+  if (raw === "1" || raw === "true" || raw === "yes" || raw === "sim" || raw === "on") return true;
+  if (raw === "0" || raw === "false" || raw === "no" || raw === "nao" || raw === "não" || raw === "off") return false;
+  return undefined;
+}
+
 function splitParagraph(text: string, maxChars: number) {
   const words = text.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
@@ -451,6 +460,12 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
   const assinaturaRaw = String(url.searchParams.get("assinatura") || "").trim();
   const consultorRaw = String(url.searchParams.get("consultor") || "").trim();
   const cargoConsultorRaw = String(url.searchParams.get("cargo_consultor") || "").trim();
+  const footerLeadFontSizeRaw = url.searchParams.get("footer_lead_font_size");
+  const consultantFontSizeRaw = url.searchParams.get("consultant_font_size") || url.searchParams.get("signature_font_size");
+  const consultantRoleFontSizeRaw = url.searchParams.get("consultant_role_font_size");
+  const footerLeadItalic = parseBooleanParam(url.searchParams.get("footer_lead_italic"));
+  const consultantItalic = parseBooleanParam(url.searchParams.get("consultant_italic"));
+  const consultantRoleItalic = parseBooleanParam(url.searchParams.get("consultant_role_italic"));
   const empresaRaw = String(url.searchParams.get("empresa") || "").trim();
   const origemRaw = String(url.searchParams.get("origem") || "").trim();
   const destinoRaw = String(url.searchParams.get("destino") || "").trim();
@@ -523,14 +538,20 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
 
   const footerLeadStyle = fixedMasterStyle({
     base: resolvedStyleMap.footerLead,
+    queryFontSize: footerLeadFontSizeRaw,
+    queryItalic: footerLeadItalic,
   });
 
   const consultantStyle = fixedMasterStyle({
     base: resolvedStyleMap.consultant,
+    queryFontSize: consultantFontSizeRaw,
+    queryItalic: consultantItalic,
   });
 
   const consultantRoleStyle = fixedMasterStyle({
     base: resolvedStyleMap.consultantRole,
+    queryFontSize: consultantRoleFontSizeRaw,
+    queryItalic: consultantRoleItalic,
   });
 
   const titulo = tituloRaw || templateRow?.titulo || `${nome}, feliz aniversário!`;

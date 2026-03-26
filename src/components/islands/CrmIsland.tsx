@@ -259,7 +259,14 @@ function buildPreviewParams(params: {
   q.set("footer_lead", assinatura.linha1 || "");
   if (assinatura.linha2) q.set("assinatura", assinatura.linha2);
   q.set("cargo_consultor", assinatura.linha3 || "");
-  if (assinatura.linha2_font_size) q.set("signature_font_size", String(assinatura.linha2_font_size));
+  q.set("footer_lead_font_size", String(assinatura.linha1_font_size || 40));
+  q.set("consultant_font_size", String(assinatura.linha2_font_size || 56));
+  q.set("consultant_role_font_size", String(assinatura.linha3_font_size || 38));
+  q.set("footer_lead_italic", assinatura.linha1_italic ? "1" : "0");
+  q.set("consultant_italic", assinatura.linha2_italic ? "1" : "0");
+  q.set("consultant_role_italic", assinatura.linha3_italic ? "1" : "0");
+  // Compatibilidade com links antigos que usam apenas signature_font_size para a linha 2.
+  q.set("signature_font_size", String(assinatura.linha2_font_size || 56));
   if (logoUrl) q.set("logo_url", logoUrl);
   return `/api/v1/cards/render.svg?${q.toString()}`;
 }
