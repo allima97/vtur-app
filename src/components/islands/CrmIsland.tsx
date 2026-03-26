@@ -30,6 +30,7 @@ type Theme = {
   assinatura_max_linhas: number;
   assinatura_max_palavras: number;
   scope: string;
+  ativo?: boolean | null;
 };
 
 type MessageTemplate = {
@@ -40,6 +41,7 @@ type MessageTemplate = {
   corpo: string;
   categoria: string | null;
   scope?: string | null;
+  ativo?: boolean | null;
 };
 
 type Cliente = {
@@ -656,6 +658,13 @@ export default function CrmIsland() {
   const [showCreateCategoryModal, setShowCreateCategoryModal] = useState(false);
   const [showCreateThemeModal, setShowCreateThemeModal] = useState(false);
   const [showCreateMessageModal, setShowCreateMessageModal] = useState(false);
+  const [showManageThemesModal, setShowManageThemesModal] = useState(false);
+  const [showManageMessagesModal, setShowManageMessagesModal] = useState(false);
+  const [previewMessageTemplate, setPreviewMessageTemplate] = useState<MessageTemplate | null>(null);
+  const [editingThemeId, setEditingThemeId] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [deletingThemeId, setDeletingThemeId] = useState<string | null>(null);
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
   const [categoryForm, setCategoryForm] = useState<CategoryForm>(() => emptyCategoryForm());
   const [themeForm, setThemeForm] = useState<ThemeForm>(() => emptyThemeForm("user"));
   const [messageForm, setMessageForm] = useState<MessageForm>(() => emptyMessageForm("user"));
@@ -778,19 +787,51 @@ export default function CrmIsland() {
   }, [filteredThemes, themePage]);
 
   const filteredMessages = useMemo(() => {
-    if (!selectedTheme) return messageLibrary;
-    const catNome = (selectedTheme.categoria || "").toLowerCase();
-    return messageLibrary.filter((m) => {
-      const mCat = (m.categoria || "").toLowerCase();
-      if (!catNome) return !mCat || mCat === "geral";
-      return !mCat || mCat === catNome || mCat === "geral";
-    }).sort((a, b) => {
-      const ownA = a.user_id === currentUserId ? 1 : 0;
-      const ownB = b.user_id === currentUserId ? 1 : 0;
-      if (ownA !== ownB) return ownB - ownA;
-      return a.nome.localeCompare(b.nome);
-    });
-  }, [messageLibrary, selectedTheme, currentUserId]);
+    const normalizeCategory = (value?: string | null) => normalizeText(String(value || ""));
+    const isGeneralCategory = (value?: string | null) => {
+      const normalized = normalizeCategory(value);
+      return !normalized || normalized === "geral" || normalized === "general";
+    };
+
+    const selectedCategoryRaw = selectedTheme
+      ? categoryNameById.get(String(selectedTheme.categoria_id || "").trim()) || String(selectedTheme.categoria || "")
+      : "";
+    const selectedCategory = normalizeCategory(selectedCategoryRaw);
+
+    return [...messageLibrary]
+      .map((message) => {
+        const messageCategory = normalizeCategory(message.categoria);
+        let categoryRank = 1;
+
+        if (!selectedCategory) {
+          categoryRank = isGeneralCategory(message.categoria) ? 3 : 2;
+        } else if (messageCategory === selectedCategory) {
+          categoryRank = 5;
+        } else if (
+          messageCategory &&
+          (messageCategory.includes(selectedCategory) || selectedCategory.includes(messageCategory))
+        ) {
+          categoryRank = 4;
+        } else if (isGeneralCategory(message.categoria)) {
+          categoryRank = 3;
+        } else {
+          categoryRank = 2;
+        }
+
+        return {
+          message,
+          categoryRank,
+        };
+      })
+      .sort((a, b) => {
+        if (a.categoryRank !== b.categoryRank) return b.categoryRank - a.categoryRank;
+        const ownA = a.message.user_id === currentUserId ? 1 : 0;
+        const ownB = b.message.user_id === currentUserId ? 1 : 0;
+        if (ownA !== ownB) return ownB - ownA;
+        return String(a.message.nome || "").localeCompare(String(b.message.nome || ""), "pt-BR");
+      })
+      .map((entry) => entry.message);
+  }, [messageLibrary, selectedTheme, categoryNameById, currentUserId]);
 
   const titleDropdownOptions = useMemo(() => {
     const options = [{ label: "Selecione o título", value: "" }];
@@ -822,6 +863,14 @@ export default function CrmIsland() {
   const defaultCreationScope = useMemo<ScopeValue>(
     () => availableScopeOptions[0]?.value || "user",
     [availableScopeOptions]
+  );
+
+  const canManageRecord = useCallback(
+    (userId?: string | null) => {
+      if (isAdmin) return true;
+      return String(userId || "").trim() === String(currentUserId || "").trim();
+    },
+    [isAdmin, currentUserId]
   );
 
   const todayLabel = useMemo(
@@ -1417,6 +1466,8 @@ export default function CrmIsland() {
   }
 
   function openCreateCategory() {
+    setShowManageThemesModal(false);
+    setShowManageMessagesModal(false);
     setShowCreateThemeModal(false);
     setShowCreateMessageModal(false);
     setCategoryForm(emptyCategoryForm());
@@ -1424,6 +1475,8 @@ export default function CrmIsland() {
   }
 
   function openCreateTheme() {
+    setEditingThemeId(null);
+    setShowManageThemesModal(false);
     setShowCreateCategoryModal(false);
     setShowCreateMessageModal(false);
     setThemeForm(emptyThemeForm(defaultCreationScope));
@@ -1431,9 +1484,68 @@ export default function CrmIsland() {
   }
 
   function openCreateMessage() {
+    setEditingMessageId(null);
+    setShowManageMessagesModal(false);
     setShowCreateCategoryModal(false);
     setShowCreateThemeModal(false);
     setMessageForm(emptyMessageForm(defaultCreationScope));
+    setShowCreateMessageModal(true);
+  }
+
+  function openManageThemes() {
+    setShowCreateCategoryModal(false);
+    setShowCreateThemeModal(false);
+    setShowCreateMessageModal(false);
+    setShowManageMessagesModal(false);
+    setShowManageThemesModal(true);
+  }
+
+  function openManageMessages() {
+    setShowCreateCategoryModal(false);
+    setShowCreateThemeModal(false);
+    setShowCreateMessageModal(false);
+    setShowManageThemesModal(false);
+    setShowManageMessagesModal(true);
+  }
+
+  function openEditTheme(theme: Theme) {
+    if (!canManageRecord(theme.user_id)) {
+      showToast("Você só pode editar templates criados por você.", "warning");
+      return;
+    }
+    setEditingThemeId(theme.id);
+    setThemeForm({
+      nome: theme.nome || "",
+      categoria_id: theme.categoria_id || null,
+      asset_url: theme.asset_url || "",
+      logo_url: cleanAssetUrl(theme.logo_url) || "",
+      scope: normalizeScopeValue(theme.scope),
+      greeting_text: theme.greeting_text || "",
+      mensagem_max_linhas: Number(theme.mensagem_max_linhas) || 6,
+      mensagem_max_palavras: Number(theme.mensagem_max_palavras) || 50,
+      assinatura_max_linhas: Number(theme.assinatura_max_linhas) || 3,
+      assinatura_max_palavras: Number(theme.assinatura_max_palavras) || 20,
+      ativo: theme.ativo !== false,
+    });
+    setShowManageThemesModal(false);
+    setShowCreateThemeModal(true);
+  }
+
+  function openEditMessage(template: MessageTemplate) {
+    if (!canManageRecord(template.user_id)) {
+      showToast("Você só pode editar mensagens criadas por você.", "warning");
+      return;
+    }
+    setEditingMessageId(template.id);
+    setMessageForm({
+      nome: template.nome || "",
+      categoria: template.categoria || "",
+      titulo: template.titulo || "",
+      corpo: template.corpo || "",
+      scope: normalizeScopeValue(template.scope),
+      ativo: template.ativo !== false,
+    });
+    setShowManageMessagesModal(false);
     setShowCreateMessageModal(true);
   }
 
@@ -1565,27 +1677,56 @@ export default function CrmIsland() {
         ativo: themeForm.ativo !== false,
         updated_at: new Date().toISOString(),
       };
-      let createdWithLegacyColumns = false;
-      let { error } = await supabaseBrowser.from("user_message_template_themes").insert(payload);
-      if (error && isThemeLogoColumnMissingError(error)) {
-        const { logo_url, logo_path, ...legacyPayload } = payload;
-        const legacyInsert = await supabaseBrowser.from("user_message_template_themes").insert(legacyPayload);
-        error = legacyInsert.error;
-        if (!error) {
-          createdWithLegacyColumns = true;
+      let legacyWithoutLogoColumns = false;
+
+      if (editingThemeId) {
+        let { error } = await supabaseBrowser
+          .from("user_message_template_themes")
+          .update(payload)
+          .eq("id", editingThemeId)
+          .eq("user_id", currentUserId);
+        if (error && isThemeLogoColumnMissingError(error)) {
+          const { logo_url, logo_path, ...legacyPayload } = payload;
+          const legacyUpdate = await supabaseBrowser
+            .from("user_message_template_themes")
+            .update(legacyPayload)
+            .eq("id", editingThemeId)
+            .eq("user_id", currentUserId);
+          error = legacyUpdate.error;
+          if (!error) {
+            legacyWithoutLogoColumns = true;
+          }
         }
+        if (error) throw error;
+        showToast(
+          legacyWithoutLogoColumns
+            ? "Template atualizado, mas este ambiente ainda não suporta logo personalizado."
+            : "Template atualizado com sucesso.",
+          legacyWithoutLogoColumns ? "warning" : "success"
+        );
+      } else {
+        let { error } = await supabaseBrowser.from("user_message_template_themes").insert(payload);
+        if (error && isThemeLogoColumnMissingError(error)) {
+          const { logo_url, logo_path, ...legacyPayload } = payload;
+          const legacyInsert = await supabaseBrowser.from("user_message_template_themes").insert(legacyPayload);
+          error = legacyInsert.error;
+          if (!error) {
+            legacyWithoutLogoColumns = true;
+          }
+        }
+        if (error) throw error;
+        showToast(
+          legacyWithoutLogoColumns
+            ? "Template criado, mas este ambiente ainda não suporta logo personalizado. Aplique a migration do CRM para habilitar."
+            : "Template criado com sucesso.",
+          legacyWithoutLogoColumns ? "warning" : "success"
+        );
       }
-      if (error) throw error;
-      showToast(
-        createdWithLegacyColumns
-          ? "Template criado, mas este ambiente ainda não suporta logo personalizado. Aplique a migration do CRM para habilitar."
-          : "Template criado com sucesso.",
-        createdWithLegacyColumns ? "warning" : "success"
-      );
       setShowCreateThemeModal(false);
+      setEditingThemeId(null);
       await reloadThemes();
     } catch (err: any) {
-      showToast(err?.message || "Erro ao criar template.", "error");
+      showToast(err?.message || "Erro ao salvar template.", "error");
     } finally {
       setSavingTheme(false);
     }
@@ -1623,15 +1764,85 @@ export default function CrmIsland() {
         ativo: messageForm.ativo !== false,
         updated_at: new Date().toISOString(),
       };
-      const { error } = await supabaseBrowser.from("user_message_templates").insert(payload);
+      const query = editingMessageId
+        ? supabaseBrowser
+            .from("user_message_templates")
+            .update(payload)
+            .eq("id", editingMessageId)
+            .eq("user_id", currentUserId)
+        : supabaseBrowser.from("user_message_templates").insert(payload);
+      const { error } = await query;
       if (error) throw error;
-      showToast("Mensagem criada com sucesso.", "success");
+      showToast(editingMessageId ? "Mensagem atualizada com sucesso." : "Mensagem criada com sucesso.", "success");
       setShowCreateMessageModal(false);
+      setEditingMessageId(null);
       await reloadMessages();
     } catch (err: any) {
-      showToast(err?.message || "Erro ao criar mensagem.", "error");
+      showToast(err?.message || "Erro ao salvar mensagem.", "error");
     } finally {
       setSavingMessage(false);
+    }
+  }
+
+  async function deleteTheme(theme: Theme) {
+    if (!canManageRecord(theme.user_id)) {
+      showToast("Você só pode excluir templates criados por você.", "warning");
+      return;
+    }
+    if (!window.confirm(`Excluir o template "${theme.nome}"? Esta ação não pode ser desfeita.`)) {
+      return;
+    }
+
+    setDeletingThemeId(theme.id);
+    try {
+      const { error } = await supabaseBrowser
+        .from("user_message_template_themes")
+        .delete()
+        .eq("id", theme.id)
+        .eq("user_id", currentUserId);
+      if (error) throw error;
+
+      if (selectedTheme?.id === theme.id) {
+        setSelectedTheme(null);
+      }
+
+      showToast("Template excluído com sucesso.", "success");
+      await reloadThemes();
+    } catch (err: any) {
+      showToast(err?.message || "Erro ao excluir template.", "error");
+    } finally {
+      setDeletingThemeId(null);
+    }
+  }
+
+  async function deleteMessageTemplate(template: MessageTemplate) {
+    if (!canManageRecord(template.user_id)) {
+      showToast("Você só pode excluir mensagens criadas por você.", "warning");
+      return;
+    }
+    if (!window.confirm(`Excluir a mensagem "${template.nome}"? Esta ação não pode ser desfeita.`)) {
+      return;
+    }
+
+    setDeletingMessageId(template.id);
+    try {
+      const { error } = await supabaseBrowser
+        .from("user_message_templates")
+        .delete()
+        .eq("id", template.id)
+        .eq("user_id", currentUserId);
+      if (error) throw error;
+
+      if (selectedMessageTemplateId === template.id) {
+        setSelectedMessageTemplateId("");
+      }
+
+      showToast("Mensagem excluída com sucesso.", "success");
+      await reloadMessages();
+    } catch (err: any) {
+      showToast(err?.message || "Erro ao excluir mensagem.", "error");
+    } finally {
+      setDeletingMessageId(null);
     }
   }
 
@@ -1718,6 +1929,16 @@ export default function CrmIsland() {
           </button>
           <button
             type="button"
+            className={["vtur-conciliacao-tab-btn", showManageThemesModal ? "is-active" : ""].filter(Boolean).join(" ")}
+            onClick={openManageThemes}
+          >
+            <span className="vtur-conciliacao-tab-btn-label">
+              <i className="pi pi-list" aria-hidden="true" /> Gerenciar templates
+            </span>
+            <span className="vtur-conciliacao-tab-btn-sub">Visualizar, editar e excluir seus templates.</span>
+          </button>
+          <button
+            type="button"
             className={["vtur-conciliacao-tab-btn", showCreateCategoryModal ? "is-active" : ""].filter(Boolean).join(" ")}
             onClick={openCreateCategory}
           >
@@ -1735,6 +1956,16 @@ export default function CrmIsland() {
               <i className="pi pi-file-edit" aria-hidden="true" /> Nova mensagem
             </span>
             <span className="vtur-conciliacao-tab-btn-sub">Mensagens reutilizáveis por tema.</span>
+          </button>
+          <button
+            type="button"
+            className={["vtur-conciliacao-tab-btn", showManageMessagesModal ? "is-active" : ""].filter(Boolean).join(" ")}
+            onClick={openManageMessages}
+          >
+            <span className="vtur-conciliacao-tab-btn-label">
+              <i className="pi pi-list-check" aria-hidden="true" /> Gerenciar mensagens
+            </span>
+            <span className="vtur-conciliacao-tab-btn-sub">Visualizar, editar e excluir suas mensagens.</span>
           </button>
         </div>
       </AppCard>
@@ -2285,6 +2516,230 @@ export default function CrmIsland() {
         )}
       </div>
 
+      {showManageThemesModal && (
+        <div className="crm-admin-modal-overlay" onClick={() => setShowManageThemesModal(false)}>
+          <div className="crm-admin-modal crm-admin-modal--wide" onClick={(event) => event.stopPropagation()}>
+            <div className="crm-admin-modal__header">
+              <h3>Gerenciar templates</h3>
+              <button type="button" className="crm-link-btn" onClick={() => setShowManageThemesModal(false)}>
+                <i className="pi pi-times" />
+              </button>
+            </div>
+            <div className="crm-admin-modal__body">
+              {themes.length === 0 ? (
+                <p className="crm-admin-empty">Nenhum template encontrado.</p>
+              ) : (
+                <table className="crm-admin-table">
+                  <thead>
+                    <tr>
+                      <th>Template</th>
+                      <th>Categoria</th>
+                      <th>Escopo</th>
+                      <th>Origem</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...themes]
+                      .sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"))
+                      .map((theme) => {
+                        const canManage = canManageRecord(theme.user_id);
+                        const deleting = deletingThemeId === theme.id;
+                        const categoryName =
+                          categoryNameById.get(String(theme.categoria_id || "").trim()) ||
+                          String(theme.categoria || "").trim() ||
+                          "—";
+                        return (
+                          <tr key={theme.id}>
+                            <td>{theme.nome}</td>
+                            <td>{categoryName}</td>
+                            <td>
+                              <span className={getScopeTone(theme.scope)}>{getScopeLabel(theme.scope)}</span>
+                            </td>
+                            <td>{canManage ? "Meu" : "Somente leitura"}</td>
+                            <td className="crm-td-actions">
+                              <div className="crm-admin-table-actions">
+                                <AppButton
+                                  type="button"
+                                  variant="secondary"
+                                  size="small"
+                                  icon="pi pi-eye"
+                                  onClick={() => window.open(theme.asset_url, "_blank")}
+                                >
+                                  Visualizar
+                                </AppButton>
+                                <AppButton
+                                  type="button"
+                                  variant="secondary"
+                                  size="small"
+                                  icon="pi pi-pencil"
+                                  onClick={() => openEditTheme(theme)}
+                                  disabled={!canManage || deleting}
+                                  title={!canManage ? "Somente o autor pode editar." : ""}
+                                >
+                                  Editar
+                                </AppButton>
+                                <AppButton
+                                  type="button"
+                                  variant="danger"
+                                  size="small"
+                                  icon={deleting ? "pi pi-spin pi-spinner" : "pi pi-trash"}
+                                  onClick={() => void deleteTheme(theme)}
+                                  disabled={!canManage || deleting}
+                                  title={!canManage ? "Somente o autor pode excluir." : ""}
+                                >
+                                  Excluir
+                                </AppButton>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="crm-admin-modal__footer">
+              <AppButton type="button" variant="secondary" onClick={() => setShowManageThemesModal(false)}>
+                Fechar
+              </AppButton>
+              <AppButton type="button" variant="primary" icon="pi pi-plus" onClick={openCreateTheme}>
+                Novo template
+              </AppButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showManageMessagesModal && (
+        <div className="crm-admin-modal-overlay" onClick={() => setShowManageMessagesModal(false)}>
+          <div className="crm-admin-modal crm-admin-modal--wide" onClick={(event) => event.stopPropagation()}>
+            <div className="crm-admin-modal__header">
+              <h3>Gerenciar mensagens</h3>
+              <button type="button" className="crm-link-btn" onClick={() => setShowManageMessagesModal(false)}>
+                <i className="pi pi-times" />
+              </button>
+            </div>
+            <div className="crm-admin-modal__body">
+              {messageLibrary.length === 0 ? (
+                <p className="crm-admin-empty">Nenhuma mensagem encontrada.</p>
+              ) : (
+                <table className="crm-admin-table">
+                  <thead>
+                    <tr>
+                      <th>Mensagem</th>
+                      <th>Ocasião</th>
+                      <th>Título</th>
+                      <th>Escopo</th>
+                      <th>Origem</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...messageLibrary]
+                      .sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"))
+                      .map((template) => {
+                        const canManage = canManageRecord(template.user_id);
+                        const deleting = deletingMessageId === template.id;
+                        return (
+                          <tr key={template.id}>
+                            <td>{template.nome}</td>
+                            <td>{template.categoria || "—"}</td>
+                            <td>{template.titulo}</td>
+                            <td>
+                              <span className={getScopeTone(template.scope)}>{getScopeLabel(template.scope)}</span>
+                            </td>
+                            <td>{canManage ? "Minha" : "Somente leitura"}</td>
+                            <td className="crm-td-actions">
+                              <div className="crm-admin-table-actions">
+                                <AppButton
+                                  type="button"
+                                  variant="secondary"
+                                  size="small"
+                                  icon="pi pi-eye"
+                                  onClick={() => setPreviewMessageTemplate(template)}
+                                >
+                                  Visualizar
+                                </AppButton>
+                                <AppButton
+                                  type="button"
+                                  variant="secondary"
+                                  size="small"
+                                  icon="pi pi-pencil"
+                                  onClick={() => openEditMessage(template)}
+                                  disabled={!canManage || deleting}
+                                  title={!canManage ? "Somente o autor pode editar." : ""}
+                                >
+                                  Editar
+                                </AppButton>
+                                <AppButton
+                                  type="button"
+                                  variant="danger"
+                                  size="small"
+                                  icon={deleting ? "pi pi-spin pi-spinner" : "pi pi-trash"}
+                                  onClick={() => void deleteMessageTemplate(template)}
+                                  disabled={!canManage || deleting}
+                                  title={!canManage ? "Somente o autor pode excluir." : ""}
+                                >
+                                  Excluir
+                                </AppButton>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="crm-admin-modal__footer">
+              <AppButton type="button" variant="secondary" onClick={() => setShowManageMessagesModal(false)}>
+                Fechar
+              </AppButton>
+              <AppButton type="button" variant="primary" icon="pi pi-plus" onClick={openCreateMessage}>
+                Nova mensagem
+              </AppButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {previewMessageTemplate && (
+        <div className="crm-admin-modal-overlay" onClick={() => setPreviewMessageTemplate(null)}>
+          <div className="crm-admin-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="crm-admin-modal__header">
+              <h3>Visualizar mensagem</h3>
+              <button type="button" className="crm-link-btn" onClick={() => setPreviewMessageTemplate(null)}>
+                <i className="pi pi-times" />
+              </button>
+            </div>
+            <div className="crm-admin-modal__body">
+              <div className="crm-field">
+                <label className="crm-label">Nome</label>
+                <p className="crm-preview-text">{previewMessageTemplate.nome}</p>
+              </div>
+              <div className="crm-field">
+                <label className="crm-label">Ocasião</label>
+                <p className="crm-preview-text">{previewMessageTemplate.categoria || "—"}</p>
+              </div>
+              <div className="crm-field">
+                <label className="crm-label">Título / greeting</label>
+                <p className="crm-preview-text">{previewMessageTemplate.titulo}</p>
+              </div>
+              <div className="crm-field">
+                <label className="crm-label">Mensagem principal</label>
+                <p className="crm-preview-message">{previewMessageTemplate.corpo}</p>
+              </div>
+            </div>
+            <div className="crm-admin-modal__footer">
+              <AppButton type="button" variant="secondary" onClick={() => setPreviewMessageTemplate(null)}>
+                Fechar
+              </AppButton>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showCreateCategoryModal && (
         <div className="crm-admin-modal-overlay" onClick={() => setShowCreateCategoryModal(false)}>
           <div className="crm-admin-modal" onClick={(event) => event.stopPropagation()}>
@@ -2368,11 +2823,11 @@ export default function CrmIsland() {
       )}
 
       {showCreateThemeModal && (
-        <div className="crm-admin-modal-overlay" onClick={() => setShowCreateThemeModal(false)}>
+        <div className="crm-admin-modal-overlay" onClick={() => { setShowCreateThemeModal(false); setEditingThemeId(null); }}>
           <div className="crm-admin-modal crm-admin-modal--wide" onClick={(event) => event.stopPropagation()}>
             <div className="crm-admin-modal__header">
-              <h3>Novo template</h3>
-              <button type="button" className="crm-link-btn" onClick={() => setShowCreateThemeModal(false)}>
+              <h3>{editingThemeId ? "Editar template" : "Novo template"}</h3>
+              <button type="button" className="crm-link-btn" onClick={() => { setShowCreateThemeModal(false); setEditingThemeId(null); }}>
                 <i className="pi pi-times" />
               </button>
             </div>
@@ -2591,11 +3046,11 @@ export default function CrmIsland() {
               </div>
             </div>
             <div className="crm-admin-modal__footer">
-              <AppButton type="button" variant="secondary" onClick={() => setShowCreateThemeModal(false)}>
+              <AppButton type="button" variant="secondary" onClick={() => { setShowCreateThemeModal(false); setEditingThemeId(null); }}>
                 Cancelar
               </AppButton>
               <AppButton type="button" variant="primary" onClick={saveTheme} disabled={savingTheme || uploadingThemeArt || uploadingThemeLogo}>
-                {savingTheme ? "Salvando..." : "Salvar"}
+                {savingTheme ? "Salvando..." : editingThemeId ? "Atualizar" : "Salvar"}
               </AppButton>
             </div>
           </div>
@@ -2603,11 +3058,11 @@ export default function CrmIsland() {
       )}
 
       {showCreateMessageModal && (
-        <div className="crm-admin-modal-overlay" onClick={() => setShowCreateMessageModal(false)}>
+        <div className="crm-admin-modal-overlay" onClick={() => { setShowCreateMessageModal(false); setEditingMessageId(null); }}>
           <div className="crm-admin-modal crm-admin-modal--wide" onClick={(event) => event.stopPropagation()}>
             <div className="crm-admin-modal__header">
-              <h3>Nova mensagem</h3>
-              <button type="button" className="crm-link-btn" onClick={() => setShowCreateMessageModal(false)}>
+              <h3>{editingMessageId ? "Editar mensagem" : "Nova mensagem"}</h3>
+              <button type="button" className="crm-link-btn" onClick={() => { setShowCreateMessageModal(false); setEditingMessageId(null); }}>
                 <i className="pi pi-times" />
               </button>
             </div>
@@ -2669,11 +3124,11 @@ export default function CrmIsland() {
               </div>
             </div>
             <div className="crm-admin-modal__footer">
-              <AppButton type="button" variant="secondary" onClick={() => setShowCreateMessageModal(false)}>
+              <AppButton type="button" variant="secondary" onClick={() => { setShowCreateMessageModal(false); setEditingMessageId(null); }}>
                 Cancelar
               </AppButton>
               <AppButton type="button" variant="primary" onClick={saveMessageTemplate} disabled={savingMessage}>
-                {savingMessage ? "Salvando..." : "Salvar"}
+                {savingMessage ? "Salvando..." : editingMessageId ? "Atualizar" : "Salvar"}
               </AppButton>
             </div>
           </div>
