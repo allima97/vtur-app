@@ -92,7 +92,7 @@ const MASTER_SECTION_STYLES: CardStyleMap = {
     fontWeight: 500,
     color: "#101828",
     fontFamily: "Alegreya Sans, Arial, sans-serif",
-    align: "center",
+    align: "left",
     lineHeight: 1.18,
   },
   footerLead: {
