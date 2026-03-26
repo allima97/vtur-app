@@ -906,7 +906,7 @@ export default function ParametrosSistemaIsland() {
               actions={
                 <AppButton
                   type="button"
-                  variant="secondary"
+                  variant="primary"
                   onClick={addConciliacaoBand}
                   disabled={bloqueado}
                 >

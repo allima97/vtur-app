@@ -365,21 +365,32 @@ export default function ParametrosAvisosIsland() {
       setBrandLogoPreview(String(brandingData?.logo_url || "").trim() || null);
       setBrandLogoFile(null);
 
-      const tplResp = await supabase
-        .from("user_message_templates")
-        .select("id, user_id, nome, categoria, titulo, corpo, assinatura, theme_id, scope, title_style, body_style, signature_style, ativo")
-        .order("categoria")
-        .order("nome");
-      if (tplResp.error) throw tplResp.error;
-      setTemplates((tplResp.data || []) as MessageTemplate[]);
+      try {
+        const libResp = await fetch("/api/v1/crm/library", { credentials: "include" });
+        if (!libResp.ok) {
+          throw new Error(`Falha ao carregar biblioteca CRM (${libResp.status}).`);
+        }
+        const payload = (await libResp.json()) as any;
+        setTemplates(((payload?.messages || []) as MessageTemplate[]).filter((item: any) => item?.ativo !== false));
+        setThemes(((payload?.themes || []) as Theme[]).filter((item: any) => item?.ativo !== false));
+      } catch (libErr) {
+        console.error("Erro ao carregar biblioteca CRM via endpoint, tentando fallback:", libErr);
+        const tplResp = await supabase
+          .from("user_message_templates")
+          .select("id, user_id, nome, categoria, titulo, corpo, assinatura, theme_id, scope, title_style, body_style, signature_style, ativo")
+          .order("categoria")
+          .order("nome");
+        if (tplResp.error) throw tplResp.error;
+        setTemplates((tplResp.data || []) as MessageTemplate[]);
 
-      const themesResp = await supabase
-        .from("user_message_template_themes")
-        .select("id, user_id, nome, categoria, asset_url, width_px, height_px, scope, title_style, body_style, signature_style, ativo")
-        .order("categoria")
-        .order("nome");
-      if (themesResp.error) throw themesResp.error;
-      setThemes((themesResp.data || []) as Theme[]);
+        const themesResp = await supabase
+          .from("user_message_template_themes")
+          .select("id, user_id, nome, categoria, asset_url, width_px, height_px, scope, title_style, body_style, signature_style, ativo")
+          .order("categoria")
+          .order("nome");
+        if (themesResp.error) throw themesResp.error;
+        setThemes((themesResp.data || []) as Theme[]);
+      }
 
       const clientesResp = await supabase
         .from("clientes")
@@ -485,6 +496,7 @@ export default function ParametrosAvisosIsland() {
     const nomeManual = String(previewNomeClienteManual || "").trim();
     const params = new URLSearchParams({
       theme_id: selectedThemeForForm.id,
+      theme_name: selectedThemeForForm.nome,
       nome: previewNomeCliente,
       cliente_nome: buildCardClientGreeting(previewNomeCliente),
       titulo: previewCardTitle,
@@ -499,12 +511,9 @@ export default function ParametrosAvisosIsland() {
       params.set("cliente_nome", buildCardClientGreeting(nomeManual));
     }
     if (resolvedThemeAsset.asset_url) params.set("theme_asset_url", resolvedThemeAsset.asset_url);
-    if (resolvedThemeAsset.width_px) params.set("width", String(resolvedThemeAsset.width_px));
-    if (resolvedThemeAsset.height_px) params.set("height", String(resolvedThemeAsset.height_px));
     if (activeBrandLogoUrl) params.set("logo_url", activeBrandLogoUrl);
-    params.set("style_overrides", JSON.stringify(styleForm));
     return params;
-  }, [selectedThemeForForm, previewNomeCliente, previewCardTitle, form.corpo, form.assinatura, nomeUsuario, styleForm, previewNomeClienteManual, activeBrandLogoUrl]);
+  }, [selectedThemeForForm, previewNomeCliente, previewCardTitle, form.corpo, form.assinatura, nomeUsuario, previewNomeClienteManual, activeBrandLogoUrl]);
 
   const previewThemeSvgUrl = useMemo(() => {
     if (!previewBaseParams) return "";

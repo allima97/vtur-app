@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabaseBrowser } from "../../lib/supabase-browser";
+import AppCard from "../ui/primer/AppCard";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,8 +63,54 @@ function countWords(text: string) {
   return (text || "").trim().split(/\s+/).filter(Boolean).length;
 }
 
-function getScopeLabel(scope?: string | null) {
+function normalizeScopeValue(scope?: string | null): "system" | "master" | "gestor" | "user" {
   const normalized = String(scope || "").trim().toLowerCase();
+  if (normalized === "system" || normalized === "master" || normalized === "gestor" || normalized === "user") {
+    return normalized;
+  }
+  // Compatibilidade: registros legados sem `scope` passam a ser tratados como Sistema.
+  return "system";
+}
+
+function normalizeText(value?: string | null) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function resolveGreetingByTheme(theme?: Pick<Theme, "nome" | "categoria" | "greeting_text"> | null) {
+  const explicit = String(theme?.greeting_text || "").trim();
+  if (explicit) return explicit;
+  const source = `${theme?.nome || ""} ${theme?.categoria || ""}`;
+  const normalized = normalizeText(source);
+  if (normalized.includes("anivers")) return "Feliz Aniversário!";
+  if (normalized.includes("pascoa")) return "Feliz Páscoa!";
+  if (normalized.includes("natal")) return "Feliz Natal!";
+  if (normalized.includes("ano novo") || normalized.includes("ano-novo") || normalized.includes("anonovo")) return "Feliz Ano Novo!";
+  if (normalized.includes("dia das maes")) return "Feliz Dia das Mães!";
+  if (normalized.includes("dia dos pais")) return "Feliz Dia dos Pais!";
+  if (normalized.includes("dia da mulher")) return "Feliz Dia da Mulher!";
+  if (normalized.includes("viajant")) return "Boas viagens e muitas conquistas!";
+  return "";
+}
+
+function stripLegacyGreeting(message: string) {
+  const raw = String(message || "").replace(/\r/g, "");
+  if (!raw.trim()) return "";
+  const lines = raw.split("\n");
+  const first = normalizeText(lines[0] || "");
+  const looksLikeLegacy =
+    first.startsWith("prezado") ||
+    first.startsWith("prezada") ||
+    first.includes("[nome do cliente]") ||
+    first.includes("{nome}");
+  if (!looksLikeLegacy) return raw;
+  return lines.slice(1).join("\n").trimStart();
+}
+
+function getScopeLabel(scope?: string | null) {
+  const normalized = normalizeScopeValue(scope);
   if (normalized === "system") return "Sistema";
   if (normalized === "master") return "Master";
   if (normalized === "gestor") return "Gestor";
@@ -71,7 +118,7 @@ function getScopeLabel(scope?: string | null) {
 }
 
 function getScopeTone(scope?: string | null) {
-  const normalized = String(scope || "").trim().toLowerCase();
+  const normalized = normalizeScopeValue(scope);
   if (normalized === "system") return "crm-badge crm-badge--system";
   if (normalized === "master") return "crm-badge crm-badge--master";
   if (normalized === "gestor") return "crm-badge crm-badge--gestor";
@@ -80,26 +127,40 @@ function getScopeTone(scope?: string | null) {
 
 function buildPreviewParams(params: {
   themeId: string;
+  themeName?: string | null;
+  themeAssetUrl?: string | null;
   greeting: string;
-  saudacao: string;
   primeiroNome: string;
+  nomeCompleto: string;
   mensagem: string;
   assinatura: AssinaturaForm;
   logoUrl: string | null;
 }) {
-  const { themeId, greeting, saudacao, primeiroNome, mensagem, assinatura, logoUrl } = params;
+  const {
+    themeId,
+    themeName,
+    themeAssetUrl,
+    greeting,
+    primeiroNome,
+    nomeCompleto,
+    mensagem,
+    assinatura,
+    logoUrl,
+  } = params;
   const q = new URLSearchParams();
   q.set("theme_id", themeId);
+  if (themeName) q.set("theme_name", themeName);
+  if (themeAssetUrl) q.set("theme_asset_url", themeAssetUrl);
   if (greeting) q.set("titulo", greeting);
-  // clientName section: "Prezado(a) Marcos,"
-  const clientName = [saudacao.trim(), primeiroNome.trim()].filter(Boolean).join(" ");
-  if (clientName) q.set("nome", clientName + (clientName.endsWith(",") ? "" : ","));
+  // `nome` alimenta variáveis e fallbacks; `cliente_nome_literal` fixa a linha dinâmica.
+  const safeNome = String(nomeCompleto || primeiroNome || "Cliente").trim();
+  q.set("nome", safeNome || "Cliente");
+  const clientName = String(primeiroNome || nomeCompleto || "").trim();
+  if (clientName) q.set("cliente_nome_literal", clientName.endsWith(",") ? clientName : `${clientName},`);
   if (mensagem) q.set("corpo", mensagem);
-  if (assinatura.linha1) {
-    q.set("footer_lead", assinatura.linha1);
-  }
+  q.set("footer_lead", assinatura.linha1 || "");
   if (assinatura.linha2) q.set("assinatura", assinatura.linha2);
-  if (assinatura.linha3) q.set("cargo_consultor", assinatura.linha3);
+  q.set("cargo_consultor", assinatura.linha3 || "");
   if (assinatura.linha2_font_size) q.set("signature_font_size", String(assinatura.linha2_font_size));
   if (logoUrl) q.set("logo_url", logoUrl);
   return `/api/v1/cards/render.svg?${q.toString()}`;
@@ -153,8 +214,8 @@ function AssinaturaEditor({
     italicKey: "linha1_italic" | "linha2_italic" | "linha3_italic";
     placeholder: string;
   }> = [
-    { key: "linha1", sizeKey: "linha1_font_size", italicKey: "linha1_italic", placeholder: "Ex.: Com carinho," },
-    { key: "linha2", sizeKey: "linha2_font_size", italicKey: "linha2_italic", placeholder: "Seu nome" },
+    { key: "linha1", sizeKey: "linha1_font_size", italicKey: "linha1_italic", placeholder: "Linha opcional (ex.: Com carinho,)" },
+    { key: "linha2", sizeKey: "linha2_font_size", italicKey: "linha2_italic", placeholder: "Nome do consultor (obrigatório)" },
     { key: "linha3", sizeKey: "linha3_font_size", italicKey: "linha3_italic", placeholder: "Seu cargo (opcional)" },
   ];
 
@@ -199,9 +260,9 @@ function AssinaturaEditor({
 // ── Main component ────────────────────────────────────────────────────────────
 
 const DEFAULT_ASSINATURA: AssinaturaForm = {
-  linha1: "Com carinho,",
+  linha1: "",
   linha1_font_size: 40,
-  linha1_italic: true,
+  linha1_italic: false,
   linha2: "",
   linha2_font_size: 56,
   linha2_italic: false,
@@ -227,7 +288,6 @@ export default function CrmIsland() {
 
   // ── Form fields ──────────────────────────────────────────────────
   const [greeting, setGreeting] = useState("");
-  const [saudacao, setSaudacao] = useState("Prezado(a)");
   const [clienteNome, setClienteNome] = useState(""); // full name selected from client list
   const [clienteNomeCustom, setClienteNomeCustom] = useState(""); // override first name
   const [useCustomNome, setUseCustomNome] = useState(false);
@@ -244,6 +304,7 @@ export default function CrmIsland() {
 
   // ── Message library picker ───────────────────────────────────────
   const [showMsgPicker, setShowMsgPicker] = useState(false);
+  const [msgPickerSearch, setMsgPickerSearch] = useState("");
   const [scopeFilter, setScopeFilter] = useState<"all" | "system" | "master" | "gestor" | "user">("all");
 
   // ── Preview ──────────────────────────────────────────────────────
@@ -251,7 +312,7 @@ export default function CrmIsland() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Derived ──────────────────────────────────────────────────────
-  const primeiroNome = useCustomNome ? clienteNomeCustom.trim() : getPrimeiroNome(clienteNome);
+  const primeiroNome = useCustomNome ? clienteNomeCustom.trim() : clienteNome.trim();
   const palavras = countWords(mensagem);
   const maxPalavras = selectedTheme?.mensagem_max_palavras ?? 50;
   const maxLinhas = selectedTheme?.mensagem_max_linhas ?? 6;
@@ -262,7 +323,7 @@ export default function CrmIsland() {
     () =>
       themes.filter((t) => {
         const matchCategory = selectedCategoryId ? t.categoria_id === selectedCategoryId : true;
-        const matchScope = scopeFilter === "all" ? true : t.scope === scopeFilter;
+        const matchScope = scopeFilter === "all" ? true : normalizeScopeValue(t.scope) === scopeFilter;
         return matchCategory && matchScope;
       }),
     [themes, selectedCategoryId, scopeFilter]
@@ -270,11 +331,10 @@ export default function CrmIsland() {
 
   const filteredMessages = useMemo(() => {
     if (!selectedTheme) return messageLibrary;
-    const catId = selectedTheme.categoria_id;
     const catNome = (selectedTheme.categoria || "").toLowerCase();
     return messageLibrary.filter((m) => {
-      if (catId && m.categoria) return true; // show all if same category
       const mCat = (m.categoria || "").toLowerCase();
+      if (!catNome) return !mCat || mCat === "geral";
       return !mCat || mCat === catNome || mCat === "geral";
     }).sort((a, b) => {
       const ownA = a.user_id === currentUserId ? 1 : 0;
@@ -284,12 +344,21 @@ export default function CrmIsland() {
     });
   }, [messageLibrary, selectedTheme, currentUserId]);
 
+  const libraryMessages = useMemo(() => {
+    const search = normalizeText(msgPickerSearch);
+    if (!search) return filteredMessages;
+    return filteredMessages.filter((item) => {
+      const haystack = normalizeText(`${item.nome} ${item.corpo} ${item.titulo || ""} ${item.categoria || ""}`);
+      return haystack.includes(search);
+    });
+  }, [filteredMessages, msgPickerSearch]);
+
   const templatesByScope = useMemo(() => {
     return {
-      system: themes.filter((theme) => theme.scope === "system").length,
-      master: themes.filter((theme) => theme.scope === "master").length,
-      gestor: themes.filter((theme) => theme.scope === "gestor").length,
-      user: themes.filter((theme) => theme.scope === "user").length,
+      system: themes.filter((theme) => normalizeScopeValue(theme.scope) === "system").length,
+      master: themes.filter((theme) => normalizeScopeValue(theme.scope) === "master").length,
+      gestor: themes.filter((theme) => normalizeScopeValue(theme.scope) === "gestor").length,
+      user: themes.filter((theme) => normalizeScopeValue(theme.scope) === "user").length,
     };
   }, [themes]);
 
@@ -298,53 +367,43 @@ export default function CrmIsland() {
     async function load() {
       setLoading(true);
       try {
-        const [authResp, catResp, themeResp, msgResp, sigResp, settingsResp] = await Promise.all([
-          supabaseBrowser.auth.getUser(),
-          supabaseBrowser
-            .from("crm_template_categories")
-            .select("id, nome, icone, sort_order")
-            .eq("ativo", true)
-            .order("sort_order"),
-          supabaseBrowser
-            .from("user_message_template_themes")
-            .select(
-              "id, user_id, nome, categoria, categoria_id, asset_url, greeting_text, mensagem_max_linhas, mensagem_max_palavras, assinatura_max_linhas, assinatura_max_palavras, scope"
-            )
-            .eq("ativo", true)
-            .order("nome"),
-          supabaseBrowser
-            .from("user_message_templates")
-            .select("id, user_id, nome, titulo, corpo, categoria, scope")
-            .eq("ativo", true)
-            .order("nome"),
-          supabaseBrowser
-            .from("user_crm_assinaturas")
-            .select("*")
-            .eq("is_default", true)
-            .maybeSingle(),
-          supabaseBrowser
-            .from("quote_print_settings")
-            .select("logo_url, consultor_nome")
-            .maybeSingle(),
-        ]);
+        const resp = await fetch("/api/v1/crm/library", { credentials: "include" });
+        if (!resp.ok) {
+          throw new Error(`Falha ao carregar biblioteca CRM (${resp.status}).`);
+        }
+        const payload = (await resp.json()) as any;
 
-        setCurrentUserId(authResp.data?.user?.id || "");
-        setCategories((catResp.data || []) as Category[]);
-        setThemes((themeResp.data || []) as Theme[]);
-        setMessageLibrary((msgResp.data || []) as MessageTemplate[]);
+        setCurrentUserId(String(payload?.userId || ""));
+        setCategories((payload?.categories || []) as Category[]);
+        setThemes(
+          ((payload?.themes || []) as Theme[])
+            .filter((theme: any) => theme?.ativo !== false)
+            .map((theme) => ({
+              ...theme,
+              scope: normalizeScopeValue(theme.scope),
+            }))
+        );
+        setMessageLibrary(
+          ((payload?.messages || []) as MessageTemplate[])
+            .filter((message: any) => message?.ativo !== false)
+            .map((message) => ({
+              ...message,
+              scope: normalizeScopeValue(message.scope),
+            }))
+        );
 
-        const settings = settingsResp.data as any;
-        const resolvedLogo = settings?.logo_url || null;
+        const settings = payload?.settings || null;
+        const resolvedLogo = String(settings?.logo_url || "").trim() || null;
         setLogoUrl(resolvedLogo);
         setLogoMissing(!resolvedLogo);
 
-        const sig = sigResp.data as any;
-        if (sig) {
-          setSavedSigId(sig.id);
+        const sig = payload?.signature || null;
+        if (sig?.id) {
+          setSavedSigId(String(sig.id));
           setAssinatura({
-            linha1: sig.linha1 || "Com carinho,",
+            linha1: sig.linha1 || "",
             linha1_font_size: sig.linha1_font_size ?? 40,
-            linha1_italic: sig.linha1_italic ?? true,
+            linha1_italic: sig.linha1_italic ?? false,
             linha2: sig.linha2 || settings?.consultor_nome || "",
             linha2_font_size: sig.linha2_font_size ?? 56,
             linha2_italic: sig.linha2_italic ?? false,
@@ -353,10 +412,84 @@ export default function CrmIsland() {
             linha3_italic: sig.linha3_italic ?? false,
           });
         } else if (settings?.consultor_nome) {
-          setAssinatura((prev) => ({ ...prev, linha2: settings.consultor_nome }));
+          setAssinatura((prev) => ({ ...prev, linha2: String(settings.consultor_nome || "") }));
         }
       } catch (err) {
-        console.error("[CRM] Erro ao carregar dados:", err);
+        console.error("[CRM] Erro no endpoint /api/v1/crm/library, tentando fallback direto:", err);
+        try {
+          const [authResp, catResp, themeResp, msgResp, sigResp, settingsResp] = await Promise.all([
+            supabaseBrowser.auth.getUser(),
+            supabaseBrowser
+              .from("crm_template_categories")
+              .select("id, nome, icone, sort_order")
+              .eq("ativo", true)
+              .order("sort_order"),
+            supabaseBrowser
+              .from("user_message_template_themes")
+              .select(
+                "id, user_id, nome, categoria, categoria_id, asset_url, greeting_text, mensagem_max_linhas, mensagem_max_palavras, assinatura_max_linhas, assinatura_max_palavras, scope, ativo"
+              )
+              .order("nome"),
+            supabaseBrowser
+              .from("user_message_templates")
+              .select("id, user_id, nome, titulo, corpo, categoria, scope, ativo")
+              .order("nome"),
+            supabaseBrowser
+              .from("user_crm_assinaturas")
+              .select("*")
+              .eq("is_default", true)
+              .maybeSingle(),
+            supabaseBrowser
+              .from("quote_print_settings")
+              .select("logo_url, consultor_nome")
+              .eq("owner_user_id", authResp.data?.user?.id || "")
+              .maybeSingle(),
+          ]);
+
+          setCurrentUserId(authResp.data?.user?.id || "");
+          setCategories((catResp.data || []) as Category[]);
+          setThemes(
+            ((themeResp.data || []) as Theme[])
+              .filter((theme: any) => theme?.ativo !== false)
+              .map((theme) => ({
+              ...theme,
+              scope: normalizeScopeValue(theme.scope),
+            }))
+          );
+          setMessageLibrary(
+            ((msgResp.data || []) as MessageTemplate[])
+              .filter((message: any) => message?.ativo !== false)
+              .map((message) => ({
+              ...message,
+              scope: normalizeScopeValue(message.scope),
+            }))
+          );
+
+          const settings = settingsResp.data as any;
+          const resolvedLogo = settings?.logo_url || null;
+          setLogoUrl(resolvedLogo);
+          setLogoMissing(!resolvedLogo);
+
+          const sig = sigResp.data as any;
+          if (sig) {
+            setSavedSigId(sig.id);
+            setAssinatura({
+              linha1: sig.linha1 || "",
+              linha1_font_size: sig.linha1_font_size ?? 40,
+              linha1_italic: sig.linha1_italic ?? false,
+              linha2: sig.linha2 || settings?.consultor_nome || "",
+              linha2_font_size: sig.linha2_font_size ?? 56,
+              linha2_italic: sig.linha2_italic ?? false,
+              linha3: sig.linha3 || "",
+              linha3_font_size: sig.linha3_font_size ?? 38,
+              linha3_italic: sig.linha3_italic ?? false,
+            });
+          } else if (settings?.consultor_nome) {
+            setAssinatura((prev) => ({ ...prev, linha2: settings.consultor_nome }));
+          }
+        } catch (fallbackErr) {
+          console.error("[CRM] Erro no fallback direto:", fallbackErr);
+        }
       } finally {
         setLoading(false);
       }
@@ -399,8 +532,10 @@ export default function CrmIsland() {
   // ── Select theme ─────────────────────────────────────────────────
   function selectTheme(theme: Theme) {
     setSelectedTheme(theme);
-    setGreeting(theme.greeting_text || "");
+    setGreeting(resolveGreetingByTheme(theme));
     setMensagem("");
+    setShowMsgPicker(false);
+    setMsgPickerSearch("");
     setPreviewUrl(null);
   }
 
@@ -411,9 +546,11 @@ export default function CrmIsland() {
     debounceRef.current = setTimeout(() => {
       const url = buildPreviewParams({
         themeId: selectedTheme.id,
+        themeName: selectedTheme.nome,
+        themeAssetUrl: selectedTheme.asset_url,
         greeting,
-        saudacao,
         primeiroNome,
+        nomeCompleto: clienteNome || primeiroNome,
         mensagem,
         assinatura,
         logoUrl,
@@ -423,7 +560,7 @@ export default function CrmIsland() {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [selectedTheme, greeting, saudacao, primeiroNome, mensagem, assinatura, logoUrl]);
+  }, [selectedTheme, greeting, primeiroNome, clienteNome, mensagem, assinatura, logoUrl]);
 
   // ── Save signature ───────────────────────────────────────────────
   async function salvarAssinatura() {
@@ -498,6 +635,12 @@ export default function CrmIsland() {
 
   return (
     <div className="crm-root">
+      <AppCard
+        tone="info"
+        title="CRM — Relacionamento com Cliente"
+        subtitle="Escolha o modelo, personalize a mensagem e gere o cartão com preenchimento automático nos espaços técnicos."
+      />
+
       {/* ── Logo missing alert ── */}
       {logoMissing && (
         <div className="crm-alert crm-alert--warning">
@@ -513,66 +656,65 @@ export default function CrmIsland() {
       <div className={`crm-layout${showComposer ? " crm-layout--split" : ""}`}>
         {/* ════════════════ LEFT: Gallery ════════════════ */}
         <aside className="crm-gallery">
-          <div className="crm-gallery__header">
-            <h2 className="crm-gallery__title">
-              <i className="pi pi-images" /> Templates
-            </h2>
-          </div>
-
-          <div className="crm-scope-overview">
-            <button type="button" className={`crm-scope-chip${scopeFilter === "all" ? " active" : ""}`} onClick={() => setScopeFilter("all")}>
-              Todos
-            </button>
-            <button type="button" className={`crm-scope-chip${scopeFilter === "system" ? " active" : ""}`} onClick={() => setScopeFilter("system")}>
-              Sistema {templatesByScope.system > 0 ? `(${templatesByScope.system})` : ""}
-            </button>
-            <button type="button" className={`crm-scope-chip${scopeFilter === "master" ? " active" : ""}`} onClick={() => setScopeFilter("master")}>
-              Master {templatesByScope.master > 0 ? `(${templatesByScope.master})` : ""}
-            </button>
-            <button type="button" className={`crm-scope-chip${scopeFilter === "gestor" ? " active" : ""}`} onClick={() => setScopeFilter("gestor")}>
-              Gestor {templatesByScope.gestor > 0 ? `(${templatesByScope.gestor})` : ""}
-            </button>
-            <button type="button" className={`crm-scope-chip${scopeFilter === "user" ? " active" : ""}`} onClick={() => setScopeFilter("user")}>
-              Meus {templatesByScope.user > 0 ? `(${templatesByScope.user})` : ""}
-            </button>
-          </div>
-
-          {/* Category tabs */}
-          <div className="crm-category-tabs">
-            <button
-              type="button"
-              className={`crm-category-tab${!selectedCategoryId ? " active" : ""}`}
-              onClick={() => setSelectedCategoryId(null)}
-            >
-              Todos
-            </button>
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                className={`crm-category-tab${selectedCategoryId === cat.id ? " active" : ""}`}
-                onClick={() => setSelectedCategoryId(cat.id)}
-              >
-                <i className={cat.icone} /> {cat.nome}
+          <AppCard
+            tone="info"
+            className="crm-panel-card"
+            title="Modelos"
+            subtitle="Filtre por escopo e ocasião para escolher a arte."
+          >
+            <div className="crm-scope-overview">
+              <button type="button" className={`crm-scope-chip${scopeFilter === "all" ? " active" : ""}`} onClick={() => setScopeFilter("all")}>
+                Todos
               </button>
-            ))}
-          </div>
+              <button type="button" className={`crm-scope-chip${scopeFilter === "system" ? " active" : ""}`} onClick={() => setScopeFilter("system")}>
+                Sistema {templatesByScope.system > 0 ? `(${templatesByScope.system})` : ""}
+              </button>
+              <button type="button" className={`crm-scope-chip${scopeFilter === "master" ? " active" : ""}`} onClick={() => setScopeFilter("master")}>
+                Master {templatesByScope.master > 0 ? `(${templatesByScope.master})` : ""}
+              </button>
+              <button type="button" className={`crm-scope-chip${scopeFilter === "gestor" ? " active" : ""}`} onClick={() => setScopeFilter("gestor")}>
+                Gestor {templatesByScope.gestor > 0 ? `(${templatesByScope.gestor})` : ""}
+              </button>
+              <button type="button" className={`crm-scope-chip${scopeFilter === "user" ? " active" : ""}`} onClick={() => setScopeFilter("user")}>
+                Meus {templatesByScope.user > 0 ? `(${templatesByScope.user})` : ""}
+              </button>
+            </div>
 
-          {/* Theme grid */}
-          {filteredThemes.length === 0 ? (
-            <p className="crm-empty">Nenhum template disponível nesta categoria.</p>
-          ) : (
-            <div className="crm-theme-grid">
-              {filteredThemes.map((t) => (
-                <ThumbCard
-                  key={t.id}
-                  theme={t}
-                  selected={selectedTheme?.id === t.id}
-                  onSelect={selectTheme}
-                />
+            <div className="crm-category-tabs">
+              <button
+                type="button"
+                className={`crm-category-tab${!selectedCategoryId ? " active" : ""}`}
+                onClick={() => setSelectedCategoryId(null)}
+              >
+                Todos
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  className={`crm-category-tab${selectedCategoryId === cat.id ? " active" : ""}`}
+                  onClick={() => setSelectedCategoryId(cat.id)}
+                >
+                  <i className={cat.icone} /> {cat.nome}
+                </button>
               ))}
             </div>
-          )}
+
+            {filteredThemes.length === 0 ? (
+              <p className="crm-empty">Nenhum modelo encontrado para os filtros atuais.</p>
+            ) : (
+              <div className="crm-theme-grid">
+                {filteredThemes.map((t) => (
+                  <ThumbCard
+                    key={t.id}
+                    theme={t}
+                    selected={selectedTheme?.id === t.id}
+                    onSelect={selectTheme}
+                  />
+                ))}
+              </div>
+            )}
+          </AppCard>
         </aside>
 
         {/* ════════════════ RIGHT: Composer + Preview ════════════════ */}
@@ -589,10 +731,12 @@ export default function CrmIsland() {
 
             <div className="crm-composer-split">
               {/* ── Form ── */}
-              <div className="crm-form">
-                <h3 className="crm-section-title">
-                  <i className="pi pi-pencil" /> Personalizar cartão
-                </h3>
+              <AppCard
+                tone="default"
+                className="crm-form crm-panel-card"
+                title="Personalizar cartão"
+                subtitle="Título, nome do cliente, mensagem e assinatura padronizados pelo mapa técnico."
+              >
                 <div className="crm-template-meta">
                   <span className={getScopeTone(selectedTheme.scope)}>{getScopeLabel(selectedTheme.scope)}</span>
                   <span className="crm-template-meta__name">{selectedTheme.nome}</span>
@@ -618,14 +762,6 @@ export default function CrmIsland() {
                 <div className="crm-field">
                   <label className="crm-label">Nome do cliente</label>
                   <div className="crm-client-row">
-                    <input
-                      type="text"
-                      className="form-input crm-saudacao-input"
-                      value={saudacao}
-                      onChange={(e) => setSaudacao(e.target.value)}
-                      placeholder="Prezado(a)"
-                      title="Saudação"
-                    />
                     <div className="crm-client-search" ref={clienteRef}>
                       <input
                         type="text"
@@ -662,13 +798,16 @@ export default function CrmIsland() {
                   {(clienteNome || useCustomNome) && (
                     <div className="crm-nome-preview">
                       <span className="crm-nome-preview__text">
-                        {saudacao} <strong>{primeiroNome || "—"}</strong>,
+                        Nome exibido no cartão: <strong>{primeiroNome || "—"}</strong>
                       </span>
                       {!useCustomNome ? (
                         <button
                           type="button"
                           className="crm-link-btn"
-                          onClick={() => { setUseCustomNome(true); setClienteNomeCustom(primeiroNome); }}
+                          onClick={() => {
+                            setUseCustomNome(true);
+                            setClienteNomeCustom(primeiroNome || getPrimeiroNome(clienteNome));
+                          }}
                         >
                           Personalizar nome
                         </button>
@@ -707,7 +846,10 @@ export default function CrmIsland() {
                       <button
                         type="button"
                         className="crm-link-btn"
-                        onClick={() => setShowMsgPicker((v) => !v)}
+                        onClick={() => {
+                          setShowMsgPicker((v) => !v);
+                          setMsgPickerSearch("");
+                        }}
                       >
                         <i className="pi pi-book" /> Biblioteca
                       </button>
@@ -718,27 +860,44 @@ export default function CrmIsland() {
                   {showMsgPicker && (
                     <div className="crm-msg-picker">
                       <div className="crm-msg-picker__header">
-                        <span>Selecione uma mensagem</span>
+                        <span>Biblioteca de mensagens</span>
                         <button type="button" className="crm-link-btn" onClick={() => setShowMsgPicker(false)}>
                           <i className="pi pi-times" />
                         </button>
                       </div>
+                      <div className="crm-msg-picker__filters">
+                        <input
+                          type="text"
+                          className="form-input"
+                          value={msgPickerSearch}
+                          onChange={(e) => setMsgPickerSearch(e.target.value)}
+                          placeholder="Buscar por nome, categoria ou conteúdo..."
+                        />
+                      </div>
                       <div className="crm-msg-picker__list">
-                        {filteredMessages.map((m) => (
-                          <button
-                            key={m.id}
-                            type="button"
-                            className="crm-msg-item"
-                            onClick={() => {
-                              setMensagem(m.corpo);
-                              setShowMsgPicker(false);
-                            }}
-                          >
-                            <strong>{m.nome}</strong>
-                            <small className={getScopeTone(m.scope)}>{getScopeLabel(m.scope)}</small>
-                            <span>{m.corpo.slice(0, 100)}…</span>
-                          </button>
-                        ))}
+                        {libraryMessages.length > 0 ? (
+                          libraryMessages.map((m) => (
+                            <button
+                              key={m.id}
+                              type="button"
+                              className="crm-msg-item"
+                              onClick={() => {
+                                setMensagem(stripLegacyGreeting(m.corpo));
+                                setShowMsgPicker(false);
+                              }}
+                            >
+                              <div className="crm-msg-item__top">
+                                <strong>{m.nome}</strong>
+                                <small className={getScopeTone(m.scope)}>{getScopeLabel(m.scope)}</small>
+                              </div>
+                              <span>{m.corpo.slice(0, 140)}{m.corpo.length > 140 ? "…" : ""}</span>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="crm-msg-picker__empty">
+                            Nenhuma mensagem encontrada para esse filtro.
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -768,7 +927,7 @@ export default function CrmIsland() {
                   <div className="crm-label-row">
                     <label className="crm-label">
                       Assinatura
-                      <span className="crm-hint-inline">máx. 3 linhas</span>
+                      <span className="crm-hint-inline">linha 2 obrigatória · linhas 1 e 3 opcionais</span>
                     </label>
                   </div>
                   <AssinaturaEditor value={assinatura} onChange={setAssinatura} />
@@ -777,7 +936,8 @@ export default function CrmIsland() {
                       type="button"
                       className={`btn btn-secondary btn-sm${sigSaved ? " btn--success" : ""}`}
                       onClick={salvarAssinatura}
-                      disabled={savingSig}
+                      disabled={savingSig || !assinatura.linha2.trim()}
+                      title={!assinatura.linha2.trim() ? "Informe o nome do consultor na linha 2." : ""}
                     >
                       {savingSig ? (
                         <><span className="crm-spinner crm-spinner--sm" /> Salvando…</>
@@ -789,13 +949,15 @@ export default function CrmIsland() {
                     </button>
                   </div>
                 </div>
-              </div>
+              </AppCard>
 
               {/* ── Preview panel ── */}
-              <div className="crm-preview-panel">
-                <h3 className="crm-section-title">
-                  <i className="pi pi-eye" /> Pré-visualização
-                </h3>
+              <AppCard
+                tone="default"
+                className="crm-preview-panel crm-panel-card"
+                title="Pré-visualização"
+                subtitle="Saída final seguindo o template técnico."
+              >
 
                 <div className="crm-preview-frame">
                   {previewUrl ? (
@@ -819,8 +981,8 @@ export default function CrmIsland() {
                       type="button"
                       className="btn btn-primary"
                       onClick={compartilharWhatsApp}
-                      disabled={!primeiroNome}
-                      title={!primeiroNome ? "Informe o nome do cliente" : ""}
+                      disabled={!primeiroNome || !assinatura.linha2.trim()}
+                      title={!primeiroNome ? "Informe o nome do cliente" : !assinatura.linha2.trim() ? "Informe o nome do consultor na assinatura." : ""}
                     >
                       <i className="pi pi-whatsapp" /> Compartilhar no WhatsApp
                     </button>
@@ -856,17 +1018,19 @@ export default function CrmIsland() {
                     </span>
                   )}
                 </div>
-              </div>
+              </AppCard>
             </div>
           </div>
         )}
 
         {/* ── No theme selected: hint ── */}
         {!showComposer && (
-          <div className="crm-select-hint">
-            <i className="pi pi-hand-pointer" />
-            <p>Selecione um template à esquerda para personalizar e enviar o cartão.</p>
-          </div>
+          <AppCard tone="config" className="crm-select-card">
+            <div className="crm-select-hint">
+              <i className="pi pi-hand-pointer" />
+              <p>Selecione um modelo à esquerda para personalizar e enviar o cartão.</p>
+            </div>
+          </AppCard>
         )}
       </div>
     </div>

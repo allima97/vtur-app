@@ -204,6 +204,15 @@ export default function PersonalizarMenuIsland() {
     if (canMenuExact("Equipe")) push("parametros", "parametros-equipe", "Equipe");
     if (canMenuExact("Escalas")) push("parametros", "parametros-escalas", "Escalas");
     if (canMenuExact("Parametros")) push("parametros", "parametros", "Parâmetros do Sistema");
+    if (
+      canMenuExact("CRM") ||
+      canMenuExact("CrmTemplates") ||
+      canMenuExact("Avisos") ||
+      canMenuExact("ParametrosAvisos") ||
+      canMenuExact("Parametros")
+    ) {
+      push("parametros", "parametros-avisos", "CRM");
+    }
     if (canMenuExact("Cambios")) push("parametros", "parametros-cambios", "Câmbios");
     if (canMenuExact("Orcamentos (PDF)")) push("parametros", "parametros-orcamentos", "Orçamentos (PDF)");
 

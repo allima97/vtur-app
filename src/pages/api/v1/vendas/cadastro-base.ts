@@ -214,7 +214,8 @@ export async function GET({ request }: { request: Request }) {
         .from("users")
         .select("id, user_types(name)")
         .eq("company_id", companyId)
-        .eq("uso_individual", false);
+        .eq("uso_individual", false)
+        .eq("active", true);
 
       const gestoresIds = ((gestoresData || []) as any[])
         .filter((row) => isAllowedSellerTipo(row?.user_types?.name))
@@ -227,6 +228,7 @@ export async function GET({ request }: { request: Request }) {
         .from("users")
         .select("id, nome_completo, user_types(name)")
         .in("id", allIds)
+        .eq("active", true)
         .order("nome_completo");
       if (vendErr) throw vendErr;
       vendedoresEquipe = ((vendedoresData || []) as any[]).filter((row) =>
@@ -238,6 +240,7 @@ export async function GET({ request }: { request: Request }) {
         .select("id, nome_completo, user_types(name)")
         .eq("company_id", companyId)
         .eq("uso_individual", false)
+        .eq("active", true)
         .order("nome_completo");
       if (vendErr) throw vendErr;
       vendedoresEquipe = ((vendedoresData || []) as any[]).filter((row) =>

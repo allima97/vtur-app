@@ -192,7 +192,11 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
   const canParametrosEscalas = canMenuExact("Escalas");
   const canParametrosSistema = canMenuExact("Parametros");
   const canParametrosCambios = canMenuExact("Cambios");
-  const canParametrosAvisos = canMenuExact("Avisos") || canMenuExact("ParametrosAvisos");
+  const canParametrosAvisos =
+    canMenuExact("CRM") ||
+    canMenuExact("CrmTemplates") ||
+    canMenuExact("Avisos") ||
+    canMenuExact("ParametrosAvisos");
   const canParametrosOrcamentosPdf = canMenuExact("Orcamentos (PDF)");
   const canParametrosFormasPagamento = canMenuExact("Formas de Pagamento");
   const canParametrosRegrasComissao = canMenuExact("RegrasComissao");
@@ -761,7 +765,12 @@ function MenuIslandInner({ activePage, initialCache }: MenuIslandProps) {
       active: "parametros-avisos",
       icon: "pi pi-share-alt",
       label: "CRM",
-      canShow: canMenuExact("Avisos") || canMenuExact("ParametrosAvisos") || canMenuExact("Parametros"),
+      canShow:
+        canMenuExact("CRM") ||
+        canMenuExact("CrmTemplates") ||
+        canMenuExact("Avisos") ||
+        canMenuExact("ParametrosAvisos") ||
+        canMenuExact("Parametros"),
     });
     entries.push({
       key: "parametros-cambios",

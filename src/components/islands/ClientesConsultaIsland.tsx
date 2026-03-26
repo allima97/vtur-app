@@ -494,6 +494,7 @@ export default function ClientesConsultaIsland() {
                   {
                     key: "historico",
                     label: "Historico",
+                    icon: <i className="pi pi-clock" aria-hidden="true" />,
                     onClick: () => abrirHistorico(c.id, c.nome),
                     variant: "ghost" as const,
                   },

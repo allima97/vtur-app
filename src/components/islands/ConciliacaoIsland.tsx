@@ -616,6 +616,17 @@ function formatDate(value: string | null | undefined) {
   return `${day}-${month}-${year}`;
 }
 
+function resolveConciliacaoDisplayDate(row: Pick<ConciliacaoItem, "movimento_data" | "conciliado_em" | "last_checked_at" | "created_at" | "updated_at">) {
+  return (
+    String(row.movimento_data || "").trim() ||
+    String(row.conciliado_em || "").trim() ||
+    String(row.last_checked_at || "").trim() ||
+    String(row.created_at || "").trim() ||
+    String(row.updated_at || "").trim() ||
+    null
+  );
+}
+
 function formatDateTime(value: string | null | undefined) {
   const raw = String(value || "").trim();
   if (!raw) return "-";
@@ -650,6 +661,13 @@ function formatMonthLabel(value: string | null | undefined) {
   ];
   const monthLabel = monthNames[monthIndex] || month;
   return `${monthLabel}-${year}`;
+}
+
+const CENTER_ICON_HEADER_STYLE: React.CSSProperties = { textAlign: "center" };
+const CENTER_ICON_CELL_STYLE: React.CSSProperties = { textAlign: "center" };
+
+function renderCenteredStatusIcon(node: React.ReactNode) {
+  return <span className="conciliacao-icon-wrap">{node}</span>;
 }
 
 function buildRecentMonthOptions(current: string, fromResumo: string[]) {
@@ -3401,9 +3419,9 @@ export default function ConciliacaoIsland() {
                   <th>Data</th>
                   <th>Documento</th>
                   <th>Status</th>
-                  <th>Recibo encontrado</th>
+                  <th className="conciliacao-icon-header" style={CENTER_ICON_HEADER_STYLE}>Recibo encontrado</th>
                   <th>Vendedor ranking</th>
-                  <th>Ranking</th>
+                  <th className="conciliacao-icon-header" style={CENTER_ICON_HEADER_STYLE}>Ranking</th>
                   <th>Meta dif.</th>
                   <th>Lançamentos</th>
                   <th>Taxas (arq)</th>
@@ -3416,7 +3434,7 @@ export default function ConciliacaoIsland() {
                   <th>Taxas (sist)</th>
                   <th>Diff total</th>
                   <th>Diff taxas</th>
-                  <th>Conciliado</th>
+                  <th className="conciliacao-icon-header" style={CENTER_ICON_HEADER_STYLE}>Conciliado</th>
                   <th className="th-actions">Ações</th>
                 </tr>
               }
@@ -3442,16 +3460,18 @@ export default function ConciliacaoIsland() {
                 const rankingTooltip = getLinhaRankingTooltip({ status: row.status, descricao: row.descricao });
                 return (
                   <tr key={row.id}>
-                    <td data-label="Data">{formatDate(row.movimento_data)}</td>
+                    <td data-label="Data">{formatDate(resolveConciliacaoDisplayDate(row))}</td>
                     <td data-label="Documento">{row.documento}</td>
                     <td data-label="Status">
                       {getLinhaStatusLabel({ status: row.status, descricao: row.descricao })}
                     </td>
-                    <td data-label="Recibo encontrado">
-                      {row._recibo_encontrado ? (
-                        <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
-                      ) : (
-                        <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
+                    <td data-label="Recibo encontrado" style={CENTER_ICON_CELL_STYLE} className="conciliacao-icon-cell">
+                      {renderCenteredStatusIcon(
+                        row._recibo_encontrado ? (
+                          <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
+                        ) : (
+                          <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
+                        )
                       )}
                     </td>
                     <td data-label="Vendedor ranking">
@@ -3469,15 +3489,17 @@ export default function ConciliacaoIsland() {
                         </span>
                       )}
                     </td>
-                    <td data-label="Ranking">
-                      {exigeAtribuicaoRanking ? (
-                        row._ranking_ok ? (
-                          <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
+                    <td data-label="Ranking" style={CENTER_ICON_CELL_STYLE} className="conciliacao-icon-cell">
+                      {renderCenteredStatusIcon(
+                        exigeAtribuicaoRanking ? (
+                          row._ranking_ok ? (
+                            <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
+                          ) : (
+                            <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
+                          )
                         ) : (
-                          <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
+                          <span className="vtur-badge vtur-badge-muted">—</span>
                         )
-                      ) : (
-                        <span className="vtur-badge vtur-badge-muted">—</span>
                       )}
                     </td>
                     <td data-label="Meta dif.">
@@ -3502,11 +3524,13 @@ export default function ConciliacaoIsland() {
                     <td data-label="Taxas (sist)">{formatMoney(row.sistema_valor_taxas)}</td>
                     <td data-label="Diff total">{formatMoney(row.diff_total)}</td>
                     <td data-label="Diff taxas">{formatMoney(row.diff_taxas)}</td>
-                    <td data-label="Conciliado">
-                      {row.conciliado ? (
-                        <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
-                      ) : (
-                        <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
+                    <td data-label="Conciliado" style={CENTER_ICON_CELL_STYLE} className="conciliacao-icon-cell">
+                      {renderCenteredStatusIcon(
+                        row.conciliado ? (
+                          <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
+                        ) : (
+                          <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
+                        )
                       )}
                     </td>
                     <td className="th-actions" data-label="Ações">
@@ -3614,9 +3638,9 @@ export default function ConciliacaoIsland() {
                   <th>Data</th>
                   <th>Documento</th>
                   <th>Status</th>
-                  <th>Recibo encontrado</th>
+                  <th className="conciliacao-icon-header" style={CENTER_ICON_HEADER_STYLE}>Recibo encontrado</th>
                   <th>Vendedor ranking</th>
-                  <th>Ranking</th>
+                  <th className="conciliacao-icon-header" style={CENTER_ICON_HEADER_STYLE}>Ranking</th>
                   <th>Lançamentos</th>
                   <th>Taxas</th>
                   <th>Descontos</th>
@@ -3624,7 +3648,7 @@ export default function ConciliacaoIsland() {
                   <th>Venda real</th>
                   <th>Comissão loja</th>
                   <th>% loja</th>
-                  <th>Conciliado</th>
+                  <th className="conciliacao-icon-header" style={CENTER_ICON_HEADER_STYLE}>Conciliado</th>
                   <th className="th-actions">Ações</th>
                 </tr>
               }
@@ -3660,10 +3684,12 @@ export default function ConciliacaoIsland() {
                     <td data-label="Status">
                       {getLinhaStatusLabel({ status: row.status, descricao: row.descricao })}
                     </td>
-                    <td data-label="Recibo encontrado">
-                      {row.venda_recibo_id
-                        ? <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
-                        : <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />}
+                    <td data-label="Recibo encontrado" style={CENTER_ICON_CELL_STYLE} className="conciliacao-icon-cell">
+                      {renderCenteredStatusIcon(
+                        row.venda_recibo_id
+                          ? <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
+                          : <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
+                      )}
                     </td>
                     <td data-label="Vendedor ranking">
                       {podeAtribuir ? (
@@ -3696,17 +3722,19 @@ export default function ConciliacaoIsland() {
                         </span>
                       )}
                     </td>
-                    <td data-label="Ranking">
-                      {exigeAtribuicaoRanking ? (
-                        registroTemRankingAtribuido(row) ? (
-                          <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
-                        ) : (
+                    <td data-label="Ranking" style={CENTER_ICON_CELL_STYLE} className="conciliacao-icon-cell">
+                      {renderCenteredStatusIcon(
+                        exigeAtribuicaoRanking ? (
+                          registroTemRankingAtribuido(row) ? (
+                            <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
+                          ) : (
+                            <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
+                          )
+                        ) : podeAtribuir ? (
                           <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
+                        ) : (
+                          <span className="vtur-badge vtur-badge-muted">—</span>
                         )
-                      ) : podeAtribuir ? (
-                        <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
-                      ) : (
-                        <span className="vtur-badge vtur-badge-muted">—</span>
                       )}
                     </td>
                     <td data-label="Lançamentos">{formatMoney(row.valor_lancamentos)}</td>
@@ -3720,8 +3748,10 @@ export default function ConciliacaoIsland() {
                         ? `${Number(row.percentual_comissao_loja).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`
                         : "-"}
                     </td>
-                    <td data-label="Conciliado">
-                      <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
+                    <td data-label="Conciliado" style={CENTER_ICON_CELL_STYLE} className="conciliacao-icon-cell">
+                      {renderCenteredStatusIcon(
+                        <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
+                      )}
                     </td>
                     <td className="th-actions" data-label="Ações">
                       <div className="action-buttons vtur-table-actions">
@@ -3840,9 +3870,9 @@ export default function ConciliacaoIsland() {
                   <th>Data</th>
                   <th>Documento</th>
                   <th>Status</th>
-                  <th>Recibo encontrado</th>
+                  <th className="conciliacao-icon-header" style={CENTER_ICON_HEADER_STYLE}>Recibo encontrado</th>
                   <th>Vendedor ranking</th>
-                  <th>Ranking</th>
+                  <th className="conciliacao-icon-header" style={CENTER_ICON_HEADER_STYLE}>Ranking</th>
                   <th>Meta dif.</th>
                   <th>Lançamentos</th>
                   <th>Taxas (arq)</th>
@@ -3855,7 +3885,7 @@ export default function ConciliacaoIsland() {
                   <th>Taxas (sist)</th>
                   <th>Diff total</th>
                   <th>Diff taxas</th>
-                  <th>Conciliado</th>
+                  <th className="conciliacao-icon-header" style={CENTER_ICON_HEADER_STYLE}>Conciliado</th>
                   <th className="th-actions">Ações</th>
                 </tr>
               }
@@ -3891,7 +3921,15 @@ export default function ConciliacaoIsland() {
                   <td data-label="Status">
                     {getLinhaStatusLabel({ status: row.status, descricao: row.descricao })}
                   </td>
-                  <td data-label="Recibo encontrado">{row.venda_recibo_id ? "Sim" : "Não"}</td>
+                  <td data-label="Recibo encontrado" style={CENTER_ICON_CELL_STYLE} className="conciliacao-icon-cell">
+                    {renderCenteredStatusIcon(
+                      row.venda_recibo_id ? (
+                        <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
+                      ) : (
+                        <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
+                      )
+                    )}
+                  </td>
                   <td data-label="Vendedor ranking">
                     {exigeAtribuicaoRanking ? (
                       !rowLocked ? (
@@ -3923,15 +3961,17 @@ export default function ConciliacaoIsland() {
                       </span>
                     )}
                   </td>
-                  <td data-label="Ranking">
-                    {exigeAtribuicaoRanking ? (
-                      registroTemRankingAtribuido(row) ? (
-                        <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
+                  <td data-label="Ranking" style={CENTER_ICON_CELL_STYLE} className="conciliacao-icon-cell">
+                    {renderCenteredStatusIcon(
+                      exigeAtribuicaoRanking ? (
+                        registroTemRankingAtribuido(row) ? (
+                          <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
+                        ) : (
+                          <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
+                        )
                       ) : (
-                        <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
+                        <span className="vtur-badge vtur-badge-muted">—</span>
                       )
-                    ) : (
-                      <span className="vtur-badge vtur-badge-muted">—</span>
                     )}
                   </td>
                   <td data-label="Meta dif.">
@@ -3990,10 +4030,12 @@ export default function ConciliacaoIsland() {
                   <td data-label="Taxas (sist)">{formatMoney(row.sistema_valor_taxas)}</td>
                   <td data-label="Diff total">{formatMoney(row.diff_total)}</td>
                   <td data-label="Diff taxas">{formatMoney(row.diff_taxas)}</td>
-                  <td data-label="Conciliado">
-                    {row.conciliado
-                      ? <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
-                      : <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />}
+                  <td data-label="Conciliado" style={CENTER_ICON_CELL_STYLE} className="conciliacao-icon-cell">
+                    {renderCenteredStatusIcon(
+                      row.conciliado
+                        ? <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
+                        : <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
+                    )}
                   </td>
                   <td className="th-actions" data-label="Ações">
                     <div className="action-buttons vtur-table-actions">
@@ -4101,15 +4143,15 @@ export default function ConciliacaoIsland() {
                   <th>Data</th>
                   <th>Documento</th>
                   <th>Status</th>
-                  <th>Recibo encontrado</th>
+                  <th className="conciliacao-icon-header" style={CENTER_ICON_HEADER_STYLE}>Recibo encontrado</th>
                   <th>Vendedor ranking</th>
-                  <th>Ranking</th>
+                  <th className="conciliacao-icon-header" style={CENTER_ICON_HEADER_STYLE}>Ranking</th>
                   <th>Lançamentos</th>
                   <th>Taxas</th>
                   <th>Venda real</th>
                   <th>Comissão loja</th>
                   <th>% loja</th>
-                  <th>Conciliado</th>
+                  <th className="conciliacao-icon-header" style={CENTER_ICON_HEADER_STYLE}>Conciliado</th>
                   <th className="th-actions">Ações</th>
                 </tr>
               }
@@ -4145,10 +4187,12 @@ export default function ConciliacaoIsland() {
                     <td data-label="Status">
                       {getLinhaStatusLabel({ status: row.status, descricao: row.descricao })}
                     </td>
-                    <td data-label="Recibo encontrado">
-                      {row.venda_recibo_id
-                        ? <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
-                        : <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />}
+                    <td data-label="Recibo encontrado" style={CENTER_ICON_CELL_STYLE} className="conciliacao-icon-cell">
+                      {renderCenteredStatusIcon(
+                        row.venda_recibo_id
+                          ? <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
+                          : <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
+                      )}
                     </td>
                     <td data-label="Vendedor ranking">
                       {podeAtribuir ? (
@@ -4175,10 +4219,12 @@ export default function ConciliacaoIsland() {
                         <span>—</span>
                       )}
                     </td>
-                    <td data-label="Ranking">
-                      {row.ranking_vendedor_id
-                        ? <span className="vtur-badge vtur-badge-warn">Pendente</span>
-                        : <span className="vtur-badge vtur-badge-warn">Não atribuído</span>}
+                    <td data-label="Ranking" style={CENTER_ICON_CELL_STYLE} className="conciliacao-icon-cell">
+                      {renderCenteredStatusIcon(
+                        row.ranking_vendedor_id
+                          ? <span className="vtur-badge vtur-badge-warn">Pendente</span>
+                          : <span className="vtur-badge vtur-badge-warn">Não atribuído</span>
+                      )}
                     </td>
                     <td data-label="Lançamentos">{formatMoney(row.valor_lancamentos)}</td>
                     <td data-label="Taxas">{formatMoney(row.valor_taxas)}</td>
@@ -4189,10 +4235,12 @@ export default function ConciliacaoIsland() {
                         ? `${Number(row.percentual_comissao_loja).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`
                         : "-"}
                     </td>
-                    <td data-label="Conciliado">
-                      {row.conciliado
-                        ? <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
-                        : <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />}
+                    <td data-label="Conciliado" style={CENTER_ICON_CELL_STYLE} className="conciliacao-icon-cell">
+                      {renderCenteredStatusIcon(
+                        row.conciliado
+                          ? <i className="pi pi-check-circle" style={{ color: "var(--color-success-fg, #1a7f37)", fontSize: "1.1rem" }} />
+                          : <i className="pi pi-times-circle" style={{ color: "var(--color-danger-fg, #cf222e)", fontSize: "1.1rem" }} />
+                      )}
                     </td>
                     <td className="th-actions" data-label="Ações">
                       <div className="action-buttons vtur-table-actions">

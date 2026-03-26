@@ -507,8 +507,10 @@ body {
   }
 }
 
-.vtur-relatorio-vendas-filters-mobile {
-  display: none;
+.vtur-relatorio-vendas-filters-mobile,
+.vtur-relatorio-vendas-filters-mobile.vtur-app-button,
+.vtur-app-card-actions .vtur-relatorio-vendas-filters-mobile {
+  display: none !important;
 }
 
 .vtur-relatorio-vendas-filters-inline {
@@ -516,8 +518,10 @@ body {
 }
 
 @media (max-width: 640px) {
-  .vtur-relatorio-vendas-filters-mobile {
-    display: inline-flex;
+  .vtur-relatorio-vendas-filters-mobile,
+  .vtur-relatorio-vendas-filters-mobile.vtur-app-button,
+  .vtur-app-card-actions .vtur-relatorio-vendas-filters-mobile {
+    display: inline-flex !important;
   }
 
   .vtur-relatorio-vendas-filters-inline {
@@ -3069,6 +3073,38 @@ input[type="radio"] {
   flex-wrap: wrap;
 }
 
+.conciliacao-icon-header {
+  text-align: center !important;
+}
+
+.table-default tbody td.conciliacao-icon-cell {
+  text-align: center !important;
+  vertical-align: middle;
+}
+
+.table-default tbody td.conciliacao-icon-cell .conciliacao-icon-wrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.vtur-data-table thead th.conciliacao-icon-header {
+  text-align: center !important;
+}
+
+.vtur-data-table tbody td.conciliacao-icon-cell {
+  text-align: center !important;
+  vertical-align: middle;
+}
+
+.vtur-data-table tbody td.conciliacao-icon-cell .conciliacao-icon-wrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .th-actions-quote {
   width: 140px;
 }
@@ -3346,6 +3382,34 @@ input[type="radio"] {
 
   .table-mobile-cards td:last-child {
     border-bottom: 0;
+  }
+
+  .conciliacao-page .table-mobile-cards td.conciliacao-icon-cell {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    align-items: center;
+    text-align: center !important;
+  }
+
+  .conciliacao-page .table-mobile-cards td.conciliacao-icon-cell::before {
+    justify-self: center;
+    align-self: center;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+
+  .conciliacao-page .table-mobile-cards td.conciliacao-icon-cell > * {
+    grid-column: 1;
+    justify-self: center;
+    text-align: center;
+  }
+
+  .conciliacao-page .conciliacao-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 24px;
   }
 
   .table-mobile-cards :is(
@@ -9970,6 +10034,34 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
     align-items: center !important;
   }
 
+  .conciliacao-page .table-mobile-cards:not(.table-mobile-plain) td.conciliacao-icon-cell:not(.th-actions) {
+    grid-template-columns: 1fr !important;
+    justify-items: center !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+
+  .conciliacao-page .table-mobile-cards:not(.table-mobile-plain) td.conciliacao-icon-cell:not(.th-actions)::before {
+    justify-self: center !important;
+    text-align: center !important;
+    margin-top: 0 !important;
+    margin-bottom: 4px !important;
+  }
+
+  .conciliacao-page .table-mobile-cards:not(.table-mobile-plain) td.conciliacao-icon-cell:not(.th-actions) > * {
+    grid-column: 1 !important;
+    justify-self: center !important;
+    text-align: center !important;
+    width: 100% !important;
+  }
+
+  .conciliacao-page .table-mobile-cards:not(.table-mobile-plain) td.conciliacao-icon-cell:not(.th-actions) .conciliacao-icon-wrap {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+
   .page-content-wrap :is(.form-row.mobile-stack, .vtur-form-grid) > [style*="min-width"] {
     min-width: 0 !important;
     width: 100% !important;
@@ -10236,6 +10328,12 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 .crm-root {
   display: flex;
   flex-direction: column;
+  gap: 14px;
+}
+
+.crm-panel-card .vtur-app-card-body {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
 
@@ -10278,17 +10376,17 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 }
 .crm-layout--split {
   flex-direction: row;
-  align-items: flex-start;
-  gap: 20px;
+  align-items: stretch;
+  gap: 16px;
 }
 
 /* ── Gallery (left panel) ── */
 .crm-gallery {
-  flex: 0 0 260px;
+  flex: 0 0 320px;
   min-width: 0;
 }
 .crm-layout--split .crm-gallery {
-  flex: 0 0 220px;
+  flex: 0 0 320px;
 }
 .crm-gallery__header {
   margin-bottom: 10px;
@@ -10364,11 +10462,11 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 /* ── Theme grid ── */
 .crm-theme-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 12px;
 }
 .crm-layout--split .crm-theme-grid {
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
 }
 
 /* ── Thumb card ── */
@@ -10377,22 +10475,24 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 6px;
-  border: 2px solid transparent;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #dbe3f0;
   border-radius: 10px;
-  background: var(--surface-ground, #f8fafc);
+  background: #ffffff;
   cursor: pointer;
-  transition: border-color 0.15s, transform 0.12s;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
   text-align: center;
 }
 .crm-thumb:hover {
   border-color: var(--primary-color, #3b82f6);
-  transform: scale(1.03);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.14);
+  transform: translateY(-1px);
 }
 .crm-thumb--selected {
   border-color: var(--primary-color, #3b82f6);
-  background: #eff6ff;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.2), 0 8px 18px rgba(37, 99, 235, 0.16);
+  background: #f8fbff;
 }
 .crm-thumb__img {
   width: 100%;
@@ -10401,8 +10501,9 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   border-radius: 6px;
 }
 .crm-thumb__label {
-  font-size: 0.72rem;
-  color: var(--text-secondary, #64748b);
+  font-size: 0.74rem;
+  color: #334155;
+  font-weight: 600;
   line-height: 1.2;
   max-width: 100%;
   overflow: hidden;
@@ -10495,7 +10596,7 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 .crm-back-btn {
   display: inline-flex;
@@ -10515,7 +10616,7 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 /* ── Composer split (form + preview side by side) ── */
 .crm-composer-split {
   display: flex;
-  gap: 20px;
+  gap: 16px;
   align-items: flex-start;
 }
 
@@ -10523,9 +10624,9 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 .crm-form {
   flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+}
+.crm-form .vtur-app-card-body {
+  gap: 14px;
 }
 .crm-section-title {
   font-size: 0.95rem;
@@ -10553,7 +10654,7 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 .crm-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
 }
 .crm-label {
   font-size: 0.85rem;
@@ -10582,11 +10683,7 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 
 /* Client search */
 .crm-client-row {
-  display: flex;
-  gap: 8px;
-}
-.crm-saudacao-input {
-  flex: 0 0 110px;
+  display: block;
 }
 .crm-client-search {
   position: relative;
@@ -10696,27 +10793,39 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   font-size: 0.85rem;
   font-weight: 600;
 }
+.crm-msg-picker__filters {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  background: #fff;
+}
 .crm-msg-picker__list {
-  max-height: 200px;
+  max-height: 260px;
   overflow-y: auto;
 }
 .crm-msg-item {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
   width: 100%;
   text-align: left;
-  padding: 8px 12px;
+  padding: 10px 12px;
   border: none;
   border-bottom: 1px solid var(--border-color, #e2e8f0);
-  background: none;
+  background: #fff;
   cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 .crm-msg-item:last-child {
   border-bottom: none;
 }
 .crm-msg-item:hover {
-  background: var(--surface-hover, #f1f5f9);
+  background: #f8fbff;
+}
+.crm-msg-item__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 .crm-msg-item strong {
   font-size: 0.8rem;
@@ -10730,9 +10839,12 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 .crm-msg-item span {
   font-size: 0.75rem;
   color: var(--text-secondary, #64748b);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.45;
+}
+.crm-msg-picker__empty {
+  padding: 14px 12px;
+  font-size: 0.82rem;
+  color: #64748b;
 }
 
 /* Assinatura editor */
@@ -10803,11 +10915,11 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 .crm-preview-panel {
   flex: 0 0 340px;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
   position: sticky;
   top: 20px;
+}
+.crm-preview-panel .vtur-app-card-body {
+  gap: 10px;
 }
 .crm-preview-frame {
   border: 1px solid var(--border-color, #e2e8f0);
@@ -10920,12 +11032,6 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   .crm-theme-grid {
     grid-template-columns: repeat(3, 1fr);
   }
-  .crm-client-row {
-    flex-wrap: wrap;
-  }
-  .crm-saudacao-input {
-    flex: 0 0 100%;
-  }
   .crm-preview-actions .btn {
     flex: 1 1 100%;
   }
@@ -10940,6 +11046,22 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   flex-direction: column;
   gap: 16px;
 }
+
+/* Reaproveita o layout das abas da Conciliação, mas fixa paleta azul no CRM */
+.crm-admin-tab-card .vtur-conciliacao-tab-btn {
+  border-left-color: var(--vtur-section-info-border, #bfdbfe);
+}
+.crm-admin-tab-card .vtur-conciliacao-tab-btn.is-active {
+  box-shadow: inset 0 -2px 0 var(--vtur-section-info-title, #1d4ed8);
+}
+.crm-admin-tab-card .vtur-conciliacao-tab-btn.is-active .vtur-conciliacao-tab-btn-label {
+  color: var(--vtur-section-info-title, #1d4ed8);
+}
+.crm-admin-tab-card .vtur-conciliacao-tab-btn-badge {
+  background: var(--vtur-section-info-border, #bfdbfe);
+  color: var(--vtur-section-info-title, #1d4ed8);
+}
+
 .crm-admin-header {
   display: flex;
   flex-direction: column;
@@ -11000,6 +11122,10 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   justify-content: space-between;
   gap: 10px;
   flex-wrap: wrap;
+}
+.crm-admin-toolbar > :is(.btn, .p-button, .vtur-app-button):not(.btn-icon):not(.p-button-icon-only) {
+  min-height: 42px;
+  border-radius: 12px;
 }
 .crm-admin-filter {
   width: 220px;
@@ -11110,6 +11236,14 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   flex: 1;
   justify-content: center;
 }
+.crm-admin-card__actions .crm-admin-card-actions {
+  width: 100%;
+  justify-content: center;
+  flex-wrap: nowrap;
+}
+.crm-admin-card__actions .crm-admin-card-actions .vtur-table-action {
+  flex: 1 1 0;
+}
 
 /* ── Scope badge ── */
 .crm-scope-badge {
@@ -11155,6 +11289,49 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   display: flex;
   gap: 6px;
   justify-content: flex-end;
+}
+.crm-td-actions .crm-admin-table-actions {
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+}
+
+.crm-admin-preview-art {
+  width: 100%;
+  max-width: 360px;
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface-ground, #f8fafc);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.crm-admin-preview-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.crm-admin-preview-art .pi {
+  font-size: 2.5rem;
+  color: var(--text-secondary, #94a3b8);
+}
+.crm-preview-text {
+  margin: 0;
+  color: var(--text-primary, #1e293b);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+.crm-preview-message {
+  margin: 0;
+  color: var(--text-primary, #1e293b);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  background: var(--surface-ground, #f8fafc);
+  padding: 10px 12px;
 }
 
 /* ── Modal ── */
@@ -11221,6 +11398,10 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   gap: 10px;
   padding: 12px 20px 16px;
   border-top: 1px solid var(--border-color, #e2e8f0);
+}
+.crm-admin-modal__footer > :is(.btn, .p-button, .vtur-app-button):not(.btn-icon):not(.p-button-icon-only) {
+  min-height: 42px;
+  border-radius: 12px;
 }
 
 /* ── Icon selector ── */
@@ -11323,5 +11504,64 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   }
   .crm-admin-theme-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .conciliacao-page .table-mobile-cards td.conciliacao-icon-cell {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    justify-items: center !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+
+  .conciliacao-page .table-mobile-cards td.conciliacao-icon-cell::before {
+    content: attr(data-label) !important;
+    display: block !important;
+    width: 100% !important;
+    margin: 0 0 4px 0 !important;
+    padding: 0 !important;
+    text-align: center !important;
+    justify-self: center !important;
+    align-self: center !important;
+  }
+
+  .conciliacao-page .table-mobile-cards td.conciliacao-icon-cell > * {
+    grid-column: 1 !important;
+    justify-self: center !important;
+    align-self: center !important;
+    width: auto !important;
+    margin: 0 auto !important;
+    text-align: center !important;
+  }
+
+  .conciliacao-page .table-mobile-cards td.conciliacao-icon-cell .conciliacao-icon-wrap {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .conciliacao-page .vtur-data-table thead th.conciliacao-icon-header {
+    text-align: center !important;
+  }
+
+  .conciliacao-page .vtur-data-table tbody td.conciliacao-icon-cell {
+    text-align: center !important;
+    vertical-align: middle !important;
+  }
+
+  .conciliacao-page .vtur-data-table tbody td.conciliacao-icon-cell > .conciliacao-icon-wrap {
+    position: relative !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: max-content !important;
+    display: inline-flex !important;
+    justify-content: center !important;
+    align-items: center !important;
   }
 }

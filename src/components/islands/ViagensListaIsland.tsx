@@ -26,7 +26,7 @@ type Viagem = {
   destino: string | null;
   responsavel_user_id: string | null;
   cliente_id: string | null;
-  clientes?: { nome: string | null; whatsapp?: string | null } | null;
+  clientes?: { nome: string | null; cpf?: string | null; whatsapp?: string | null } | null;
   responsavel?: { nome_completo?: string | null } | null;
   recibo?: {
     id: string;
@@ -74,6 +74,10 @@ function obterStatusPorPeriodo(inicio?: string | null, fim?: string | null): str
 function formatarMoeda(valor?: number | null) {
   if (valor == null || Number.isNaN(valor)) return "-";
   return formatCurrencyBRL(valor);
+}
+
+function normalizeDigits(value?: string | null) {
+  return String(value || "").replace(/\D/g, "");
 }
 
 function obterMinData(datas: Array<string | null | undefined>) {
@@ -470,10 +474,13 @@ export default function ViagensListaIsland() {
     });
   }, [viagensAgrupadas]);
   const viagensFiltradas = useMemo(() => {
-    const termo = normalizeText(busca.trim());
-    if (!termo) return proximasViagens;
+    const termoRaw = busca.trim();
+    const termo = normalizeText(termoRaw, { collapseWhitespace: true, trim: true });
+    const termoCpf = normalizeDigits(termoRaw);
+    if (!termo && !termoCpf) return proximasViagens;
     return proximasViagens.filter((viagem) => {
       const clienteNome = viagem.clientes?.nome || "";
+      const clienteCpf = normalizeDigits(viagem.clientes?.cpf);
       const produtos = (viagem.recibos || [])
         .map((recibo) =>
           [
@@ -485,8 +492,13 @@ export default function ViagensListaIsland() {
             .join(" ")
         )
         .join(" ");
-      const haystack = normalizeText([clienteNome, produtos].filter(Boolean).join(" "));
-      return haystack.includes(termo);
+      const haystack = normalizeText([clienteNome, produtos].filter(Boolean).join(" "), {
+        collapseWhitespace: true,
+        trim: true,
+      });
+      const matchTexto = Boolean(termo) && haystack.includes(termo);
+      const matchCpf = Boolean(termoCpf) && clienteCpf.includes(termoCpf);
+      return matchTexto || matchCpf;
     });
   }, [proximasViagens, busca]);
   const viagensExibidas = useMemo(() => {
@@ -654,7 +666,7 @@ export default function ViagensListaIsland() {
               <AppField
                 wrapperClassName="form-group"
                 label="Buscar cliente"
-                placeholder="Cliente ou produto..."
+                placeholder="Nome, CPF ou produto..."
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
               />
@@ -671,7 +683,7 @@ export default function ViagensListaIsland() {
                   <AppField
                     wrapperClassName="form-group"
                     label="Buscar cliente"
-                    placeholder="Cliente ou produto..."
+                    placeholder="Nome, CPF ou produto..."
                     value={busca}
                     onChange={(e) => setBusca(e.target.value)}
                   />

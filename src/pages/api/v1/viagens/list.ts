@@ -176,7 +176,7 @@ export async function GET({ request }: { request: Request }) {
     let query = client
       .from("viagens")
       .select(
-        "id, venda_id, data_inicio, data_fim, status, origem, destino, responsavel_user_id, cliente_id, clientes (nome, whatsapp), responsavel:users!responsavel_user_id (nome_completo), recibo:vendas_recibos (id, valor_total, valor_taxas, data_inicio, data_fim, numero_recibo, produto_id, tipo_produtos (id, nome, tipo))"
+        "id, venda_id, data_inicio, data_fim, status, origem, destino, responsavel_user_id, cliente_id, clientes (nome, cpf, whatsapp), responsavel:users!responsavel_user_id (nome_completo), recibo:vendas_recibos (id, valor_total, valor_taxas, data_inicio, data_fim, numero_recibo, produto_id, tipo_produtos (id, nome, tipo))"
       )
       .eq("company_id", companyId)
       .order("data_inicio", { ascending: true });

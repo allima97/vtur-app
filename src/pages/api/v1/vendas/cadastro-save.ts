@@ -1,6 +1,7 @@
 import {
   applyScopeToQuery,
   buildAuthClient,
+  fetchGestorEquipeIdsComGestor,
   getUserScope,
   isUuid,
   requireModuloLevel,
@@ -45,6 +46,93 @@ function sanitizeLabel(value?: string | null) {
   const raw = String(value || "").trim();
   if (!raw) return "";
   return normalizeText(raw, { trim: true, collapseWhitespace: true });
+}
+
+function isAllowedSellerTipo(tipoNome?: string | null) {
+  const tipo = String(tipoNome || "").toUpperCase();
+  return tipo.includes("VENDEDOR") || tipo.includes("GESTOR") || tipo.includes("MASTER");
+}
+
+type Scope = Awaited<ReturnType<typeof getUserScope>>;
+
+async function ensureAssignableActiveSeller(client: any, scope: Scope, vendedorId: string) {
+  const { data: vendedorData, error: vendedorError } = await client
+    .from("users")
+    .select("id, company_id, active, uso_individual, user_types(name)")
+    .eq("id", vendedorId)
+    .maybeSingle();
+  if (vendedorError) throw vendedorError;
+
+  const vendedor = vendedorData as any;
+  if (!vendedor?.id) {
+    return new Response("Vendedor informado nao encontrado.", { status: 400 });
+  }
+  if (!Boolean(vendedor?.active)) {
+    return new Response("Vendedor informado esta inativo.", { status: 400 });
+  }
+  if (!isAllowedSellerTipo(vendedor?.user_types?.name)) {
+    return new Response("Usuario informado nao pode receber venda.", { status: 403 });
+  }
+
+  const vendedorCompanyId = String(vendedor?.company_id || "").trim() || null;
+
+  if (scope.isAdmin) return null;
+
+  if (scope.usoIndividual) {
+    if (vendedorId !== scope.userId) {
+      return new Response("Uso individual: vendedor invalido.", { status: 403 });
+    }
+    return null;
+  }
+
+  if (!scope.companyId || vendedorCompanyId !== scope.companyId) {
+    return new Response("Vendedor fora do escopo da empresa atual.", { status: 403 });
+  }
+
+  if (scope.papel === "MASTER") {
+    if (Boolean(vendedor?.uso_individual)) {
+      return new Response("Master so pode atribuir vendas para usuarios corporativos ativos.", {
+        status: 403,
+      });
+    }
+    return null;
+  }
+
+  if (scope.papel === "GESTOR") {
+    if (Boolean(vendedor?.uso_individual)) {
+      return new Response("Gestor so pode atribuir vendas para equipe corporativa ativa.", {
+        status: 403,
+      });
+    }
+
+    const equipeIds = await fetchGestorEquipeIdsComGestor(client, scope.userId);
+    const { data: gestoresData, error: gestoresError } = await client
+      .from("users")
+      .select("id, user_types(name)")
+      .eq("company_id", scope.companyId)
+      .eq("uso_individual", false)
+      .eq("active", true);
+    if (gestoresError) throw gestoresError;
+
+    const gestoresIds = ((gestoresData || []) as any[])
+      .filter((row) => isAllowedSellerTipo(row?.user_types?.name))
+      .map((row) => String(row?.id || "").trim())
+      .filter(Boolean);
+
+    const allowedIdSet = new Set([...equipeIds, ...gestoresIds]);
+    if (!allowedIdSet.has(vendedorId)) {
+      return new Response("Gestor so pode atribuir vendas para sua equipe ativa.", {
+        status: 403,
+      });
+    }
+    return null;
+  }
+
+  if (vendedorId !== scope.userId) {
+    return new Response("Sem permissao para atribuir venda para outro usuario.", { status: 403 });
+  }
+
+  return null;
 }
 
 type ReciboPayload = {
@@ -116,6 +204,9 @@ export async function POST({ request }: { request: Request }) {
     if (scope.usoIndividual && vendedorId !== user.id) {
       return new Response("Uso individual: vendedor invalido.", { status: 403 });
     }
+
+    const deniedSeller = await ensureAssignableActiveSeller(client, scope, vendedorId);
+    if (deniedSeller) return deniedSeller;
 
     const recibos = Array.isArray(body?.recibos) ? body.recibos : [];
     if (!recibos.length) return new Response("recibos obrigatorio.", { status: 400 });

@@ -7,7 +7,7 @@ import {
   type CardThemeMask,
   type CardThemePhotoSlot,
 } from "../../../../lib/cards/themeLayouts";
-import { parseCardStyleOverrideParam, resolveCardStyleMap } from "../../../../lib/cards/styleConfig";
+import { resolveCardStyleMap } from "../../../../lib/cards/styleConfig";
 import { renderTemplateText } from "../../../../lib/messageTemplates";
 import {
   buildCardClientGreeting,
@@ -41,11 +41,11 @@ export type CardRenderResult = {
 const MASTER_WIDTH = 1080;
 const MASTER_HEIGHT = 1080;
 const MASTER_LAYOUT_KEY = "master-card-v1";
-const DEFAULT_LOGO_SLOT_RATIOS = {
-  x: 0.835,
-  y: 0.84,
-  width: 0.125,
-  height: 0.125,
+const DEFAULT_LOGO_SLOT_MASTER = {
+  x: 918,
+  y: 846,
+  width: 120,
+  height: 120,
 };
 
 function escapeXml(value: string) {
@@ -277,11 +277,13 @@ function resolveLogoSlot(
   if (themeLayout?.logo) {
     return scaleLogoSlot(themeLayout.logo, themeLayout.canvas, width, height);
   }
+  const scaleX = width / MASTER_WIDTH;
+  const scaleY = height / MASTER_HEIGHT;
   return {
-    x: Math.round(width * DEFAULT_LOGO_SLOT_RATIOS.x),
-    y: Math.round(height * DEFAULT_LOGO_SLOT_RATIOS.y),
-    width: Math.round(width * DEFAULT_LOGO_SLOT_RATIOS.width),
-    height: Math.round(height * DEFAULT_LOGO_SLOT_RATIOS.height),
+    x: Math.round(DEFAULT_LOGO_SLOT_MASTER.x * scaleX),
+    y: Math.round(DEFAULT_LOGO_SLOT_MASTER.y * scaleY),
+    width: Math.round(DEFAULT_LOGO_SLOT_MASTER.width * scaleX),
+    height: Math.round(DEFAULT_LOGO_SLOT_MASTER.height * scaleY),
   };
 }
 
@@ -459,64 +461,34 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
       : null,
   );
   const themeLayout = getCardThemeLayout(activeThemeName);
-  const width = parseNum(
-    url.searchParams.get("width"),
-    Number(themeLayout?.canvas?.width || resolvedThemeAsset.width_px || MASTER_WIDTH),
-  );
-  const height = parseNum(
-    url.searchParams.get("height"),
-    Number(themeLayout?.canvas?.height || resolvedThemeAsset.height_px || MASTER_HEIGHT),
-  );
-  const styleOverrideMap = parseCardStyleOverrideParam(url.searchParams.get("style_overrides"));
-  const resolvedStyleMap = resolveCardStyleMap({
-    themeName: activeThemeName,
-    themeBuckets: themeRow ? {
-      title_style: themeRow.title_style,
-      body_style: themeRow.body_style,
-      signature_style: themeRow.signature_style,
-    } : null,
-    templateBuckets: templateRow ? {
-      title_style: templateRow.title_style,
-      body_style: templateRow.body_style,
-      signature_style: templateRow.signature_style,
-    } : null,
-    overrideMap: styleOverrideMap,
-  });
+  // Layout técnico oficial: sempre 1080x1080 para manter posições/zonas fixas.
+  const width = parseNum(url.searchParams.get("width"), MASTER_WIDTH);
+  const height = parseNum(url.searchParams.get("height"), MASTER_HEIGHT);
+  // Metodologia técnica padronizada: estilos fixos para todas as artes.
+  const resolvedStyleMap = resolveCardStyleMap();
 
   const titleStyle = fixedMasterStyle({
     base: resolvedStyleMap.title,
-    queryFontSize: url.searchParams.get("title_font_size"),
-    queryColor: url.searchParams.get("title_color"),
   });
 
   const clientNameStyle = fixedMasterStyle({
     base: resolvedStyleMap.clientName,
-    queryFontSize: url.searchParams.get("client_name_font_size"),
-    queryColor: url.searchParams.get("client_name_color"),
   });
 
   const bodyStyle = fixedMasterStyle({
     base: resolvedStyleMap.body,
-    queryFontSize: url.searchParams.get("body_font_size"),
-    queryColor: url.searchParams.get("body_color"),
   });
 
   const footerLeadStyle = fixedMasterStyle({
     base: resolvedStyleMap.footerLead,
-    queryColor: url.searchParams.get("signature_color"),
-    queryItalic: null,
   });
 
   const consultantStyle = fixedMasterStyle({
     base: resolvedStyleMap.consultant,
-    queryFontSize: url.searchParams.get("signature_font_size"),
-    queryColor: url.searchParams.get("signature_color"),
-    queryItalic: url.searchParams.has("signature_italic") ? url.searchParams.get("signature_italic") === "1" : null,
   });
 
   const consultantRoleStyle = fixedMasterStyle({
     base: resolvedStyleMap.consultantRole,
-    queryColor: url.searchParams.get("signature_color"),
   });
 
   const titulo = tituloRaw || templateRow?.titulo || `${nome}, feliz aniversário!`;

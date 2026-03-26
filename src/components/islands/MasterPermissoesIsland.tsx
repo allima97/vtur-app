@@ -247,7 +247,7 @@ export default function MasterPermissoesIsland() {
       if (!label) return;
       const key = toModuloKey(label);
       if (!key || seen.has(key)) return;
-      if (!can(label)) return;
+      if (!isMaster && !can(label)) return;
       seen.add(key);
       ordered.push(label);
     };
@@ -260,7 +260,7 @@ export default function MasterPermissoesIsland() {
     });
 
     return ordered;
-  }, [acessos, can]);
+  }, [acessos, can, isMaster]);
 
   const modulosPorSecao = useMemo(
     () => agruparModulosPorSecao(modulosEditor),

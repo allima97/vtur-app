@@ -259,7 +259,8 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
                   const { data, error } = await supabase
                     .from("users")
                     .select("id, nome_completo, participa_ranking, user_types(name)")
-                    .eq("company_id", empresaId);
+                    .eq("company_id", empresaId)
+                    .eq("active", true);
                   if (error) throw error;
 
                   const gestoresEmpresa = (data || [])
@@ -279,18 +280,23 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
               : Promise.resolve([]),
             fetchGestorEquipeVendedorIds(auth.user.id),
           ]);
-          setEquipeIds(equipe);
 
           const { data: nomes, error: nomesErr } = await supabase
             .from("users")
             .select("id, nome_completo")
-            .in("id", equipe);
+            .in("id", equipe)
+            .eq("active", true);
           if (nomesErr) throw nomesErr;
 
           const map: Record<string, string> = {};
+          const equipeAtivaIds: string[] = [];
           (nomes || []).forEach((n: any) => {
-            map[n.id] = formatNome(n.nome_completo) || "Vendedor";
+            const id = String(n?.id || "").trim();
+            if (!id) return;
+            equipeAtivaIds.push(id);
+            map[id] = formatNome(n.nome_completo) || "Vendedor";
           });
+          setEquipeIds(Array.from(new Set(equipeAtivaIds)));
           setEquipeNomes(map);
 
           const gestoresEmpresa = gestoresGrupo.length > 0
@@ -324,7 +330,8 @@ export default function RankingVendasIsland({ viewOnly = false }: RankingVendasP
           const { data: equipeData, error: equipeErr } = await supabase
             .from("users")
             .select("id, nome_completo, user_types(name), participa_ranking")
-            .eq("company_id", empresaId);
+            .eq("company_id", empresaId)
+            .eq("active", true);
           if (equipeErr) throw equipeErr;
 
           const ids: string[] = [];

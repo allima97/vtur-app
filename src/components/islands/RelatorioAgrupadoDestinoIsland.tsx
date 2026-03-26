@@ -300,10 +300,10 @@ export default function RelatorioAgrupadoDestinoIsland() {
   useEffect(() => {
     if (dataInicio || dataFim) return;
     const hoje = new Date();
-    const inicio = addDays(hoje, -30);
+    const inicio = addDays(hoje, -7);
     setDataInicio(formatISO(inicio));
     setDataFim(hojeISO());
-    setPeriodoPreset("30");
+    setPeriodoPreset("7");
   }, []);
 
   const linhasExibidas = linhas;
@@ -699,10 +699,9 @@ export default function RelatorioAgrupadoDestinoIsland() {
     <div className="vtur-quote-top-actions">
       {[
         { id: "hoje", label: "Hoje" },
-        { id: "7", label: "Ultimos 7 dias" },
-        { id: "30", label: "Ultimos 30 dias" },
-        { id: "mes_atual", label: "Este mes" },
-        { id: "mes_anterior", label: "Mes anterior" },
+        { id: "7", label: "Últimos 7 dias" },
+        { id: "mes_atual", label: "Este mês" },
+        { id: "mes_anterior", label: "Mês anterior" },
         { id: "limpar", label: "Limpar datas" },
       ].map((periodo) => (
         <AppButton
@@ -714,6 +713,19 @@ export default function RelatorioAgrupadoDestinoIsland() {
           {periodo.label}
         </AppButton>
       ))}
+      <AppButton type="button" variant="primary" onClick={aplicarFiltrosRelatorio}>
+        Aplicar filtros
+      </AppButton>
+      <AppButton
+        type="button"
+        variant="secondary"
+        onClick={() => {
+          setShowFilters(false);
+          setShowExport(true);
+        }}
+      >
+        Exportar
+      </AppButton>
     </div>
   );
 
@@ -827,19 +839,18 @@ export default function RelatorioAgrupadoDestinoIsland() {
           subtitle={`Gerencie indicadores por destino com visao de CRM. Periodo: ${periodoResumo}.`}
           actions={
             <div className="vtur-quote-top-actions">
-              <AppButton type="button" variant="secondary" className="sm:hidden" onClick={() => setShowFilters(true)}>
+              <AppButton
+                type="button"
+                variant="secondary"
+                className="vtur-relatorio-vendas-filters-mobile"
+                onClick={() => setShowFilters(true)}
+              >
                 Filtros
-              </AppButton>
-              <AppButton type="button" variant="primary" onClick={aplicarFiltrosRelatorio}>
-                Aplicar filtros
-              </AppButton>
-              <AppButton type="button" variant="secondary" onClick={() => setShowExport(true)}>
-                Exportar
               </AppButton>
             </div>
           }
         >
-          <div className="hidden sm:block">{renderFiltersGrid()}</div>
+          <div className="vtur-relatorio-vendas-filters-inline">{renderFiltersGrid()}</div>
         </AppCard>
 
         {showFilters ? (

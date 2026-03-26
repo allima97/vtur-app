@@ -18,7 +18,6 @@ import { matchesCpfSearch } from "../../lib/searchNormalization";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import { renderTemplateText } from "../../lib/messageTemplates";
 import { renderSvgUrlToPngObjectUrl, validarPngServidor } from "../../lib/cards/browserPng";
-import { resolveCardStyleMap } from "../../lib/cards/styleConfig";
 import { resolveThemeAssetMeta } from "../../lib/cards/themeAssetMeta";
 import {
   buildCardClientGreeting,
@@ -430,27 +429,37 @@ export default function ClientesIsland() {
     let mounted = true;
     async function carregarTemplatesAviso() {
       try {
-        const { data: authData } = await supabase.auth.getUser();
-        const uid = authData?.user?.id;
-        if (!uid) return;
-        const { data, error } = await supabase
-      .from("user_message_templates")
-      .select("id, nome, categoria, assunto, titulo, corpo, assinatura, theme_id, title_style, body_style, signature_style, ativo")
-      .eq("ativo", true)
-      .order("nome");
-        if (error) throw error;
-        if (mounted) setTemplatesAviso((data || []) as any[]);
-
-        const themeResp = await supabase
-      .from("user_message_template_themes")
-      .select("id, nome, categoria, asset_url, width_px, height_px, title_style, body_style, signature_style")
-      .eq("ativo", true)
-      .order("categoria")
-      .order("nome");
-        if (themeResp.error) throw themeResp.error;
-        if (mounted) setThemesAviso((themeResp.data || []) as any[]);
+        const resp = await fetch("/api/v1/crm/library", { credentials: "include" });
+        if (!resp.ok) {
+          throw new Error(`Falha ao carregar biblioteca CRM (${resp.status}).`);
+        }
+        const payload = (await resp.json()) as any;
+        if (!mounted) return;
+        setTemplatesAviso(((payload?.messages || []) as any[]).filter((row) => row?.ativo !== false));
+        setThemesAviso(((payload?.themes || []) as any[]).filter((row) => row?.ativo !== false));
       } catch (e) {
-        console.error("Erro ao carregar templates de aviso:", e);
+        console.error("Erro ao carregar templates de aviso via endpoint, tentando fallback:", e);
+        try {
+          const { data: authData } = await supabase.auth.getUser();
+          const uid = authData?.user?.id;
+          if (!uid) return;
+          const { data, error } = await supabase
+            .from("user_message_templates")
+            .select("id, nome, categoria, assunto, titulo, corpo, assinatura, theme_id, title_style, body_style, signature_style, ativo")
+            .order("nome");
+          if (error) throw error;
+          if (mounted) setTemplatesAviso(((data || []) as any[]).filter((row) => row?.ativo !== false));
+
+          const themeResp = await supabase
+            .from("user_message_template_themes")
+            .select("id, nome, categoria, asset_url, width_px, height_px, title_style, body_style, signature_style")
+            .order("categoria")
+            .order("nome");
+          if (themeResp.error) throw themeResp.error;
+          if (mounted) setThemesAviso((themeResp.data || []) as any[]);
+        } catch (fallbackErr) {
+          console.error("Erro no fallback de templates de aviso:", fallbackErr);
+        }
       }
     }
     if (!loadPerm && podeVer) carregarTemplatesAviso();
@@ -802,21 +811,6 @@ export default function ClientesIsland() {
     const resolvedThemeAsset = resolveThemeAssetMeta(selectedTheme);
     const nomeCard = String(recipient.nome || "Cliente").trim() || "Cliente";
     const signatureTextConfig = extractSignatureTextConfig(tpl.signature_style);
-    const resolvedStyleMap = resolveCardStyleMap({
-      themeName: selectedTheme?.nome || null,
-      themeBuckets: selectedTheme
-        ? {
-            title_style: selectedTheme.title_style,
-            body_style: selectedTheme.body_style,
-            signature_style: selectedTheme.signature_style,
-          }
-        : null,
-      templateBuckets: {
-        title_style: tpl.title_style,
-        body_style: tpl.body_style,
-        signature_style: tpl.signature_style,
-      },
-    });
     const brandingLogoUrl =
       String(brandingData?.logo_url || "").trim() ||
       String(
@@ -825,6 +819,8 @@ export default function ClientesIsland() {
           : "",
       ).trim();
     const cardParams = new URLSearchParams({
+      theme_id: selectedThemeId,
+      theme_name: String(selectedTheme?.nome || ""),
       nome: nomeCard,
       cliente_nome: buildCardClientGreeting(nomeCard),
       titulo: tpl.titulo || "",
@@ -834,12 +830,9 @@ export default function ClientesIsland() {
       cargo_consultor: signatureTextConfig.hasConsultantRole
         ? signatureTextConfig.consultantRole || DEFAULT_CARD_CONSULTANT_ROLE
         : DEFAULT_CARD_CONSULTANT_ROLE,
-      style_overrides: JSON.stringify(resolvedStyleMap),
       v: String(Date.now()),
     });
     if (resolvedThemeAsset.asset_url) cardParams.set("theme_asset_url", resolvedThemeAsset.asset_url);
-    if (resolvedThemeAsset.width_px) cardParams.set("width", String(resolvedThemeAsset.width_px));
-    if (resolvedThemeAsset.height_px) cardParams.set("height", String(resolvedThemeAsset.height_px));
     if (brandingLogoUrl) cardParams.set("logo_url", brandingLogoUrl);
 
     const subject = renderTemplateText(tpl.assunto || tpl.titulo || tpl.nome, {
@@ -2518,12 +2511,14 @@ export default function ClientesIsland() {
                           {
                             key: `historico-${c.id}`,
                             label: "Historico",
+                            icon: "pi pi-clock",
                             onClick: () => abrirHistorico(c),
                             variant: "ghost" as const,
                           },
                           {
                             key: `template-${c.id}`,
                             label: "Template",
+                            icon: "pi pi-image",
                             onClick: () => abrirModalAviso(c),
                             variant: "ghost" as const,
                           },

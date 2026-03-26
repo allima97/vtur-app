@@ -66,7 +66,8 @@ export async function fetchConciliacaoRankingOptions(params: {
       .from("users")
       .select("id, user_types(name)")
       .eq("company_id", companyId)
-      .eq("uso_individual", false);
+      .eq("uso_individual", false)
+      .eq("active", true);
 
     const gestoresIds = ((gestoresData || []) as any[])
       .filter((row) => isAllowedRankingTipo(row?.user_types?.name))
@@ -79,7 +80,8 @@ export async function fetchConciliacaoRankingOptions(params: {
   let usersQuery = client
     .from("users")
     .select("id, nome_completo, user_types(name)")
-    .eq("company_id", companyId);
+    .eq("company_id", companyId)
+    .eq("active", true);
 
   if (allowedIds.length > 0) {
     usersQuery = usersQuery.in("id", allowedIds);

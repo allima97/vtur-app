@@ -375,6 +375,7 @@ export async function GET({ request }: { request: Request }) {
     const viewMode = viewParam || papel === "VENDEDOR";
     const companyViewMode =
       viewMode && papel !== "ADMIN" && papel !== "MASTER" && papel !== "GESTOR";
+    const dataClient = companyViewMode ? supabaseServer : client;
 
 
     if (papel !== "ADMIN") {
@@ -421,7 +422,8 @@ export async function GET({ request }: { request: Request }) {
       const { data: equipeData, error: equipeErr } = await client
         .from("users")
         .select("id, user_types(name), participa_ranking")
-        .eq("company_id", companyId);
+        .eq("company_id", companyId)
+        .eq("active", true);
       if (equipeErr) throw equipeErr;
 
       vendorIdsParam = (equipeData || [])
@@ -434,6 +436,24 @@ export async function GET({ request }: { request: Request }) {
         .map((row: any) => String(row?.id || "").trim())
         .filter((id: string) => isUuid(id))
         .slice(0, 400);
+    }
+
+    if (vendorIdsParam.length > 0) {
+      let ativosQuery = dataClient
+        .from("users")
+        .select("id")
+        .in("id", vendorIdsParam)
+        .eq("active", true);
+      if (companyId) ativosQuery = ativosQuery.eq("company_id", companyId);
+      const { data: ativosData, error: ativosErr } = await ativosQuery;
+      if (ativosErr) throw ativosErr;
+
+      const ativosSet = new Set(
+        (ativosData || [])
+          .map((row: any) => String(row?.id || "").trim())
+          .filter((id: string) => isUuid(id))
+      );
+      vendorIdsParam = vendorIdsParam.filter((id) => ativosSet.has(id));
     }
 
     if (vendorIdsParam.length === 0) {
@@ -480,8 +500,6 @@ export async function GET({ request }: { request: Request }) {
 
       // cache local removido: usar apenas kvCache
     }
-
-    const dataClient = companyViewMode ? supabaseServer : client;
 
     let paramsPayload = {
       usar_taxas_na_meta: true,

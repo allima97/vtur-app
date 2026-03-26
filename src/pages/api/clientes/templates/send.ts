@@ -1,4 +1,4 @@
-import { createServerClient, readEnv } from "../../../../lib/supabaseServer";
+import { createServerClient, readEnv, supabaseServer, hasServiceRoleKey } from "../../../../lib/supabaseServer";
 import { renderEmailHtml, renderEmailText } from "../../../../lib/emailMarkdown";
 import {
   buildFromEmails,
@@ -15,6 +15,7 @@ import {
   DEFAULT_CARD_FOOTER_LEAD,
 } from "../../../../lib/cards/templateRuntime";
 import { getSupabaseEnv } from "../../users";
+import { getUserScope } from "../../v1/vendas/_utils";
 
 type Body = {
   clienteId?: string;
@@ -24,6 +25,36 @@ type Body = {
   emailDestinatario?: string;
   themeId?: string | null;
 };
+
+type ScopeValue = "system" | "master" | "gestor" | "user";
+
+function normalizeScope(value?: string | null): ScopeValue {
+  const scope = String(value || "").trim().toLowerCase();
+  if (scope === "system" || scope === "master" || scope === "gestor" || scope === "user") return scope;
+  return "system";
+}
+
+function inCompany(companyId: string | null, allowed: Set<string>) {
+  const key = String(companyId || "").trim();
+  return key ? allowed.has(key) : false;
+}
+
+function canAccessScopedRow(params: {
+  isAdmin: boolean;
+  userId: string;
+  companyIds: Set<string>;
+  rowUserId?: string | null;
+  rowCompanyId?: string | null;
+  rowScope?: string | null;
+}) {
+  const { isAdmin, userId, companyIds, rowUserId, rowCompanyId, rowScope } = params;
+  if (isAdmin) return true;
+  if (String(rowUserId || "") === userId) return true;
+  const scope = normalizeScope(rowScope);
+  if (scope === "system") return true;
+  if (scope === "user") return false;
+  return inCompany(rowCompanyId || null, companyIds);
+}
 
 function isPlainObject(value: unknown): value is Record<string, any> {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -115,6 +146,23 @@ export async function POST({ request }: { request: Request }) {
     const { data: authData, error: authErr } = await authClient.auth.getUser();
     if (authErr || !authData?.user?.id) return new Response("Sessão inválida.", { status: 401 });
     const userId = authData.user.id;
+    const userScope = await getUserScope(authClient, userId);
+    const isAdmin = Boolean(userScope.isAdmin);
+    const companyIds = new Set<string>();
+    if (userScope.companyId) companyIds.add(String(userScope.companyId));
+    if (userScope.papel === "MASTER") {
+      const { data: vinculos } = await authClient
+        .from("master_empresas")
+        .select("company_id, status")
+        .eq("master_id", userId);
+      (vinculos || []).forEach((row: any) => {
+        const status = String(row?.status || "").toLowerCase();
+        const companyId = String(row?.company_id || "").trim();
+        if (!companyId || status === "rejected") return;
+        companyIds.add(companyId);
+      });
+    }
+    const dataClient: any = hasServiceRoleKey ? supabaseServer : authClient;
 
     const templateId = String(body.templateId || "").trim();
     const clienteId = String(body.clienteId || "").trim();
@@ -129,12 +177,24 @@ export async function POST({ request }: { request: Request }) {
       .maybeSingle();
     const assinaturaPadrao = String(userRow?.nome_completo || authData.user.user_metadata?.name || "").trim();
 
-    const { data: tpl, error: tplErr } = await authClient
+    const { data: tpl, error: tplErr } = await dataClient
       .from("user_message_templates")
-      .select("id, nome, assunto, titulo, corpo, assinatura, ativo, theme_id, title_style, body_style, signature_style")
+      .select("id, user_id, company_id, scope, nome, assunto, titulo, corpo, assinatura, ativo, theme_id, title_style, body_style, signature_style")
       .eq("id", templateId)
       .maybeSingle();
     if (tplErr || !tpl) return new Response("Template não encontrado.", { status: 404 });
+    if (
+      !canAccessScopedRow({
+        isAdmin,
+        userId,
+        companyIds,
+        rowUserId: (tpl as any)?.user_id || null,
+        rowCompanyId: (tpl as any)?.company_id || null,
+        rowScope: (tpl as any)?.scope || null,
+      })
+    ) {
+      return new Response("Template não encontrado.", { status: 404 });
+    }
     if (!tpl.ativo) return new Response("Template inativo.", { status: 400 });
 
     const nomeDestinatario = String(body.nomeDestinatario || "").trim() || "Cliente";
@@ -152,12 +212,24 @@ export async function POST({ request }: { request: Request }) {
     const signatureTextConfig = extractSignatureTextConfig(tpl.signature_style);
     let themeRow: Record<string, any> | null = null;
     if (selectedThemeId) {
-      const { data } = await authClient
+      const { data } = await dataClient
         .from("user_message_template_themes")
-        .select("nome, asset_url, width_px, height_px, title_style, body_style, signature_style")
+        .select("id, user_id, company_id, scope, nome, asset_url, width_px, height_px, title_style, body_style, signature_style")
         .eq("id", selectedThemeId)
         .maybeSingle();
-      themeRow = data || null;
+      if (
+        data &&
+        canAccessScopedRow({
+          isAdmin,
+          userId,
+          companyIds,
+          rowUserId: (data as any)?.user_id || null,
+          rowCompanyId: (data as any)?.company_id || null,
+          rowScope: (data as any)?.scope || null,
+        })
+      ) {
+        themeRow = data || null;
+      }
     }
     const { data: brandingRow } = await authClient
       .from("quote_print_settings")
@@ -180,6 +252,8 @@ export async function POST({ request }: { request: Request }) {
       },
     });
     const cardParams = new URLSearchParams({
+      theme_id: selectedThemeId,
+      theme_name: String(themeRow?.nome || ""),
       nome: nomeDestinatario,
       cliente_nome: buildCardClientGreeting(nomeDestinatario),
       titulo: String(tpl.titulo || ""),
@@ -195,12 +269,6 @@ export async function POST({ request }: { request: Request }) {
     if (themeRow) {
       const resolvedThemeAsset = resolveThemeAssetMeta(themeRow);
       if (resolvedThemeAsset.asset_url) cardParams.set("theme_asset_url", resolvedThemeAsset.asset_url);
-      if (Number.isFinite(resolvedThemeAsset.width_px) && resolvedThemeAsset.width_px > 0) {
-        cardParams.set("width", String(Math.round(resolvedThemeAsset.width_px)));
-      }
-      if (Number.isFinite(resolvedThemeAsset.height_px) && resolvedThemeAsset.height_px > 0) {
-        cardParams.set("height", String(Math.round(resolvedThemeAsset.height_px)));
-      }
     }
     const brandingLogoUrl =
       String(brandingRow?.logo_url || "").trim() ||

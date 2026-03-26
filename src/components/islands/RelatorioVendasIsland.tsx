@@ -1900,10 +1900,9 @@ export default function RelatorioVendasIsland() {
     <div className="vtur-quote-top-actions">
       {[
         { id: "hoje", label: "Hoje" },
-        { id: "7", label: "Ultimos 7 dias" },
-        { id: "30", label: "Ultimos 30 dias" },
-        { id: "mes_atual", label: "Este mes" },
-        { id: "mes_anterior", label: "Mes anterior" },
+        { id: "7", label: "Últimos 7 dias" },
+        { id: "mes_atual", label: "Este mês" },
+        { id: "mes_anterior", label: "Mês anterior" },
         { id: "limpar", label: "Limpar datas" },
       ].map((periodo) => (
         <AppButton
@@ -1915,6 +1914,12 @@ export default function RelatorioVendasIsland() {
           {periodo.label}
         </AppButton>
       ))}
+      <AppButton type="button" variant="primary" onClick={aplicarFiltrosRelatorio}>
+        Aplicar filtros
+      </AppButton>
+      <AppButton type="button" variant="secondary" onClick={() => setShowExport(true)}>
+        Exportar
+      </AppButton>
     </div>
   );
 
@@ -2050,12 +2055,6 @@ export default function RelatorioVendasIsland() {
                 onClick={() => setShowFilters(true)}
               >
                 Filtros
-              </AppButton>
-              <AppButton type="button" variant="primary" onClick={aplicarFiltrosRelatorio}>
-                Aplicar filtros
-              </AppButton>
-              <AppButton type="button" variant="secondary" onClick={() => setShowExport(true)}>
-                Exportar
               </AppButton>
             </div>
           }

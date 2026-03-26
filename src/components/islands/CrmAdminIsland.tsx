@@ -1,6 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { ToastStack, useToastQueue } from "../ui/Toast";
+import ConfirmDialog from "../ui/ConfirmDialog";
+import TableActions from "../ui/TableActions";
+import AppCard from "../ui/primer/AppCard";
+import AppButton from "../ui/primer/AppButton";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -58,6 +62,27 @@ const ICON_SUGGESTIONS = [
   "pi pi-calendar", "pi pi-globe", "pi pi-flag",
 ];
 
+const CRM_TAB_SECTIONS = [
+  {
+    id: "modelos",
+    icon: "pi pi-images",
+    label: "Modelos",
+    subtitle: "Artes e configurações visuais.",
+  },
+  {
+    id: "textos",
+    icon: "pi pi-file-edit",
+    label: "Textos padrão por ocasião",
+    subtitle: "Mensagens reutilizáveis por tema.",
+  },
+  {
+    id: "categorias",
+    icon: "pi pi-tags",
+    label: "Categorias",
+    subtitle: "Organização e ordenação dos grupos.",
+  },
+] as const;
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function emptyCategory(): Omit<Category, "id"> {
@@ -90,10 +115,33 @@ function emptyMessageTemplate(): Omit<MessageTemplate, "id"> {
   };
 }
 
+function getStoragePathFromPublicUrl(publicUrl?: string | null): string | null {
+  const raw = String(publicUrl || "").trim();
+  if (!raw) return null;
+  const marker = `/storage/v1/object/public/${STORAGE_BUCKET}/`;
+
+  const markerIndex = raw.indexOf(marker);
+  if (markerIndex >= 0) {
+    const value = raw.slice(markerIndex + marker.length).split("?")[0];
+    return value ? decodeURIComponent(value) : null;
+  }
+
+  try {
+    const url = new URL(raw);
+    const path = url.pathname || "";
+    const pathIndex = path.indexOf(marker);
+    if (pathIndex < 0) return null;
+    const value = path.slice(pathIndex + marker.length);
+    return value ? decodeURIComponent(value) : null;
+  } catch {
+    return null;
+  }
+}
+
 // ── Main component ─────────────────────────────────────────────────────────
 
 export default function CrmAdminIsland() {
-  const [tab, setTab] = useState<"categorias" | "templates">("templates");
+  const [tab, setTab] = useState<"categorias" | "modelos" | "textos">("modelos");
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [currentCompanyId, setCurrentCompanyId] = useState<string | null>(null);
 
@@ -122,6 +170,12 @@ export default function CrmAdminIsland() {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [savingMessage, setSavingMessage] = useState(false);
+  const [themeToDelete, setThemeToDelete] = useState<Theme | null>(null);
+  const [deletingThemeId, setDeletingThemeId] = useState<string | null>(null);
+  const [messageToDelete, setMessageToDelete] = useState<MessageTemplate | null>(null);
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
+  const [themeToPreview, setThemeToPreview] = useState<Theme | null>(null);
+  const [messageToPreview, setMessageToPreview] = useState<MessageTemplate | null>(null);
 
   // ── Filter ──
   const [filterCatId, setFilterCatId] = useState<string>("");
@@ -316,6 +370,41 @@ export default function CrmAdminIsland() {
     loadThemes();
   }
 
+  async function deleteTheme(theme: Theme) {
+    setDeletingThemeId(theme.id);
+    try {
+      const { error } = await supabase
+        .from("user_message_template_themes")
+        .delete()
+        .eq("id", theme.id);
+      if (error) throw error;
+
+      const storagePath = getStoragePathFromPublicUrl(theme.asset_url);
+      if (storagePath) {
+        const { count } = await supabase
+          .from("user_message_template_themes")
+          .select("id", { count: "exact", head: true })
+          .eq("asset_url", theme.asset_url);
+        if (!count || count <= 0) {
+          const { error: removeError } = await supabase.storage
+            .from(STORAGE_BUCKET)
+            .remove([storagePath]);
+          if (removeError) {
+            console.warn("Falha ao remover arte do storage após excluir template:", removeError);
+          }
+        }
+      }
+
+      showToast("Template excluído.", "success");
+      await loadThemes();
+    } catch (err: any) {
+      showToast(err?.message || "Erro ao excluir template.", "error");
+    } finally {
+      setDeletingThemeId(null);
+      setThemeToDelete(null);
+    }
+  }
+
   // ── Message template CRUD ───────────────────────────────────────────────
   function openNewMessageTemplate() {
     setEditingMessageId(null);
@@ -377,6 +466,24 @@ export default function CrmAdminIsland() {
     loadMessages();
   }
 
+  async function deleteMessageTemplate(template: MessageTemplate) {
+    setDeletingMessageId(template.id);
+    try {
+      const { error } = await supabase
+        .from("user_message_templates")
+        .delete()
+        .eq("id", template.id);
+      if (error) throw error;
+      showToast("Texto padrão excluído.", "success");
+      await loadMessages();
+    } catch (err: any) {
+      showToast(err?.message || "Erro ao excluir texto padrão.", "error");
+    } finally {
+      setDeletingMessageId(null);
+      setMessageToDelete(null);
+    }
+  }
+
   // ── Filtered themes ──
   const filteredThemes = filterCatId
     ? themes.filter((t) => t.categoria_id === filterCatId)
@@ -387,36 +494,38 @@ export default function CrmAdminIsland() {
     <div className="crm-admin-root">
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
-      {/* Header */}
-      <div className="crm-admin-header">
-        <h1 className="crm-admin-title">
-          <i className="pi pi-share-alt" /> CRM — Gerenciar Templates
-        </h1>
-        <p className="crm-admin-subtitle">
-          Gerencie as artes e categorias disponíveis para envio de cartões de relacionamento.
-        </p>
-      </div>
+      <AppCard
+        tone="info"
+        title="CRM — Gerenciar Templates"
+        subtitle="Gerencie as artes e categorias disponíveis para envio de cartões de relacionamento."
+      />
 
       {/* Tabs */}
-      <div className="crm-admin-tabs">
-        <button
-          type="button"
-          className={`crm-admin-tab${tab === "templates" ? " active" : ""}`}
-          onClick={() => setTab("templates")}
-        >
-          <i className="pi pi-images" /> Templates
-        </button>
-        <button
-          type="button"
-          className={`crm-admin-tab${tab === "categorias" ? " active" : ""}`}
-          onClick={() => setTab("categorias")}
-        >
-          <i className="pi pi-tags" /> Categorias
-        </button>
-      </div>
+      <AppCard tone="info" className="mb-3 list-toolbar-sticky vtur-conciliacao-tab-card crm-admin-tab-card">
+        <div className="vtur-conciliacao-tab-nav">
+          {CRM_TAB_SECTIONS.map((section) => (
+            <button
+              key={section.id}
+              type="button"
+              className={[
+                "vtur-conciliacao-tab-btn",
+                tab === section.id ? "is-active" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              onClick={() => setTab(section.id)}
+            >
+              <span className="vtur-conciliacao-tab-btn-label">
+                <i className={section.icon} aria-hidden="true" /> {section.label}
+              </span>
+              <span className="vtur-conciliacao-tab-btn-sub">{section.subtitle}</span>
+            </button>
+          ))}
+        </div>
+      </AppCard>
 
-      {/* ══════════ TAB: TEMPLATES ══════════ */}
-      {tab === "templates" && (
+      {/* ══════════ TAB: MODELOS ══════════ */}
+      {tab === "modelos" && (
         <div className="crm-admin-section">
           <div className="crm-admin-toolbar">
             <select
@@ -429,19 +538,20 @@ export default function CrmAdminIsland() {
                 <option key={c.id} value={c.id}>{c.nome}</option>
               ))}
             </select>
-            <button type="button" className="btn btn-primary btn-sm" onClick={openNewTheme}>
-              <i className="pi pi-plus" /> Novo template
-            </button>
+            <AppButton type="button" variant="primary" icon="pi pi-plus" onClick={openNewTheme}>
+              Novo modelo
+            </AppButton>
           </div>
 
           {loadingThemes ? (
             <div className="crm-admin-loading"><span className="crm-spinner" /> Carregando…</div>
           ) : filteredThemes.length === 0 ? (
-            <p className="crm-admin-empty">Nenhum template encontrado.</p>
+            <p className="crm-admin-empty">Nenhum modelo encontrado.</p>
           ) : (
             <div className="crm-admin-theme-grid">
               {filteredThemes.map((t) => {
                 const catNome = categories.find((c) => c.id === t.categoria_id)?.nome || "—";
+                const deletingTheme = deletingThemeId === t.id;
                 return (
                   <div key={t.id} className={`crm-admin-card${t.ativo ? "" : " crm-admin-card--inactive"}`}>
                     <div className="crm-admin-card__thumb">
@@ -464,22 +574,53 @@ export default function CrmAdminIsland() {
                       )}
                     </div>
                     <div className="crm-admin-card__actions">
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => openEditTheme(t)}
-                        title="Editar"
-                      >
-                        <i className="pi pi-pencil" />
-                      </button>
-                      <button
-                        type="button"
-                        className={`btn btn-sm${t.ativo ? " btn-secondary" : " btn-primary"}`}
-                        onClick={() => toggleThemeAtivo(t)}
-                        title={t.ativo ? "Desativar" : "Ativar"}
-                      >
-                        <i className={`pi ${t.ativo ? "pi-eye-slash" : "pi-eye"}`} />
-                      </button>
+                      <TableActions
+                        className="crm-admin-card-actions"
+                        actions={[
+                          {
+                            key: "view",
+                            label: "Visualizar",
+                            icon: "pi pi-eye",
+                            onClick: () => setThemeToPreview(t),
+                            disabled: deletingTheme,
+                          },
+                          {
+                            key: "edit",
+                            label: "Editar",
+                            icon: "pi pi-pencil",
+                            onClick: () => openEditTheme(t),
+                            disabled: deletingTheme,
+                          },
+                          {
+                            key: "toggle",
+                            label: t.ativo ? "Desativar" : "Ativar",
+                            icon: t.ativo ? (
+                              <i
+                                className="pi pi-times-circle"
+                                style={{ color: "var(--color-danger-fg, #cf222e)" }}
+                                aria-hidden="true"
+                              />
+                            ) : (
+                              <i
+                                className="pi pi-check-circle"
+                                style={{ color: "var(--color-success-fg, #1a7f37)" }}
+                                aria-hidden="true"
+                              />
+                            ),
+                            variant: "ghost",
+                            onClick: () => toggleThemeAtivo(t),
+                            disabled: deletingTheme,
+                          },
+                          {
+                            key: "delete",
+                            label: "Excluir",
+                            icon: deletingTheme ? "pi pi-spin pi-spinner" : "pi pi-trash",
+                            variant: "danger",
+                            onClick: () => setThemeToDelete(t),
+                            disabled: deletingTheme,
+                          },
+                        ]}
+                      />
                     </div>
                   </div>
                 );
@@ -487,32 +628,44 @@ export default function CrmAdminIsland() {
             </div>
           )}
 
-          <div className="crm-admin-subsection">
-            <div className="crm-admin-toolbar">
-              <h3 className="crm-admin-subsection__title">Textos padrão por ocasião</h3>
-              <button type="button" className="btn btn-primary btn-sm" onClick={openNewMessageTemplate}>
-                <i className="pi pi-plus" /> Novo texto
-              </button>
-            </div>
+        </div>
+      )}
 
-            {loadingMessages ? (
-              <div className="crm-admin-loading"><span className="crm-spinner" /> Carregando…</div>
-            ) : messageTemplates.length === 0 ? (
-              <p className="crm-admin-empty">Nenhum texto padrão encontrado.</p>
-            ) : (
-              <table className="crm-admin-table">
-                <thead>
-                  <tr>
-                    <th>Nome</th>
-                    <th>Ocasião</th>
-                    <th>Greeting</th>
-                    <th>Escopo</th>
-                    <th>Status</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {messageTemplates.map((template) => (
+      {/* ══════════ TAB: TEXTOS ══════════ */}
+      {tab === "textos" && (
+        <div className="crm-admin-section">
+          <div className="crm-admin-toolbar">
+            <span className="crm-admin-subsection__title">Textos padrão por ocasião</span>
+            <AppButton
+              type="button"
+              variant="primary"
+              icon="pi pi-plus"
+              onClick={openNewMessageTemplate}
+            >
+              Novo texto
+            </AppButton>
+          </div>
+
+          {loadingMessages ? (
+            <div className="crm-admin-loading"><span className="crm-spinner" /> Carregando…</div>
+          ) : messageTemplates.length === 0 ? (
+            <p className="crm-admin-empty">Nenhum texto padrão encontrado.</p>
+          ) : (
+            <table className="crm-admin-table">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Ocasião</th>
+                  <th>Greeting</th>
+                  <th>Escopo</th>
+                  <th>Status</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {messageTemplates.map((template) => {
+                  const deletingMessage = deletingMessageId === template.id;
+                  return (
                     <tr key={template.id} className={template.ativo ? "" : "crm-row--inactive"}>
                       <td>{template.nome}</td>
                       <td>{template.categoria || "—"}</td>
@@ -523,33 +676,69 @@ export default function CrmAdminIsland() {
                         </span>
                       </td>
                       <td>
-                        <span className={`status-badge ${template.ativo ? "status-badge--active" : "status-badge--inactive"}`}>
+                        <span
+                          className={`status-badge ${
+                            template.ativo ? "status-badge--active" : "status-badge--inactive"
+                          }`}
+                        >
                           {template.ativo ? "Ativo" : "Inativo"}
                         </span>
                       </td>
                       <td className="crm-td-actions">
-                        <button
-                          type="button"
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => openEditMessageTemplate(template)}
-                        >
-                          <i className="pi pi-pencil" />
-                        </button>
-                        <button
-                          type="button"
-                          className={`btn btn-sm${template.ativo ? " btn-secondary" : " btn-primary"}`}
-                          onClick={() => toggleMessageAtivo(template)}
-                          title={template.ativo ? "Desativar" : "Ativar"}
-                        >
-                          <i className={`pi ${template.ativo ? "pi-eye-slash" : "pi-eye"}`} />
-                        </button>
+                        <TableActions
+                          className="crm-admin-table-actions"
+                          actions={[
+                            {
+                              key: "view",
+                              label: "Visualizar",
+                              icon: "pi pi-eye",
+                              onClick: () => setMessageToPreview(template),
+                              disabled: deletingMessage,
+                            },
+                            {
+                              key: "edit",
+                              label: "Editar",
+                              icon: "pi pi-pencil",
+                              onClick: () => openEditMessageTemplate(template),
+                              disabled: deletingMessage,
+                            },
+                            {
+                              key: "toggle",
+                              label: template.ativo ? "Desativar" : "Ativar",
+                              icon: template.ativo ? (
+                                <i
+                                  className="pi pi-times-circle"
+                                  style={{ color: "var(--color-danger-fg, #cf222e)" }}
+                                  aria-hidden="true"
+                                />
+                              ) : (
+                                <i
+                                  className="pi pi-check-circle"
+                                  style={{ color: "var(--color-success-fg, #1a7f37)" }}
+                                  aria-hidden="true"
+                                />
+                              ),
+                              variant: "ghost",
+                              onClick: () => toggleMessageAtivo(template),
+                              disabled: deletingMessage,
+                            },
+                            {
+                              key: "delete",
+                              label: "Excluir",
+                              icon: deletingMessage ? "pi pi-spin pi-spinner" : "pi pi-trash",
+                              variant: "danger",
+                              onClick: () => setMessageToDelete(template),
+                              disabled: deletingMessage,
+                            },
+                          ]}
+                        />
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
@@ -558,9 +747,9 @@ export default function CrmAdminIsland() {
         <div className="crm-admin-section">
           <div className="crm-admin-toolbar">
             <span />
-            <button type="button" className="btn btn-primary btn-sm" onClick={openNewCategory}>
-              <i className="pi pi-plus" /> Nova categoria
-            </button>
+            <AppButton type="button" variant="primary" icon="pi pi-plus" onClick={openNewCategory}>
+              Nova categoria
+            </AppButton>
           </div>
 
           {loadingCats ? (
@@ -603,7 +792,14 @@ export default function CrmAdminIsland() {
                         onClick={() => toggleCategoryAtivo(cat)}
                         title={cat.ativo ? "Desativar" : "Ativar"}
                       >
-                        <i className={`pi ${cat.ativo ? "pi-eye-slash" : "pi-eye"}`} />
+                        <i
+                          className={`pi ${cat.ativo ? "pi-times-circle" : "pi-check-circle"}`}
+                          style={{
+                            color: cat.ativo
+                              ? "var(--color-danger-fg, #cf222e)"
+                              : "var(--color-success-fg, #1a7f37)",
+                          }}
+                        />
                       </button>
                     </td>
                   </tr>
@@ -983,6 +1179,143 @@ export default function CrmAdminIsland() {
           </div>
         </div>
       )}
+
+      {themeToPreview && (
+        <div className="crm-admin-modal-overlay" onClick={() => setThemeToPreview(null)}>
+          <div className="crm-admin-modal crm-admin-modal--wide" onClick={(e) => e.stopPropagation()}>
+            <div className="crm-admin-modal__header">
+              <h3>Visualizar template</h3>
+              <button type="button" className="crm-link-btn" onClick={() => setThemeToPreview(null)}>
+                <i className="pi pi-times" />
+              </button>
+            </div>
+            <div className="crm-admin-modal__body crm-admin-modal__body--split">
+              <div className="crm-admin-modal__col">
+                <div className="crm-admin-preview-art">
+                  {themeToPreview.asset_url ? (
+                    <img src={themeToPreview.asset_url} alt={themeToPreview.nome} />
+                  ) : (
+                    <i className="pi pi-image" />
+                  )}
+                </div>
+              </div>
+              <div className="crm-admin-modal__col">
+                <div className="crm-field">
+                  <label className="crm-label">Nome</label>
+                  <p className="crm-preview-text">{themeToPreview.nome}</p>
+                </div>
+                <div className="crm-field">
+                  <label className="crm-label">Categoria</label>
+                  <p className="crm-preview-text">
+                    {categories.find((c) => c.id === themeToPreview.categoria_id)?.nome || "—"}
+                  </p>
+                </div>
+                <div className="crm-field">
+                  <label className="crm-label">Escopo</label>
+                  <p className="crm-preview-text">{SCOPE_LABELS[themeToPreview.scope] || themeToPreview.scope}</p>
+                </div>
+                <div className="crm-field">
+                  <label className="crm-label">Greeting padrão</label>
+                  <p className="crm-preview-text">{themeToPreview.greeting_text || "—"}</p>
+                </div>
+                <div className="crm-field">
+                  <label className="crm-label">Status</label>
+                  <span className={`status-badge ${themeToPreview.ativo ? "status-badge--active" : "status-badge--inactive"}`}>
+                    {themeToPreview.ativo ? "Ativo" : "Inativo"}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="crm-admin-modal__footer">
+              <button type="button" className="btn btn-secondary" onClick={() => setThemeToPreview(null)}>
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {messageToPreview && (
+        <div className="crm-admin-modal-overlay" onClick={() => setMessageToPreview(null)}>
+          <div className="crm-admin-modal crm-admin-modal--wide" onClick={(e) => e.stopPropagation()}>
+            <div className="crm-admin-modal__header">
+              <h3>Visualizar texto padrão</h3>
+              <button type="button" className="crm-link-btn" onClick={() => setMessageToPreview(null)}>
+                <i className="pi pi-times" />
+              </button>
+            </div>
+            <div className="crm-admin-modal__body">
+              <div className="crm-field">
+                <label className="crm-label">Nome</label>
+                <p className="crm-preview-text">{messageToPreview.nome}</p>
+              </div>
+              <div className="crm-field">
+                <label className="crm-label">Ocasião</label>
+                <p className="crm-preview-text">{messageToPreview.categoria || "—"}</p>
+              </div>
+              <div className="crm-field">
+                <label className="crm-label">Escopo</label>
+                <p className="crm-preview-text">
+                  {SCOPE_LABELS[messageToPreview.scope] || messageToPreview.scope}
+                </p>
+              </div>
+              <div className="crm-field">
+                <label className="crm-label">Greeting</label>
+                <p className="crm-preview-text">{messageToPreview.titulo}</p>
+              </div>
+              <div className="crm-field">
+                <label className="crm-label">Mensagem principal</label>
+                <div className="crm-preview-message">{messageToPreview.corpo}</div>
+              </div>
+              <div className="crm-field">
+                <label className="crm-label">Status</label>
+                <span className={`status-badge ${messageToPreview.ativo ? "status-badge--active" : "status-badge--inactive"}`}>
+                  {messageToPreview.ativo ? "Ativo" : "Inativo"}
+                </span>
+              </div>
+            </div>
+            <div className="crm-admin-modal__footer">
+              <button type="button" className="btn btn-secondary" onClick={() => setMessageToPreview(null)}>
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={Boolean(themeToDelete)}
+        title="Excluir template"
+        message={`Deseja excluir o template "${themeToDelete?.nome || ""}"?`}
+        confirmLabel={deletingThemeId ? "Excluindo..." : "Excluir"}
+        confirmVariant="danger"
+        confirmDisabled={Boolean(deletingThemeId)}
+        onCancel={() => {
+          if (deletingThemeId) return;
+          setThemeToDelete(null);
+        }}
+        onConfirm={() => {
+          if (!themeToDelete || deletingThemeId) return;
+          void deleteTheme(themeToDelete);
+        }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(messageToDelete)}
+        title="Excluir texto padrão"
+        message={`Deseja excluir o texto "${messageToDelete?.nome || ""}"?`}
+        confirmLabel={deletingMessageId ? "Excluindo..." : "Excluir"}
+        confirmVariant="danger"
+        confirmDisabled={Boolean(deletingMessageId)}
+        onCancel={() => {
+          if (deletingMessageId) return;
+          setMessageToDelete(null);
+        }}
+        onConfirm={() => {
+          if (!messageToDelete || deletingMessageId) return;
+          void deleteMessageTemplate(messageToDelete);
+        }}
+      />
     </div>
   );
 }

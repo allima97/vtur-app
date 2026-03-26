@@ -78,7 +78,8 @@ export function useMasterScope(enabled: boolean) {
           .from("users")
           .select("id, nome_completo, company_id, uso_individual, user_types(name)")
           .in("company_id", idsAprovadas)
-          .eq("uso_individual", false);
+          .eq("uso_individual", false)
+          .eq("active", true);
         if (usuariosErr) throw usuariosErr;
 
         if (!mounted) return;
