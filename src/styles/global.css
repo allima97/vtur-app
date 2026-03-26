@@ -10427,6 +10427,67 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   background: #eff6ff;
 }
 
+/* ── Wizard / Steps ── */
+.crm-wizard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.crm-steps-card .vtur-app-card-body {
+  gap: 10px;
+}
+
+.crm-steps-wrap {
+  width: 100%;
+}
+
+.crm-steps.p-steps .p-steps-item .p-menuitem-link {
+  border-radius: 12px;
+  padding: 0.55rem 0.45rem;
+  transition: background-color 0.15s ease;
+}
+
+.crm-steps.p-steps .p-steps-item:not(.p-disabled) .p-menuitem-link:hover {
+  background: #eff6ff;
+}
+
+.crm-steps.p-steps .p-steps-item .p-menuitem-text {
+  font-weight: 700;
+}
+
+.crm-steps.p-steps .p-steps-item .p-steps-number {
+  border: 1px solid #bfdbfe;
+  color: #1e3a8a;
+}
+
+.crm-steps.p-steps .p-steps-item.p-highlight .p-steps-number {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+}
+
+.crm-step-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.crm-step-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.crm-step-nav--end {
+  justify-content: flex-end;
+}
+
+.crm-step-nav--between {
+  justify-content: space-between;
+}
+
+/* ── Legacy split layout (kept for compatibility with other CRM screens) ── */
 /* ── Layout ── */
 .crm-layout {
   display: flex;
@@ -11204,6 +11265,19 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 
 /* ── Responsive ── */
 @media (max-width: 900px) {
+  .crm-steps-wrap {
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+  .crm-steps-wrap .crm-steps {
+    min-width: 560px;
+  }
+  .crm-step-nav {
+    flex-wrap: wrap;
+  }
+  .crm-step-nav .vtur-app-button {
+    flex: 1 1 240px;
+  }
   .crm-layout--split {
     flex-direction: column;
   }
@@ -11244,6 +11318,17 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
 }
 
 @media (max-width: 480px) {
+  .crm-steps-wrap .crm-steps {
+    min-width: 460px;
+  }
+  .crm-step-nav {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .crm-step-nav .vtur-app-button {
+    width: 100%;
+    min-width: 0;
+  }
   .crm-theme-grid {
     grid-template-columns: repeat(3, 1fr);
   }

@@ -3,6 +3,7 @@ import { supabaseBrowser } from "../../lib/supabase-browser";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppButton from "../ui/primer/AppButton";
+import { Steps } from "primereact/steps";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -626,6 +627,7 @@ export default function CrmIsland() {
 
   // ── Selection / navigation ───────────────────────────────────────
   const [selectedTheme, setSelectedTheme] = useState<Theme | null>(null);
+  const [wizardStep, setWizardStep] = useState(0);
 
   // ── Form fields ──────────────────────────────────────────────────
   const [greeting, setGreeting] = useState("");
@@ -829,6 +831,34 @@ export default function CrmIsland() {
         month: "long",
       }).format(new Date()),
     []
+  );
+
+  const wizardItems = useMemo(
+    () => [
+      { label: "Template", icon: "pi pi-images" },
+      { label: "Mensagem", icon: "pi pi-file-edit" },
+      { label: "Arte final", icon: "pi pi-send" },
+    ],
+    []
+  );
+
+  const wizardSubtitle = useMemo(() => {
+    if (wizardStep === 0) return "Etapa 1 de 3: escolha a arte base para começar o cartão.";
+    if (wizardStep === 1) return "Etapa 2 de 3: personalize título, mensagem, assinatura e logo.";
+    return "Etapa 3 de 3: revise a arte final e envie para o cliente.";
+  }, [wizardStep]);
+
+  const goToWizardStep = useCallback(
+    (nextStep: number) => {
+      const bounded = Math.max(0, Math.min(2, nextStep));
+      if (bounded > 0 && !selectedTheme) {
+        setWizardStep(0);
+        showToast("Selecione um template para continuar.", "warning");
+        return;
+      }
+      setWizardStep(bounded);
+    },
+    [selectedTheme, showToast]
   );
 
   const moveElement = useCallback(
@@ -1211,6 +1241,12 @@ export default function CrmIsland() {
     }
     selectTheme(filteredThemes[0]);
   }, [filteredThemes, selectedTheme, selectTheme]);
+
+  useEffect(() => {
+    if (!selectedTheme && wizardStep > 0) {
+      setWizardStep(0);
+    }
+  }, [selectedTheme, wizardStep]);
 
   function applyBirthdayCliente(item: BirthdayItem) {
     const nome = String(item?.nome || "").trim();
@@ -1703,477 +1739,547 @@ export default function CrmIsland() {
         </div>
       </AppCard>
 
-      <div className={`crm-layout${showComposer ? " crm-layout--split" : ""}`}>
-        {/* ════════════════ LEFT: Gallery ════════════════ */}
-        <aside className="crm-gallery">
-          <AppCard
-            tone="info"
-            className="crm-panel-card crm-equal-card crm-models-card"
-            title="Modelos"
-            subtitle="Filtre por escopo e ocasião para escolher a arte."
-          >
-            <div className="vtur-inline-filter-row crm-filter-row">
-              <AppField
-                as="select"
-                label="Escopo"
-                value={scopeFilter}
-                onChange={(e) =>
-                  setScopeFilter((e as React.ChangeEvent<HTMLSelectElement>).target.value as "all" | "system" | "master" | "gestor" | "user")
-                }
-                options={[
-                  { label: "Todos", value: "all" },
-                  { label: `Sistema (${templatesByScope.system})`, value: "system" },
-                  { label: `Master (${templatesByScope.master})`, value: "master" },
-                  { label: `Gestor (${templatesByScope.gestor})`, value: "gestor" },
-                  { label: `Meus (${templatesByScope.user})`, value: "user" },
-                ]}
-              />
-              <AppField
-                as="select"
-                label="Tema"
-                value={temaFilter}
-                onChange={(e) => setTemaFilter((e as React.ChangeEvent<HTMLSelectElement>).target.value as TemaFilterValue)}
-                options={temaFilterOptions}
-              />
-              <div className="vtur-inline-filter-actions">
-                <AppButton
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    setScopeFilter("all");
-                    setTemaFilter("all");
-                  }}
-                >
-                  Limpar
-                </AppButton>
-              </div>
-            </div>
+      <div className="crm-wizard">
+        <AppCard
+          tone="info"
+          className="crm-steps-card"
+          title="Fluxo do cartão"
+          subtitle={wizardSubtitle}
+        >
+          <div className="crm-steps-wrap">
+            <Steps
+              model={wizardItems}
+              activeIndex={wizardStep}
+              readOnly={false}
+              onSelect={(event: any) => goToWizardStep(Number(event?.index ?? 0))}
+              className="crm-steps"
+            />
+          </div>
+        </AppCard>
 
-            {filteredThemes.length === 0 ? (
-              <p className="crm-empty">Nenhum modelo encontrado para os filtros atuais.</p>
-            ) : (
-              <div className="crm-theme-grid-wrap">
-                <div className="crm-theme-grid">
-                  {pagedThemes.map((t) => (
-                    <ThumbCard
-                      key={t.id}
-                      theme={t}
-                      selected={selectedTheme?.id === t.id}
-                      onSelect={selectTheme}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-            {filteredThemes.length > 0 && (
-              <div className="crm-theme-pagination">
-                <AppButton
-                  type="button"
-                  variant="secondary"
-                  icon="pi pi-angle-left"
-                  onClick={() => setThemePage((p) => Math.max(1, p - 1))}
-                  disabled={themePage <= 1}
-                >
-                  Anterior
-                </AppButton>
-                <span className="crm-theme-pagination__meta">
-                  Página {themePage} de {totalThemePages}
-                </span>
-                <AppButton
-                  type="button"
-                  variant="secondary"
-                  icon="pi pi-angle-right"
-                  iconPos="right"
-                  onClick={() => setThemePage((p) => Math.min(totalThemePages, p + 1))}
-                  disabled={themePage >= totalThemePages}
-                >
-                  Próxima
-                </AppButton>
-              </div>
-            )}
-          </AppCard>
-        </aside>
-
-        {/* ════════════════ RIGHT: Composer + Preview ════════════════ */}
-        {showComposer && selectedTheme && (
-          <div className="crm-composer-wrap">
-            <div className="crm-composer-split">
-              {/* ── Form ── */}
-              <AppCard
-                tone="default"
-                className="crm-form crm-panel-card crm-equal-card"
-                title="Personalizar cartão"
-                subtitle="Título, nome do cliente, mensagem e assinatura padronizados pelo mapa técnico."
-              >
-                <div className="crm-template-meta">
-                  <span className={getScopeTone(selectedTheme.scope)}>{getScopeLabel(selectedTheme.scope)}</span>
-                  <span className="crm-template-meta__name">{selectedTheme.nome}</span>
-                </div>
-
-                <div className="crm-text-color-box">
-                  <label className="crm-label">
-                    Cor do texto
-                    <span className="crm-hint-inline">uma cor única para todo o texto do cartão</span>
-                  </label>
-                  <div className="crm-color-palette" role="radiogroup" aria-label="Cor do texto do cartão">
-                    {CARD_TEXT_COLOR_PRESETS.map((color) => {
-                      const selected = textColor === color.value;
-                      const isDefault = !color.value;
-                      return (
-                        <button
-                          key={color.label}
-                          type="button"
-                          className={`crm-color-swatch${selected ? " is-active" : ""}${isDefault ? " is-default" : ""}`}
-                          style={isDefault ? undefined : { backgroundColor: color.value }}
-                          onClick={() => setTextColor(color.value)}
-                          title={
-                            isDefault
-                              ? "Usar as cores padrão do template"
-                              : `Aplicar ${color.label} em todo o texto`
-                          }
-                          aria-label={
-                            isDefault
-                              ? "Cor padrão do template"
-                              : `Cor ${color.label}`
-                          }
-                          aria-pressed={selected}
-                        >
-                          {isDefault && <span>Aa</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Greeting */}
-                <div className="crm-field">
-                  <div className="crm-label-row">
-                    <label className="crm-label">
-                      Título / saudação
-                      <span className="crm-hint-inline">escolha um título da biblioteca</span>
-                    </label>
-                    {renderInlinePositionControl({
-                      keyName: "title",
-                      label: "Título / saudação",
-                    })}
-                  </div>
-                  <select
-                    className="form-select"
-                    value={selectedMessageTemplateId}
-                    onChange={(e) => {
-                      const templateId = e.target.value;
-                      setSelectedMessageTemplateId(templateId);
-                      if (!templateId) {
-                        setGreeting(resolveGreetingByTheme(selectedTheme));
-                        return;
-                      }
-                      applyTemplateById(templateId);
-                    }}
-                  >
-                    {titleDropdownOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Client name */}
-                <div className="crm-field">
-                  <div className="crm-label-row">
-                    <label className="crm-label">Nome do cliente</label>
-                    {renderInlinePositionControl({
-                      keyName: "clientName",
-                      label: "Nome do cliente",
-                    })}
-                  </div>
-                  <div className="crm-client-row">
-                    <div className="crm-client-search" ref={clienteRef}>
-                      <input
-                        type="text"
-                        className="form-input"
-                        value={clienteBusca}
-                        onChange={(e) => setClienteBusca(e.target.value)}
-                        placeholder="Buscar cliente…"
-                      />
-                      {clienteResults.length > 0 && (
-                        <div className="crm-client-dropdown">
-                          {clienteResults.map((c) => (
-                            <button
-                              key={c.id}
-                              type="button"
-                              className="crm-client-item"
-                              onClick={() => {
-                                setClienteNome(c.nome);
-                                setClienteBusca(c.nome);
-                                setClienteResults([]);
-                                setUseCustomNome(false);
-                                setClienteNomeCustom("");
-                              }}
-                            >
-                              {c.nome}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      {searchingClientes && <span className="crm-spinner crm-spinner--sm" />}
-                    </div>
-                  </div>
-
-                  {/* Nome exibido + personalização */}
-                  {(clienteNome || useCustomNome) && (
-                    <div className="crm-nome-preview">
-                      <span className="crm-nome-preview__text">
-                        Nome exibido no cartão: <strong>{primeiroNome || "—"}</strong>
-                      </span>
-                      {!useCustomNome ? (
-                        <button
-                          type="button"
-                          className="crm-link-btn"
-                          onClick={() => {
-                            setUseCustomNome(true);
-                            setClienteNomeCustom(primeiroNome || getPrimeiroNome(clienteNome));
-                          }}
-                        >
-                          Personalizar nome
-                        </button>
-                      ) : (
-                        <div className="crm-nome-custom-row">
-                          <input
-                            type="text"
-                            className="form-input crm-nome-custom-input"
-                            value={clienteNomeCustom}
-                            onChange={(e) => setClienteNomeCustom(e.target.value)}
-                            placeholder="Nome a exibir"
-                          />
-                          <button
-                            type="button"
-                            className="crm-link-btn"
-                            onClick={() => { setUseCustomNome(false); setClienteNomeCustom(""); }}
-                          >
-                            Usar nome original
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Message */}
-                <div className="crm-field">
-                  <div className="crm-label-row">
-                    <label className="crm-label">
-                      Mensagem principal
-                      <span className="crm-hint-inline">
-                        máx. {maxLinhas} linhas · {maxPalavras} palavras
-                      </span>
-                    </label>
-                    {renderInlinePositionControl({
-                      keyName: "body",
-                      label: "Mensagem principal",
-                    })}
-                  </div>
-
-                  <textarea
-                    className={`form-textarea crm-mensagem${palavrasExcedido || linhasExcedido ? " crm-mensagem--over" : ""}`}
-                    value={mensagem}
-                    onChange={(e) => setMensagem(e.target.value)}
-                    placeholder="Mensagem preenchida automaticamente pelo título selecionado."
-                    rows={6}
-                  />
-                  <div className={`crm-counter${palavrasExcedido ? " crm-counter--over" : ""}`}>
-                    {palavrasExcedido && (
-                      <span className="crm-counter__alert">
-                        <i className="pi pi-exclamation-triangle" /> Limite excedido!{" "}
-                      </span>
-                    )}
-                    {palavras}/{maxPalavras} palavras
-                    {mensagem.split("\n").length > 1 && (
-                      <> · {mensagem.split("\n").length}/{maxLinhas} linhas</>
-                    )}
-                  </div>
-                </div>
-
-                {/* Signature */}
-                <div className="crm-field">
-                  <div className="crm-label-row">
-                    <label className="crm-label">
-                      Assinatura
-                      <span className="crm-hint-inline">linha 2 obrigatória · linhas 1 e 3 opcionais</span>
-                    </label>
-                    {renderInlinePositionControl({
-                      keyName: "signature",
-                      label: "Assinatura",
-                    })}
-                  </div>
-                  <AssinaturaEditor value={assinatura} onChange={setAssinatura} />
-                </div>
-
-                <div className="crm-field">
-                  <div className="crm-label-row">
-                    <label className="crm-label">
-                      Logo da empresa
-                      <span className="crm-hint-inline">posicione o logo no cartão</span>
-                    </label>
-                    {renderInlinePositionControl({
-                      keyName: "logo",
-                      label: "Logo da empresa",
-                    })}
-                  </div>
-                  <div className="crm-logo-source-switch" role="radiogroup" aria-label="Origem do logo do cartão">
-                    <button
-                      type="button"
-                      className={`crm-logo-source-btn${logoSourceMode === "default" ? " is-active" : ""}`}
-                      onClick={() => setLogoSourceMode("default")}
-                      aria-pressed={logoSourceMode === "default"}
-                    >
-                      Logo padrão da empresa
-                    </button>
-                    <button
-                      type="button"
-                      className={`crm-logo-source-btn${logoSourceMode === "custom" ? " is-active" : ""}`}
-                      onClick={() => setLogoSourceMode("custom")}
-                      disabled={!hasSelectedThemeCustomLogo}
-                      aria-pressed={logoSourceMode === "custom"}
-                      title={
-                        hasSelectedThemeCustomLogo
-                          ? "Usar o logo personalizado cadastrado neste template"
-                          : "Este template ainda não possui logo personalizado"
-                      }
-                    >
-                      Logo personalizado do template
-                    </button>
-                  </div>
-                  {hasSelectedThemeCustomLogo ? (
-                    <div className="crm-selected-logo-preview">
-                      <img src={selectedThemeCustomLogoUrl || ""} alt="Logo personalizado do template" />
-                      <span className="crm-hint">Logo personalizado disponível para este template.</span>
-                    </div>
-                  ) : (
-                    <p className="crm-hint">Este template não possui logo personalizado cadastrado.</p>
-                  )}
-                  <p className="crm-hint">
-                    {logoSourceMode === "custom" && hasSelectedThemeCustomLogo
-                      ? "Usando logo personalizado do template na pré-visualização."
-                      : companyLogoMissing
-                        ? "Sem logo padrão configurado."
-                        : "Usando logo padrão da empresa na pré-visualização."}
-                    {logoSourceMode !== "custom" && companyLogoMissing && (
-                      <>
-                        {" "}
-                        <a href="/parametros/orcamentos">Configurar logo padrão</a>.
-                      </>
-                    )}
-                  </p>
-                </div>
-
-                <div className="crm-sig-actions">
-                  <AppButton
-                    type="button"
-                    variant="primary"
-                    size="small"
-                    onClick={salvarAssinatura}
-                    loading={savingSig}
-                    disabled={savingSig || !assinatura.linha2.trim()}
-                    title={!assinatura.linha2.trim() ? "Informe o nome do consultor na linha 2." : ""}
-                  >
-                    {sigSaved ? "Assinatura salva!" : "Salvar como padrão"}
-                  </AppButton>
+        {wizardStep === 0 && (
+          <div className="crm-step-stack">
+            <AppCard
+              tone="info"
+              className="crm-panel-card crm-models-card"
+              title="1. Escolha do template"
+              subtitle="Filtre por escopo e ocasião para definir a arte base."
+            >
+              <div className="vtur-inline-filter-row crm-filter-row">
+                <AppField
+                  as="select"
+                  label="Escopo"
+                  value={scopeFilter}
+                  onChange={(e) =>
+                    setScopeFilter((e as React.ChangeEvent<HTMLSelectElement>).target.value as "all" | "system" | "master" | "gestor" | "user")
+                  }
+                  options={[
+                    { label: "Todos", value: "all" },
+                    { label: `Sistema (${templatesByScope.system})`, value: "system" },
+                    { label: `Master (${templatesByScope.master})`, value: "master" },
+                    { label: `Gestor (${templatesByScope.gestor})`, value: "gestor" },
+                    { label: `Meus (${templatesByScope.user})`, value: "user" },
+                  ]}
+                />
+                <AppField
+                  as="select"
+                  label="Tema"
+                  value={temaFilter}
+                  onChange={(e) => setTemaFilter((e as React.ChangeEvent<HTMLSelectElement>).target.value as TemaFilterValue)}
+                  options={temaFilterOptions}
+                />
+                <div className="vtur-inline-filter-actions">
                   <AppButton
                     type="button"
                     variant="secondary"
-                    size="small"
-                    onClick={resetTextFormatting}
-                    title="Zerar posicionamento e voltar para a cor padrão do template"
+                    onClick={() => {
+                      setScopeFilter("all");
+                      setTemaFilter("all");
+                    }}
                   >
-                    Limpar formatação
+                    Limpar
                   </AppButton>
                 </div>
-              </AppCard>
+              </div>
 
-              {/* ── Preview panel ── */}
-              <AppCard
-                tone="default"
-                className="crm-preview-panel crm-panel-card crm-equal-card"
-                title="Pré-visualização"
-                subtitle="Saída final seguindo o template técnico."
-              >
-
-                <div className="crm-preview-frame">
-                  {previewUrl ? (
-                    <img
-                      src={previewUrl}
-                      alt="Pré-visualização do cartão"
-                      className="crm-preview-img"
-                      key={previewUrl}
-                    />
-                  ) : (
-                    <div className="crm-preview-placeholder">
-                      <i className="pi pi-image" />
-                      <span>Preencha os campos para visualizar o cartão</span>
-                    </div>
-                  )}
-                </div>
-
-                {previewUrl && (
-                  <div className="crm-preview-actions">
-                    <AppButton
-                      type="button"
-                      variant="primary"
-                      icon="pi pi-whatsapp"
-                      onClick={compartilharWhatsApp}
-                      disabled={!primeiroNome || !assinatura.linha2.trim()}
-                      title={!primeiroNome ? "Informe o nome do cliente" : !assinatura.linha2.trim() ? "Informe o nome do consultor na assinatura." : ""}
-                    >
-                      Compartilhar no WhatsApp
-                    </AppButton>
-                    <AppButton
-                      type="button"
-                      variant="secondary"
-                      icon="pi pi-external-link"
-                      onClick={() => window.open(previewUrl, "_blank")}
-                    >
-                      Ver em tela cheia
-                    </AppButton>
-                    <AppButton
-                      type="button"
-                      variant="secondary"
-                      icon="pi pi-link"
-                      onClick={copiarLinkPreview}
-                    >
-                      Copiar link
-                    </AppButton>
+              {filteredThemes.length === 0 ? (
+                <p className="crm-empty">Nenhum modelo encontrado para os filtros atuais.</p>
+              ) : (
+                <div className="crm-theme-grid-wrap">
+                  <div className="crm-theme-grid">
+                    {pagedThemes.map((t) => (
+                      <ThumbCard
+                        key={t.id}
+                        theme={t}
+                        selected={selectedTheme?.id === t.id}
+                        onSelect={selectTheme}
+                      />
+                    ))}
                   </div>
-                )}
-
-                {/* Logo info */}
-                <div className="crm-logo-info">
-                  <i className="pi pi-info-circle" />
-                  {!activeLogoUrl ? (
-                    <span>
-                      Sem logo disponível para esta seleção.{" "}
-                      <a href="/parametros/orcamentos">Configurar logo</a>
-                    </span>
-                  ) : logoSourceMode === "custom" && hasSelectedThemeCustomLogo ? (
-                    <span>Usando logo personalizado do template selecionado.</span>
-                  ) : (
-                    <span>
-                      Usando logo padrão da empresa no canto inferior direito.{" "}
-                      <a href="/parametros/orcamentos">Alterar</a>
-                    </span>
-                  )}
                 </div>
-              </AppCard>
+              )}
+              {filteredThemes.length > 0 && (
+                <div className="crm-theme-pagination">
+                  <AppButton
+                    type="button"
+                    variant="secondary"
+                    icon="pi pi-angle-left"
+                    onClick={() => setThemePage((p) => Math.max(1, p - 1))}
+                    disabled={themePage <= 1}
+                  >
+                    Anterior
+                  </AppButton>
+                  <span className="crm-theme-pagination__meta">
+                    Página {themePage} de {totalThemePages}
+                  </span>
+                  <AppButton
+                    type="button"
+                    variant="secondary"
+                    icon="pi pi-angle-right"
+                    iconPos="right"
+                    onClick={() => setThemePage((p) => Math.min(totalThemePages, p + 1))}
+                    disabled={themePage >= totalThemePages}
+                  >
+                    Próxima
+                  </AppButton>
+                </div>
+              )}
+            </AppCard>
+
+            <div className="crm-step-nav crm-step-nav--end">
+              <AppButton
+                type="button"
+                variant="primary"
+                icon="pi pi-arrow-right"
+                iconPos="right"
+                onClick={() => goToWizardStep(1)}
+                disabled={!showComposer}
+                title={!showComposer ? "Selecione um template para continuar." : ""}
+              >
+                Continuar para mensagem
+              </AppButton>
             </div>
           </div>
         )}
 
-        {/* ── No theme selected: hint ── */}
-        {!showComposer && (
+        {wizardStep === 1 && showComposer && selectedTheme && (
+          <div className="crm-step-stack">
+            <AppCard
+              tone="default"
+              className="crm-form crm-panel-card"
+              title="2. Escolha e personalização da mensagem"
+              subtitle="Título, nome do cliente, mensagem e assinatura padronizados pelo mapa técnico."
+            >
+              <div className="crm-template-meta">
+                <span className={getScopeTone(selectedTheme.scope)}>{getScopeLabel(selectedTheme.scope)}</span>
+                <span className="crm-template-meta__name">{selectedTheme.nome}</span>
+              </div>
+
+              <div className="crm-text-color-box">
+                <label className="crm-label">
+                  Cor do texto
+                  <span className="crm-hint-inline">uma cor única para todo o texto do cartão</span>
+                </label>
+                <div className="crm-color-palette" role="radiogroup" aria-label="Cor do texto do cartão">
+                  {CARD_TEXT_COLOR_PRESETS.map((color) => {
+                    const selected = textColor === color.value;
+                    const isDefault = !color.value;
+                    return (
+                      <button
+                        key={color.label}
+                        type="button"
+                        className={`crm-color-swatch${selected ? " is-active" : ""}${isDefault ? " is-default" : ""}`}
+                        style={isDefault ? undefined : { backgroundColor: color.value }}
+                        onClick={() => setTextColor(color.value)}
+                        title={
+                          isDefault
+                            ? "Usar as cores padrão do template"
+                            : `Aplicar ${color.label} em todo o texto`
+                        }
+                        aria-label={
+                          isDefault
+                            ? "Cor padrão do template"
+                            : `Cor ${color.label}`
+                        }
+                        aria-pressed={selected}
+                      >
+                        {isDefault && <span>Aa</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="crm-field">
+                <div className="crm-label-row">
+                  <label className="crm-label">
+                    Título / saudação
+                    <span className="crm-hint-inline">escolha um título da biblioteca</span>
+                  </label>
+                  {renderInlinePositionControl({
+                    keyName: "title",
+                    label: "Título / saudação",
+                  })}
+                </div>
+                <select
+                  className="form-select"
+                  value={selectedMessageTemplateId}
+                  onChange={(e) => {
+                    const templateId = e.target.value;
+                    setSelectedMessageTemplateId(templateId);
+                    if (!templateId) {
+                      setGreeting(resolveGreetingByTheme(selectedTheme));
+                      return;
+                    }
+                    applyTemplateById(templateId);
+                  }}
+                >
+                  {titleDropdownOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="crm-field">
+                <div className="crm-label-row">
+                  <label className="crm-label">Nome do cliente</label>
+                  {renderInlinePositionControl({
+                    keyName: "clientName",
+                    label: "Nome do cliente",
+                  })}
+                </div>
+                <div className="crm-client-row">
+                  <div className="crm-client-search" ref={clienteRef}>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={clienteBusca}
+                      onChange={(e) => setClienteBusca(e.target.value)}
+                      placeholder="Buscar cliente…"
+                    />
+                    {clienteResults.length > 0 && (
+                      <div className="crm-client-dropdown">
+                        {clienteResults.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            className="crm-client-item"
+                            onClick={() => {
+                              setClienteNome(c.nome);
+                              setClienteBusca(c.nome);
+                              setClienteResults([]);
+                              setUseCustomNome(false);
+                              setClienteNomeCustom("");
+                            }}
+                          >
+                            {c.nome}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {searchingClientes && <span className="crm-spinner crm-spinner--sm" />}
+                  </div>
+                </div>
+
+                {(clienteNome || useCustomNome) && (
+                  <div className="crm-nome-preview">
+                    <span className="crm-nome-preview__text">
+                      Nome exibido no cartão: <strong>{primeiroNome || "—"}</strong>
+                    </span>
+                    {!useCustomNome ? (
+                      <button
+                        type="button"
+                        className="crm-link-btn"
+                        onClick={() => {
+                          setUseCustomNome(true);
+                          setClienteNomeCustom(primeiroNome || getPrimeiroNome(clienteNome));
+                        }}
+                      >
+                        Personalizar nome
+                      </button>
+                    ) : (
+                      <div className="crm-nome-custom-row">
+                        <input
+                          type="text"
+                          className="form-input crm-nome-custom-input"
+                          value={clienteNomeCustom}
+                          onChange={(e) => setClienteNomeCustom(e.target.value)}
+                          placeholder="Nome a exibir"
+                        />
+                        <button
+                          type="button"
+                          className="crm-link-btn"
+                          onClick={() => { setUseCustomNome(false); setClienteNomeCustom(""); }}
+                        >
+                          Usar nome original
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="crm-field">
+                <div className="crm-label-row">
+                  <label className="crm-label">
+                    Mensagem principal
+                    <span className="crm-hint-inline">
+                      máx. {maxLinhas} linhas · {maxPalavras} palavras
+                    </span>
+                  </label>
+                  {renderInlinePositionControl({
+                    keyName: "body",
+                    label: "Mensagem principal",
+                  })}
+                </div>
+
+                <textarea
+                  className={`form-textarea crm-mensagem${palavrasExcedido || linhasExcedido ? " crm-mensagem--over" : ""}`}
+                  value={mensagem}
+                  onChange={(e) => setMensagem(e.target.value)}
+                  placeholder="Mensagem preenchida automaticamente pelo título selecionado."
+                  rows={6}
+                />
+                <div className={`crm-counter${palavrasExcedido ? " crm-counter--over" : ""}`}>
+                  {palavrasExcedido && (
+                    <span className="crm-counter__alert">
+                      <i className="pi pi-exclamation-triangle" /> Limite excedido!{" "}
+                    </span>
+                  )}
+                  {palavras}/{maxPalavras} palavras
+                  {mensagem.split("\n").length > 1 && (
+                    <> · {mensagem.split("\n").length}/{maxLinhas} linhas</>
+                  )}
+                </div>
+              </div>
+
+              <div className="crm-field">
+                <div className="crm-label-row">
+                  <label className="crm-label">
+                    Assinatura
+                    <span className="crm-hint-inline">linha 2 obrigatória · linhas 1 e 3 opcionais</span>
+                  </label>
+                  {renderInlinePositionControl({
+                    keyName: "signature",
+                    label: "Assinatura",
+                  })}
+                </div>
+                <AssinaturaEditor value={assinatura} onChange={setAssinatura} />
+              </div>
+
+              <div className="crm-field">
+                <div className="crm-label-row">
+                  <label className="crm-label">
+                    Logo da empresa
+                    <span className="crm-hint-inline">posicione o logo no cartão</span>
+                  </label>
+                  {renderInlinePositionControl({
+                    keyName: "logo",
+                    label: "Logo da empresa",
+                  })}
+                </div>
+                <div className="crm-logo-source-switch" role="radiogroup" aria-label="Origem do logo do cartão">
+                  <button
+                    type="button"
+                    className={`crm-logo-source-btn${logoSourceMode === "default" ? " is-active" : ""}`}
+                    onClick={() => setLogoSourceMode("default")}
+                    aria-pressed={logoSourceMode === "default"}
+                  >
+                    Logo padrão da empresa
+                  </button>
+                  <button
+                    type="button"
+                    className={`crm-logo-source-btn${logoSourceMode === "custom" ? " is-active" : ""}`}
+                    onClick={() => setLogoSourceMode("custom")}
+                    disabled={!hasSelectedThemeCustomLogo}
+                    aria-pressed={logoSourceMode === "custom"}
+                    title={
+                      hasSelectedThemeCustomLogo
+                        ? "Usar o logo personalizado cadastrado neste template"
+                        : "Este template ainda não possui logo personalizado"
+                    }
+                  >
+                    Logo personalizado do template
+                  </button>
+                </div>
+                {hasSelectedThemeCustomLogo ? (
+                  <div className="crm-selected-logo-preview">
+                    <img src={selectedThemeCustomLogoUrl || ""} alt="Logo personalizado do template" />
+                    <span className="crm-hint">Logo personalizado disponível para este template.</span>
+                  </div>
+                ) : (
+                  <p className="crm-hint">Este template não possui logo personalizado cadastrado.</p>
+                )}
+                <p className="crm-hint">
+                  {logoSourceMode === "custom" && hasSelectedThemeCustomLogo
+                    ? "Usando logo personalizado do template na pré-visualização."
+                    : companyLogoMissing
+                      ? "Sem logo padrão configurado."
+                      : "Usando logo padrão da empresa na pré-visualização."}
+                  {logoSourceMode !== "custom" && companyLogoMissing && (
+                    <>
+                      {" "}
+                      <a href="/parametros/orcamentos">Configurar logo padrão</a>.
+                    </>
+                  )}
+                </p>
+              </div>
+
+              <div className="crm-sig-actions">
+                <AppButton
+                  type="button"
+                  variant="primary"
+                  size="small"
+                  onClick={salvarAssinatura}
+                  loading={savingSig}
+                  disabled={savingSig || !assinatura.linha2.trim()}
+                  title={!assinatura.linha2.trim() ? "Informe o nome do consultor na linha 2." : ""}
+                >
+                  {sigSaved ? "Assinatura salva!" : "Salvar como padrão"}
+                </AppButton>
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  size="small"
+                  onClick={resetTextFormatting}
+                  title="Zerar posicionamento e voltar para a cor padrão do template"
+                >
+                  Limpar formatação
+                </AppButton>
+              </div>
+            </AppCard>
+
+            <div className="crm-step-nav crm-step-nav--between">
+              <AppButton
+                type="button"
+                variant="secondary"
+                icon="pi pi-arrow-left"
+                onClick={() => goToWizardStep(0)}
+              >
+                Voltar para template
+              </AppButton>
+              <AppButton
+                type="button"
+                variant="primary"
+                icon="pi pi-arrow-right"
+                iconPos="right"
+                onClick={() => goToWizardStep(2)}
+              >
+                Ir para arte final
+              </AppButton>
+            </div>
+          </div>
+        )}
+
+        {wizardStep === 2 && showComposer && selectedTheme && (
+          <div className="crm-step-stack">
+            <AppCard
+              tone="default"
+              className="crm-preview-panel crm-panel-card"
+              title="3. Arte final para envio"
+              subtitle="Saída final seguindo o template técnico."
+            >
+              <div className="crm-template-meta">
+                <span className={getScopeTone(selectedTheme.scope)}>{getScopeLabel(selectedTheme.scope)}</span>
+                <span className="crm-template-meta__name">{selectedTheme.nome}</span>
+              </div>
+
+              <div className="crm-preview-frame">
+                {previewUrl ? (
+                  <img
+                    src={previewUrl}
+                    alt="Pré-visualização do cartão"
+                    className="crm-preview-img"
+                    key={previewUrl}
+                  />
+                ) : (
+                  <div className="crm-preview-placeholder">
+                    <i className="pi pi-image" />
+                    <span>Preencha os campos da etapa anterior para visualizar o cartão</span>
+                  </div>
+                )}
+              </div>
+
+              {previewUrl && (
+                <div className="crm-preview-actions">
+                  <AppButton
+                    type="button"
+                    variant="primary"
+                    icon="pi pi-whatsapp"
+                    onClick={compartilharWhatsApp}
+                    disabled={!primeiroNome || !assinatura.linha2.trim()}
+                    title={!primeiroNome ? "Informe o nome do cliente" : !assinatura.linha2.trim() ? "Informe o nome do consultor na assinatura." : ""}
+                  >
+                    Compartilhar no WhatsApp
+                  </AppButton>
+                  <AppButton
+                    type="button"
+                    variant="secondary"
+                    icon="pi pi-external-link"
+                    onClick={() => window.open(previewUrl, "_blank")}
+                  >
+                    Ver em tela cheia
+                  </AppButton>
+                  <AppButton
+                    type="button"
+                    variant="secondary"
+                    icon="pi pi-link"
+                    onClick={copiarLinkPreview}
+                  >
+                    Copiar link
+                  </AppButton>
+                </div>
+              )}
+
+              <div className="crm-logo-info">
+                <i className="pi pi-info-circle" />
+                {!activeLogoUrl ? (
+                  <span>
+                    Sem logo disponível para esta seleção.{" "}
+                    <a href="/parametros/orcamentos">Configurar logo</a>
+                  </span>
+                ) : logoSourceMode === "custom" && hasSelectedThemeCustomLogo ? (
+                  <span>Usando logo personalizado do template selecionado.</span>
+                ) : (
+                  <span>
+                    Usando logo padrão da empresa no canto inferior direito.{" "}
+                    <a href="/parametros/orcamentos">Alterar</a>
+                  </span>
+                )}
+              </div>
+            </AppCard>
+
+            <div className="crm-step-nav crm-step-nav--between">
+              <AppButton
+                type="button"
+                variant="secondary"
+                icon="pi pi-arrow-left"
+                onClick={() => goToWizardStep(1)}
+              >
+                Voltar para mensagem
+              </AppButton>
+              <AppButton
+                type="button"
+                variant="secondary"
+                icon="pi pi-images"
+                onClick={() => goToWizardStep(0)}
+              >
+                Trocar template
+              </AppButton>
+            </div>
+          </div>
+        )}
+
+        {(wizardStep === 1 || wizardStep === 2) && !showComposer && (
           <AppCard tone="config" className="crm-select-card">
             <div className="crm-select-hint">
               <i className="pi pi-hand-pointer" />
-              <p>Selecione um modelo à esquerda para personalizar e enviar o cartão.</p>
+              <p>Selecione um modelo na etapa 1 para personalizar e enviar o cartão.</p>
+              <AppButton type="button" variant="secondary" onClick={() => goToWizardStep(0)}>
+                Voltar para templates
+              </AppButton>
             </div>
           </AppCard>
         )}
