@@ -289,20 +289,18 @@ export default function QuoteListIsland() {
           className="mb-3 list-toolbar-sticky"
           title="Carteira de Orcamentos"
           subtitle={`Gerencie seus orcamentos com visao de CRM. ${resumoLista}`}
-          actions={
-            <div className="orcamentos-action-bar">
-              <AppButton as="a" href="/orcamentos/importar" type="button" variant="secondary">
-                Importar orcamento
-              </AppButton>
-              <AppButton as="a" href="/orcamentos/criar" type="button" variant="primary">
-                Criar orcamento
-              </AppButton>
-              <AppButton as="a" href="/orcamentos/personalizados" type="button" variant="secondary">
-                Personalizados
-              </AppButton>
-            </div>
-          }
         >
+          <div className="orcamentos-action-bar mb-3">
+            <AppButton as="a" href="/orcamentos/importar" type="button" variant="secondary">
+              Importar orcamento
+            </AppButton>
+            <AppButton as="a" href="/orcamentos/criar" type="button" variant="primary">
+              Criar orcamento
+            </AppButton>
+            <AppButton as="a" href="/orcamentos/personalizados" type="button" variant="secondary">
+              Personalizados
+            </AppButton>
+          </div>
           <div className="vtur-form-grid vtur-form-grid-2">
             <AppField
               label="Buscar"
