@@ -672,17 +672,18 @@ export async function renderCardSvg(request: Request): Promise<CardRenderResult>
   const hideBody = Boolean(showPhoto && themeLayout?.photo?.hideBodyWhenPhoto);
   const visibility = themeLayout?.visibility;
   const logoUrl = await resolveInlineImageHref(absoluteAssetUrl(url.origin, logoUrlRaw));
+  const backgroundUrl = await resolveInlineImageHref(
+    absoluteAssetUrl(
+      url.origin,
+      themeAssetUrlFromQuery || resolvedThemeAsset.asset_url,
+    ),
+  );
   const logoSlotBase = resolveLogoSlot(themeLayout, width, height);
   const logoSlot = {
     ...logoSlotBase,
     x: Number(logoSlotBase.x || 0) + logoOffsetX,
     y: Number(logoSlotBase.y || 0) + logoOffsetY,
   };
-
-  const backgroundUrl = absoluteAssetUrl(
-    url.origin,
-    themeAssetUrlFromQuery || resolvedThemeAsset.asset_url,
-  );
 
   const fontFaceCss = buildCardFontFaceCss();
   const svg = `<?xml version="1.0" encoding="UTF-8"?>

@@ -11190,6 +11190,9 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   border-radius: 10px;
   overflow: hidden;
   aspect-ratio: 1 / 1;
+  width: min(100%, 560px);
+  max-height: min(72vh, 560px);
+  margin: 0 auto;
   background: var(--surface-ground, #f8fafc);
   display: flex;
   align-items: center;
