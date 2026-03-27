@@ -484,13 +484,13 @@ function buildPreviewParams(params: {
   if (assinatura.linha2) q.set("assinatura", assinatura.linha2);
   q.set("cargo_consultor", assinatura.linha3 || "");
   q.set("footer_lead_font_size", String(assinatura.linha1_font_size || 40));
-  q.set("consultant_font_size", String(assinatura.linha2_font_size || 56));
-  q.set("consultant_role_font_size", String(assinatura.linha3_font_size || 38));
+  q.set("consultant_font_size", String(assinatura.linha2_font_size || 40));
+  q.set("consultant_role_font_size", String(assinatura.linha3_font_size || 24));
   q.set("footer_lead_italic", assinatura.linha1_italic ? "1" : "0");
   q.set("consultant_italic", assinatura.linha2_italic ? "1" : "0");
   q.set("consultant_role_italic", assinatura.linha3_italic ? "1" : "0");
   // Compatibilidade com links antigos que usam apenas signature_font_size para a linha 2.
-  q.set("signature_font_size", String(assinatura.linha2_font_size || 56));
+  q.set("signature_font_size", String(assinatura.linha2_font_size || 40));
   if (textColor) q.set("text_color", textColor);
   if (position.title.x) q.set("title_offset_x", String(position.title.x));
   if (position.title.y) q.set("title_offset_y", String(position.title.y));
@@ -625,10 +625,10 @@ const DEFAULT_ASSINATURA: AssinaturaForm = {
   linha1_font_size: 40,
   linha1_italic: false,
   linha2: "",
-  linha2_font_size: 56,
+  linha2_font_size: 40,
   linha2_italic: false,
   linha3: "",
-  linha3_font_size: 38,
+  linha3_font_size: 24,
   linha3_italic: false,
 };
 
@@ -1152,10 +1152,10 @@ export default function CrmIsland() {
             linha1_font_size: sig.linha1_font_size ?? 40,
             linha1_italic: sig.linha1_italic ?? false,
             linha2: sig.linha2 || settings?.consultor_nome || "",
-            linha2_font_size: sig.linha2_font_size ?? 56,
+            linha2_font_size: sig.linha2_font_size ?? 40,
             linha2_italic: sig.linha2_italic ?? false,
             linha3: sig.linha3 || "",
-            linha3_font_size: sig.linha3_font_size ?? 38,
+            linha3_font_size: sig.linha3_font_size ?? 24,
             linha3_italic: sig.linha3_italic ?? false,
           });
         } else if (settings?.consultor_nome) {
@@ -1237,10 +1237,10 @@ export default function CrmIsland() {
               linha1_font_size: sig.linha1_font_size ?? 40,
               linha1_italic: sig.linha1_italic ?? false,
               linha2: sig.linha2 || settings?.consultor_nome || "",
-              linha2_font_size: sig.linha2_font_size ?? 56,
+              linha2_font_size: sig.linha2_font_size ?? 40,
               linha2_italic: sig.linha2_italic ?? false,
               linha3: sig.linha3 || "",
-              linha3_font_size: sig.linha3_font_size ?? 38,
+              linha3_font_size: sig.linha3_font_size ?? 24,
               linha3_italic: sig.linha3_italic ?? false,
             });
           } else if (settings?.consultor_nome) {

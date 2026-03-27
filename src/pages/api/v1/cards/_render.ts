@@ -41,8 +41,8 @@ const MASTER_WIDTH = 1080;
 const MASTER_HEIGHT = 1080;
 const MASTER_LAYOUT_KEY = "master-card-v1";
 const DEFAULT_LOGO_SLOT_MASTER = {
-  x: 848,
-  y: 856,
+  x: 828,
+  y: 848,
   width: 120,
   height: 120,
 };
