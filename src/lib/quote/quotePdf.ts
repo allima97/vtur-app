@@ -47,6 +47,7 @@ type ExportOptions = {
   showItemValues: boolean;
   showSummary: boolean;
   discount?: number;
+  action?: "download" | "preview" | "blob-url";
 };
 
 const DEFAULT_FOOTER = [
@@ -308,7 +309,7 @@ export async function exportQuoteToPdf(params: {
   items: QuotePdfItem[];
   settings: QuotePdfSettings;
   options: ExportOptions;
-}) {
+}): Promise<string | void> {
   const { quote, items, settings, options } = params;
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -1206,6 +1207,25 @@ export async function exportQuoteToPdf(params: {
     drawPageNumber(page, totalPages);
   }
 
+  const action = options.action || "download";
   const timestamp = new Date().toISOString().replace(/-|:|T/g, "").slice(0, 12);
-  doc.save(`orcamento-${quote.id}-${timestamp}.pdf`);
+  const fileName = `orcamento-${quote.id}-${timestamp}.pdf`;
+
+  if (action === "blob-url" && typeof window !== "undefined") {
+    const blob = doc.output("blob");
+    return URL.createObjectURL(blob);
+  }
+
+  if (action === "preview" && typeof window !== "undefined") {
+    const blob = doc.output("blob");
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, "_blank", "noopener,noreferrer");
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    if (!win) {
+      doc.save(fileName);
+    }
+    return;
+  }
+
+  doc.save(fileName);
 }

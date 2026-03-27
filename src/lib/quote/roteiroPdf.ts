@@ -113,7 +113,7 @@ export type RoteiroOrcamentoResumoPdf = {
 };
 
 export type ExportRoteiroPdfOptions = {
-  action?: "download" | "preview";
+  action?: "download" | "preview" | "blob-url";
 };
 
 function parseParagraphItems(text: string) {
@@ -576,7 +576,10 @@ async function resolveStorageUrl(url?: string | null, path?: string | null) {
   return url || null;
 }
 
-export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportRoteiroPdfOptions = {}) {
+export async function exportRoteiroPdf(
+  roteiro: RoteiroParaPdf,
+  options: ExportRoteiroPdfOptions = {}
+): Promise<string | void> {
   const action = options.action || "download";
   const { data: auth } = await supabaseBrowser.auth.getUser();
   const userId = auth?.user?.id;
@@ -2486,6 +2489,11 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
   for (let page = 1; page <= totalPages; page++) {
     doc.setPage(page);
     drawPageNumber(page, totalPages);
+  }
+
+  if (action === "blob-url" && typeof window !== "undefined") {
+    const blob = doc.output("blob");
+    return URL.createObjectURL(blob);
   }
 
   if (action === "preview" && typeof window !== "undefined") {

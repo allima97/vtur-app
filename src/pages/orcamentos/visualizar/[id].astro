@@ -1,0 +1,37 @@
+---
+import "../../../styles/global.css";
+import DashboardLayout from "../../../layouts/DashboardLayout.astro";
+import QuoteVisualizarIsland from "../../../components/islands/QuoteVisualizarIsland";
+import { createAstroServerClient } from "../../../lib/supabaseAstro";
+
+const supabase = createAstroServerClient(Astro);
+
+const {
+  data: { user },
+} = await supabase.auth.getUser();
+
+if (!user) {
+  return Astro.redirect("/auth/login");
+}
+
+const quoteId = String(Astro.params.id || "").trim();
+if (!quoteId) {
+  return Astro.redirect("/orcamentos/consulta");
+}
+
+const { data: quote, error: quoteError } = await supabase
+  .from("quote")
+  .select("id")
+  .eq("id", quoteId)
+  .maybeSingle();
+
+if (quoteError || !quote) {
+  return Astro.redirect("/orcamentos/consulta");
+}
+
+const activePage = "orcamentos";
+---
+
+<DashboardLayout title="Visualizacao de Orcamento" {activePage}>
+  <QuoteVisualizarIsland client:only="react" quoteId={quoteId} />
+</DashboardLayout>

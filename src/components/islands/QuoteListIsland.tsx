@@ -12,6 +12,7 @@ import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 import { matchesCpfSearch } from "../../lib/searchNormalization";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
+import { exportQuotePdfById } from "../../lib/quote/exportQuotePdfClient";
 
 type QuoteItemRow = {
   id: string;
@@ -92,7 +93,7 @@ export default function QuoteListIsland() {
   const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("all");
   const [deletandoId, setDeletandoId] = useState<string | null>(null);
-  const [visualizandoQuote, setVisualizandoQuote] = useState<QuoteRow | null>(null);
+  const [exportandoQuoteId, setExportandoQuoteId] = useState<string | null>(null);
   const [interacaoQuote, setInteracaoQuote] = useState<QuoteRow | null>(null);
   const [quoteParaExcluir, setQuoteParaExcluir] = useState<QuoteRow | null>(null);
   const [interactionDate, setInteractionDate] = useState("");
@@ -212,6 +213,24 @@ export default function QuoteListIsland() {
     } catch (err) {
       console.error("Erro ao atualizar status:", err);
       setErro("Nao foi possivel atualizar o status.");
+    }
+  }
+
+  async function exportarQuotePdf(id: string) {
+    setExportandoQuoteId(id);
+    setErro(null);
+    try {
+      await exportQuotePdfById({
+        quoteId: id,
+        showItemValues: true,
+        showSummary: true,
+        action: "download",
+      });
+    } catch (err) {
+      console.error("Erro ao exportar orcamento em PDF:", err);
+      setErro("Nao foi possivel exportar o PDF do orcamento.");
+    } finally {
+      setExportandoQuoteId(null);
     }
   }
 
@@ -387,8 +406,23 @@ export default function QuoteListIsland() {
                   label: "Abrir",
                   icon: "pi pi-eye",
                   variant: "ghost" as const,
-                  onClick: () => setVisualizandoQuote(quote),
+                  onClick: () => {
+                    if (typeof window !== "undefined") {
+                      window.location.href = `/orcamentos/visualizar/${quote.id}`;
+                    }
+                  },
                   title: "Visualizar orcamento",
+                },
+                {
+                  key: "pdf",
+                  label: exportandoQuoteId === quote.id ? "..." : "PDF",
+                  icon: "pi pi-file-pdf",
+                  variant: "ghost" as const,
+                  onClick: () => {
+                    void exportarQuotePdf(quote.id);
+                  },
+                  disabled: exportandoQuoteId === quote.id,
+                  title: "Exportar PDF",
                 },
                 ...(!isFechado
                   ? [
@@ -528,57 +562,6 @@ export default function QuoteListIsland() {
               {interactionError && (
                 <AlertMessage variant="error">{interactionError}</AlertMessage>
               )}
-            </div>
-          </Dialog>
-        )}
-
-        {visualizandoQuote && (
-          <Dialog
-            title={visualizandoQuote.client_name || visualizandoQuote.cliente?.nome || "-"}
-            width="large"
-            onClose={() => setVisualizandoQuote(null)}
-            footerButtons={[
-              {
-                content: "Fechar",
-                buttonType: "primary",
-                onClick: () => setVisualizandoQuote(null),
-              },
-            ]}
-          >
-            <div className="vtur-modal-body-stack">
-              <AppCard
-                tone="info"
-                title="Resumo do orcamento"
-                subtitle={`Status ${visualizandoQuote.status_negociacao || "Enviado"} · Total ${formatCurrency(
-                  Number(visualizandoQuote.total || 0)
-                )}`}
-              />
-
-              <AppCard title="Itens" subtitle="Itens principais da proposta selecionada.">
-                <DataTable
-                  headers={
-                    <tr>
-                      <th>Item</th>
-                      <th>Qtd</th>
-                      <th>Total</th>
-                    </tr>
-                  }
-                  empty={!visualizandoQuote.quote_item || visualizandoQuote.quote_item.length === 0}
-                  emptyMessage="Nenhum item encontrado."
-                  colSpan={3}
-                  className="table-mobile-cards table-header-blue"
-                >
-                  {(visualizandoQuote.quote_item || []).map((item) => (
-                    <tr key={`${visualizandoQuote.id}-${item.id}`}>
-                      <td data-label="Item">{buildItemLabel(item)}</td>
-                      <td data-label="Qtd">{item.quantity || 1}</td>
-                      <td data-label="Total">
-                        {formatCurrency(Number(item.total_amount || 0))}
-                      </td>
-                    </tr>
-                  ))}
-                </DataTable>
-              </AppCard>
             </div>
           </Dialog>
         )}

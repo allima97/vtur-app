@@ -895,6 +895,45 @@ body {
   min-width: 150px;
 }
 
+.orcamentos-visualizar-page .vtur-app-card {
+  margin-bottom: 16px;
+}
+
+.orcamento-preview-shell {
+  display: flex;
+  justify-content: center;
+}
+
+.orcamento-preview-frame-wrap {
+  width: min(100%, 980px);
+  border: 1px solid #d0d8e6;
+  border-radius: 18px;
+  padding: 14px;
+  background: linear-gradient(180deg, #f8fbff 0%, #edf3ff 100%);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+}
+
+.orcamento-preview-frame {
+  display: block;
+  width: 100%;
+  height: min(78vh, 1120px);
+  border: 1px solid #d7deea;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+@media (max-width: 960px) {
+  .orcamento-preview-frame-wrap {
+    border-radius: 14px;
+    padding: 10px;
+  }
+
+  .orcamento-preview-frame {
+    height: min(74vh, 980px);
+    border-radius: 10px;
+  }
+}
+
 /* Documentação */
 .doc-content {
   width: 100%;

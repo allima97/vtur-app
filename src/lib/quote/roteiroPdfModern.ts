@@ -1004,7 +1004,10 @@ async function getBlobFromPdf(pdfDoc: { getBlob: (...args: any[]) => any }): Pro
   });
 }
 
-export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportRoteiroPdfOptions = {}) {
+export async function exportRoteiroPdf(
+  roteiro: RoteiroParaPdf,
+  options: ExportRoteiroPdfOptions = {}
+): Promise<string | void> {
   try {
     if (typeof window === "undefined") {
       throw new Error("PDFMake disponível apenas no navegador.");
@@ -1155,6 +1158,11 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
       console.info("[Roteiro PDF] Renderer moderno ativo (pdfmake).");
     }
 
+    if (action === "blob-url") {
+      const blob = await getBlobFromPdf(pdfDoc);
+      return URL.createObjectURL(blob);
+    }
+
     if (action === "preview") {
       const blob = await getBlobFromPdf(pdfDoc);
       const url = URL.createObjectURL(blob);
@@ -1172,6 +1180,6 @@ export async function exportRoteiroPdf(roteiro: RoteiroParaPdf, options: ExportR
     if (typeof window !== "undefined") {
       console.warn("[Roteiro PDF] Falha no renderer moderno; usando fallback legado (jsPDF).", error);
     }
-    await exportRoteiroPdfLegacy(roteiro, options);
+    return await exportRoteiroPdfLegacy(roteiro, options);
   }
 }

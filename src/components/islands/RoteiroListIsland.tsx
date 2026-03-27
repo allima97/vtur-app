@@ -9,6 +9,7 @@ import SearchInput from "../ui/SearchInput";
 import AppButton from "../ui/primer/AppButton";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 import AppCard from "../ui/primer/AppCard";
+import { exportRoteiroPdfById } from "../../lib/quote/exportRoteiroPdfClient";
 
 type Roteiro = {
   id: string;
@@ -26,6 +27,7 @@ export default function RoteiroListIsland() {
   const [busca, setBusca] = useState("");
   const [roteiroParaExcluir, setRoteiroParaExcluir] = useState<Roteiro | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [exportingRoteiroId, setExportingRoteiroId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -58,6 +60,21 @@ export default function RoteiroListIsland() {
       setError(err.message || "Erro ao excluir roteiro.");
     } finally {
       setDeleting(false);
+    }
+  }
+
+  async function handleExportPdf(id: string) {
+    setExportingRoteiroId(id);
+    setError(null);
+    try {
+      await exportRoteiroPdfById({
+        roteiroId: id,
+        action: "download",
+      });
+    } catch (err: any) {
+      setError(err?.message || "Erro ao exportar PDF do roteiro.");
+    } finally {
+      setExportingRoteiroId(null);
     }
   }
 
@@ -174,6 +191,16 @@ export default function RoteiroListIsland() {
                               onClick: () => {
                                 window.location.href = `/orcamentos/personalizados/${r.id}`;
                               },
+                            },
+                            {
+                              key: "pdf",
+                              label: exportingRoteiroId === r.id ? "..." : "PDF",
+                              icon: <i className="pi pi-file-pdf" aria-hidden="true" />,
+                              onClick: () => {
+                                void handleExportPdf(r.id);
+                              },
+                              disabled: exportingRoteiroId === r.id,
+                              title: "Exportar PDF",
                             },
                             {
                               key: "duplicate",

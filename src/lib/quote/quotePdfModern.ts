@@ -10,6 +10,7 @@ type ExportOptions = {
   showItemValues: boolean;
   showSummary: boolean;
   discount?: number;
+  action?: "download" | "preview" | "blob-url";
 };
 
 type PdfMakeLike = {
@@ -18,6 +19,7 @@ type PdfMakeLike = {
   createPdf: (docDefinition: any) => {
     // pdfmake 0.3.x: download is async; 2.x was void
     download: (fileName?: string) => Promise<void> | void;
+    getBlob?: ((cb: (blob: Blob) => void) => void) | (() => Promise<Blob>);
   };
 };
 
@@ -1500,14 +1502,53 @@ export async function exportQuoteToPdf(params: QuoteModernParams) {
     };
 
     const fileName = buildFileName(quote);
+    const action = options.action || "download";
     if (typeof window !== "undefined") {
       console.info("[Quote PDF] Renderer moderno ativo (pdfmake).");
     }
-    await pdfMake.createPdf(docDefinition).download(fileName);
+    const pdfDoc = pdfMake.createPdf(docDefinition) as {
+      download: (fileName?: string) => Promise<void> | void;
+      getBlob?: ((cb: (blob: Blob) => void) => void) | (() => Promise<Blob>);
+    };
+
+    const getBlobFromPdfDoc = async () => {
+      if (!pdfDoc.getBlob) {
+        throw new Error("Renderer PDF não suporta geração de blob.");
+      }
+      const maybePromise = (pdfDoc.getBlob as any)();
+      if (maybePromise && typeof maybePromise.then === "function") {
+        return (await maybePromise) as Blob;
+      }
+      return await new Promise<Blob>((resolve, reject) => {
+        try {
+          (pdfDoc.getBlob as any)((blob: Blob) => resolve(blob));
+        } catch (error) {
+          reject(error);
+        }
+      });
+    };
+
+    if (action === "blob-url") {
+      const blob = await getBlobFromPdfDoc();
+      return URL.createObjectURL(blob);
+    }
+
+    if (action === "preview") {
+      const blob = await getBlobFromPdfDoc();
+      const url = URL.createObjectURL(blob);
+      const previewWindow = window.open(url, "_blank", "noopener,noreferrer");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      if (!previewWindow) {
+        await pdfDoc.download(fileName);
+      }
+      return;
+    }
+
+    await pdfDoc.download(fileName);
   } catch (error) {
     if (typeof window !== "undefined") {
       console.warn("[Quote PDF] Falha no renderer moderno; usando fallback legado (jsPDF).", error);
     }
-    await exportQuoteToPdfLegacy(params);
+    return await exportQuoteToPdfLegacy(params);
   }
 }

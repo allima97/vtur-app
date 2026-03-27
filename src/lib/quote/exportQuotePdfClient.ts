@@ -20,6 +20,7 @@ type ExportArgs = {
   showItemValues?: boolean;
   showSummary?: boolean;
   discount?: number;
+  action?: "download" | "preview" | "blob-url";
 };
 
 type ItemRawImport = {
@@ -503,8 +504,8 @@ async function fetchQuoteItems(quoteId: string) {
   return (data || []) as QuoteItemRecord[];
 }
 
-export async function exportQuotePdfById(args: ExportArgs) {
-  const { quoteId, showItemValues = true, showSummary, discount } = args;
+export async function exportQuotePdfById(args: ExportArgs): Promise<string | void> {
+  const { quoteId, showItemValues = true, showSummary, discount, action = "download" } = args;
   const { data: auth } = await supabaseBrowser.auth.getUser();
   const userId = auth?.user?.id;
   if (!userId) {
@@ -558,11 +559,10 @@ export async function exportQuotePdfById(args: ExportArgs) {
       desconto: safeDiscount,
       total: Math.max(valorSemTaxas + taxas - safeDiscount, 0),
     };
-    await exportRoteiroPdf(roteiro, { action: "download" });
-    return;
+    return await exportRoteiroPdf(roteiro, { action });
   }
 
-  await exportQuoteToPdf({
+  return await exportQuoteToPdf({
     quote: {
       id: quote.id,
       created_at: quote.created_at || null,
@@ -580,6 +580,7 @@ export async function exportQuotePdfById(args: ExportArgs) {
       showItemValues,
       showSummary: showSummary ?? showItemValues,
       discount,
+      action,
     },
   });
 }
