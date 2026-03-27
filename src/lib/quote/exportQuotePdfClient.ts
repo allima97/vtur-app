@@ -1,6 +1,6 @@
 import { supabaseBrowser } from "../supabase-browser";
 import type { QuotePdfItem } from "./quotePdf";
-import { exportQuoteToPdf } from "./quotePdfModern";
+import { buildQuotePreviewHtml, exportQuoteToPdf } from "./quotePdfModern";
 import { exportRoteiroPdf } from "./roteiroPdfModern";
 import type { RoteiroParaPdf, RoteiroHotelPdf, RoteiroPasseioPdf, RoteiroTransportePdf } from "./roteiroPdf";
 
@@ -21,6 +21,13 @@ type ExportArgs = {
   showSummary?: boolean;
   discount?: number;
   action?: "download" | "preview" | "blob-url";
+};
+
+type PreviewArgs = {
+  quoteId: string;
+  showItemValues?: boolean;
+  showSummary?: boolean;
+  discount?: number;
 };
 
 type ItemRawImport = {
@@ -581,6 +588,61 @@ export async function exportQuotePdfById(args: ExportArgs): Promise<string | voi
       showSummary: showSummary ?? showItemValues,
       discount,
       action,
+    },
+  });
+}
+
+export async function loadQuotePreviewHtmlById(args: PreviewArgs): Promise<string> {
+  const { quoteId, showItemValues = true, showSummary = true, discount } = args;
+  const { data: auth } = await supabaseBrowser.auth.getUser();
+  const userId = auth?.user?.id;
+  if (!userId) {
+    throw new Error("Usuario nao autenticado.");
+  }
+
+  const { data: quote, error: quoteError } = await supabaseBrowser
+    .from("quote")
+    .select("id, created_at, currency, total, status, client_name, cliente:client_id (nome)")
+    .eq("id", quoteId)
+    .maybeSingle();
+  if (quoteError || !quote) {
+    throw new Error("Orcamento nao encontrado.");
+  }
+
+  const items = await fetchQuoteItems(quote.id);
+  const formattedItems = formatQuotePdfItems(items);
+
+  const { data: settings } = await supabaseBrowser
+    .from("quote_print_settings")
+    .select(
+      "logo_url, logo_path, consultor_nome, filial_nome, endereco_linha1, endereco_linha2, endereco_linha3, telefone, whatsapp, whatsapp_codigo_pais, email, rodape_texto, imagem_complementar_url, imagem_complementar_path"
+    )
+    .eq("owner_user_id", userId)
+    .maybeSingle();
+
+  const logoUrl = settings ? await resolveStorageUrl(settings.logo_url, settings.logo_path).catch(() => null) : null;
+  const complementImageUrl = settings
+    ? await resolveStorageUrl(settings.imagem_complementar_url, settings.imagem_complementar_path).catch(() => null)
+    : null;
+
+  return await buildQuotePreviewHtml({
+    quote: {
+      id: quote.id,
+      created_at: quote.created_at || null,
+      total: quote.total || 0,
+      currency: quote.currency || "BRL",
+      client_name: quote.client_name || quote.cliente?.nome || null,
+    },
+    items: formattedItems,
+    settings: {
+      ...(settings || {}),
+      logo_url: logoUrl,
+      imagem_complementar_url: complementImageUrl,
+    },
+    options: {
+      showItemValues,
+      showSummary,
+      discount,
     },
   });
 }

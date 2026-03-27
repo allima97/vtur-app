@@ -2416,40 +2416,38 @@ function toLineChartConfig(
           title="Dashboard comercial"
           subtitle="Acompanhe vendas, metas, orçamentos, consultorias, viagens e follow-up com personalização por widget."
           tone="info"
-          actions={
-            <div className="vtur-dashboard-toolbar-actions">
-              <div className="vtur-dashboard-mobile-quick-actions sm:hidden">
-                <AppButton
-                  type="button"
-                  variant="secondary"
-                  className="dashboard-mobile-filter-btn"
-                  onClick={() => setShowFilters(true)}
-                >
-                  Filtros
-                </AppButton>
-              </div>
-              <AppButton type="button" variant="primary" onClick={() => setShowCustomize(true)}>
-                Personalizar dashboard
-              </AppButton>
-              {showRankingView && (
-                <AppButton as="a" href="/relatorios/ranking-vendas/view" variant="secondary">
-                  Ranking de vendas
-                </AppButton>
-              )}
-              {!isMobile && (
-                <AppButton
-                  type="button"
-                  variant="secondary"
-                  className="vtur-calculator-trigger"
-                  onClick={() => setShowCalculator(true)}
-                  aria-label="Calculadora"
-                  title="Calculadora"
-                  icon="pi pi-calculator"
-                />
-              )}
-            </div>
-          }
         >
+          <div className="vtur-dashboard-toolbar-actions orcamentos-action-bar mb-3">
+            <div className="vtur-dashboard-mobile-quick-actions sm:hidden">
+              <AppButton
+                type="button"
+                variant="secondary"
+                className="dashboard-mobile-filter-btn"
+                onClick={() => setShowFilters(true)}
+              >
+                Filtros
+              </AppButton>
+            </div>
+            <AppButton type="button" variant="primary" onClick={() => setShowCustomize(true)}>
+              Personalizar dashboard
+            </AppButton>
+            {showRankingView && (
+              <AppButton as="a" href="/relatorios/ranking-vendas/view" variant="secondary">
+                Ranking de vendas
+              </AppButton>
+            )}
+            {!isMobile && (
+              <AppButton
+                type="button"
+                variant="secondary"
+                className="vtur-calculator-trigger"
+                onClick={() => setShowCalculator(true)}
+                aria-label="Calculadora"
+                title="Calculadora"
+                icon="pi pi-calculator"
+              />
+            )}
+          </div>
           <div className="hidden sm:block">
             <div className="vtur-dashboard-preset-row">
               <AppButton

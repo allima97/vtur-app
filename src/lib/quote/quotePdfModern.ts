@@ -86,6 +86,13 @@ type QuoteModernParams = {
   options: ExportOptions;
 };
 
+type QuotePreviewParams = {
+  quote: QuotePdfData;
+  items: QuotePdfItem[];
+  settings: QuotePdfSettings;
+  options?: Partial<ExportOptions>;
+};
+
 const NUNITO_REGULAR_FILE = "NunitoSans-Regular.ttf";
 const NUNITO_SEMIBOLD_FILE = "NunitoSans-SemiBold.ttf";
 const NUNITO_BOLD_FILE = "NunitoSans-Bold.ttf";
@@ -1357,6 +1364,43 @@ function buildQuoteHtml(params: {
     </div>
   </div>
 </div>`;
+}
+
+export async function buildQuotePreviewHtml(params: QuotePreviewParams): Promise<string> {
+  if (typeof window === "undefined") {
+    throw new Error("Visualizacao HTML disponivel apenas no navegador.");
+  }
+
+  const options: ExportOptions = {
+    showItemValues: params.options?.showItemValues ?? true,
+    showSummary: params.options?.showSummary ?? true,
+    discount: params.options?.discount,
+    action: "download",
+  };
+  const settings = params.settings || {};
+  const whatsappLink = construirLinkWhatsApp(settings.whatsapp, settings.whatsapp_codigo_pais);
+
+  const [logoDataUrl, complementDataUrl, qrDataUrl, airportCodeCityLookup] = await Promise.all([
+    settings.logo_url ? fetchImageData(settings.logo_url).catch(() => null) : Promise.resolve(null),
+    settings.imagem_complementar_url
+      ? fetchImageData(settings.imagem_complementar_url).catch(() => null)
+      : Promise.resolve(null),
+    whatsappLink
+      ? fetchImageData(`https://quickchart.io/qr?size=200&margin=1&text=${encodeURIComponent(whatsappLink)}`).catch(() => null)
+      : Promise.resolve(null),
+    loadAirportCodeCityLookup().catch(() => ({})),
+  ]);
+
+  return buildQuoteHtml({
+    quote: params.quote,
+    items: params.items,
+    settings,
+    options,
+    logoDataUrl,
+    qrDataUrl,
+    complementDataUrl,
+    airportCodeCityLookup,
+  });
 }
 
 function loadPdfmakeDeps() {
