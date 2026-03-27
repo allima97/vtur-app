@@ -1,5 +1,6 @@
 import { extractSeguroViagemIncludeLinesFromPasseios, isSeguroPasseioLike } from "../roteiroSeguro";
 import { supabaseBrowser } from "../supabase-browser";
+import { loadAirportCodeCityLookup, type AirportCodeCityLookup } from "../airportCodeCityLookup";
 import nunitoSansBoldUrl from "../../assets/cards/fonts/NunitoSans-Bold.ttf?url";
 import nunitoSansRegularUrl from "../../assets/cards/fonts/NunitoSans-Regular.ttf?url";
 import nunitoSansSemiBoldUrl from "../../assets/cards/fonts/NunitoSans-SemiBold.ttf?url";
@@ -260,9 +261,16 @@ function formatBudgetItemText(value?: string | null) {
     .join("");
 }
 
-function formatFlightPlace(city?: string | null, airport?: string | null) {
-  const cityValue = formatBudgetItemText(city);
+function formatFlightPlace(
+  city?: string | null,
+  airport?: string | null,
+  airportCodeCityLookup: AirportCodeCityLookup = {}
+) {
   const airportValue = textValue(airport).toUpperCase();
+  const lookupCity = /^[A-Z]{3}$/.test(airportValue)
+    ? formatBudgetItemText(airportCodeCityLookup[airportValue])
+    : "";
+  const cityValue = lookupCity || formatBudgetItemText(city);
   if (!cityValue && !airportValue) return "";
   if (!/^[A-Z]{3}$/.test(airportValue)) return cityValue || airportValue;
   if (!cityValue) return airportValue;
@@ -272,7 +280,10 @@ function formatFlightPlace(city?: string | null, airport?: string | null) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^A-Za-z]/g, "")
     .toUpperCase();
-  if (normalizedCity === airportValue) return airportValue;
+  if (normalizedCity === airportValue) {
+    if (lookupCity) return `${lookupCity} (${airportValue})`;
+    return airportValue;
+  }
   return `${cityValue} (${airportValue})`;
 }
 
@@ -702,7 +713,12 @@ function td(text: string, align: "left" | "center" | "right" = "left"): any {
   return { text, fontSize: 10, alignment: align, color: TEXT_MUTED_CLR };
 }
 
-function buildRoteiroPdfContent(roteiro: RoteiroParaPdf, settings: QuotePdfSettings, airlineLookup: AirlineIataLookupEntry[] = []): any[] {
+function buildRoteiroPdfContent(
+  roteiro: RoteiroParaPdf,
+  settings: QuotePdfSettings,
+  airlineLookup: AirlineIataLookupEntry[] = [],
+  airportCodeCityLookup: AirportCodeCityLookup = {}
+): any[] {
   const dias = normalizeDiasForPdf(roteiro.dias || []);
   const hoteis = (roteiro.hoteis || []).filter((item) => Boolean(textValue(item.cidade) || textValue(item.hotel)));
   const passeios = (roteiro.passeios || []).filter((item) => Boolean(textValue(item.passeio) || textValue(item.cidade)));
@@ -849,12 +865,27 @@ function buildRoteiroPdfContent(roteiro: RoteiroParaPdf, settings: QuotePdfSetti
           ? `${textValue(item.hora_saida)} / ${textValue(item.hora_chegada)}`
           : textValue(item.hora_saida) || textValue(item.hora_chegada) || "-";
       const iataCode = resolveAirlineIata(item.cia_aerea, airlineLookup) || formatBudgetItemText(item.cia_aerea) || "-";
-      const origemDisplay = formatFlightPlace(trecho.origem, item.aeroporto_saida) || "-";
-      const destinoDisplay = formatFlightPlace(trecho.destino, item.aeroporto_chegada) || "-";
-      return { iataCode, origemDisplay, dataOrigem, destinoDisplay, dataDestino, horarios };
+      const origemDisplay = formatFlightPlace(trecho.origem, item.aeroporto_saida, airportCodeCityLookup) || "-";
+      const destinoDisplay = formatFlightPlace(trecho.destino, item.aeroporto_chegada, airportCodeCityLookup) || "-";
+      const detailParts = [
+        item.classe_reserva ? `Classe: ${formatBudgetItemText(item.classe_reserva)}` : "",
+        item.tipo_voo ? `Tipo: ${formatBudgetItemText(item.tipo_voo)}` : "",
+        item.duracao_voo ? `Duração: ${textValue(item.duracao_voo)}` : "",
+        item.tarifa_nome ? `Tarifa: ${formatBudgetItemText(item.tarifa_nome)}` : "",
+        item.reembolso_tipo ? `Reembolso: ${formatBudgetItemText(item.reembolso_tipo)}` : "",
+      ].filter(Boolean);
+      return {
+        iataCode,
+        origemDisplay,
+        dataOrigem,
+        destinoDisplay,
+        dataDestino,
+        horarios,
+        details: detailParts.join(" | ") || "-",
+      };
     });
     const flightTableBody: any[][] = [
-      [th("Cia"), th("Origem"), th("Sa\u00edda"), th("Destino"), th("Chegada"), th("Sa\u00edda / Chegada")],
+      [th("Cia"), th("Origem"), th("Sa\u00edda"), th("Destino"), th("Chegada"), th("Sa\u00edda / Chegada"), th("Detalhes")],
       ...flightRows.map((row) => [
         td(row.iataCode),
         td(row.origemDisplay),
@@ -862,6 +893,7 @@ function buildRoteiroPdfContent(roteiro: RoteiroParaPdf, settings: QuotePdfSetti
         td(row.destinoDisplay),
         td(row.dataDestino || "-"),
         td(row.horarios),
+        td(row.details),
       ]),
     ];
     const airlineLegendParts: string[] = [];
@@ -875,7 +907,7 @@ function buildRoteiroPdfContent(roteiro: RoteiroParaPdf, settings: QuotePdfSetti
     });
     const flightCardBody: any[] = [
       {
-        table: { widths: ["auto", "*", "auto", "*", "auto", "auto"], headerRows: 1, body: flightTableBody },
+        table: { widths: ["auto", 90, "auto", 90, "auto", 80, "*"], headerRows: 1, body: flightTableBody },
         layout: innerTableLayout,
       },
     ];
@@ -991,17 +1023,20 @@ function buildFileName(roteiro: RoteiroParaPdf) {
 async function getBlobFromPdf(pdfDoc: { getBlob: (...args: any[]) => any }): Promise<Blob> {
   // pdfmake 0.3.x: getBlob() is async and returns Promise<Blob>
   // pdfmake 2.x: getBlob(callback) was callback-based
+  if ((pdfDoc as any).getBlob.length >= 1) {
+    return new Promise<Blob>((resolve, reject) => {
+      try {
+        (pdfDoc as any).getBlob((blob: Blob) => resolve(blob));
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
   const maybePromise = (pdfDoc as any).getBlob();
   if (maybePromise && typeof (maybePromise as any).then === "function") {
     return maybePromise as Promise<Blob>;
   }
-  return new Promise<Blob>((resolve, reject) => {
-    try {
-      (pdfDoc as any).getBlob((blob: Blob) => resolve(blob));
-    } catch (error) {
-      reject(error);
-    }
-  });
+  throw new Error("Renderer PDF nao retornou blob.");
 }
 
 export async function exportRoteiroPdf(
@@ -1032,7 +1067,7 @@ export async function exportRoteiroPdf(
 
     const whatsappLink = construirLinkWhatsApp((settings as any).whatsapp, (settings as any).whatsapp_codigo_pais);
 
-    const [logoDataUrl, qrDataUrl, airlineLookup] = await Promise.all([
+    const [logoDataUrl, qrDataUrl, airlineLookup, airportCodeCityLookup] = await Promise.all([
       logoUrl ? fetchImageDataUrl(logoUrl).catch(() => null) : Promise.resolve(null),
       whatsappLink
         ? fetchImageDataUrl(`https://quickchart.io/qr?size=200&margin=1&text=${encodeURIComponent(whatsappLink)}`).catch(() => null)
@@ -1061,10 +1096,16 @@ export async function exportRoteiroPdf(
           return [];
         }
       })(),
+      loadAirportCodeCityLookup().catch(() => ({})),
     ]);
 
     const { pdfMake, defaultFont } = await loadPdfmakeDeps();
-    const content = buildRoteiroPdfContent(roteiro, settings as QuotePdfSettings, airlineLookup);
+    const content = buildRoteiroPdfContent(
+      roteiro,
+      settings as QuotePdfSettings,
+      airlineLookup,
+      airportCodeCityLookup
+    );
 
     const filialLines = [
       (settings as any).filial_nome,

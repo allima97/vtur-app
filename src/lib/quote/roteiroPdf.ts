@@ -1,6 +1,7 @@
 import { jsPDF } from "jspdf";
 import { resolveAirlineIata, resolveAirlineNameByIata } from "../airlineIata";
 import { extractSeguroViagemIncludeLinesFromPasseios, isSeguroPasseioLike } from "../roteiroSeguro";
+import { loadAirportCodeCityLookup, type AirportCodeCityLookup } from "../airportCodeCityLookup";
 import { supabaseBrowser } from "../supabase-browser";
 import { construirLinkWhatsApp } from "../whatsapp";
 import { QuotePdfSettings } from "./quotePdf";
@@ -282,9 +283,16 @@ function formatBudgetItemText(value?: string | null) {
     .join("");
 }
 
-function formatFlightPlace(city?: string | null, airport?: string | null) {
-  const cityValue = formatBudgetItemText(city);
+function formatFlightPlace(
+  city?: string | null,
+  airport?: string | null,
+  airportCodeCityLookup: AirportCodeCityLookup = {}
+) {
   const airportValue = textValue(airport).toUpperCase();
+  const lookupCity = /^[A-Z]{3}$/.test(airportValue)
+    ? formatBudgetItemText(airportCodeCityLookup[airportValue])
+    : "";
+  const cityValue = lookupCity || formatBudgetItemText(city);
   if (!cityValue && !airportValue) return "";
   if (!/^[A-Z]{3}$/.test(airportValue)) return cityValue || airportValue;
   if (!cityValue) return airportValue;
@@ -294,7 +302,10 @@ function formatFlightPlace(city?: string | null, airport?: string | null) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^A-Za-z]/g, "")
     .toUpperCase();
-  if (normalizedCity === airportValue) return airportValue;
+  if (normalizedCity === airportValue) {
+    if (lookupCity) return `${lookupCity} (${airportValue})`;
+    return airportValue;
+  }
   return `${cityValue} (${airportValue})`;
 }
 
@@ -634,6 +645,7 @@ export async function exportRoteiroPdf(
       return [];
     }
   })();
+  const airportCodeCityLookup = await loadAirportCodeCityLookup().catch(() => ({}));
 
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -2086,11 +2098,18 @@ export async function exportRoteiroPdf(
       return {
         cia: resolveAirlineIata(t.cia_aerea, airlineLookup) || "-",
         cia_nome: textValue(t.cia_aerea),
-        de: formatFlightPlace(trecho.origem, t.aeroporto_saida),
+        de: formatFlightPlace(trecho.origem, t.aeroporto_saida, airportCodeCityLookup),
         data_origem: formatDate(t.data_voo || t.data_inicio),
-        para: formatFlightPlace(trecho.destino, t.aeroporto_chegada),
+        para: formatFlightPlace(trecho.destino, t.aeroporto_chegada, airportCodeCityLookup),
         data_destino: formatDate(t.data_fim || t.data_voo || t.data_inicio),
         horarios,
+        detalhes: [
+          t.classe_reserva ? `Classe: ${formatBudgetItemText(t.classe_reserva)}` : "",
+          t.tipo_voo ? `Tipo: ${formatBudgetItemText(t.tipo_voo)}` : "",
+          t.duracao_voo ? `Duracao: ${textValue(t.duracao_voo)}` : "",
+          t.tarifa_nome ? `Tarifa: ${formatBudgetItemText(t.tarifa_nome)}` : "",
+          t.reembolso_tipo ? `Reembolso: ${formatBudgetItemText(t.reembolso_tipo)}` : "",
+        ].filter(Boolean).join(" | "),
       } as const;
     });
 
@@ -2139,8 +2158,13 @@ export async function exportRoteiroPdf(
     drawFlightHeader();
 
     flightRows.forEach((row) => {
+      const detailText = String((row as any).detalhes || "").trim();
+      const detailLines = detailText ? doc.splitTextToSize(detailText, Math.max(tableWidth - 4, 40)) : [];
+      const detailLineHeight = Math.max(bodyLineHeight - 2, 10);
+      const rowHeightNeeded =
+        bodyLineHeight + 6 + (detailLines.length > 0 ? detailLines.length * detailLineHeight + 2 : 0);
       const beforeEnsure = curY;
-      ensureSpace(bodyLineHeight + 6);
+      ensureSpace(rowHeightNeeded);
       if (curY < beforeEnsure) {
         drawFlightHeader();
       }
@@ -2157,6 +2181,17 @@ export async function exportRoteiroPdf(
         colX += column.width + (index < columns.length - 1 ? columnGap : 0);
       });
       curY += bodyLineHeight + 2;
+      if (detailLines.length > 0) {
+        doc.setFont(bodyFont, "normal");
+        doc.setFontSize(Math.max(flightBodyFontSize - 2, 8));
+        doc.setTextColor(...colors.text);
+        detailLines.forEach((line: string, idx: number) => {
+          doc.text(line, labelX, curY + bodyFontSize - 1 + idx * detailLineHeight);
+        });
+        doc.setFontSize(flightBodyFontSize);
+        doc.setTextColor(...colors.muted);
+        curY += detailLines.length * detailLineHeight + 2;
+      }
     });
 
     const airlineLegend = (() => {

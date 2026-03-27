@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import pdfWorkerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import AlertMessage from "../ui/AlertMessage";
 import EmptyState from "../ui/EmptyState";
 import AppButton from "../ui/primer/AppButton";
@@ -12,7 +13,9 @@ type Props = {
 
 export default function QuoteVisualizarIsland({ quoteId }: Props) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewPages, setPreviewPages] = useState<string[]>([]);
   const [loadingPreview, setLoadingPreview] = useState(true);
+  const [renderingPreview, setRenderingPreview] = useState(false);
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,6 +80,71 @@ export default function QuoteVisualizarIsland({ quoteId }: Props) {
       canceled = true;
     };
   }, [quoteId, refreshNonce]);
+
+  useEffect(() => {
+    let canceled = false;
+
+    async function renderPreviewPages() {
+      if (!previewUrl) {
+        setPreviewPages([]);
+        return;
+      }
+      setRenderingPreview(true);
+      try {
+        const pdfjs = await import("pdfjs-dist");
+        pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
+
+        const loadingTask = pdfjs.getDocument(previewUrl);
+        const pdfDocument = await loadingTask.promise;
+        const pages: string[] = [];
+
+        for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber += 1) {
+          if (canceled) break;
+          const page = await pdfDocument.getPage(pageNumber);
+          const viewport = page.getViewport({ scale: 1.25 });
+          const canvas = document.createElement("canvas");
+          const context = canvas.getContext("2d");
+          if (!context) continue;
+
+          canvas.width = Math.floor(viewport.width);
+          canvas.height = Math.floor(viewport.height);
+
+          await page.render({
+            canvasContext: context,
+            viewport,
+          }).promise;
+
+          pages.push(canvas.toDataURL("image/png"));
+        }
+
+        if (!canceled) {
+          setPreviewPages(pages);
+        }
+
+        try {
+          await pdfDocument.cleanup();
+          await pdfDocument.destroy();
+        } catch {
+          // ignore cleanup errors
+        }
+      } catch (err: any) {
+        if (canceled) return;
+        console.error("[QuoteVisualizar] Erro ao renderizar paginas do PDF:", err);
+        setError(err?.message || "Nao foi possivel renderizar a visualizacao do orcamento.");
+        setPreviewPages([]);
+      } finally {
+        if (!canceled) {
+          setRenderingPreview(false);
+        }
+      }
+    }
+
+    void renderPreviewPages();
+
+    return () => {
+      canceled = true;
+    };
+  }, [previewUrl]);
 
   async function handleDownloadPdf() {
     setExportingPdf(true);
@@ -167,14 +235,26 @@ export default function QuoteVisualizarIsland({ quoteId }: Props) {
             />
           ) : null}
 
-          {previewUrl ? (
+          {renderingPreview && previewUrl && previewPages.length === 0 ? (
+            <EmptyState
+              title="Montando paginas"
+              description="Estamos preparando a visualizacao pagina a pagina do PDF."
+            />
+          ) : null}
+
+          {previewPages.length > 0 ? (
             <div className="orcamento-preview-shell">
               <div className="orcamento-preview-frame-wrap">
-                <iframe
-                  title={`preview-orcamento-${quoteId}`}
-                  src={previewUrl}
-                  className="orcamento-preview-frame"
-                />
+                <div className="orcamento-preview-pages" aria-label={`preview-orcamento-${quoteId}`}>
+                  {previewPages.map((pageImage, index) => (
+                    <img
+                      key={`quote-preview-page-${index}`}
+                      src={pageImage}
+                      alt={`Pagina ${index + 1} do orcamento`}
+                      className="orcamento-preview-page"
+                    />
+                  ))}
+                </div>
               </div>
             </div>
           ) : null}

@@ -1,5 +1,6 @@
 import { construirLinkWhatsApp } from "../whatsapp";
 import { resolveAirlineIata, resolveAirlineNameByIata } from "../airlineIata";
+import { loadAirportCodeCityLookup, type AirportCodeCityLookup } from "../airportCodeCityLookup";
 import nunitoSansBoldUrl from "../../assets/cards/fonts/NunitoSans-Bold.ttf?url";
 import nunitoSansRegularUrl from "../../assets/cards/fonts/NunitoSans-Regular.ttf?url";
 import nunitoSansSemiBoldUrl from "../../assets/cards/fonts/NunitoSans-SemiBold.ttf?url";
@@ -472,9 +473,14 @@ function getItemRawImports(item: QuotePdfItem): ItemRawImport {
   return (item.raw || {}) as ItemRawImport;
 }
 
-function formatAeroLocation(city?: string | null, airportCode?: string | null) {
-  const cityLabel = formatBudgetItemText(city);
+function formatAeroLocation(
+  city?: string | null,
+  airportCode?: string | null,
+  airportCodeCityLookup: AirportCodeCityLookup = {}
+) {
   const code = textValue(airportCode).toUpperCase();
+  const lookupCity = /^[A-Z]{3}$/.test(code) ? formatBudgetItemText(airportCodeCityLookup[code]) : "";
+  const cityLabel = lookupCity || formatBudgetItemText(city);
   if (!cityLabel && !code) return "-";
   if (!/^[A-Z]{3}$/.test(code)) return cityLabel || code || "-";
   if (!cityLabel) return code;
@@ -484,7 +490,10 @@ function formatAeroLocation(city?: string | null, airportCode?: string | null) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^A-Za-z]/g, "")
     .toUpperCase();
-  if (normalizedCity === code) return code;
+  if (normalizedCity === code) {
+    if (lookupCity) return `${lookupCity} (${code})`;
+    return code;
+  }
   return `${cityLabel} (${code})`;
 }
 
@@ -587,7 +596,7 @@ function buildPasseioRows(items: QuotePdfItem[]) {
   return sortByStartDate(rows);
 }
 
-function buildFlightRows(items: QuotePdfItem[]) {
+function buildFlightRows(items: QuotePdfItem[], airportCodeCityLookup: AirportCodeCityLookup = {}) {
   const rows: StructuredFlightRow[] = [];
   const legend = new Map<string, string>();
   items.forEach((item, sourceOrder) => {
@@ -626,9 +635,9 @@ function buildFlightRows(items: QuotePdfItem[]) {
           sourceOrder,
           rowOrder: rowBase + segIdx,
           cia: ciaLabel,
-          origem: formatAeroLocation(origemCidade, segment?.aeroporto_saida),
+          origem: formatAeroLocation(origemCidade, segment?.aeroporto_saida, airportCodeCityLookup),
           dataSaida,
-          destino: formatAeroLocation(destinoCidade, segment?.aeroporto_chegada),
+          destino: formatAeroLocation(destinoCidade, segment?.aeroporto_chegada, airportCodeCityLookup),
           dataChegada,
           saidaChegada: horarios || "-",
         });
@@ -648,9 +657,17 @@ function buildFlightRows(items: QuotePdfItem[]) {
             sourceOrder,
             rowOrder: runningOrder,
             cia: ciaLabel,
-            origem: formatAeroLocation(leg.departure_city || routeOrigem, leg.departure_code),
+            origem: formatAeroLocation(
+              leg.departure_city || routeOrigem,
+              leg.departure_code,
+              airportCodeCityLookup
+            ),
             dataSaida: directionDateIso,
-            destino: formatAeroLocation(leg.arrival_city || routeDestino, leg.arrival_code),
+            destino: formatAeroLocation(
+              leg.arrival_city || routeDestino,
+              leg.arrival_code,
+              airportCodeCityLookup
+            ),
             dataChegada: directionDateIso,
             saidaChegada: horarios || "-",
           });
@@ -669,9 +686,17 @@ function buildFlightRows(items: QuotePdfItem[]) {
       sourceOrder,
       rowOrder: rowBase,
       cia: ciaLabel,
-      origem: formatAeroLocation(importedAereo?.cidade_saida || routeOrigem, importedAereo?.aeroporto_saida),
+      origem: formatAeroLocation(
+        importedAereo?.cidade_saida || routeOrigem,
+        importedAereo?.aeroporto_saida,
+        airportCodeCityLookup
+      ),
       dataSaida,
-      destino: formatAeroLocation(importedAereo?.cidade_chegada || routeDestino, importedAereo?.aeroporto_chegada),
+      destino: formatAeroLocation(
+        importedAereo?.cidade_chegada || routeDestino,
+        importedAereo?.aeroporto_chegada,
+        airportCodeCityLookup
+      ),
       dataChegada,
       saidaChegada: horarios || "-",
     });
@@ -805,10 +830,14 @@ function buildFallbackItemsHtml(items: QuotePdfItem[], showItemValues: boolean) 
     .join("");
 }
 
-function buildItemsHtml(items: QuotePdfItem[], showItemValues: boolean) {
+function buildItemsHtml(
+  items: QuotePdfItem[],
+  showItemValues: boolean,
+  airportCodeCityLookup: AirportCodeCityLookup = {}
+) {
   const hotelRows = buildHotelRows(items);
   const passeioRows = buildPasseioRows(items);
-  const flightBase = buildFlightRows(items);
+  const flightBase = buildFlightRows(items, airportCodeCityLookup);
   const flightRows = flightBase.rows.map((row) => {
     const match = row.saidaChegada.match(/^(\d{1,2}:\d{2})\s*\/\s*(\d{1,2}:\d{2})(?:\s*\(\+(\d+)\))?$/);
     if (!match) return row;
@@ -1156,8 +1185,18 @@ function buildQuoteHtml(params: {
   logoDataUrl: string | null;
   qrDataUrl: string | null;
   complementDataUrl: string | null;
+  airportCodeCityLookup: AirportCodeCityLookup;
 }) {
-  const { quote, items, settings, options, logoDataUrl, qrDataUrl, complementDataUrl } = params;
+  const {
+    quote,
+    items,
+    settings,
+    options,
+    logoDataUrl,
+    qrDataUrl,
+    complementDataUrl,
+    airportCodeCityLookup,
+  } = params;
 
   const orderedItems = sortQuoteItemsForPdf(items);
   const summary = buildSummaryRows(orderedItems, Number(options.discount || 0));
@@ -1276,7 +1315,7 @@ function buildQuoteHtml(params: {
     </tbody>
   </table>
 
-  ${buildItemsHtml(orderedItems, options.showItemValues)}
+  ${buildItemsHtml(orderedItems, options.showItemValues, airportCodeCityLookup)}
 
   ${
     options.showSummary
@@ -1457,12 +1496,13 @@ export async function exportQuoteToPdf(params: QuoteModernParams) {
     const { quote, items, settings, options } = params;
     const whatsappLink = construirLinkWhatsApp(settings.whatsapp, settings.whatsapp_codigo_pais);
 
-    const [logoDataUrl, complementDataUrl, qrDataUrl] = await Promise.all([
+    const [logoDataUrl, complementDataUrl, qrDataUrl, airportCodeCityLookup] = await Promise.all([
       settings.logo_url ? fetchImageData(settings.logo_url).catch(() => null) : Promise.resolve(null),
       settings.imagem_complementar_url ? fetchImageData(settings.imagem_complementar_url).catch(() => null) : Promise.resolve(null),
       whatsappLink
         ? fetchImageData(`https://quickchart.io/qr?size=200&margin=1&text=${encodeURIComponent(whatsappLink)}`).catch(() => null)
         : Promise.resolve(null),
+      loadAirportCodeCityLookup().catch(() => ({})),
     ]);
 
     const { pdfMake, htmlToPdfmake, defaultFont } = await loadPdfmakeDeps();
@@ -1474,6 +1514,7 @@ export async function exportQuoteToPdf(params: QuoteModernParams) {
       logoDataUrl,
       qrDataUrl,
       complementDataUrl,
+      airportCodeCityLookup,
     });
 
     const content = htmlToPdfmake(html, {
@@ -1515,17 +1556,20 @@ export async function exportQuoteToPdf(params: QuoteModernParams) {
       if (!pdfDoc.getBlob) {
         throw new Error("Renderer PDF não suporta geração de blob.");
       }
+      if ((pdfDoc.getBlob as any).length >= 1) {
+        return await new Promise<Blob>((resolve, reject) => {
+          try {
+            (pdfDoc.getBlob as any)((blob: Blob) => resolve(blob));
+          } catch (error) {
+            reject(error);
+          }
+        });
+      }
       const maybePromise = (pdfDoc.getBlob as any)();
       if (maybePromise && typeof maybePromise.then === "function") {
         return (await maybePromise) as Blob;
       }
-      return await new Promise<Blob>((resolve, reject) => {
-        try {
-          (pdfDoc.getBlob as any)((blob: Blob) => resolve(blob));
-        } catch (error) {
-          reject(error);
-        }
-      });
+      throw new Error("Renderer PDF nao retornou blob.");
     };
 
     if (action === "blob-url") {
