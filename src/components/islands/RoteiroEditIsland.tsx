@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useId, useMemo } from "react";
-import { exportRoteiroPdf } from "../../lib/quote/roteiroPdfModern";
+import { exportRoteiroPdf } from "../../lib/quote/roteiroPdf";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import { extractPlainTextFromFile } from "../../lib/documentosViagens/extractPlainTextFromFile";
 import {

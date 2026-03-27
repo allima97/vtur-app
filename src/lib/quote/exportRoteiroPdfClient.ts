@@ -1,5 +1,5 @@
 import { supabaseBrowser } from "../supabase-browser";
-import { exportRoteiroPdf } from "./roteiroPdfModern";
+import { exportRoteiroPdf } from "./roteiroPdf";
 
 type ExportRoteiroByIdArgs = {
   roteiroId: string;

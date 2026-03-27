@@ -183,8 +183,6 @@ type ConsultoriaReminder = {
   storageKey: string;
 };
 
-type PresetPeriodo = "mes_atual" | "ultimos_30" | "personalizado";
-
 type WidgetId =
   | "kpis"
   | "vendas_destino"
@@ -261,14 +259,6 @@ function getMonthBounds() {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const toISO = (d: Date) => d.toISOString().substring(0, 10);
-  return { inicio: toISO(start), fim: toISO(end) };
-}
-
-function getLastNDaysBounds(n: number) {
-  const end = new Date();
-  const start = new Date();
-  start.setDate(end.getDate() - (n - 1));
   const toISO = (d: Date) => d.toISOString().substring(0, 10);
   return { inicio: toISO(start), fim: toISO(end) };
 }
@@ -453,8 +443,6 @@ function toLineChartConfig(
     return nome || "André Lima";
   }, [userCtx?.nome]);
 
-  const [presetPeriodo, setPresetPeriodo] =
-    useState<PresetPeriodo>("mes_atual");
   const [inicio, setInicio] = useState<string>("");
   const [fim, setFim] = useState<string>("");
 
@@ -717,22 +705,7 @@ function toLineChartConfig(
     const { inicio: i, fim: f } = getMonthBounds();
     setInicio(i);
     setFim(f);
-    setPresetPeriodo("mes_atual");
   }, []);
-
-  function aplicarPreset(p: PresetPeriodo) {
-    setPresetPeriodo(p);
-    if (p === "mes_atual") {
-      const { inicio: i, fim: f } = getMonthBounds();
-      setInicio(i);
-      setFim(f);
-    } else if (p === "ultimos_30") {
-      const { inicio: i, fim: f } = getLastNDaysBounds(30);
-      setInicio(i);
-      setFim(f);
-    }
-    // personalizado: usuário vai editar datas manualmente
-  }
 
   // Ajusta ordem/visibilidade quando KPIs dinâmicos de produto mudam
   useEffect(() => {
@@ -2418,16 +2391,14 @@ function toLineChartConfig(
           tone="info"
         >
           <div className="vtur-dashboard-toolbar-actions orcamentos-action-bar mb-3">
-            <div className="vtur-dashboard-mobile-quick-actions sm:hidden">
-              <AppButton
-                type="button"
-                variant="secondary"
-                className="dashboard-mobile-filter-btn"
-                onClick={() => setShowFilters(true)}
-              >
-                Filtros
-              </AppButton>
-            </div>
+            <AppButton
+              type="button"
+              variant="secondary"
+              className="dashboard-mobile-filter-btn"
+              onClick={() => setShowFilters(true)}
+            >
+              Filtros
+            </AppButton>
             <AppButton type="button" variant="primary" onClick={() => setShowCustomize(true)}>
               Personalizar dashboard
             </AppButton>
@@ -2448,57 +2419,6 @@ function toLineChartConfig(
               />
             )}
           </div>
-          <div className="hidden sm:block">
-            <div className="vtur-dashboard-preset-row">
-              <AppButton
-                type="button"
-                variant={presetPeriodo === "mes_atual" ? "primary" : "secondary"}
-                onClick={() => aplicarPreset("mes_atual")}
-              >
-                Mês atual
-              </AppButton>
-              <AppButton
-                type="button"
-                variant={presetPeriodo === "ultimos_30" ? "primary" : "secondary"}
-                onClick={() => aplicarPreset("ultimos_30")}
-              >
-                Últimos 30 dias
-              </AppButton>
-              <AppButton
-                type="button"
-                variant={presetPeriodo === "personalizado" ? "primary" : "secondary"}
-                onClick={() => setPresetPeriodo("personalizado")}
-              >
-                Personalizado
-              </AppButton>
-            </div>
-            <div className="vtur-form-grid vtur-form-grid-2">
-              <AppField
-                label="Data Início"
-                type="date"
-                value={inicio}
-                onFocus={selectAllInputOnFocus}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  const nextInicio = e.target.value;
-                  setPresetPeriodo("personalizado");
-                  setInicio(nextInicio);
-                  setFim((prev) => boundDateEndISO(nextInicio, prev));
-                }}
-              />
-              <AppField
-                label="Data Final"
-                type="date"
-                value={fim}
-                min={inicio || undefined}
-                onFocus={selectAllInputOnFocus}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  setPresetPeriodo("personalizado");
-                  const nextFim = e.target.value;
-                  setFim(boundDateEndISO(inicio, nextFim));
-                }}
-              />
-            </div>
-          </div>
         </AppCard>
 
         {showFilters && (
@@ -2514,47 +2434,30 @@ function toLineChartConfig(
             ]}
           >
             <div className="vtur-modal-body-stack">
-              <AppCard title="Período" subtitle="Defina rapidamente o recorte temporal do dashboard.">
+              <AppCard title="Período" subtitle="Defina o intervalo de datas para aplicar no dashboard.">
                 <div className="vtur-form-grid vtur-form-grid-2">
                   <AppField
-                    as="select"
-                    label="Preset"
-                    value={presetPeriodo}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => aplicarPreset(e.target.value as PresetPeriodo)}
-                    options={[
-                      { value: "mes_atual", label: "Mês atual" },
-                      { value: "ultimos_30", label: "Últimos 30 dias" },
-                      { value: "personalizado", label: "Personalizado" },
-                    ]}
+                    label="Data Início"
+                    type="date"
+                    value={inicio}
+                    onFocus={selectAllInputOnFocus}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      const nextInicio = e.target.value;
+                      setInicio(nextInicio);
+                      setFim((prev) => boundDateEndISO(nextInicio, prev));
+                    }}
                   />
-                  {presetPeriodo === "personalizado" && (
-                    <>
-                      <AppField
-                        label="Data Início"
-                        type="date"
-                        value={inicio}
-                        onFocus={selectAllInputOnFocus}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          const nextInicio = e.target.value;
-                          setPresetPeriodo("personalizado");
-                          setInicio(nextInicio);
-                          setFim((prev) => boundDateEndISO(nextInicio, prev));
-                        }}
-                      />
-                      <AppField
-                        label="Data Final"
-                        type="date"
-                        value={fim}
-                        min={inicio || undefined}
-                        onFocus={selectAllInputOnFocus}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          setPresetPeriodo("personalizado");
-                          const nextFim = e.target.value;
-                          setFim(boundDateEndISO(inicio, nextFim));
-                        }}
-                      />
-                    </>
-                  )}
+                  <AppField
+                    label="Data Final"
+                    type="date"
+                    value={fim}
+                    min={inicio || undefined}
+                    onFocus={selectAllInputOnFocus}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      const nextFim = e.target.value;
+                      setFim(boundDateEndISO(inicio, nextFim));
+                    }}
+                  />
                 </div>
               </AppCard>
             </div>
