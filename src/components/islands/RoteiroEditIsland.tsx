@@ -13,6 +13,7 @@ import {
   mergeImportedRoteiroAereo,
   parseImportedRoteiroAereo,
 } from "../../lib/roteiroAereoImport";
+import { loadAirportCodeCityLookup } from "../../lib/airportCodeCityLookup";
 import { mergeImportedRoteiroPasseios, parseImportedRoteiroPasseios } from "../../lib/roteiroPasseioImport";
 import {
   buildItineraryTransferCities,
@@ -1678,8 +1679,10 @@ export default function RoteiroEditIsland({ roteiroId, roteiro, duplicateFromId 
     setAereoImportError(null);
     try {
       const airportAliasValues = (sugestoes?.aereo_alias || []).map((value) => String(value || "").trim()).filter(Boolean);
+      const airportCodeCityLookup = await loadAirportCodeCityLookup();
       const imported = parseImportedRoteiroAereo(aereoImportText, new Date(), {
         airportAliasValues,
+        airportCodeCityLookup,
       });
       if (imported.length === 0) {
         throw new Error("Não encontrei passagens válidas no texto informado.");
@@ -1690,6 +1693,7 @@ export default function RoteiroEditIsland({ roteiroId, roteiro, duplicateFromId 
       try {
         const aliasesDetectados = collectImportedRoteiroAereoAliasValues(aereoImportText, {
           airportAliasValues,
+          airportCodeCityLookup,
         });
         const existing = new Set(airportAliasValues.map((value) => value.toLocaleLowerCase()));
         const novosAliases = aliasesDetectados.filter((value) => !existing.has(String(value || "").toLocaleLowerCase()));

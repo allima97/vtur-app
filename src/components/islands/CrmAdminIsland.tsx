@@ -4,7 +4,6 @@ import { ToastStack, useToastQueue } from "../ui/Toast";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import TableActions from "../ui/TableActions";
 import AppCard from "../ui/primer/AppCard";
-import AppButton from "../ui/primer/AppButton";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -61,27 +60,6 @@ const ICON_SUGGESTIONS = [
   "pi pi-heart", "pi pi-map", "pi pi-tag", "pi pi-image",
   "pi pi-calendar", "pi pi-globe", "pi pi-flag",
 ];
-
-const CRM_TAB_SECTIONS = [
-  {
-    id: "modelos",
-    icon: "pi pi-images",
-    label: "Modelos",
-    subtitle: "Artes e configurações visuais.",
-  },
-  {
-    id: "textos",
-    icon: "pi pi-file-edit",
-    label: "Textos padrão por ocasião",
-    subtitle: "Mensagens reutilizáveis por tema.",
-  },
-  {
-    id: "categorias",
-    icon: "pi pi-tags",
-    label: "Categorias",
-    subtitle: "Organização e ordenação dos grupos.",
-  },
-] as const;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -334,7 +312,7 @@ export default function CrmAdminIsland() {
     try {
       const payload = {
         user_id: currentUserId,
-        company_id: (themeForm.scope || "system") === "system" ? null : currentCompanyId,
+        company_id: currentCompanyId,
         nome: themeForm.nome.trim(),
         categoria_id: themeForm.categoria_id || null,
         asset_url: themeForm.asset_url.trim(),
@@ -433,7 +411,7 @@ export default function CrmAdminIsland() {
     try {
       const payload = {
         user_id: currentUserId,
-        company_id: (messageForm.scope || "system") === "system" ? null : currentCompanyId,
+        company_id: currentCompanyId,
         nome: messageForm.nome.trim(),
         categoria: messageForm.categoria?.trim() || null,
         assunto: messageForm.titulo.trim(),
@@ -496,33 +474,34 @@ export default function CrmAdminIsland() {
 
       <AppCard
         tone="info"
-        title="CRM — Gerenciar Templates"
+        title="CRM — Gerenciar Modelos, Textos e Gategorias"
         subtitle="Gerencie as artes e categorias disponíveis para envio de cartões de relacionamento."
       />
 
       {/* Tabs */}
-      <AppCard tone="info" className="mb-3 list-toolbar-sticky vtur-conciliacao-tab-card crm-admin-tab-card">
-        <div className="vtur-conciliacao-tab-nav">
-          {CRM_TAB_SECTIONS.map((section) => (
-            <button
-              key={section.id}
-              type="button"
-              className={[
-                "vtur-conciliacao-tab-btn",
-                tab === section.id ? "is-active" : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              onClick={() => setTab(section.id)}
-            >
-              <span className="vtur-conciliacao-tab-btn-label">
-                <i className={section.icon} aria-hidden="true" /> {section.label}
-              </span>
-              <span className="vtur-conciliacao-tab-btn-sub">{section.subtitle}</span>
-            </button>
-          ))}
-        </div>
-      </AppCard>
+      <div className="crm-admin-tabs">
+        <button
+          type="button"
+          className={`crm-admin-tab${tab === "modelos" ? " active" : ""}`}
+          onClick={() => setTab("modelos")}
+        >
+          <i className="pi pi-images" /> Modelos
+        </button>
+        <button
+          type="button"
+          className={`crm-admin-tab${tab === "textos" ? " active" : ""}`}
+          onClick={() => setTab("textos")}
+        >
+          <i className="pi pi-file-edit" /> Textos padrão por ocasião
+        </button>
+        <button
+          type="button"
+          className={`crm-admin-tab${tab === "categorias" ? " active" : ""}`}
+          onClick={() => setTab("categorias")}
+        >
+          <i className="pi pi-tags" /> Categorias
+        </button>
+      </div>
 
       {/* ══════════ TAB: MODELOS ══════════ */}
       {tab === "modelos" && (
@@ -538,9 +517,9 @@ export default function CrmAdminIsland() {
                 <option key={c.id} value={c.id}>{c.nome}</option>
               ))}
             </select>
-            <AppButton type="button" variant="primary" icon="pi pi-plus" onClick={openNewTheme}>
-              Novo modelo
-            </AppButton>
+            <button type="button" className="btn btn-primary btn-sm" onClick={openNewTheme}>
+              <i className="pi pi-plus" /> Novo modelo
+            </button>
           </div>
 
           {loadingThemes ? (
@@ -636,14 +615,9 @@ export default function CrmAdminIsland() {
         <div className="crm-admin-section">
           <div className="crm-admin-toolbar">
             <span className="crm-admin-subsection__title">Textos padrão por ocasião</span>
-            <AppButton
-              type="button"
-              variant="primary"
-              icon="pi pi-plus"
-              onClick={openNewMessageTemplate}
-            >
-              Novo texto
-            </AppButton>
+            <button type="button" className="btn btn-primary btn-sm" onClick={openNewMessageTemplate}>
+              <i className="pi pi-plus" /> Novo texto
+            </button>
           </div>
 
           {loadingMessages ? (
@@ -747,9 +721,9 @@ export default function CrmAdminIsland() {
         <div className="crm-admin-section">
           <div className="crm-admin-toolbar">
             <span />
-            <AppButton type="button" variant="primary" icon="pi pi-plus" onClick={openNewCategory}>
-              Nova categoria
-            </AppButton>
+            <button type="button" className="btn btn-primary btn-sm" onClick={openNewCategory}>
+              <i className="pi pi-plus" /> Nova categoria
+            </button>
           </div>
 
           {loadingCats ? (

@@ -3,6 +3,7 @@ import {
   parseImportedRoteiroAereo,
   type ImportedRoteiroAereo,
 } from "../roteiroAereoImport";
+import { loadAirportCodeCityLookup } from "../airportCodeCityLookup";
 import {
   parseImportedRoteiroHotels,
   type ImportedRoteiroHotel,
@@ -3054,7 +3055,10 @@ export async function extractCvcQuoteFromText(text: string, options: ExtractOpti
   const hasFlightItems = deduped.some((item) => isFlightLabel(item.item_type));
   if (!hasFlightItems) {
     try {
-      const importedAereo = parseImportedRoteiroAereo(text, new Date(baseYear, 0, 1));
+      const airportCodeCityLookup = await loadAirportCodeCityLookup();
+      const importedAereo = parseImportedRoteiroAereo(text, new Date(baseYear, 0, 1), {
+        airportCodeCityLookup,
+      });
       if (importedAereo.length > 0) {
         const mappedFlights = mapImportedAereoToQuoteItems(importedAereo);
         if (mappedFlights.length > 0) {

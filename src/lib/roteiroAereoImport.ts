@@ -22,6 +22,7 @@ export type ImportedRoteiroAereo = {
 
 export type ParseImportedRoteiroAereoOptions = {
   airportAliasValues?: string[];
+  airportCodeCityLookup?: Record<string, string>;
 };
 
 type AirportAliasEntry = {
@@ -235,10 +236,36 @@ function normalizeCityLabel(value?: string | null) {
   return toTitleCase(raw);
 }
 
-function findAirportAliasByCode(code?: string | null, runtimeAliases: AirportAliasEntry[] = []) {
-  const normalizedCode = normalizeLine(code).toUpperCase();
+function normalizeAirportCode(code?: string | null) {
+  return normalizeLine(code).toUpperCase();
+}
+
+function getCityByAirportCodeLookup(code?: string | null, airportCodeCityLookup: Record<string, string> = {}) {
+  const normalizedCode = normalizeAirportCode(code);
+  if (!/^[A-Z]{3}$/.test(normalizedCode)) return "";
+  const rawCity = normalizeLine(airportCodeCityLookup[normalizedCode]);
+  if (!rawCity) return "";
+  return normalizeCityLabel(rawCity) || toTitleCase(rawCity);
+}
+
+function findAirportAliasByCode(
+  code?: string | null,
+  runtimeAliases: AirportAliasEntry[] = [],
+  airportCodeCityLookup: Record<string, string> = {}
+) {
+  const normalizedCode = normalizeAirportCode(code);
   if (!/^[A-Z]{3}$/.test(normalizedCode)) return null;
-  return runtimeAliases.find((item) => item.code === normalizedCode) || KNOWN_AIRPORT_ALIASES.find((item) => item.code === normalizedCode) || null;
+  const runtimeMatch = runtimeAliases.find((item) => item.code === normalizedCode);
+  if (runtimeMatch) return runtimeMatch;
+  const knownMatch = KNOWN_AIRPORT_ALIASES.find((item) => item.code === normalizedCode);
+  if (knownMatch) return knownMatch;
+  const lookupCity = getCityByAirportCodeLookup(normalizedCode, airportCodeCityLookup);
+  if (!lookupCity) return null;
+  return {
+    code: normalizedCode,
+    city: lookupCity,
+    aliases: [normalizedCode],
+  };
 }
 
 function extractAirportCodeFromLabel(value?: string | null) {
@@ -615,13 +642,17 @@ function inferArrivalDateByTimes(departureDate?: string | null, departureTime?: 
   return toIsoDate(base);
 }
 
-function resolveAirportMatch(value?: string | null, runtimeAliases: AirportAliasEntry[] = []) {
+function resolveAirportMatch(
+  value?: string | null,
+  runtimeAliases: AirportAliasEntry[] = [],
+  airportCodeCityLookup: Record<string, string> = {}
+) {
   const normalized = normalizeText(value);
   if (!normalized) return null;
 
   const explicitCode = extractAirportCodeFromLabel(value);
   if (explicitCode) {
-    const existing = findAirportAliasByCode(explicitCode, runtimeAliases);
+    const existing = findAirportAliasByCode(explicitCode, runtimeAliases, airportCodeCityLookup);
     const inferredCity = normalizeCityLabel(existing?.city || inferCityFromAirportLabel(value, explicitCode));
     return {
       code: explicitCode,
@@ -639,14 +670,22 @@ function resolveAirportMatch(value?: string | null, runtimeAliases: AirportAlias
   return null;
 }
 
-function normalizeAirportField(value?: string | null, runtimeAliases: AirportAliasEntry[] = []) {
-  const match = resolveAirportMatch(value, runtimeAliases);
+function normalizeAirportField(
+  value?: string | null,
+  runtimeAliases: AirportAliasEntry[] = [],
+  airportCodeCityLookup: Record<string, string> = {}
+) {
+  const match = resolveAirportMatch(value, runtimeAliases, airportCodeCityLookup);
   if (match?.code) return match.code;
   return normalizeLine(value);
 }
 
-function resolveCityFromAirportLabel(value?: string | null, runtimeAliases: AirportAliasEntry[] = []) {
-  const match = resolveAirportMatch(value, runtimeAliases);
+function resolveCityFromAirportLabel(
+  value?: string | null,
+  runtimeAliases: AirportAliasEntry[] = [],
+  airportCodeCityLookup: Record<string, string> = {}
+) {
+  const match = resolveAirportMatch(value, runtimeAliases, airportCodeCityLookup);
   if (match?.city) return normalizeCityLabel(match.city) || match.city;
   const raw = normalizeLine(value);
   if (!raw) return "";
@@ -664,7 +703,11 @@ function parseFlightTypeFromStops(value?: string | null) {
   return `${stops} escalas`;
 }
 
-function parseProvider2(text: string, runtimeAliases: AirportAliasEntry[] = []) {
+function parseProvider2(
+  text: string,
+  runtimeAliases: AirportAliasEntry[] = [],
+  airportCodeCityLookup: Record<string, string> = {}
+) {
   const rawLines = String(text || "")
     .replace(/\r/g, "\n")
     .split("\n")
@@ -773,8 +816,8 @@ function parseProvider2(text: string, runtimeAliases: AirportAliasEntry[] = []) 
       const arrival = parseProvider2DateTime(arrivals[index] || "");
       const origem = origins[index] || "";
       const destino = destinations[index] || "";
-      const cityOut = resolveCityFromAirportLabel(origem, runtimeAliases);
-      const cityIn = resolveCityFromAirportLabel(destino, runtimeAliases);
+      const cityOut = resolveCityFromAirportLabel(origem, runtimeAliases, airportCodeCityLookup);
+      const cityIn = resolveCityFromAirportLabel(destino, runtimeAliases, airportCodeCityLookup);
       return {
         trecho: [cityOut, cityIn].filter(Boolean).join(" - "),
         cia_aerea: parseProvider2Airline(airline),
@@ -783,11 +826,11 @@ function parseProvider2(text: string, runtimeAliases: AirportAliasEntry[] = []) 
         data_fim: arrival?.date || departure?.date || "",
         classe_reserva: cabinOrClassValues[index] || "",
         hora_saida: departure?.time || "",
-        aeroporto_saida: normalizeAirportField(origem, runtimeAliases),
+        aeroporto_saida: normalizeAirportField(origem, runtimeAliases, airportCodeCityLookup),
         duracao_voo: durations[index] || "",
         tipo_voo: parseFlightTypeFromStops(stops[index]),
         hora_chegada: formatArrivalTimeWithOffset(departure?.date, arrival?.date, arrival?.time),
-        aeroporto_chegada: normalizeAirportField(destino, runtimeAliases),
+        aeroporto_chegada: normalizeAirportField(destino, runtimeAliases, airportCodeCityLookup),
         tarifa_nome: "",
         reembolso_tipo: reembolsoTipo,
         qtd_adultos: qtdAdultos,
@@ -800,7 +843,12 @@ function parseProvider2(text: string, runtimeAliases: AirportAliasEntry[] = []) 
   );
 }
 
-function parseProviderCards(text: string, referenceDate: Date, runtimeAliases: AirportAliasEntry[] = []) {
+function parseProviderCards(
+  text: string,
+  referenceDate: Date,
+  runtimeAliases: AirportAliasEntry[] = [],
+  airportCodeCityLookup: Record<string, string> = {}
+) {
   const rawLines = String(text || "")
     .replace(/\r/g, "\n")
     .split("\n")
@@ -877,8 +925,12 @@ function parseProviderCards(text: string, referenceDate: Date, runtimeAliases: A
       const airportIn = lines[cursor + 7] || "";
 
       const dateClassMatch = dateClassLine.match(DATE_CLASS_RE);
-      const airportOutResolved = Boolean(isAirportLine(airportOut) || resolveAirportMatch(airportOut, runtimeAliases));
-      const airportInResolved = Boolean(isAirportLine(airportIn) || resolveAirportMatch(airportIn, runtimeAliases));
+      const airportOutResolved = Boolean(
+        isAirportLine(airportOut) || resolveAirportMatch(airportOut, runtimeAliases, airportCodeCityLookup)
+      );
+      const airportInResolved = Boolean(
+        isAirportLine(airportIn) || resolveAirportMatch(airportIn, runtimeAliases, airportCodeCityLookup)
+      );
       if (
         !dateClassMatch ||
         !isTimeLine(departTime) ||
@@ -907,11 +959,11 @@ function parseProviderCards(text: string, referenceDate: Date, runtimeAliases: A
         data_fim: dataFim || dataInicio,
         classe_reserva: normalizeLine(dateClassMatch[3] || ""),
         hora_saida: normalizeLine(departTime),
-        aeroporto_saida: normalizeAirportField(airportOut, runtimeAliases),
+        aeroporto_saida: normalizeAirportField(airportOut, runtimeAliases, airportCodeCityLookup),
         duracao_voo: normalizeLine(duration),
         tipo_voo: normalizeLine(flightType),
         hora_chegada: formatArrivalTimeWithOffset(dataInicio, dataFim || dataInicio, arrivalTime),
-        aeroporto_chegada: normalizeAirportField(airportIn, runtimeAliases),
+        aeroporto_chegada: normalizeAirportField(airportIn, runtimeAliases, airportCodeCityLookup),
       });
 
       cursor += 7;
@@ -923,8 +975,8 @@ function parseProviderCards(text: string, referenceDate: Date, runtimeAliases: A
     const distributedTaxes = splitTotalAcrossSegments(cardTaxes, cardSegments.length);
 
     cardSegments.forEach((segment, index) => {
-      const cityOut = resolveCityFromAirportLabel(segment.aeroporto_saida, runtimeAliases);
-      const cityIn = resolveCityFromAirportLabel(segment.aeroporto_chegada, runtimeAliases);
+      const cityOut = resolveCityFromAirportLabel(segment.aeroporto_saida, runtimeAliases, airportCodeCityLookup);
+      const cityIn = resolveCityFromAirportLabel(segment.aeroporto_chegada, runtimeAliases, airportCodeCityLookup);
       const fallbackTrecho = [cityOut, cityIn].filter(Boolean).join(" - ");
 
       const trechoResolved = (() => {
@@ -962,7 +1014,11 @@ function parseProviderCards(text: string, referenceDate: Date, runtimeAliases: A
   return sortFlights(imported);
 }
 
-function collectProvider2AliasValues(text: string, runtimeAliases: AirportAliasEntry[] = []) {
+function collectProvider2AliasValues(
+  text: string,
+  runtimeAliases: AirportAliasEntry[] = [],
+  airportCodeCityLookup: Record<string, string> = {}
+) {
   const rawLines = String(text || "")
     .replace(/\r/g, "\n")
     .split("\n")
@@ -1010,7 +1066,7 @@ function collectProvider2AliasValues(text: string, runtimeAliases: AirportAliasE
   [...origins, ...destinations].forEach((label) => {
     const normalizedLabel = normalizeLine(label);
     if (!normalizedLabel || isAirportLine(normalizedLabel)) return;
-    const resolved = resolveAirportMatch(normalizedLabel, runtimeAliases);
+    const resolved = resolveAirportMatch(normalizedLabel, runtimeAliases, airportCodeCityLookup);
     if (!resolved?.code) return;
     const storageValue = buildAirportAliasStorageValue(normalizedLabel, resolved.code, resolved.city);
     if (!storageValue) return;
@@ -1020,7 +1076,11 @@ function collectProvider2AliasValues(text: string, runtimeAliases: AirportAliasE
   return Array.from(aliases);
 }
 
-function collectProviderCardAliasValues(text: string, runtimeAliases: AirportAliasEntry[] = []) {
+function collectProviderCardAliasValues(
+  text: string,
+  runtimeAliases: AirportAliasEntry[] = [],
+  airportCodeCityLookup: Record<string, string> = {}
+) {
   const rawLines = String(text || "")
     .replace(/\r/g, "\n")
     .split("\n")
@@ -1058,7 +1118,7 @@ function collectProviderCardAliasValues(text: string, runtimeAliases: AirportAli
       [airportOut, airportIn].forEach((label) => {
         const normalizedLabel = normalizeLine(label);
         if (!normalizedLabel || isAirportLine(normalizedLabel)) return;
-        const resolved = resolveAirportMatch(normalizedLabel, runtimeAliases);
+        const resolved = resolveAirportMatch(normalizedLabel, runtimeAliases, airportCodeCityLookup);
         if (!resolved?.code) return;
         const storageValue = buildAirportAliasStorageValue(normalizedLabel, resolved.code, resolved.city);
         if (!storageValue) return;
@@ -1075,9 +1135,10 @@ export function collectImportedRoteiroAereoAliasValues(
   options: ParseImportedRoteiroAereoOptions = {}
 ) {
   const runtimeAliases = buildRuntimeAirportAliases(options.airportAliasValues);
+  const airportCodeCityLookup = options.airportCodeCityLookup || {};
   const aliases = new Set<string>([
-    ...collectProvider2AliasValues(text, runtimeAliases),
-    ...collectProviderCardAliasValues(text, runtimeAliases),
+    ...collectProvider2AliasValues(text, runtimeAliases, airportCodeCityLookup),
+    ...collectProviderCardAliasValues(text, runtimeAliases, airportCodeCityLookup),
   ]);
   return Array.from(aliases);
 }
@@ -1088,10 +1149,11 @@ export function parseImportedRoteiroAereo(
   options: ParseImportedRoteiroAereoOptions = {}
 ) {
   const runtimeAliases = buildRuntimeAirportAliases(options.airportAliasValues);
-  const provider2 = parseProvider2(text, runtimeAliases);
+  const airportCodeCityLookup = options.airportCodeCityLookup || {};
+  const provider2 = parseProvider2(text, runtimeAliases, airportCodeCityLookup);
   if (provider2.length > 0) return provider2;
 
-  const providerCards = parseProviderCards(text, referenceDate, runtimeAliases);
+  const providerCards = parseProviderCards(text, referenceDate, runtimeAliases, airportCodeCityLookup);
   if (providerCards.length > 0) return providerCards;
 
   const lines = String(text || "")
