@@ -92,17 +92,15 @@ export default function RoteiroListIsland() {
           tone="info"
           title="Roteiros personalizados"
           subtitle="Busque, edite e remova roteiros salvos."
-          actions={(
-            <div className="mobile-stack-buttons orcamentos-action-bar vtur-actions-end">
-              <AppButton as="a" href="/orcamentos/personalizados/novo" variant="primary">
-                Novo Roteiro
-              </AppButton>
-              <AppButton as="a" href="/orcamentos/consulta" variant="secondary">
-                Voltar
-              </AppButton>
-            </div>
-          )}
         >
+          <div className="mobile-stack-buttons orcamentos-action-bar mb-3">
+            <AppButton as="a" href="/orcamentos/personalizados/novo" variant="primary">
+              Novo Roteiro
+            </AppButton>
+            <AppButton as="a" href="/orcamentos/consulta" variant="secondary">
+              Voltar
+            </AppButton>
+          </div>
           <div
             className="form-row mobile-stack"
             style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}

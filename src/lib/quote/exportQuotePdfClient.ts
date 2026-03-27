@@ -476,6 +476,78 @@ function formatQuotePdfItems(items: QuoteItemRecord[]): QuotePdfItem[] {
   }));
 }
 
+function escapeHtml(value?: string | null) {
+  return textValue(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function formatCurrency(value: number) {
+  if (!Number.isFinite(value)) return "R$ 0,00";
+  return value.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+function buildFallbackPreviewHtml(params: {
+  quote: {
+    id: string;
+    created_at: string | null;
+    client_name: string | null;
+  };
+  items: QuotePdfItem[];
+  showItemValues: boolean;
+}) {
+  const { quote, items, showItemValues } = params;
+  const total = items.reduce((sum, item) => sum + Number(item.total_amount || 0), 0);
+  const dateLabel = quote.created_at ? new Date(quote.created_at).toLocaleDateString("pt-BR") : "-";
+  const clientLabel = textValue(quote.client_name) || "Cliente";
+
+  const rows = items
+    .map((item) => {
+      const label = textValue(item.title || item.product_name || item.item_type || "Item");
+      const city = textValue(item.city_name);
+      const periodStart = textValue(item.start_date);
+      const periodEnd = textValue(item.end_date);
+      const period = [periodStart, periodEnd].filter(Boolean).join(" - ");
+      const meta = [city, period].filter(Boolean).join(" | ");
+      const amount = Number(item.total_amount || 0);
+      return `<tr>
+        <td style="padding:10px 8px; border-bottom:1px solid #e2e8f0; color:#0f172a;">${escapeHtml(label)}</td>
+        <td style="padding:10px 8px; border-bottom:1px solid #e2e8f0; color:#64748b;">${escapeHtml(meta || "-")}</td>
+        <td style="padding:10px 8px; border-bottom:1px solid #e2e8f0; text-align:right; color:#0f172a;">${
+          showItemValues ? escapeHtml(formatCurrency(amount)) : "-"
+        }</td>
+      </tr>`;
+    })
+    .join("");
+
+  return `<div style="font-family:Arial, sans-serif; color:#0f172a;">
+    <div style="border:1px solid #dbeafe; border-radius:12px; padding:16px; margin-bottom:14px;">
+      <div style="font-size:22px; color:#1d4ed8; font-weight:700;">Orcamento da viagem</div>
+      <div style="font-size:13px; color:#475569; margin-top:2px;">Cliente: ${escapeHtml(clientLabel)}</div>
+      <div style="font-size:13px; color:#475569;">Data: ${escapeHtml(dateLabel)}</div>
+      <div style="font-size:14px; color:#0f172a; margin-top:10px;"><b>Total:</b> ${escapeHtml(
+        formatCurrency(total)
+      )}</div>
+    </div>
+    <table style="width:100%; border-collapse:collapse; border:1px solid #dbeafe; border-radius:12px; overflow:hidden;">
+      <thead>
+        <tr style="background:#eff6ff;">
+          <th style="text-align:left; padding:10px 8px; color:#1e3a8a;">Item</th>
+          <th style="text-align:left; padding:10px 8px; color:#1e3a8a;">Detalhes</th>
+          <th style="text-align:right; padding:10px 8px; color:#1e3a8a;">Valor</th>
+        </tr>
+      </thead>
+      <tbody>${rows || `<tr><td colspan="3" style="padding:12px;">Sem itens no orcamento.</td></tr>`}</tbody>
+    </table>
+  </div>`;
+}
+
 function extractStoragePath(value?: string | null) {
   if (!value) return null;
   const marker = "/quotes/";
@@ -595,10 +667,7 @@ export async function exportQuotePdfById(args: ExportArgs): Promise<string | voi
 export async function loadQuotePreviewHtmlById(args: PreviewArgs): Promise<string> {
   const { quoteId, showItemValues = true, showSummary = true, discount } = args;
   const { data: auth } = await supabaseBrowser.auth.getUser();
-  const userId = auth?.user?.id;
-  if (!userId) {
-    throw new Error("Usuario nao autenticado.");
-  }
+  const userId = auth?.user?.id || null;
 
   const { data: quote, error: quoteError } = await supabaseBrowser
     .from("quote")
@@ -612,20 +681,22 @@ export async function loadQuotePreviewHtmlById(args: PreviewArgs): Promise<strin
   const items = await fetchQuoteItems(quote.id);
   const formattedItems = formatQuotePdfItems(items);
 
-  const { data: settings } = await supabaseBrowser
+  let settingsQuery = supabaseBrowser
     .from("quote_print_settings")
     .select(
       "logo_url, logo_path, consultor_nome, filial_nome, endereco_linha1, endereco_linha2, endereco_linha3, telefone, whatsapp, whatsapp_codigo_pais, email, rodape_texto, imagem_complementar_url, imagem_complementar_path"
-    )
-    .eq("owner_user_id", userId)
-    .maybeSingle();
+    );
+  if (userId) {
+    settingsQuery = settingsQuery.eq("owner_user_id", userId);
+  }
+  const { data: settings } = await settingsQuery.limit(1).maybeSingle();
 
   const logoUrl = settings ? await resolveStorageUrl(settings.logo_url, settings.logo_path).catch(() => null) : null;
   const complementImageUrl = settings
     ? await resolveStorageUrl(settings.imagem_complementar_url, settings.imagem_complementar_path).catch(() => null)
     : null;
 
-  return await buildQuotePreviewHtml({
+  const basePayload = {
     quote: {
       id: quote.id,
       created_at: quote.created_at || null,
@@ -644,5 +715,20 @@ export async function loadQuotePreviewHtmlById(args: PreviewArgs): Promise<strin
       showSummary,
       discount,
     },
-  });
+  };
+
+  try {
+    return await buildQuotePreviewHtml(basePayload);
+  } catch (err) {
+    console.error("[QuotePreview] Falha ao montar visualizacao HTML 1:1. Aplicando fallback.", err);
+    return buildFallbackPreviewHtml({
+      quote: {
+        id: basePayload.quote.id,
+        created_at: basePayload.quote.created_at,
+        client_name: basePayload.quote.client_name,
+      },
+      items: basePayload.items,
+      showItemValues,
+    });
+  }
 }

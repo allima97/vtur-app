@@ -177,42 +177,41 @@ export default function RoteiroVisualizarIsland({ roteiroId, roteiroNome }: Prop
           className="mb-3 list-toolbar-sticky"
           title={roteiroNome ? `Visualizacao: ${roteiroNome}` : "Visualizacao do roteiro"}
           subtitle="A previa HTML usa exatamente o mesmo PDF final gerado para exportacao."
-          actions={
-            <div className="orcamentos-action-bar vtur-actions-end">
-              <AppButton
-                type="button"
-                variant="primary"
-                onClick={handleDownloadPdf}
-                disabled={exportingPdf}
-                loading={exportingPdf}
-              >
-                {exportingPdf ? "Exportando..." : "Exportar PDF"}
-              </AppButton>
-              <AppButton
-                type="button"
-                variant="secondary"
-                onClick={() => setRefreshNonce((value) => value + 1)}
-                disabled={loadingPreview}
-              >
-                Atualizar visualizacao
-              </AppButton>
-              <AppButton
-                type="button"
-                variant="ghost"
-                onClick={handleOpenNewTab}
-                disabled={!previewUrl}
-              >
-                Abrir em nova aba
-              </AppButton>
-              <AppButton as="a" href={`/orcamentos/personalizados/${roteiroId}`} variant="secondary">
-                Editar
-              </AppButton>
-              <AppButton as="a" href="/orcamentos/personalizados" variant="secondary">
-                Voltar
-              </AppButton>
-            </div>
-          }
-        />
+        >
+          <div className="orcamentos-action-bar">
+            <AppButton
+              type="button"
+              variant="primary"
+              onClick={handleDownloadPdf}
+              disabled={exportingPdf}
+              loading={exportingPdf}
+            >
+              {exportingPdf ? "Exportando..." : "Exportar PDF"}
+            </AppButton>
+            <AppButton
+              type="button"
+              variant="secondary"
+              onClick={() => setRefreshNonce((value) => value + 1)}
+              disabled={loadingPreview}
+            >
+              Atualizar visualizacao
+            </AppButton>
+            <AppButton
+              type="button"
+              variant="ghost"
+              onClick={handleOpenNewTab}
+              disabled={!previewUrl}
+            >
+              Abrir em nova aba
+            </AppButton>
+            <AppButton as="a" href={`/orcamentos/personalizados/${roteiroId}`} variant="secondary">
+              Editar
+            </AppButton>
+            <AppButton as="a" href="/orcamentos/personalizados" variant="secondary">
+              Voltar
+            </AppButton>
+          </div>
+        </AppCard>
 
         {error && (
           <AlertMessage variant="error" className="mb-3">

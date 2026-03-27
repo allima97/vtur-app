@@ -1,38 +1,22 @@
 import { useEffect, useRef, useState } from "react";
-import pdfWorkerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import AlertMessage from "../ui/AlertMessage";
 import EmptyState from "../ui/EmptyState";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
-import { exportQuotePdfById } from "../../lib/quote/exportQuotePdfClient";
+import { exportQuotePdfById, loadQuotePreviewHtmlById } from "../../lib/quote/exportQuotePdfClient";
 
 type Props = {
   quoteId: string;
 };
 
 export default function QuoteVisualizarIsland({ quoteId }: Props) {
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [previewPages, setPreviewPages] = useState<string[]>([]);
+  const [previewHtml, setPreviewHtml] = useState("");
   const [loadingPreview, setLoadingPreview] = useState(true);
-  const [renderingPreview, setRenderingPreview] = useState(false);
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const previewRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    previewRef.current = previewUrl;
-  }, [previewUrl]);
-
-  useEffect(() => {
-    return () => {
-      if (previewRef.current) {
-        URL.revokeObjectURL(previewRef.current);
-        previewRef.current = null;
-      }
-    };
-  }, []);
+  const previewScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let canceled = false;
@@ -41,32 +25,22 @@ export default function QuoteVisualizarIsland({ quoteId }: Props) {
       setLoadingPreview(true);
       setError(null);
       try {
-        const blobUrl = await exportQuotePdfById({
+        const html = await loadQuotePreviewHtmlById({
           quoteId,
           showItemValues: true,
           showSummary: true,
-          action: "blob-url",
         });
 
-        if (typeof blobUrl !== "string") {
-          throw new Error("Nao foi possivel gerar a visualizacao do PDF.");
+        if (canceled) return;
+        setPreviewHtml(html);
+        if (previewScrollRef.current) {
+          previewScrollRef.current.scrollTop = 0;
         }
-
-        if (canceled) {
-          URL.revokeObjectURL(blobUrl);
-          return;
-        }
-
-        setPreviewUrl((previous) => {
-          if (previous && previous !== blobUrl) {
-            URL.revokeObjectURL(previous);
-          }
-          return blobUrl;
-        });
       } catch (err: any) {
         if (canceled) return;
         console.error("[QuoteVisualizar] Erro ao gerar previa:", err);
         setError(err?.message || "Nao foi possivel carregar a visualizacao do orcamento.");
+        setPreviewHtml("");
       } finally {
         if (!canceled) {
           setLoadingPreview(false);
@@ -80,71 +54,6 @@ export default function QuoteVisualizarIsland({ quoteId }: Props) {
       canceled = true;
     };
   }, [quoteId, refreshNonce]);
-
-  useEffect(() => {
-    let canceled = false;
-
-    async function renderPreviewPages() {
-      if (!previewUrl) {
-        setPreviewPages([]);
-        return;
-      }
-      setRenderingPreview(true);
-      try {
-        const pdfjs = await import("pdfjs-dist");
-        pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
-
-        const loadingTask = pdfjs.getDocument(previewUrl);
-        const pdfDocument = await loadingTask.promise;
-        const pages: string[] = [];
-
-        for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber += 1) {
-          if (canceled) break;
-          const page = await pdfDocument.getPage(pageNumber);
-          const viewport = page.getViewport({ scale: 1.25 });
-          const canvas = document.createElement("canvas");
-          const context = canvas.getContext("2d");
-          if (!context) continue;
-
-          canvas.width = Math.floor(viewport.width);
-          canvas.height = Math.floor(viewport.height);
-
-          await page.render({
-            canvasContext: context,
-            viewport,
-          }).promise;
-
-          pages.push(canvas.toDataURL("image/png"));
-        }
-
-        if (!canceled) {
-          setPreviewPages(pages);
-        }
-
-        try {
-          await pdfDocument.cleanup();
-          await pdfDocument.destroy();
-        } catch {
-          // ignore cleanup errors
-        }
-      } catch (err: any) {
-        if (canceled) return;
-        console.error("[QuoteVisualizar] Erro ao renderizar paginas do PDF:", err);
-        setError(err?.message || "Nao foi possivel renderizar a visualizacao do orcamento.");
-        setPreviewPages([]);
-      } finally {
-        if (!canceled) {
-          setRenderingPreview(false);
-        }
-      }
-    }
-
-    void renderPreviewPages();
-
-    return () => {
-      canceled = true;
-    };
-  }, [previewUrl]);
 
   async function handleDownloadPdf() {
     setExportingPdf(true);
@@ -164,14 +73,6 @@ export default function QuoteVisualizarIsland({ quoteId }: Props) {
     }
   }
 
-  function handleOpenNewTab() {
-    if (!previewUrl || typeof window === "undefined") return;
-    const opened = window.open(previewUrl, "_blank", "noopener,noreferrer");
-    if (!opened) {
-      setError("O navegador bloqueou a abertura da nova aba do PDF.");
-    }
-  }
-
   return (
     <AppPrimerProvider>
       <div className="page-content-wrap orcamentos-visualizar-page">
@@ -179,43 +80,34 @@ export default function QuoteVisualizarIsland({ quoteId }: Props) {
           tone="info"
           className="mb-3 list-toolbar-sticky"
           title="Visualizacao do orcamento"
-          subtitle="A previa HTML usa exatamente o mesmo PDF final gerado para exportacao."
-          actions={
-            <div className="orcamentos-action-bar vtur-actions-end">
-              <AppButton
-                type="button"
-                variant="primary"
-                onClick={handleDownloadPdf}
-                disabled={exportingPdf}
-                loading={exportingPdf}
-              >
-                {exportingPdf ? "Exportando..." : "Exportar PDF"}
-              </AppButton>
-              <AppButton
-                type="button"
-                variant="secondary"
-                onClick={() => setRefreshNonce((value) => value + 1)}
-                disabled={loadingPreview}
-              >
-                Atualizar visualizacao
-              </AppButton>
-              <AppButton
-                type="button"
-                variant="ghost"
-                onClick={handleOpenNewTab}
-                disabled={!previewUrl}
-              >
-                Abrir em nova aba
-              </AppButton>
-              <AppButton as="a" href={`/orcamentos/${quoteId}`} variant="secondary">
-                Editar
-              </AppButton>
-              <AppButton as="a" href="/orcamentos/consulta" variant="secondary">
-                Voltar
-              </AppButton>
-            </div>
-          }
-        />
+          subtitle="Visualizacao HTML com a mesma estrutura visual do modelo de PDF."
+        >
+          <div className="orcamentos-action-bar">
+            <AppButton
+              type="button"
+              variant="primary"
+              onClick={handleDownloadPdf}
+              disabled={exportingPdf}
+              loading={exportingPdf}
+            >
+              {exportingPdf ? "Gerando..." : "Gerar PDF"}
+            </AppButton>
+            <AppButton
+              type="button"
+              variant="secondary"
+              onClick={() => setRefreshNonce((value) => value + 1)}
+              disabled={loadingPreview}
+            >
+              Atualizar visualizacao
+            </AppButton>
+            <AppButton as="a" href={`/orcamentos/${quoteId}`} variant="secondary">
+              Editar
+            </AppButton>
+            <AppButton as="a" href="/orcamentos/consulta" variant="secondary">
+              Voltar
+            </AppButton>
+          </div>
+        </AppCard>
 
         {error && (
           <AlertMessage variant="error" className="mb-3">
@@ -228,35 +120,41 @@ export default function QuoteVisualizarIsland({ quoteId }: Props) {
           title="Previa 1:1 do PDF"
           subtitle="Visualizacao em escala amigavel para conferencia antes do envio ao cliente."
         >
-          {loadingPreview && !previewUrl ? (
+          {loadingPreview && !previewHtml ? (
             <EmptyState
               title="Gerando visualizacao"
-              description="Aguarde alguns segundos enquanto montamos o mesmo PDF da exportacao."
+              description="Aguarde alguns segundos enquanto montamos a visualizacao HTML."
             />
           ) : null}
 
-          {renderingPreview && previewUrl && previewPages.length === 0 ? (
-            <EmptyState
-              title="Montando paginas"
-              description="Estamos preparando a visualizacao pagina a pagina do PDF."
-            />
-          ) : null}
-
-          {previewPages.length > 0 ? (
+          {previewHtml ? (
             <div className="orcamento-preview-shell">
               <div className="orcamento-preview-frame-wrap">
-                <div className="orcamento-preview-pages" aria-label={`preview-orcamento-${quoteId}`}>
-                  {previewPages.map((pageImage, index) => (
-                    <img
-                      key={`quote-preview-page-${index}`}
-                      src={pageImage}
-                      alt={`Pagina ${index + 1} do orcamento`}
-                      className="orcamento-preview-page"
+                <div className="orcamento-preview-frame">
+                  <div
+                    ref={previewScrollRef}
+                    className="orcamento-html-preview-wrap"
+                    aria-label={`preview-orcamento-${quoteId}`}
+                  >
+                    <div
+                      className="orcamento-html-preview"
+                      dangerouslySetInnerHTML={{ __html: previewHtml }}
                     />
-                  ))}
+                  </div>
                 </div>
               </div>
             </div>
+          ) : null}
+
+          {!loadingPreview && !previewHtml ? (
+            <EmptyState
+              title="Visualizacao indisponivel"
+              description={
+                error
+                  ? "Nao foi possivel montar a visualizacao HTML agora. Clique em Atualizar visualizacao para tentar novamente."
+                  : "Nao encontramos conteudo para visualizacao neste orcamento."
+              }
+            />
           ) : null}
         </AppCard>
       </div>
