@@ -291,6 +291,7 @@ export async function GET({ request }: { request: Request }) {
       String(url.searchParams.get("include_viagens") || "1").trim() === "1";
     const includeFollowUps =
       String(url.searchParams.get("include_followups") || "1").trim() === "1";
+    const cacheRevision = String(url.searchParams.get("rev") || "").trim() || "0";
     const noCache = String(url.searchParams.get("no_cache") || "").trim() === "1";
 
     const requestedVendedorIds = requestedVendedorIdsRaw
@@ -332,6 +333,7 @@ export async function GET({ request }: { request: Request }) {
       inicio,
       fim,
       tipoName || "sem_tipo",
+      `rev:${cacheRevision}`,
     ];
 
     let perms: Record<string, Permissao> = {};

@@ -33,6 +33,7 @@ import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import { getVendasCacheVersion } from "../../lib/vendasCacheVersion";
 
 type Cliente = {
   id: string;
@@ -319,6 +320,7 @@ async function fetchRelatorioVendas(params: {
   all?: boolean;
   noCache?: boolean;
   includePagamentos?: boolean;
+  cacheRevision?: string;
 }) {
   const qs = new URLSearchParams();
   if (params.dataInicio) qs.set("inicio", params.dataInicio);
@@ -335,6 +337,7 @@ async function fetchRelatorioVendas(params: {
   if (params.all) qs.set("all", "1");
   if (params.noCache) qs.set("no_cache", "1");
   if (params.includePagamentos) qs.set("include_pagamentos", "1");
+  if (params.cacheRevision && params.cacheRevision !== "0") qs.set("rev", params.cacheRevision);
 
   const resp = await fetch(`/api/v1/relatorios/vendas?${qs.toString()}`);
   if (!resp.ok) {
@@ -1392,6 +1395,7 @@ export default function RelatorioVendasIsland() {
         pageSize: tamanhoPagina,
         all: filtrosLocaisAtivos,
         includePagamentos: true,
+        cacheRevision: getVendasCacheVersion(),
       });
 
       const vendasData = items as Venda[];

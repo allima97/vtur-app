@@ -110,6 +110,7 @@ export async function GET({ request }: { request: Request }) {
     const fim = String(url.searchParams.get("fim") || "").trim();
     const requestedCompanyId = String(url.searchParams.get("company_id") || "").trim();
     const vendedorIdsRaw = String(url.searchParams.get("vendedor_ids") || "").trim();
+    const cacheRevision = String(url.searchParams.get("rev") || "").trim() || "0";
     const noCache = String(url.searchParams.get("no_cache") || "").trim() === "1";
 
     const hasDates = Boolean(inicio || fim);
@@ -202,6 +203,7 @@ export async function GET({ request }: { request: Request }) {
       hasDates ? fim : "all",
       companyId || "all",
       vendedorIds.length === 0 ? "all" : vendedorIds.join(","),
+      `rev:${cacheRevision}`,
     ].join("|");
 
     if (!noCache) {

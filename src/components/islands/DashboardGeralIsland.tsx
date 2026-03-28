@@ -6,6 +6,7 @@ import {
   invalidateQueryLiteByPrefix,
   queryLite,
 } from "../../lib/queryLite";
+import { getVendasCacheVersion } from "../../lib/vendasCacheVersion";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
 import { formatCurrencyBRL, formatDateTimeBR } from "../../lib/format";
@@ -470,6 +471,7 @@ function toLineChartConfig(
   const [showCustomize, setShowCustomize] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [vendasCacheRevision, setVendasCacheRevision] = useState("0");
   const [mobileWidgetOpen, setMobileWidgetOpen] = useState<Record<WidgetId, boolean>>(() =>
     ALL_WIDGETS.reduce((acc, w) => ({ ...acc, [w.id]: false }), {} as Record<WidgetId, boolean>)
   );
@@ -517,6 +519,29 @@ function toLineChartConfig(
       setShowCalculator(false);
     }
   }, [isMobile]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const sync = () => setVendasCacheRevision(getVendasCacheVersion());
+    const onBust = (event: Event) => {
+      const detail = (event as CustomEvent<{ version?: string }>).detail;
+      const nextVersion = String(detail?.version || getVendasCacheVersion() || "0");
+      setVendasCacheRevision(nextVersion);
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== "vtur_vendas_cache_version") return;
+      setVendasCacheRevision(String(event.newValue || "0"));
+    };
+
+    sync();
+    window.addEventListener("vtur:vendas-cache-bust", onBust as EventListener);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("vtur:vendas-cache-bust", onBust as EventListener);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
 
   useEffect(() => {
     const id = setInterval(() => setAgora(Date.now()), 30000);
@@ -740,6 +765,10 @@ function toLineChartConfig(
         setErro(null);
 
         const params = new URLSearchParams({ mode: "geral", inicio, fim });
+        const cacheRevision = vendasCacheRevision || getVendasCacheVersion();
+        if (cacheRevision && cacheRevision !== "0") {
+          params.set("rev", cacheRevision);
+        }
         params.set("include_clientes", "0");
         const storedVisibility = readWidgetVisibilityFromStorage(
           "dashboard_widgets",
@@ -909,7 +938,7 @@ function toLineChartConfig(
     return () => {
       cancelled = true;
     };
-  }, [inicio, fim, userId, podeVerConsultoria, podeVerOperacao]);
+  }, [inicio, fim, userId, podeVerConsultoria, podeVerOperacao, vendasCacheRevision]);
 
 
   useEffect(() => {

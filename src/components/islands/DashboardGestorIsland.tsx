@@ -2,6 +2,7 @@ import { Dialog } from "../ui/primer/legacyCompat";
 import React, { useEffect, useMemo, useState } from "react";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { buildQueryLiteKey, queryLite } from "../../lib/queryLite";
+import { getVendasCacheVersion } from "../../lib/vendasCacheVersion";
 import { supabase } from "../../lib/supabase";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import IslandErrorBoundary from "../ui/IslandErrorBoundary";
@@ -371,6 +372,7 @@ function DashboardGestorIslandInner() {
       )
   );
   const [showCustomize, setShowCustomize] = useState(false);
+  const [vendasCacheRevision, setVendasCacheRevision] = useState("0");
 
   const [equipeNomes, setEquipeNomes] = useState<Record<string, string>>({});
   const isMaster = papel === "MASTER";
@@ -449,6 +451,29 @@ function DashboardGestorIslandInner() {
       active = false;
     };
   }, [userId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const sync = () => setVendasCacheRevision(getVendasCacheVersion());
+    const onBust = (event: Event) => {
+      const detail = (event as CustomEvent<{ version?: string }>).detail;
+      const nextVersion = String(detail?.version || getVendasCacheVersion() || "0");
+      setVendasCacheRevision(nextVersion);
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== "vtur_vendas_cache_version") return;
+      setVendasCacheRevision(String(event.newValue || "0"));
+    };
+
+    sync();
+    window.addEventListener("vtur:vendas-cache-bust", onBust as EventListener);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("vtur:vendas-cache-bust", onBust as EventListener);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -600,6 +625,10 @@ function DashboardGestorIslandInner() {
         }
 
         const params = new URLSearchParams({ mode: "gestor", inicio, fim });
+        const cacheRevision = vendasCacheRevision || getVendasCacheVersion();
+        if (cacheRevision && cacheRevision !== "0") {
+          params.set("rev", cacheRevision);
+        }
         params.set("include_clientes", "0");
         const storedVisibility = readGestorWidgetVisibility(
           "dashboard_gestor_widgets",
@@ -669,6 +698,7 @@ function DashboardGestorIslandInner() {
     masterScope.empresaSelecionada,
     masterScope.gestorSelecionado,
     masterScope.vendedorSelecionado,
+    vendasCacheRevision,
   ]);
 
   useEffect(() => {

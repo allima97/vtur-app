@@ -555,6 +555,7 @@ export async function GET({ request }: { request: Request }) {
     const valorMinRaw = String(url.searchParams.get("valor_min") || "").trim();
     const valorMaxRaw = String(url.searchParams.get("valor_max") || "").trim();
     const vendedorIdsRaw = String(url.searchParams.get("vendedor_ids") || "").trim();
+    const cacheRevision = String(url.searchParams.get("rev") || "").trim() || "0";
     const noCache = String(url.searchParams.get("no_cache") || "").trim() === "1";
     const includePagamentos = String(url.searchParams.get("include_pagamentos") || "").trim() === "1";
     const all = String(url.searchParams.get("all") || "").trim() === "1";
@@ -643,6 +644,7 @@ export async function GET({ request }: { request: Request }) {
       includePagamentos ? "p1" : "p0",
       String(page),
       String(pageSize),
+      `rev:${cacheRevision}`,
     ].join("|");
 
     if (!noCache) {

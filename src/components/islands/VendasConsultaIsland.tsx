@@ -4,6 +4,7 @@ import { registrarLog } from "../../lib/logs";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { useMasterScope } from "../../lib/useMasterScope";
 import { buildQueryLiteKey, invalidateQueryLiteByPrefix, queryLite } from "../../lib/queryLite";
+import { bumpVendasCacheVersion, getVendasCacheVersion } from "../../lib/vendasCacheVersion";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { construirLinkWhatsApp } from "../../lib/whatsapp";
 import { normalizeText } from "../../lib/normalizeText";
@@ -538,6 +539,11 @@ export default function VendasConsultaIsland() {
       }
 
       const params = new URLSearchParams();
+      const cacheRevision = getVendasCacheVersion();
+      if (cacheRevision && cacheRevision !== "0") {
+        params.set("rev", cacheRevision);
+        kpisParams.set("rev", cacheRevision);
+      }
       if (openId) {
         params.set("id", openId);
         setCarregouTodos(true);
@@ -721,6 +727,7 @@ export default function VendasConsultaIsland() {
     if (!userCtx?.usuarioId) return;
     invalidateQueryLiteByPrefix(`vendasList|${userCtx.usuarioId}|`);
     invalidateQueryLiteByPrefix(`vendasKpis|${userCtx.usuarioId}|`);
+    bumpVendasCacheVersion();
   }
 
   useEffect(() => {

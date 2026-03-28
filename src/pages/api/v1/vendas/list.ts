@@ -250,6 +250,7 @@ export async function GET({ request }: { request: Request }) {
     const includeKpis =
       String(url.searchParams.get("include_kpis") || "").trim() === "1" ||
       String(url.searchParams.get("kpis") || "").trim() === "1";
+    const cacheRevision = String(url.searchParams.get("rev") || "").trim() || "0";
     const noCache = String(url.searchParams.get("no_cache") || "").trim() === "1";
 
     const page = parseIntSafe(url.searchParams.get("page"), 1);
@@ -340,6 +341,7 @@ export async function GET({ request }: { request: Request }) {
       companyId || "all",
       vendedorIds.length === 0 ? "all" : vendedorIds.join(","),
       all ? "all" : `p${page}-${pageSize}`,
+      `rev:${cacheRevision}`,
     ].join("|");
 
     if (!noCache) {

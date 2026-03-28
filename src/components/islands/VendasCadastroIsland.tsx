@@ -9,6 +9,7 @@ import { formatNumberBR } from "../../lib/format";
 import { normalizeMoneyInput, sanitizeMoneyInput, selectAllInputOnFocus } from "../../lib/inputNormalization";
 import { matchesCpfSearch, onlyDigits } from "../../lib/searchNormalization";
 import { carregarTermosNaoComissionaveis, isFormaNaoComissionavel } from "../../lib/pagamentoUtils";
+import { bumpVendasCacheVersion } from "../../lib/vendasCacheVersion";
 import CalculatorModal from "../ui/CalculatorModal";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import AlertMessage from "../ui/AlertMessage";
@@ -1493,6 +1494,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
         showToast("Venda cadastrada com sucesso!", "success");
       }
 
+      bumpVendasCacheVersion();
       setTimeout(() => resetFormAndGoToConsulta(), 200);
     } catch (e: any) {
       console.error(e);
