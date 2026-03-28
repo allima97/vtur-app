@@ -823,7 +823,6 @@ export default function VendasCadastroIsland() {
     return produtos.some((p) => p.todas_as_cidades && p.tipo_produto === tipoId);
   }
 
-  const cidadeObrigatoria = useMemo(() => recibos.length > 0, [recibos.length]);
   const wizardItems = useMemo(
     () => [
       { label: "Dados da venda" },
@@ -1150,6 +1149,27 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
       return false;
     }
 
+    if (!formVenda.destino_id?.trim()) {
+      setErro("Selecione a cidade de destino antes de continuar.");
+      showToast("Selecione a cidade de destino antes de continuar.", "error");
+      setWizardStep(0);
+      return false;
+    }
+
+    if (!formVenda.data_embarque) {
+      setErro("Informe a data de embarque antes de continuar.");
+      showToast("Informe a data de embarque antes de continuar.", "error");
+      setWizardStep(0);
+      return false;
+    }
+
+    if (!formVenda.data_final) {
+      setErro("Informe a data final antes de continuar.");
+      showToast("Informe a data final antes de continuar.", "error");
+      setWizardStep(0);
+      return false;
+    }
+
     if (formVenda.data_embarque && formVenda.data_final && !isEndOnOrAfterStart(formVenda.data_embarque, formVenda.data_final)) {
       setErro("A data final deve ser igual ou após a data de embarque.");
       showToast("A data final deve ser igual ou após a data de embarque.", "error");
@@ -1246,6 +1266,28 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
     return true;
   }
 
+  function validatePagamentosStep() {
+    if (pagamentos.length === 0) {
+      setErro("Inclua ao menos uma forma de pagamento antes de salvar.");
+      showToast("Inclua ao menos uma forma de pagamento antes de salvar.", "error");
+      setWizardStep(2);
+      return false;
+    }
+
+    for (let i = 0; i < pagamentos.length; i += 1) {
+      const pagamento = pagamentos[i];
+      if (!pagamento.forma_id && !pagamento.forma_nome?.trim()) {
+        const msg = `Pagamento ${i + 1}: selecione ou informe a forma de pagamento.`;
+        setErro(msg);
+        showToast(msg, "error");
+        setWizardStep(2);
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   function goToWizardStep(nextStep: number) {
     const bounded = Math.max(0, Math.min(2, nextStep));
     if (bounded <= wizardStep) {
@@ -1271,6 +1313,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
 
     if (!validateDadosVendaStep()) return;
     if (!validateRecibosStep()) return;
+    if (!validatePagamentosStep()) return;
 
     const clienteId = formVenda.cliente_id.trim();
 
@@ -1858,7 +1901,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                   onChange={(e) => handleCidadeDestino(e.target.value)}
                   onFocus={() => setMostrarSugestoesCidade(true)}
                   onBlur={() => setTimeout(() => setMostrarSugestoesCidade(false), 150)}
-                  required={cidadeObrigatoria}
+                  required
                 />
                 {mostrarSugestoesCidade && (buscandoCidade || buscaDestino.trim().length >= 2) && (
                   <div className="vtur-city-dropdown" style={{ maxHeight: 220 }}>
@@ -1960,6 +2003,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                     };
                   })
                 }
+                required
               />
 
               <AppField
@@ -1978,6 +2022,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                         : e.target.value,
                   })
                 }
+                required
               />
             </div>
           </AppCard>
