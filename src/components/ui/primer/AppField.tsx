@@ -47,9 +47,7 @@ export default function AppField(props: AppFieldProps) {
   const inputProps = rest as React.InputHTMLAttributes<HTMLInputElement>;
   const inputType = as === "input" ? inputProps.type : undefined;
   const inputClassName = typeof inputProps.className === "string" ? inputProps.className : "";
-  const controlWrapClassName = ["vtur-app-field-control", inputType === "date" ? "is-date" : ""]
-    .filter(Boolean)
-    .join(" ");
+  const controlWrapClassName = "vtur-app-field-control";
 
   return (
     <div className={["vtur-app-field", wrapperClassName].filter(Boolean).join(" ")}>

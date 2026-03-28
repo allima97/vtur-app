@@ -1619,8 +1619,8 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
             tone="config"
             className="mb-3 vendas-cadastro-dados-card"
           >
-            <div className="vtur-form-grid vtur-form-grid-4">
-              {canAssignVendedor && (
+            {canAssignVendedor && (
+              <div className="vtur-form-grid vtur-form-grid-2" style={{ marginBottom: 16 }}>
                 <AppField
                   as="select"
                   label="Vendedor *"
@@ -1635,8 +1635,10 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                     label: v.nome_completo || "Vendedor",
                   }))}
                 />
-              )}
+              </div>
+            )}
 
+            <div className="vtur-form-grid vtur-form-grid-2">
               <div className="form-group min-w-0 vtur-city-picker">
                 <AppField
                   label="Cliente *"
@@ -1767,7 +1769,9 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                   </div>
                 )}
               </div>
+            </div>
 
+            <div className="vtur-form-grid vtur-form-grid-4" style={{ marginTop: 16 }}>
               <AppField
                 label="Lançada em"
                 wrapperClassName="form-group min-w-0 vtur-sales-mobile-wide-field"
