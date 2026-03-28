@@ -277,6 +277,49 @@ export async function GET({ request }: { request: Request }) {
     if (pacotesResp.error) throw pacotesResp.error;
     if (formasResp.error) throw formasResp.error;
 
+    const clientesBase = Array.isArray(c.data) ? (c.data as any[]) : [];
+    let clientesDetalhados: any[] = clientesBase;
+
+    if (clientesBase.length > 0) {
+      try {
+        const ids = Array.from(
+          new Set(
+            clientesBase
+              .map((row: any) => String(row?.id || "").trim())
+              .filter(Boolean)
+          )
+        );
+        if (ids.length > 0) {
+          const { data: contatosData, error: contatosErr } = await client
+            .from("clientes")
+            .select("id, telefone, email, whatsapp")
+            .in("id", ids);
+          if (contatosErr) {
+            console.warn("[vendas/cadastro-base] sem contatos de clientes:", contatosErr.message);
+          } else {
+            const contatoById = new Map<string, any>();
+            (contatosData || []).forEach((row: any) => {
+              const id = String(row?.id || "").trim();
+              if (!id) return;
+              contatoById.set(id, row);
+            });
+            clientesDetalhados = clientesBase.map((row: any) => {
+              const id = String(row?.id || "").trim();
+              const contato = contatoById.get(id) || {};
+              return {
+                ...row,
+                telefone: contato?.telefone ?? null,
+                email: contato?.email ?? null,
+                whatsapp: contato?.whatsapp ?? null,
+              };
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("[vendas/cadastro-base] falha ao enriquecer clientes:", err);
+      }
+    }
+
     const payload = {
       user: {
         id: user.id,
@@ -287,7 +330,7 @@ export async function GET({ request }: { request: Request }) {
         can_assign_vendedor: canAssignVendedor,
       },
       vendedoresEquipe,
-      clientes: c.data || [],
+      clientes: clientesDetalhados,
       cidades: d.data || [],
       produtos: (p.data || []).map((prod: any) => ({
         ...prod,

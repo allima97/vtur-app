@@ -126,6 +126,11 @@ function formatPeriodoLabel(valor: string) {
   return `${mesLabel}/${ano}`;
 }
 
+function getCurrentMonthLocal() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
 export default function MinhaEscalaIsland() {
   const { loading: loadingPerms, ready } = usePermissoesStore();
   const loadingPerm = loadingPerms || !ready;
@@ -134,7 +139,7 @@ export default function MinhaEscalaIsland() {
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [userNome, setUserNome] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"minha" | "equipe">("minha");
-  const [periodo, setPeriodo] = useState(() => new Date().toISOString().slice(0, 7));
+  const [periodo, setPeriodo] = useState(() => getCurrentMonthLocal());
   const [escalaDias, setEscalaDias] = useState<EscalaDia[]>([]);
   const [escalaEquipeDias, setEscalaEquipeDias] = useState<EscalaDia[]>([]);
   const [equipeIds, setEquipeIds] = useState<string[]>([]);

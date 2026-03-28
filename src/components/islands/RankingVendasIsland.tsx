@@ -5,6 +5,7 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { useMasterScope } from "../../lib/useMasterScope";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { formatCurrencyBRL, formatNumberBR } from "../../lib/format";
+import { toISODateLocal } from "../../lib/dateTime";
 import { fetchGestorEquipeVendedorIds } from "../../lib/gestorEquipe";
 import AlertMessage from "../ui/AlertMessage";
 import AppCard from "../ui/primer/AppCard";
@@ -85,7 +86,7 @@ function formatPercent(value: number) {
 }
 
 function toIsoDate(date: Date) {
-  return date.toISOString().slice(0, 10);
+  return toISODateLocal(date);
 }
 
 function toMonthValue(date: Date) {

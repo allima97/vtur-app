@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { hasServiceRoleKey, supabaseServer, readEnv } from "../../lib/supabaseServer";
 import { resolveFromEmails, resolveResendApiKey, resolveSmtpConfig } from "../../lib/emailSettings";
+import { toISODateLocal } from "../../lib/dateTime";
 
 type OpcaoCron = {
   periodoInicio?: string; // ISO (yyyy-mm-dd)
@@ -41,12 +42,12 @@ const SENDGRID_API_KEY = readEnv("SENDGRID_API_KEY");
 const SENDGRID_FROM_EMAIL = readEnv("SENDGRID_FROM_EMAIL");
 
 function hojeISO() {
-  return new Date().toISOString().slice(0, 10);
+  return toISODateLocal(new Date());
 }
 
 function primeiroDiaMesAtual() {
   const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+  return toISODateLocal(new Date(d.getFullYear(), d.getMonth(), 1));
 }
 
 function daysDiff(a: string, b: string) {

@@ -89,7 +89,10 @@ type ExportFlags = {
 type PeriodoPreset = "hoje" | "7" | "30" | "mes_atual" | "mes_anterior" | "limpar" | "";
 
 function hojeISO() {
-  return new Date().toISOString().substring(0, 10);
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
+    now.getDate()
+  ).padStart(2, "0")}`;
 }
 
 function addDays(base: Date, days: number) {
@@ -99,7 +102,9 @@ function addDays(base: Date, days: number) {
 }
 
 function formatISO(date: Date) {
-  return date.toISOString().substring(0, 10);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate()
+  ).padStart(2, "0")}`;
 }
 
 async function fetchRelatorioProdutos(params: {

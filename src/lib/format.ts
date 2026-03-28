@@ -1,3 +1,9 @@
+import {
+  formatDatePtBrInTimeZone,
+  formatDateTimePtBrInTimeZone,
+  toISODateInTimeZone,
+} from "./dateTime";
+
 export function formatNumberBR(
   value: number | string | null | undefined,
   decimals = 2
@@ -32,46 +38,17 @@ export function formatCurrency(
 }
 
 export function formatDateBR(value?: string | Date | null): string {
-  if (!value) return "-";
-  if (value instanceof Date) {
-    return formatDateBR(value.toISOString());
-  }
-  const raw = String(value).trim();
-  if (!raw) return "-";
-  const datePart = raw.includes("T")
-    ? raw.split("T")[0]
-    : raw.includes(" ")
-    ? raw.split(" ")[0]
-    : raw;
-  if (datePart.includes("/")) return datePart;
-  const parts = datePart.split("-");
-  if (parts.length !== 3) return datePart;
-  const [year, month, day] = parts;
-  if (!year || !month || !day) return datePart;
-  return `${day}/${month}/${year}`;
+  return formatDatePtBrInTimeZone(value, "-");
 }
 
 export function formatDateTimeBR(value?: string | Date | null): string {
-  if (!value) return "-";
-  if (value instanceof Date) {
-    return formatDateTimeBR(value.toISOString());
-  }
-  const raw = String(value).trim();
-  if (!raw) return "-";
-  const sep = raw.includes("T") ? "T" : raw.includes(" ") ? " " : null;
-  if (!sep) return formatDateBR(raw);
-  const [datePart, timePartRaw] = raw.split(sep);
-  const date = formatDateBR(datePart);
-  if (!timePartRaw) return date;
-  const timeMatch = timePartRaw.match(/(\d{2}:\d{2})/);
-  const time = timeMatch ? timeMatch[1] : timePartRaw;
-  return `${date} ${time}`;
+  return formatDateTimePtBrInTimeZone(value, "-");
 }
 
 export function formatMonthYearBR(value?: string | Date | null, fallback = "-"): string {
   if (!value) return fallback;
 
-  const raw = value instanceof Date ? value.toISOString() : String(value).trim();
+  const raw = value instanceof Date ? toISODateInTimeZone(value) : String(value).trim();
   if (!raw) return fallback;
 
   const datePart = raw.includes("T") ? raw.split("T")[0] : raw.includes(" ") ? raw.split(" ")[0] : raw;

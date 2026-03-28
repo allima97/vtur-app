@@ -20,6 +20,7 @@ import {
   generateAutomaticRoteiroDias,
   type ItineraryTransferCity,
 } from "../../lib/roteiroItineraryBuilder";
+import { toISODateLocal } from "../../lib/dateTime";
 import {
   extractSeguroViagemIncludeLinesFromPasseios,
   isSeguroPasseioLike,
@@ -248,11 +249,7 @@ function buildDuplicateName(value: string, isDuplicate: boolean): string {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function hojeISO(): string {
-  // YYYY-MM-DD no fuso local (evita min=hoje “voltar” um dia em alguns fusos)
-  const now = new Date();
-  const tzOffsetMinutes = now.getTimezoneOffset();
-  const local = new Date(now.getTime() - tzOffsetMinutes * 60000);
-  return local.toISOString().slice(0, 10);
+  return toISODateLocal(new Date());
 }
 
 function calcNoites(di: string, df: string): number {

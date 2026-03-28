@@ -133,6 +133,12 @@ function writeCache(key: string, payload: unknown) {
   cache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, payload });
 }
 
+function toISODateLocal(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate()
+  ).padStart(2, "0")}`;
+}
+
 type VendasAgg = {
   totalVendas: number;
   totalTaxas: number;
@@ -486,7 +492,7 @@ export async function GET({ request }: { request: Request }) {
         const hoje = new Date();
         const ontem = new Date(hoje);
         ontem.setDate(hoje.getDate() - 1);
-        const ontemIso = ontem.toISOString().slice(0, 10);
+        const ontemIso = toISODateLocal(ontem);
         const fimFollowUp = fim < ontemIso ? fim : ontemIso;
         if (fimFollowUp < inicio) return [];
 
@@ -564,10 +570,10 @@ export async function GET({ request }: { request: Request }) {
       if (!canOperacao) return [];
       if (mode === "gestor") {
         try {
-          const hojeIso = new Date().toISOString().slice(0, 10);
+          const hojeIso = toISODateLocal(new Date());
           const limiteData = new Date();
           limiteData.setDate(limiteData.getDate() + 14);
-          const limiteIso = limiteData.toISOString().slice(0, 10);
+          const limiteIso = toISODateLocal(limiteData);
           let viagensQuery = client
             .from("viagens")
             .select(
@@ -598,10 +604,10 @@ export async function GET({ request }: { request: Request }) {
         }
       }
       try {
-        const hojeIso = new Date().toISOString().slice(0, 10);
+        const hojeIso = toISODateLocal(new Date());
         const limiteData = new Date();
         limiteData.setDate(limiteData.getDate() + 14);
-        const limiteIso = limiteData.toISOString().slice(0, 10);
+        const limiteIso = toISODateLocal(limiteData);
         let viagensQuery = client
           .from("viagens")
           .select(`

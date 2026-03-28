@@ -13,6 +13,7 @@ import {
   Legend,
   Cell,
 } from "recharts";
+import { toISODateLocal } from "../../lib/dateTime";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import ConfirmDialog from "../ui/ConfirmDialog";
@@ -103,7 +104,7 @@ export default function PerformanceDashboardIsland() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `vtur-performance-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `vtur-performance-${toISODateLocal(new Date())}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };

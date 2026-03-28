@@ -29,6 +29,16 @@ function toNullableNumber(value: unknown) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function toISODateLocal(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate()
+  ).padStart(2, "0")}`;
+}
+
+function isISODate(value: unknown) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || "").trim());
+}
+
 function calcularStatusPeriodo(inicio?: string | null, fim?: string | null) {
   if (!inicio) return "planejada";
   const hoje = new Date();
@@ -238,13 +248,26 @@ export async function POST({ request }: { request: Request }) {
     const produtosDestinoId = String(venda?.destino_id || "").trim();
     if (!isUuid(produtosDestinoId)) return new Response("destino_id invalido.", { status: 400 });
 
+    const todayIso = toISODateLocal(new Date());
+    const dataVendaInput = String(venda?.data_venda || "").trim();
+    const dataLancamentoInput = String(venda?.data_lancamento || "").trim();
+    if (!isISODate(dataVendaInput)) {
+      return new Response("data_venda invalida.", { status: 400 });
+    }
+
+    let dataLancamento = isISODate(dataLancamentoInput) ? dataLancamentoInput : todayIso;
+    let dataVenda = dataVendaInput;
+    if (dataLancamento > todayIso) dataLancamento = todayIso;
+    if (dataVenda > todayIso) dataVenda = todayIso;
+    if (dataVenda > dataLancamento) dataVenda = dataLancamento;
+
     const vendaPayload: any = {
       vendedor_id: vendedorId,
       cliente_id: clienteId,
       destino_id: produtosDestinoId,
       destino_cidade_id: venda?.destino_cidade_id || null,
-      data_lancamento: venda?.data_lancamento || null,
-      data_venda: venda?.data_venda || null,
+      data_lancamento: dataLancamento,
+      data_venda: dataVenda,
       data_embarque: venda?.data_embarque || null,
       data_final: venda?.data_final || null,
       desconto_comercial_aplicado: Boolean(venda?.desconto_comercial_aplicado),

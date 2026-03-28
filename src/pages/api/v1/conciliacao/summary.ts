@@ -11,10 +11,16 @@ function startOfMonth(value: string) {
   return `${value}-01`;
 }
 
+function toISODateLocal(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate()
+  ).padStart(2, "0")}`;
+}
+
 function endOfMonth(value: string) {
   const [year, month] = value.split("-").map(Number);
   const d = new Date(year, month, 0);
-  return d.toISOString().slice(0, 10);
+  return toISODateLocal(d);
 }
 
 function buildDateSeries(inicio: string, fim: string) {
@@ -22,7 +28,7 @@ function buildDateSeries(inicio: string, fim: string) {
   const current = new Date(`${inicio}T12:00:00`);
   const limit = new Date(`${fim}T12:00:00`);
   while (current <= limit) {
-    out.push(current.toISOString().slice(0, 10));
+    out.push(toISODateLocal(current));
     current.setDate(current.getDate() + 1);
   }
   return out;
@@ -104,8 +110,8 @@ export const GET: APIRoute = async ({ request }) => {
     const now = new Date();
     const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     const selectedMonth = /^\d{4}-\d{2}$/.test(month) ? month : defaultMonth;
-    const historyStart = new Date(now.getFullYear(), now.getMonth() - 11, 1).toISOString().slice(0, 10);
-    const today = now.toISOString().slice(0, 10);
+    const historyStart = toISODateLocal(new Date(now.getFullYear(), now.getMonth() - 11, 1));
+    const today = toISODateLocal(now);
 
     const rows = await fetchResumoRows(client, companyId, historyStart);
 

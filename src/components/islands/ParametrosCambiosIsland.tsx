@@ -10,6 +10,7 @@ import ConfirmDialog from "../ui/ConfirmDialog";
 import { registrarLog } from "../../lib/logs";
 import { formatDateTimeBR, formatNumberBR } from "../../lib/format";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
+import { toISODateLocal } from "../../lib/dateTime";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
@@ -34,7 +35,7 @@ type FormState = {
   valor: string;
 };
 
-const agoraData = () => new Date().toISOString().slice(0, 10);
+const agoraData = () => toISODateLocal(new Date());
 const buildInitialForm = (): FormState => ({ moeda: "USD", data: agoraData(), valor: "" });
 
 function parseDecimal(value: string) {

@@ -82,6 +82,12 @@ function writeCache(key: string, payload: unknown) {
   cache.set(key, { expiresAt: Date.now() + LOCAL_CACHE_TTL_MS, payload });
 }
 
+function toISODateLocal(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate()
+  ).padStart(2, "0")}`;
+}
+
 function isUuid(value?: string | null) {
   return Boolean(
     value &&
@@ -247,10 +253,10 @@ export async function GET({ request }: { request: Request }) {
       }
     }
 
-    const hojeIso = new Date().toISOString().slice(0, 10);
+    const hojeIso = toISODateLocal(new Date());
     const limiteData = new Date();
     limiteData.setDate(limiteData.getDate() + 14);
-    const limiteIso = limiteData.toISOString().slice(0, 10);
+    const limiteIso = toISODateLocal(limiteData);
 
     function agruparPorVenda(rawData: any[]): any[] {
       const grupos = new Map<string, any>();

@@ -13,6 +13,12 @@ const CACHE_TTL_MS = 10_000;
 const CACHE_MAX_ENTRIES = 200;
 const cache = new Map<string, CacheEntry>();
 
+function toISODateLocal(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate()
+  ).padStart(2, "0")}`;
+}
+
 function parseCookies(request: Request): Map<string, string> {
   const header = request.headers.get("cookie") ?? "";
   const map = new Map<string, string>();
@@ -106,7 +112,7 @@ export async function GET({ request }: { request: Request }) {
 
     let agendaToday = 0;
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = toISODateLocal(new Date());
       const filterOverlap = [
         `and(start_date.lte.${today},end_date.gte.${today})`,
         `and(start_date.gte.${today},start_date.lte.${today},end_date.is.null)`,

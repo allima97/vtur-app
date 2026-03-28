@@ -10,6 +10,7 @@ import {
   isConciliacaoEfetivada,
   resolveConciliacaoStatus,
 } from "../../../../lib/conciliacao/business";
+import { toISODateLocal } from "../../../../lib/dateTime";
 
 function normalizeStatus(value?: string | null) {
   return String(value || "").trim().toUpperCase() || "OUTRO";
@@ -181,7 +182,7 @@ export const GET: APIRoute = async ({ request }) => {
     if (/^\d{4}-\d{2}$/.test(month)) {
       const [year, monthNum] = month.split("-").map(Number);
       const inicio = `${month}-01`;
-      const fim = new Date(year, monthNum, 0).toISOString().slice(0, 10);
+      const fim = toISODateLocal(new Date(year, monthNum, 0));
       query = query.gte("movimento_data", inicio).lte("movimento_data", fim);
     }
     if (/^\d{4}-\d{2}-\d{2}$/.test(day)) {

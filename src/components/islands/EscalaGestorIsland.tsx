@@ -120,6 +120,11 @@ const TIPO_CODIGO: Record<string, string> = {
   PENDENCIA: "!",
 };
 
+function getCurrentMonthLocal() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
 const TIPO_LABEL: Record<string, string> = {
   TRABALHO: "Trabalho",
   PLANTAO: "Plantão",
@@ -200,7 +205,7 @@ export default function EscalaGestorIsland() {
   const [equipeIds, setEquipeIds] = useState<string[]>([]);
   const [equipeNomes, setEquipeNomes] = useState<Record<string, string>>({});
 
-  const [periodo, setPeriodo] = useState(() => new Date().toISOString().slice(0, 7));
+  const [periodo, setPeriodo] = useState(() => getCurrentMonthLocal());
   const periodoOptions = useMemo(() => {
     const options = buildMonthOptionsYYYYMM({ yearsBack: 10, yearsForward: 2, order: "desc" });
     if (periodo && !options.includes(periodo)) return [periodo, ...options];

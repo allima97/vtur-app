@@ -15,6 +15,7 @@ import {
 import { supabase } from "../../lib/supabase";
 import { normalizeText } from "../../lib/normalizeText";
 import { formatNumberBR } from "../../lib/format";
+import { guessTimeZoneFromCity, setAppTimeZone, toISODateLocal } from "../../lib/dateTime";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import { bumpVendasCacheVersion } from "../../lib/vendasCacheVersion";
@@ -408,7 +409,7 @@ export default function VendaContratoImportIsland() {
   const [resultadosCidade, setResultadosCidade] = useState<CidadeSugestao[]>([]);
   const [buscandoCidade, setBuscandoCidade] = useState(false);
   const [erroCidade, setErroCidade] = useState<string | null>(null);
-  const [dataVenda, setDataVenda] = useState(() => new Date().toISOString().split("T")[0]);
+  const [dataVenda, setDataVenda] = useState(() => toISODateLocal(new Date()));
   const [cidadeManual, setCidadeManual] = useState(false);
   const [cidadeAutoIndefinida, setCidadeAutoIndefinida] = useState(false);
   const [loadingCidadeIndefinida, setLoadingCidadeIndefinida] = useState(false);
@@ -1667,6 +1668,8 @@ export default function VendaContratoImportIsland() {
                                   setCidadeManual(true);
                                   setCidadeId(c.id);
                                   setCidadeNome(c.nome);
+                                  const guessedTimeZone = guessTimeZoneFromCity(c.nome);
+                                  if (guessedTimeZone) setAppTimeZone(guessedTimeZone);
                                   setBuscaCidade(label);
                                   setCidadeSelecionadaLabel(label);
                                   setCidadePaisNome(c.pais_nome || null);
@@ -1750,6 +1753,7 @@ export default function VendaContratoImportIsland() {
                   }
                   type="date"
                   value={dataVenda}
+                  max={toISODateLocal(new Date())}
                   onFocus={selectAllInputOnFocus}
                   onChange={(e) => setDataVenda(e.target.value)}
                 />

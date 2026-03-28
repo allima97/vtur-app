@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Dialog } from "../ui/primer/legacyCompat";
-import { matchesCpfSearch } from "../../lib/searchNormalization";
+import { cpfDigitsToFormatted, matchesCpfSearch, onlyDigits } from "../../lib/searchNormalization";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { useMasterScope } from "../../lib/useMasterScope";
 import { construirLinkWhatsApp } from "../../lib/whatsapp";
@@ -26,6 +26,16 @@ type Cliente = {
   company_id?: string | null;
   created_by?: string | null;
 };
+
+function formatDocumentoDisplay(value?: string | null): string {
+  const digits = onlyDigits(value);
+  if (!digits) return "-";
+  if (digits.length === 11) return cpfDigitsToFormatted(digits);
+  if (digits.length === 14) {
+    return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12, 14)}`;
+  }
+  return String(value || digits);
+}
 
 async function fetchClientesList(params: {
   page: number;
@@ -464,7 +474,7 @@ export default function ClientesConsultaIsland() {
               headers={
                 <tr>
                   <th>Nome</th>
-                  <th>CPF</th>
+                  <th>CPF/CNPJ</th>
                   <th>Telefone</th>
                   <th>E-mail</th>
                   <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>
@@ -519,7 +529,7 @@ export default function ClientesConsultaIsland() {
                 return (
                   <tr key={c.id}>
                     <td data-label="Nome">{c.nome}</td>
-                    <td data-label="CPF">{c.cpf}</td>
+                    <td data-label="CPF/CNPJ">{formatDocumentoDisplay(c.cpf)}</td>
                     <td data-label="Telefone">{c.telefone || "-"}</td>
                     <td data-label="E-mail">{c.email || "-"}</td>
                     <td className="th-actions" data-label="Ações">
@@ -565,7 +575,7 @@ export default function ClientesConsultaIsland() {
             >
               <div className="vtur-form-grid vtur-form-grid-4">
                 <AppField label="Nome" value={historicoCliente.nome} readOnly />
-                <AppField label="CPF" value={historicoCliente.cpf || "-"} readOnly />
+                <AppField label="CPF/CNPJ" value={formatDocumentoDisplay(historicoCliente.cpf)} readOnly />
                 <AppField label="Telefone" value={historicoCliente.telefone || "-"} readOnly />
                 <AppField label="E-mail" value={historicoCliente.email || "-"} readOnly />
               </div>

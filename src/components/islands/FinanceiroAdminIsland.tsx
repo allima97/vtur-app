@@ -11,6 +11,7 @@ import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import { formatDateBR } from "../../lib/format";
+import { toISODateLocal } from "../../lib/dateTime";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 
 type PlanoRow = {
@@ -297,8 +298,8 @@ const FinanceiroAdminIsland: React.FC = () => {
 
     const today = new Date();
     const next = addMonths(today, 1);
-    const todayStr = today.toISOString().slice(0, 10);
-    const nextStr = next.toISOString().slice(0, 10);
+    const todayStr = toISODateLocal(today);
+    const nextStr = toISODateLocal(next);
 
     const planValue = planos.find((p) => p.id === form.plan_id)?.valor_mensal;
     const valorNumero = form.valor_mensal ? Number(form.valor_mensal) : planValue ?? null;

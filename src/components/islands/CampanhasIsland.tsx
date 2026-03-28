@@ -80,6 +80,12 @@ function formatDateLabel(date?: string | null) {
   return `${day}/${month}/${year}`;
 }
 
+function toISODateLocal(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate()
+  ).padStart(2, "0")}`;
+}
+
 export default function CampanhasIsland() {
   const { loading: loadingPerms, ready, userType } = usePermissoesStore();
   const loadingPerm = loadingPerms || !ready;
@@ -119,7 +125,7 @@ export default function CampanhasIsland() {
   } | null>(null);
 
   const [titulo, setTitulo] = useState("");
-  const [dataCampanha, setDataCampanha] = useState(() => new Date().toISOString().slice(0, 10));
+  const [dataCampanha, setDataCampanha] = useState(() => toISODateLocal(new Date()));
   const [validadeAte, setValidadeAte] = useState("");
   const [status, setStatus] = useState<CampanhaStatus>("ativa");
   const [regras, setRegras] = useState("");
@@ -136,7 +142,7 @@ export default function CampanhasIsland() {
 
   const resetForm = () => {
     setTitulo("");
-    setDataCampanha(new Date().toISOString().slice(0, 10));
+    setDataCampanha(toISODateLocal(new Date()));
     setValidadeAte("");
     setStatus("ativa");
     setRegras("");
@@ -228,7 +234,7 @@ export default function CampanhasIsland() {
   function openEdit(c: Campanha) {
     setEditing(c);
     setTitulo(c.titulo || "");
-    setDataCampanha(c.data_campanha || new Date().toISOString().slice(0, 10));
+    setDataCampanha(c.data_campanha || toISODateLocal(new Date()));
     setValidadeAte(c.validade_ate || "");
     setStatus((c.status as CampanhaStatus) || "ativa");
     setRegras(c.regras || "");

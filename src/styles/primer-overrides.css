@@ -1854,6 +1854,35 @@ a.vtur-app-button:visited {
   white-space: normal;
 }
 
+.vendas-cadastro-dados-card,
+.vendas-cadastro-dados-card .vtur-app-card-body {
+  overflow: visible;
+}
+
+.vtur-vendas-client-dropdown {
+  max-height: min(360px, 52vh);
+}
+
+.vtur-vendas-client-dropdown .vtur-city-option {
+  min-height: 68px;
+  padding-block: 10px;
+}
+
+.vtur-vendas-client-dropdown .vtur-choice-button-content {
+  width: 100%;
+  gap: 3px;
+}
+
+.vtur-vendas-client-dropdown .vtur-choice-button-title {
+  font-weight: 800;
+}
+
+.vtur-vendas-client-option-meta {
+  color: var(--vtur-primer-muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
 .vtur-city-helper {
   margin-top: 6px;
   color: var(--vtur-primer-muted);

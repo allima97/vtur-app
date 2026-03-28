@@ -6,6 +6,7 @@ import AlertMessage from "../ui/AlertMessage";
 import EmptyState from "../ui/EmptyState";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
 import { formatCurrency, formatCurrencyBRL } from "../../lib/format";
+import { toISODateLocal } from "../../lib/dateTime";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import { construirLinkWhatsApp } from "../../lib/whatsapp";
 import { parentescoOptions } from "../../lib/parentescoOptions";
@@ -264,7 +265,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
   }, [viagensVenda, reciboPrincipal]);
   const dadosViagem = viagemPrincipalDados || viagem;
   const dataEmbarqueIso = (dadosViagem?.data_inicio || viagem?.data_inicio || "").slice(0, 10);
-  const hojeIso = new Date().toISOString().slice(0, 10);
+  const hojeIso = toISODateLocal(new Date());
   const followUpLiberado = Boolean(dataEmbarqueIso && dataEmbarqueIso <= hojeIso);
   const followUpDisabled = !podeCriar || !followUpLiberado || savingFollowUp;
   const dataEmbarqueLabel = dataEmbarqueIso ? formatarDataParaExibicao(dataEmbarqueIso) : "";

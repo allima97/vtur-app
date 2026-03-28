@@ -1,4 +1,5 @@
 import { buildAuthClient, requireModuloLevel } from "../vendas/_utils";
+import { toISODateLocal } from "../../../../lib/dateTime";
 
 export async function POST({ request }: { request: Request }) {
   try {
@@ -101,7 +102,7 @@ export async function POST({ request }: { request: Request }) {
         unit_price: Number(p.valor_total_com_taxas || 0) - Number(p.taxas || 0),
         total_amount: Number(p.valor_total_com_taxas || 0) - Number(p.taxas || 0),
         taxes_amount: Number(p.taxas || 0),
-        start_date: new Date().toISOString().split("T")[0],
+        start_date: toISODateLocal(new Date()),
         end_date: null,
         currency: "BRL",
         confidence: 1,

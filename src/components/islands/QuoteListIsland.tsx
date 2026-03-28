@@ -13,6 +13,11 @@ import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 import { matchesCpfSearch } from "../../lib/searchNormalization";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import { exportQuotePdfById } from "../../lib/quote/exportQuotePdfClient";
+import {
+  formatDatePtBrInTimeZone,
+  formatDateTimePtBrInTimeZone,
+  toISODateInTimeZone,
+} from "../../lib/dateTime";
 
 type QuoteItemRow = {
   id: string;
@@ -42,29 +47,23 @@ type QuoteRow = {
 };
 
 function formatDate(value: string) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString("pt-BR");
+  return formatDatePtBrInTimeZone(value, "-");
 }
 
 function formatDateTime(value?: string | null) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleString("pt-BR");
+  return formatDateTimePtBrInTimeZone(value, "-");
 }
 
 function formatDateInput(value?: string | null) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().slice(0, 10);
+  return toISODateInTimeZone(date);
 }
 
 function toInteractionTimestamp(value: string) {
   if (!value) return null;
-  const date = new Date(`${value}T00:00:00`);
+  const date = new Date(`${value}T12:00:00`);
   if (Number.isNaN(date.getTime())) return null;
   return date.toISOString();
 }

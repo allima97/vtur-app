@@ -8,6 +8,16 @@ import { criarVinculosViajaComAutomaticos } from "./viagaComManager";
 
 const STORAGE_BUCKET = "viagens";
 
+function toISODateLocal(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate()
+  ).padStart(2, "0")}`;
+}
+
+function isISODate(value?: string | null) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || "").trim());
+}
+
 function normalizeCpf(value?: string | null) {
   return (value || "").replace(/\D/g, "");
 }
@@ -560,6 +570,9 @@ export async function saveContratoImport(params: {
   } = params;
   if (!contratos.length) throw new Error("Nenhum contrato para salvar.");
   if (!dataVenda) throw new Error("Data da venda é obrigatória.");
+  if (!isISODate(dataVenda)) throw new Error("Data da venda inválida.");
+  const dataLancamento = toISODateLocal(new Date());
+  const dataVendaFinal = dataVenda > dataLancamento ? dataLancamento : dataVenda;
 
   const { data: authSession } = await supabaseBrowser.auth.getSession();
   let session = authSession?.session || null;
@@ -744,8 +757,8 @@ export async function saveContratoImport(params: {
     destino_id: produtoPrincipal.id,
     destino_cidade_id: destinoCidadeId,
     company_id: companyId,
-    data_lancamento: new Date().toISOString().split("T")[0],
-    data_venda: dataVenda,
+    data_lancamento: dataLancamento,
+    data_venda: dataVendaFinal,
     data_embarque: dataInicioVenda,
     data_final: dataFimVenda,
     desconto_comercial_aplicado: descontoComercial > 0,

@@ -6,8 +6,9 @@ import { usePermissoesStore } from "../../lib/permissoesStore";
 import { registrarLog } from "../../lib/logs";
 import { normalizeText } from "../../lib/normalizeText";
 import { formatNumberBR } from "../../lib/format";
+import { guessTimeZoneFromCity, setAppTimeZone, toISODateLocal } from "../../lib/dateTime";
 import { normalizeMoneyInput, sanitizeMoneyInput, selectAllInputOnFocus } from "../../lib/inputNormalization";
-import { matchesCpfSearch, onlyDigits } from "../../lib/searchNormalization";
+import { cpfDigitsToFormatted, matchesCpfSearch, onlyDigits } from "../../lib/searchNormalization";
 import { carregarTermosNaoComissionaveis, isFormaNaoComissionavel } from "../../lib/pagamentoUtils";
 import { bumpVendasCacheVersion } from "../../lib/vendasCacheVersion";
 import CalculatorModal from "../ui/CalculatorModal";
@@ -22,7 +23,14 @@ import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
 const STORAGE_BUCKET = "viagens";
 
-type Cliente = { id: string; nome: string; cpf?: string | null };
+type Cliente = {
+  id: string;
+  nome: string;
+  cpf?: string | null;
+  telefone?: string | null;
+  email?: string | null;
+  whatsapp?: string | null;
+};
 type Cidade = { id: string; nome: string };
 type CidadeSugestao = { id: string; nome: string; subdivisao_nome?: string | null; pais_nome?: string | null };
 type CidadePrefill = { id: string; nome: string };
@@ -153,8 +161,8 @@ const initialVenda: FormVenda = {
   vendedor_id: "",
   cliente_id: "",
   destino_id: "",
-  data_lancamento: new Date().toISOString().substring(0, 10),
-  data_venda: new Date().toISOString().substring(0, 10),
+  data_lancamento: toISODateLocal(new Date()),
+  data_venda: toISODateLocal(new Date()),
   data_embarque: "",
   data_final: "",
   desconto_comercial_aplicado: false,
@@ -212,19 +220,40 @@ function moedaParaNumero(valor: string) {
   return num;
 }
 
+function formatDocumentoCliente(value?: string | null): string {
+  const digits = onlyDigits(value || "");
+  if (!digits) return "Sem documento";
+  if (digits.length === 11) return cpfDigitsToFormatted(digits);
+  if (digits.length === 14) {
+    return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12, 14)}`;
+  }
+  return digits;
+}
+
+function buildClienteInfoResumo(cliente?: Cliente | null): string {
+  if (!cliente) return "";
+  const documento = formatDocumentoCliente(cliente.cpf);
+  const telefone = String(cliente.whatsapp || cliente.telefone || "").trim();
+  const email = String(cliente.email || "").trim();
+  const extras = [telefone ? `Contato: ${telefone}` : "", email ? `E-mail: ${email}` : ""]
+    .filter(Boolean)
+    .join(" • ");
+  return extras ? `${documento} • ${extras}` : documento;
+}
+
 function dataParaInput(value?: string | Date | null) {
   if (value == null) return "";
   if (typeof value === "string") {
     if (value.includes("T")) {
       const parsed = new Date(value);
       if (!Number.isNaN(parsed.getTime())) {
-        return parsed.toISOString().split("T")[0];
+        return toISODateLocal(parsed);
       }
       return value.split("T")[0];
     }
     return value;
   }
-  return value.toISOString().split("T")[0];
+  return toISODateLocal(value);
 }
 
 function parseDateInput(value?: string | null) {
@@ -419,6 +448,8 @@ export default function VendasCadastroIsland() {
       if (!cidadeNome && cidadePrefillParam?.nome) {
         cidadeNome = cidadePrefillParam.nome;
       }
+      const guessedTimeZone = guessTimeZoneFromCity(cidadeNome);
+      if (guessedTimeZone) setAppTimeZone(guessedTimeZone);
 
       setFormVenda((prev) => ({
         ...prev,
@@ -729,9 +760,15 @@ export default function VendasCadastroIsland() {
   const clientesFiltrados = useMemo(() => {
     if (!buscaCliente.trim()) return [];
     const t = normalizeText(buscaCliente);
+    const telefoneBusca = onlyDigits(buscaCliente);
     return clientes.filter((c) => {
       if (normalizeText(c.nome).includes(t)) return true;
       if (matchesCpfSearch(c.cpf || "", buscaCliente)) return true;
+      if (normalizeText(c.email || "").includes(t)) return true;
+      if (telefoneBusca) {
+        const contato = onlyDigits(c.whatsapp || c.telefone || "");
+        if (contato.includes(telefoneBusca)) return true;
+      }
       return false;
     }).slice(0, 10);
   }, [clientes, buscaCliente]);
@@ -1023,7 +1060,8 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
     setFormVenda({
       ...initialVenda,
       vendedor_id: currentUserId || "",
-      data_lancamento: new Date().toISOString().substring(0, 10),
+      data_lancamento: toISODateLocal(new Date()),
+      data_venda: toISODateLocal(new Date()),
     });
     setRecibos([]);
     setRecibosExpandidos({});
@@ -1570,7 +1608,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
             title="Dados da venda"
             subtitle="Informe cliente, destino e datas da operacao comercial."
             tone="config"
-            className="mb-3"
+            className="mb-3 vendas-cadastro-dados-card"
           >
             <div className="vtur-form-grid vtur-form-grid-4">
               {canAssignVendedor && (
@@ -1594,11 +1632,16 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 <AppField
                   label="Cliente *"
                   wrapperClassName="min-w-0"
-                  placeholder="Buscar cliente por nome ou CPF..."
+                  placeholder="Buscar cliente por nome, CPF/CNPJ, telefone ou e-mail..."
                   autoComplete="off"
                   value={buscaCliente || clienteSelecionado?.nome || ""}
                   onChange={(e) => handleClienteInputChange(e.target.value)}
                   onFocus={() => setMostrarSugestoesCliente(true)}
+                  caption={
+                    clienteSelecionado
+                      ? `Selecionado: ${buildClienteInfoResumo(clienteSelecionado)}`
+                      : "Selecione o cliente pela lista de sugestões para garantir o vínculo correto."
+                  }
                   onBlur={() => {
                     setTimeout(() => setMostrarSugestoesCliente(false), 150);
                     if (!buscaCliente.trim()) return;
@@ -1619,7 +1662,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                   required
                 />
                 {mostrarSugestoesCliente && buscaCliente.trim().length >= 1 && (
-                  <div className="vtur-city-dropdown" style={{ maxHeight: 220 }}>
+                  <div className="vtur-city-dropdown vtur-city-dropdown-inline vtur-quote-client-dropdown vtur-vendas-client-dropdown" style={{ maxHeight: 300 }}>
                     {clientesFiltrados.length === 0 ? (
                       <div className="vtur-city-helper">Nenhum cliente encontrado.</div>
                     ) : (
@@ -1639,9 +1682,20 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                         >
                           <span className="vtur-choice-button-content">
                             <span className="vtur-choice-button-title">{c.nome}</span>
-                            {c.cpf ? (
-                              <span className="vtur-choice-button-caption">CPF: {c.cpf}</span>
-                            ) : null}
+                            <span className="vtur-choice-button-caption">
+                              CPF/CNPJ: {formatDocumentoCliente(c.cpf)}
+                            </span>
+                            {(c.whatsapp || c.telefone || c.email) ? (
+                              <span className="vtur-choice-button-caption vtur-vendas-client-option-meta">
+                                {c.whatsapp || c.telefone ? `Contato: ${c.whatsapp || c.telefone}` : ""}
+                                {c.whatsapp || c.telefone ? (c.email ? " • " : "") : ""}
+                                {c.email ? `E-mail: ${c.email}` : ""}
+                              </span>
+                            ) : (
+                              <span className="vtur-choice-button-caption vtur-vendas-client-option-meta">
+                                Sem contato complementar cadastrado.
+                              </span>
+                            )}
                           </span>
                         </AppButton>
                       ))
@@ -1686,6 +1740,8 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                             setFormVenda((prev) => ({ ...prev, destino_id: c.id }));
                             setBuscaDestino(label);
                             setBuscaCidadeSelecionada(label);
+                            const guessedTimeZone = guessTimeZoneFromCity(c.nome);
+                            if (guessedTimeZone) setAppTimeZone(guessedTimeZone);
                             setMostrarSugestoesCidade(false);
                             setResultadosCidade([]);
                           }}
@@ -1708,6 +1764,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 wrapperClassName="form-group min-w-0 vtur-sales-mobile-wide-field"
                 type="date"
                 value={formVenda.data_lancamento}
+                max={toISODateLocal(new Date())}
                 onFocus={selectAllInputOnFocus}
                 onChange={(e) =>
                   setFormVenda((prev) => ({ ...prev, data_lancamento: e.target.value }))
@@ -1729,6 +1786,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 wrapperClassName="form-group min-w-0 vtur-sales-mobile-wide-field"
                 type="date"
                 value={formVenda.data_venda}
+                max={toISODateLocal(new Date())}
                 onFocus={selectAllInputOnFocus}
                 onChange={(e) => setFormVenda((prev) => ({ ...prev, data_venda: e.target.value }))}
                 required

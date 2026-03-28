@@ -3,6 +3,7 @@ import { fetchCidadesByApiWithCache } from "../../lib/cidadesSearchApiCache";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { normalizeText } from "../../lib/normalizeText";
 import { formatNumberBR } from "../../lib/format";
+import { toISODateLocal } from "../../lib/dateTime";
 import { fetchTipoProdutosOptionsWithCache } from "../../lib/tipoProdutosCache";
 import { matchesCpfSearch, onlyDigits } from "../../lib/searchNormalization";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
@@ -99,7 +100,7 @@ function formatCurrency(value: number) {
 }
 
 function hojeISO() {
-  return new Date().toISOString().substring(0, 10);
+  return toISODateLocal(new Date());
 }
 
 function dedupeSugestoes(valores: string[]) {

@@ -63,6 +63,11 @@ const isUsuarioMaster = (usuario?: Usuario | null) =>
 const isUsuarioAdmin = (usuario?: Usuario | null) =>
   extrairNomesTipos(usuario).some((nome) => nome.toUpperCase().includes("ADMIN"));
 
+function getCurrentMonthLocal() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
 export default function MetasVendedorIsland() {
   const { can, loading: loadingPerms, ready } = usePermissoesStore();
   const loadingPerm = loadingPerms || !ready;
@@ -79,7 +84,7 @@ export default function MetasVendedorIsland() {
   const [produtos, setProdutos] = useState<{ id: string; nome: string }[]>([]);
 
   const [vendedorSelecionado, setVendedorSelecionado] = useState<string>("");
-  const [periodo, setPeriodo] = useState<string>(new Date().toISOString().slice(0, 7));
+  const [periodo, setPeriodo] = useState<string>(getCurrentMonthLocal());
   const [ativoMeta, setAtivoMeta] = useState<boolean>(true);
 
   const [metaGeral, setMetaGeral] = useState<string>("");
@@ -94,7 +99,7 @@ export default function MetasVendedorIsland() {
   const [metaGestor, setMetaGestor] = useState<string>("");
   const [metaEquipeProdutos, setMetaEquipeProdutos] = useState<{ produto_id: string; valor: string }[]>([]);
   const [mostrarMetaEquipeProdutos, setMostrarMetaEquipeProdutos] = useState<boolean>(false);
-  const [periodoEquipe, setPeriodoEquipe] = useState<string>(new Date().toISOString().slice(0, 7));
+  const [periodoEquipe, setPeriodoEquipe] = useState<string>(getCurrentMonthLocal());
   const [ativoEquipe, setAtivoEquipe] = useState<boolean>(true);
   const [salvandoEquipe, setSalvandoEquipe] = useState<boolean>(false);
   const [erroEquipe, setErroEquipe] = useState<string | null>(null);

@@ -1,5 +1,6 @@
 import {
   fetchEffectiveConciliacaoReceipts,
+  filterRecibosCanceladosMesmoMes,
 } from "../../../../lib/conciliacao/source";
 
 type ProdutoRecibo = {
@@ -17,6 +18,8 @@ type ReciboVenda = {
   valor_du?: number | null;
   valor_bruto_override?: number | null;
   valor_liquido_override?: number | null;
+  cancelado_por_conciliacao_em?: string | null;
+  cancelado_por_conciliacao_observacao?: string | null;
   produto_id?: string | null;
   produtos?: ProdutoRecibo | null;
 };
@@ -54,11 +57,6 @@ export type VendasAgg = {
 function toNumber(value: unknown) {
   const parsed = Number(value || 0);
   return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function clamp01(value: number) {
-  if (!Number.isFinite(value)) return 0;
-  return Math.max(0, Math.min(1, value));
 }
 
 function toDateKey(value?: string | null) {
@@ -128,6 +126,8 @@ export async function fetchVendasAggregateRows(
           valor_total,
           valor_taxas,
           valor_du,
+          cancelado_por_conciliacao_em,
+          cancelado_por_conciliacao_observacao,
           produto_id,
           produtos:tipo_produtos!produto_id (id, nome, tipo, exibe_kpi_comissao)
         )
@@ -281,14 +281,9 @@ export function computeVendasAggFromRows(
 
   rows.forEach((venda) => {
     const vendaDate = toDateKey(venda?.data_venda);
-    const recibosAll = Array.isArray(venda?.vendas_recibos) ? venda.vendas_recibos : [];
-    const saleHasOverride = recibosAll.some((recibo) => hasConciliacaoOverride(recibo));
+    const recibosAllRaw = Array.isArray(venda?.vendas_recibos) ? venda.vendas_recibos : [];
+    const recibosAll = filterRecibosCanceladosMesmoMes(recibosAllRaw);
     const valorTotalRef = toNumber(venda?.valor_total_bruto ?? venda?.valor_total);
-    const totalBrutoAll = recibosAll.reduce((sum, recibo) => sum + toNumber(recibo?.valor_total), 0);
-    const fator =
-      !saleHasOverride && totalBrutoAll > 0 && valorTotalRef > 0
-        ? clamp01(valorTotalRef / totalBrutoAll)
-        : 1;
     const destinoNome = String(venda?.destinos?.nome || "Sem destino");
     const vendedorId = String(venda?.vendedor_id || "unknown");
 
@@ -298,7 +293,7 @@ export function computeVendasAggFromRows(
     });
 
     if (recibosPeriodo.length === 0) {
-      if (recibosAll.length > 0 || !isInRange(vendaDate, inicio, fim)) return;
+      if (recibosAllRaw.length > 0 || !isInRange(vendaDate, inicio, fim)) return;
 
       const vendaTotal = valorTotalRef;
       const vendaTaxas = toNumber(venda?.valor_taxas);
@@ -330,8 +325,8 @@ export function computeVendasAggFromRows(
 
     recibosPeriodo.forEach((recibo) => {
       const reciboDate = toDateKey(recibo?.data_venda) || vendaDate;
-      const bruto = getReciboBruto(recibo) * fator;
-      const taxasEfetivas = getReciboTaxas(recibo) * fator;
+      const bruto = getReciboBruto(recibo);
+      const taxasEfetivas = getReciboTaxas(recibo);
       const produto = recibo?.produtos || null;
 
       totalVendas += bruto;

@@ -7,7 +7,7 @@ import { formatarDataParaExibicao } from "../../lib/formatDate";
 import { fetchCidadesByApiWithCache } from "../../lib/cidadesSearchApiCache";
 import { normalizeText } from "../../lib/normalizeText";
 import { matchesCpfSearch } from "../../lib/searchNormalization";
-import { formatCurrencyBRL, formatDateBR } from "../../lib/format";
+import { formatCurrencyBRL, formatDateBR, formatNumberBR } from "../../lib/format";
 import {
   ParametrosComissao,
   Regra,
@@ -269,7 +269,10 @@ type ExportFlags = {
 };
 
 function hojeISO() {
-  return new Date().toISOString().substring(0, 10);
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
+    now.getDate()
+  ).padStart(2, "0")}`;
 }
 
 function addDays(base: Date, days: number) {
@@ -279,7 +282,9 @@ function addDays(base: Date, days: number) {
 }
 
 function formatISO(date: Date) {
-  return date.toISOString().substring(0, 10);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate()
+  ).padStart(2, "0")}`;
 }
 
 function startOfMonth(date: Date) {
@@ -1345,6 +1350,56 @@ export default function RelatorioVendasIsland() {
     [parametrosComissao, commissionAggregates, calcularPctParaProduto]
   );
 
+  const calcularPercentualComissaoRecibo = useCallback(
+    (recibo: ReciboEnriquecido) => {
+      const aggregates = commissionAggregates;
+      if (!aggregates) return 0;
+      const params = parametrosComissao || {
+        usar_taxas_na_meta: true,
+        foco_valor: "bruto",
+        foco_faturamento: "bruto",
+        conciliacao_regra_ativa: false,
+        conciliacao_tipo: "GERAL",
+        conciliacao_meta_nao_atingida: null,
+        conciliacao_meta_atingida: null,
+        conciliacao_super_meta: null,
+        conciliacao_tiers: [],
+        conciliacao_faixas_loja: [],
+      };
+      const prodId = recibo.produto_tipo_id || recibo.produto_id || "";
+      if (!prodId) return 0;
+      const brutoSemRav = getBrutoSemRav(recibo);
+      const liquido = getLiquidoComissionavel(recibo);
+      const baseCom = params.foco_faturamento === "liquido" ? liquido : brutoSemRav;
+      if (baseCom <= 0) return 0;
+      const conciliacaoSelection =
+        hasConciliacaoOverride(recibo) && hasConciliacaoCommissionRule(params)
+          ? resolveConciliacaoCommissionSelection(params, {
+              faixa_comissao: recibo.faixa_comissao || null,
+              percentual_comissao_loja:
+                recibo.percentual_comissao_loja != null
+                  ? Number(recibo.percentual_comissao_loja)
+                  : null,
+              is_seguro_viagem: isSeguroRecibo(recibo),
+            })
+          : null;
+      const pct =
+        conciliacaoSelection?.kind === "CONCILIACAO"
+          ? calcularPctPorRegra(conciliacaoSelection.rule, aggregates.pctMetaGeral)
+          : calcularPctParaProduto(prodId, isSeguroRecibo(recibo), recibo.tipo_pacote || null);
+      return Number.isFinite(pct) ? pct : 0;
+    },
+    [parametrosComissao, commissionAggregates, calcularPctParaProduto]
+  );
+
+  const percentualComissaoPorRecibo = useMemo(() => {
+    const mapa = new Map<string, number>();
+    recibosFiltrados.forEach((recibo) => {
+      mapa.set(recibo.id, calcularPercentualComissaoRecibo(recibo));
+    });
+    return mapa;
+  }, [recibosFiltrados, calcularPercentualComissaoRecibo]);
+
   const comissaoPorRecibo = useMemo(() => {
     const mapa = new Map<string, number>();
     recibosFiltrados.forEach((recibo) => {
@@ -1583,6 +1638,9 @@ export default function RelatorioVendasIsland() {
 	      "data_venda",
 	      "data_embarque",
 	      "valor_total",
+        "valor_liquido",
+        "comissao",
+        "percentual_comissao",
 	    ];
 
     const linhas = recibosParaExportar.map((r) => [
@@ -1595,6 +1653,9 @@ export default function RelatorioVendasIsland() {
 	      r.data_venda || "",
 	      r.data_embarque || "",
         (getBrutoRecibo(r) ?? 0).toString().replace(".", ","),
+      getLiquidoComissionavel(r).toString().replace(".", ","),
+      calcularComissaoRecibo(r).toString().replace(".", ","),
+      formatNumberBR(calcularPercentualComissaoRecibo(r), 4),
 	    ]);
 
     const all = [header, ...linhas]
@@ -1645,6 +1706,9 @@ export default function RelatorioVendasIsland() {
 	        "Data venda": r.data_venda?.slice(0, 10) || "",
 	        "Data embarque": r.data_embarque?.slice(0, 10) || "",
           "Valor total": getBrutoRecibo(r),
+          "Valor líquido": getLiquidoComissionavel(r),
+          Comissão: calcularComissaoRecibo(r),
+          "% Comissão": `${formatNumberBR(calcularPercentualComissaoRecibo(r), 4)}%`,
 	      }));
 
 	      const ws = XLSX.utils.json_to_sheet(data);
@@ -1683,12 +1747,14 @@ export default function RelatorioVendasIsland() {
       "Taxas",
       "Valor líquido",
       "Comissão",
+      "%",
     ];
     const rows = recibosParaExportar.map((r) => {
 	    const valorTotal = getBrutoRecibo(r);
 	    const valorTaxas = getTaxasEfetivas(r);
 	    const valorLiquido = getLiquidoComissionavel(r);
 	      const comissao = calcularComissaoRecibo(r);
+        const percentual = calcularPercentualComissaoRecibo(r);
 
 	      return [
 	        r.data_venda?.slice(0, 10) || "",
@@ -1703,6 +1769,7 @@ export default function RelatorioVendasIsland() {
 	      formatCurrency(valorTaxas),
 	      formatCurrency(valorLiquido),
         formatCurrency(comissao),
+        `${formatNumberBR(percentual, 4)}%`,
       ];
     });
 
@@ -1730,6 +1797,7 @@ export default function RelatorioVendasIsland() {
       formatCurrency(somaTaxas),
       formatCurrency(somaLiquido),
       formatCurrency(somaComissao),
+      "",
     ]);
 
     try {
@@ -2242,6 +2310,7 @@ export default function RelatorioVendasIsland() {
                 <th>Taxas</th>
                 <th>Valor líquido</th>
                 <th>Comissão</th>
+                <th>%</th>
               </tr>
             }
             loading={loading}
@@ -2253,11 +2322,12 @@ export default function RelatorioVendasIsland() {
                 description="Ajuste datas, escopo ou filtros locais para ampliar o recorte do relatório."
               />
             }
-            colSpan={12}
+            colSpan={13}
             className="table-header-blue table-mobile-cards min-w-[1100px]"
           >
             {recibosExibidos.map((recibo) => {
               const comissao = comissaoPorRecibo.get(recibo.id) ?? 0;
+              const percentualComissao = percentualComissaoPorRecibo.get(recibo.id) ?? 0;
               return (
                 <tr key={recibo.id}>
                   <td data-label="Data venda">{recibo.data_venda ? formatDateBR(recibo.data_venda) : "-"}</td>
@@ -2274,6 +2344,7 @@ export default function RelatorioVendasIsland() {
                   <td data-label="Taxas">{formatCurrency(getTaxasEfetivas(recibo))}</td>
                   <td data-label="Valor líquido">{formatCurrency(getLiquidoComissionavel(recibo))}</td>
                   <td data-label="Comissão">{formatCurrency(comissao)}</td>
+                  <td data-label="%">{`${formatNumberBR(percentualComissao, 4)}%`}</td>
                 </tr>
               );
             })}

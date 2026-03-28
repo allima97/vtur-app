@@ -6,6 +6,7 @@ import { useMasterScope } from "../../lib/useMasterScope";
 import { normalizeText } from "../../lib/normalizeText";
 import { matchesReciboSearch } from "../../lib/searchNormalization";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
+import { toISODateLocal } from "../../lib/dateTime";
 import TableActions from "../ui/TableActions";
 import { exportTableToPDF } from "../../lib/pdf";
 import { boundDateEndISO, selectAllInputOnFocus } from "../../lib/inputNormalization";
@@ -380,7 +381,7 @@ export default function ControleSacIsland() {
 
   function abrirInteracao(row: SacRegistro) {
     setInteracaoSac(row);
-    setInteracaoData(new Date().toISOString().slice(0, 10));
+    setInteracaoData(toISODateLocal(new Date()));
     setInteracaoTexto("");
     setInteracaoErro(null);
   }

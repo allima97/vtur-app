@@ -82,6 +82,12 @@ function writeCache(key: string, payload: unknown) {
   cache.set(key, { expiresAt: Date.now() + LOCAL_CACHE_TTL_MS, payload });
 }
 
+function toISODateLocal(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate()
+  ).padStart(2, "0")}`;
+}
+
 function isIsoDate(value: string) {
   return /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(value);
 }
@@ -249,7 +255,7 @@ export async function GET({ request }: { request: Request }) {
     const hoje = new Date();
     const ontem = new Date(hoje);
     ontem.setDate(hoje.getDate() - 1);
-    const ontemIso = ontem.toISOString().slice(0, 10);
+    const ontemIso = toISODateLocal(ontem);
     const fimFollowUp = fim < ontemIso ? fim : ontemIso;
     if (fimFollowUp < inicio) {
       return new Response(JSON.stringify({ items: [] }), {

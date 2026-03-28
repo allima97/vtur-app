@@ -259,9 +259,11 @@ function getOrcamentoDestino(orc?: Orcamento | null) {
 function getMonthBounds() {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const toISO = (d: Date) => d.toISOString().substring(0, 10);
-  return { inicio: toISO(start), fim: toISO(end) };
+  const toISODateLocal = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate()
+    ).padStart(2, "0")}`;
+  return { inicio: toISODateLocal(start), fim: toISODateLocal(now) };
 }
 
 function normalizeKpiOrder(order: KpiId[], ids: KpiId[]) {

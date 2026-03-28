@@ -27,7 +27,13 @@ export default defineConfig({
       // `astro/compiler-runtime` em `node_modules/.vite/deps_ssr`, deixando o `.js`
       // ausente e quebrando o carregamento. Mantemos esse runtime interno fora do prebundle.
       optimizeDeps: {
-        exclude: ["astro/compiler-runtime", "@astrojs/cloudflare/handler"],
+        exclude: [
+          "astro/compiler-runtime",
+          "@astrojs/cloudflare/handler",
+          // Dexie pode gerar artefato órfão em deps_ssr durante HMR.
+          "dexie",
+          "dexie-cloud-addon",
+        ],
       },
     },
     // Evita falhas de "Outdated Optimize Dep" no dev ao carregar gráficos
@@ -38,7 +44,14 @@ export default defineConfig({
       force: true,
       // Essas libs são pesadas e, quando reotimizadas, geram 504 "Outdated Optimize Dep" com mais frequência.
       // Como já carregamos sob demanda (dynamic import), mantemos fora do prebundle.
-      exclude: ["xlsx", "jspdf", "jspdf-autotable", "astro/compiler-runtime"],
+      exclude: [
+        "xlsx",
+        "jspdf",
+        "jspdf-autotable",
+        "astro/compiler-runtime",
+        "dexie",
+        "dexie-cloud-addon",
+      ],
       include: [
         "react",
         "react-dom",
@@ -69,8 +82,6 @@ export default defineConfig({
         "tesseract.js",
         "pdfjs-dist",
         "@supabase/supabase-js",
-        "dexie",
-        "dexie-cloud-addon",
       ],
     },
     resolve: {
