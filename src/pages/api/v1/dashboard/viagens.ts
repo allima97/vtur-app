@@ -275,16 +275,74 @@ export async function GET({ request }: { request: Request }) {
         if (v.data_inicio && (!existing.data_inicio || v.data_inicio < existing.data_inicio)) {
           existing.data_inicio = v.data_inicio;
         }
-        // Maior data_fim = retorno real → esse recibo vira o representativo do grupo
+        // Maior data_fim = retorno real (mantemos o id da primeira saída para abrir o dossiê da ida).
         if (v.data_fim && (!existing.data_fim || v.data_fim > existing.data_fim)) {
           existing.data_fim = v.data_fim;
-          existing.id = v.id;
-          existing.recibo = v.recibo ?? existing.recibo;
         }
         // Acumula todos os tipos de serviço da viagem
         if (produtoNome && !(existing.produtos_tipos as string[]).includes(produtoNome)) {
           (existing.produtos_tipos as string[]).push(produtoNome);
         }
+      }
+      return Array.from(grupos.values());
+    }
+
+    // Depois de mesclar por venda, faz dedupe por passageiro para evitar poluição no card
+    // de próximas viagens quando há múltiplos recibos da mesma viagem/passageiro.
+    function agruparPorPassageiroPrimeiraSaida(rawData: any[]): any[] {
+      const grupos = new Map<string, any>();
+      for (const v of rawData) {
+        const clienteId = String(v?.clientes?.id || "").trim();
+        const key = clienteId || String(v?.venda_id || v?.recibo?.venda_id || v?.id || "").trim();
+        if (!key) continue;
+
+        const produtos = Array.isArray(v?.produtos_tipos)
+          ? v.produtos_tipos.filter(Boolean)
+          : [];
+        const existente = grupos.get(key);
+        if (!existente) {
+          grupos.set(key, {
+            ...v,
+            produtos_tipos: Array.from(new Set(produtos)),
+          });
+          continue;
+        }
+
+        const produtosSet = new Set<string>([
+          ...((existente.produtos_tipos as string[]) || []),
+          ...produtos,
+        ]);
+        const inicioAtual = String(v?.data_inicio || "");
+        const inicioExistente = String(existente?.data_inicio || "");
+        const deveTrocarRepresentante =
+          Boolean(inicioAtual) && (!inicioExistente || inicioAtual < inicioExistente);
+
+        if (deveTrocarRepresentante) {
+          const fimExistente = String(existente?.data_fim || "");
+          const fimAtual = String(v?.data_fim || "");
+          grupos.set(key, {
+            ...existente,
+            ...v,
+            // Sempre preserva a primeira saída do passageiro
+            id: v.id,
+            data_inicio: v.data_inicio,
+            data_fim:
+              fimExistente && (!fimAtual || fimExistente > fimAtual)
+                ? existente.data_fim
+                : v.data_fim,
+            produtos_tipos: Array.from(produtosSet),
+          });
+          continue;
+        }
+
+        existente.produtos_tipos = Array.from(produtosSet);
+        if (v.data_fim && (!existente.data_fim || v.data_fim > existente.data_fim)) {
+          existente.data_fim = v.data_fim;
+        }
+        existente.destino = existente.destino || v.destino || null;
+        existente.origem = existente.origem || v.origem || null;
+        existente.status = existente.status || v.status || null;
+        if (!existente.clientes && v.clientes) existente.clientes = v.clientes;
       }
       return Array.from(grupos.values());
     }
@@ -376,10 +434,12 @@ export async function GET({ request }: { request: Request }) {
         detalhadas = detalhadasData || [];
       }
 
-      data = filtrarProximasViagens([
-        ...agruparPorVenda(detalhadas),
-        ...agruparPorVenda(avulsas),
-      ]);
+      data = filtrarProximasViagens(
+        agruparPorPassageiroPrimeiraSaida([
+          ...agruparPorVenda(detalhadas),
+          ...agruparPorVenda(avulsas),
+        ])
+      );
     } else {
       let candidatasQuery = client
         .from("viagens")
@@ -477,10 +537,12 @@ export async function GET({ request }: { request: Request }) {
         detalhadas = detalhadasData || [];
       }
 
-      data = filtrarProximasViagens([
-        ...agruparPorVenda(detalhadas),
-        ...agruparPorVenda(avulsas),
-      ]);
+      data = filtrarProximasViagens(
+        agruparPorPassageiroPrimeiraSaida([
+          ...agruparPorVenda(detalhadas),
+          ...agruparPorVenda(avulsas),
+        ])
+      );
     }
 
     const payload = { items: data };

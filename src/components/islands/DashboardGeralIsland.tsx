@@ -1364,7 +1364,7 @@ function toLineChartConfig(
     return sorted.slice(0, 10);
   }, [orcamentos]);
 
-  // A API já entrega agrupado por venda (min data_inicio, max data_fim, todos os serviços).
+  // A API já entrega agrupado por passageiro (primeira saída) e venda.
   const proximasViagensAgrupadas = useMemo(() => {
     const grupos = new Map<string, {
       key: string;
@@ -1382,7 +1382,7 @@ function toLineChartConfig(
     viagens
       .filter((v) => (v.status || "").toLowerCase() !== "cancelada")
       .forEach((v) => {
-        const key = v.venda_id || v.id;
+        const key = v.clientes?.id || v.venda_id || v.id;
         const produtos = v.produtos_tipos?.length
           ? v.produtos_tipos
           : v.recibo?.tipo_produtos?.nome
@@ -1405,6 +1405,7 @@ function toLineChartConfig(
           return;
         }
         if (v.data_inicio && (!existente.dataInicio || v.data_inicio < existente.dataInicio)) {
+          existente.viagemId = v.id;
           existente.dataInicio = v.data_inicio;
           existente.destino = existente.destino || v.destino || null;
           existente.origem = existente.origem || v.origem || null;
@@ -2212,7 +2213,7 @@ function toLineChartConfig(
           <AppCard
             className={hideTitle ? undefined : "dashboard-widget-table-card"}
             title={hideTitle ? undefined : `Próximas viagens (${proximasViagensAgrupadas.length})`}
-            subtitle={hideTitle ? undefined : "Embarques futuros agrupados por venda."}
+            subtitle={hideTitle ? undefined : "Embarques futuros sem duplicidade de recibos por passageiro."}
             tone="info"
           >
             {!podeVerOperacao ? (

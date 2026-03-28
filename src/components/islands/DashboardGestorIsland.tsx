@@ -1059,13 +1059,14 @@ function DashboardGestorIslandInner() {
     [...viagens]
       .filter((v) => (v.status || "").toLowerCase() !== "cancelada")
       .forEach((v) => {
-        const key = v.venda_id || v.id;
+        const key = v.clientes?.id || v.venda_id || v.id;
         const existing = seen.get(key);
         if (!existing) {
           seen.set(key, { ...v });
           return;
         }
         if (v.data_inicio && (!existing.data_inicio || v.data_inicio < existing.data_inicio)) {
+          existing.id = v.id;
           existing.data_inicio = v.data_inicio;
           existing.destino = existing.destino || v.destino;
           existing.clientes = existing.clientes || v.clientes;
