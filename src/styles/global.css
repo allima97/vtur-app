@@ -10585,6 +10585,71 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   min-height: 40px;
 }
 
+.vtur-sales-wizard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.vtur-sales-steps-card .vtur-app-card-body {
+  gap: 10px;
+}
+
+.vtur-sales-steps-wrap {
+  width: 100%;
+}
+
+.vtur-sales-steps.p-steps .p-steps-item .p-menuitem-link {
+  border-radius: 12px;
+  padding: 0.55rem 0.45rem;
+  transition: background-color 0.15s ease;
+}
+
+.vtur-sales-steps.p-steps .p-steps-item:not(.p-disabled) .p-menuitem-link:hover {
+  background: #eff6ff;
+}
+
+.vtur-sales-steps.p-steps .p-steps-item .p-menuitem-text {
+  font-weight: 700;
+}
+
+.vtur-sales-steps.p-steps .p-steps-item .p-steps-number {
+  border: 1px solid #bfdbfe;
+  color: #1e3a8a;
+}
+
+.vtur-sales-steps.p-steps .p-steps-item.p-highlight .p-steps-number {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+}
+
+.vtur-sales-step-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.vtur-sales-step-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vtur-sales-step-nav--between {
+  justify-content: space-between;
+}
+
+.vtur-sales-step-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vtur-sales-step-nav .vtur-app-button {
+  min-height: 40px;
+}
+
 /* ── Legacy split layout (kept for compatibility with other CRM screens) ── */
 /* ── Layout ── */
 .crm-layout {
@@ -11370,10 +11435,20 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
     overflow-x: auto;
     padding-bottom: 2px;
   }
+  .vtur-sales-steps-wrap {
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
   .crm-steps-wrap .crm-steps {
     min-width: 420px;
   }
+  .vtur-sales-steps-wrap .vtur-sales-steps {
+    min-width: 420px;
+  }
   .crm-step-nav {
+    flex-wrap: wrap;
+  }
+  .vtur-sales-step-nav {
     flex-wrap: wrap;
   }
   .crm-step-nav .crm-step-nav-btn.vtur-app-button {
@@ -11381,6 +11456,15 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
     min-height: 36px;
     padding: 0.42rem 0.68rem;
     font-size: 0.82rem;
+  }
+  .vtur-sales-step-nav .vtur-app-button {
+    flex: 1 1 160px;
+    min-height: 36px;
+    padding: 0.42rem 0.68rem;
+    font-size: 0.82rem;
+  }
+  .vtur-sales-step-actions {
+    width: 100%;
   }
   .crm-layout--split {
     flex-direction: column;
@@ -11425,14 +11509,30 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
   .crm-steps-wrap .crm-steps {
     min-width: 320px;
   }
+  .vtur-sales-steps-wrap .vtur-sales-steps {
+    min-width: 320px;
+  }
   .crm-steps.p-steps .p-steps-item .p-menuitem-link {
+    padding: 0.42rem 0.34rem;
+  }
+  .vtur-sales-steps.p-steps .p-steps-item .p-menuitem-link {
     padding: 0.42rem 0.34rem;
   }
   .crm-steps.p-steps .p-steps-item .p-menuitem-text {
     font-size: 0.73rem;
     white-space: nowrap;
   }
+  .vtur-sales-steps.p-steps .p-steps-item .p-menuitem-text {
+    font-size: 0.73rem;
+    white-space: nowrap;
+  }
   .crm-steps.p-steps .p-steps-item .p-steps-number {
+    width: 1.42rem;
+    height: 1.42rem;
+    min-width: 1.42rem;
+    font-size: 0.72rem;
+  }
+  .vtur-sales-steps.p-steps .p-steps-item .p-steps-number {
     width: 1.42rem;
     height: 1.42rem;
     min-width: 1.42rem;
@@ -11443,13 +11543,26 @@ body.sakai-theme .personalizar-menu-page .personalizar-menu-section-title {
     flex-wrap: wrap;
     align-items: stretch;
   }
+  .vtur-sales-step-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
   .crm-step-nav .crm-step-nav-btn.vtur-app-button {
+    width: auto;
+    min-width: 0;
+    flex: 1 1 calc(50% - 4px);
+  }
+  .vtur-sales-step-nav .vtur-app-button {
     width: auto;
     min-width: 0;
     flex: 1 1 calc(50% - 4px);
   }
   .crm-step-nav--end .crm-step-nav-btn.vtur-app-button {
     flex-basis: 100%;
+  }
+  .vtur-sales-step-actions {
+    width: 100%;
   }
   .crm-theme-grid {
     grid-template-columns: repeat(3, 1fr);

@@ -21,6 +21,7 @@ import AppField from "../ui/primer/AppField";
 import FileUploadField from "../ui/primer/FileUploadField";
 import AppNoticeDialog from "../ui/primer/AppNoticeDialog";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
+import { Steps } from "primereact/steps";
 
 const STORAGE_BUCKET = "viagens";
 
@@ -318,6 +319,7 @@ export default function VendasCadastroIsland() {
   const [loadingVenda, setLoadingVenda] = useState(false);
   const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
   const [showCalculator, setShowCalculator] = useState(false);
+  const [wizardStep, setWizardStep] = useState(0);
 
   // AUTOCOMPLETE (cliente, cidade de destino, produto)
   const [buscaCliente, setBuscaCliente] = useState("");
@@ -822,6 +824,19 @@ export default function VendasCadastroIsland() {
   }
 
   const cidadeObrigatoria = useMemo(() => recibos.length > 0, [recibos.length]);
+  const wizardItems = useMemo(
+    () => [
+      { label: "Dados da venda" },
+      { label: "Recibos" },
+      { label: "Forma de pagamento" },
+    ],
+    []
+  );
+  const wizardSubtitle = useMemo(() => {
+    if (wizardStep === 0) return "Etapa 1 de 3: defina cliente, destino, datas e condições comerciais.";
+    if (wizardStep === 1) return "Etapa 2 de 3: organize os recibos da operação e o produto principal.";
+    return "Etapa 3 de 3: distribua os pagamentos e salve para abrir a visualização final da venda.";
+  }, [wizardStep]);
 
   function handleClienteInputChange(value: string) {
     setBuscaCliente(value);
@@ -1097,6 +1112,11 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
     window.location.href = "/vendas/consulta";
   }
 
+  function openVendaView(vendaId?: string | null) {
+    const id = String(vendaId || "").trim();
+    window.location.href = id ? `/vendas/consulta?id=${encodeURIComponent(id)}` : "/vendas/consulta";
+  }
+
   function cancelarCadastro() {
     setFormVenda({
       ...initialVenda,
@@ -1114,6 +1134,129 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
     window.location.href = "/vendas/consulta";
   }
 
+  function validateDadosVendaStep() {
+    const clienteId = formVenda.cliente_id.trim();
+    if (!clienteId) {
+      setErro("Selecione um cliente valido antes de continuar.");
+      showToast("Selecione um cliente valido antes de continuar.", "error");
+      setWizardStep(0);
+      return false;
+    }
+
+    if (canAssignVendedor && !formVenda.vendedor_id) {
+      setErro("Selecione o vendedor responsável pela venda.");
+      showToast("Selecione o vendedor responsável pela venda.", "error");
+      setWizardStep(0);
+      return false;
+    }
+
+    if (formVenda.data_embarque && formVenda.data_final && !isEndOnOrAfterStart(formVenda.data_embarque, formVenda.data_final)) {
+      setErro("A data final deve ser igual ou após a data de embarque.");
+      showToast("A data final deve ser igual ou após a data de embarque.", "error");
+      setWizardStep(0);
+      return false;
+    }
+
+    if (!formVenda.data_venda) {
+      setErro("Informe a data da venda (Systur).");
+      showToast("Informe a data da venda (Systur).", "error");
+      setWizardStep(0);
+      return false;
+    }
+
+    return true;
+  }
+
+  function validateRecibosStep() {
+    if (recibos.length === 0) {
+      setErro("Uma venda precisa ter ao menos 1 recibo.");
+      showToast("Inclua ao menos um recibo na venda.", "error");
+      setWizardStep(1);
+      return false;
+    }
+
+    for (let i = 0; i < recibos.length; i += 1) {
+      const recibo = recibos[i];
+      if (!recibo.tipo_produto_id) {
+        const msg = `Recibo ${i + 1}: selecione o tipo de produto.`;
+        setErro(msg);
+        showToast(msg, "error");
+        setWizardStep(1);
+        return false;
+      }
+      if (!recibo.produto_id) {
+        const msg = `Recibo ${i + 1}: selecione o produto.`;
+        setErro(msg);
+        showToast(msg, "error");
+        setWizardStep(1);
+        return false;
+      }
+      if (!recibo.numero_recibo.trim()) {
+        const msg = `Recibo ${i + 1}: informe o número do recibo.`;
+        setErro(msg);
+        showToast(msg, "error");
+        setWizardStep(1);
+        return false;
+      }
+      if (!normalizeText(recibo.tipo_pacote || "")) {
+        setTipoPacoteModal({
+          mensagem: "É obrigatório a escolha de um tipo de pacote.",
+        });
+        setWizardStep(1);
+        return false;
+      }
+      if (!recibo.data_inicio || !recibo.data_fim) {
+        const msg = `Recibo ${i + 1}: informe as datas de início e fim.`;
+        setErro(msg);
+        showToast(msg, "error");
+        setWizardStep(1);
+        return false;
+      }
+      if (recibo.data_inicio && recibo.data_fim && !isEndOnOrAfterStart(recibo.data_inicio, recibo.data_fim)) {
+        const msg = `Recibo ${i + 1}: a data fim deve ser igual ou após a data início.`;
+        setErro(msg);
+        showToast(msg, "error");
+        setWizardStep(1);
+        return false;
+      }
+    }
+
+    const principalRecibo = recibos.find((r) => r.principal) || recibos[0];
+    if (!principalRecibo?.produto_id) {
+      setErro("Selecione um produto para o recibo principal da venda.");
+      showToast("Selecione o produto principal antes de continuar.", "error");
+      setWizardStep(1);
+      return false;
+    }
+
+    const possuiProdutoLocal = recibos.some((r) => {
+      const prod = produtos.find((p) => p.id === r.produto_id);
+      const ehGlobal =
+        !!prod?.todas_as_cidades || (r.produto_id || "").startsWith("virtual-");
+      return prod?.cidade_id && !ehGlobal;
+    });
+
+    if (possuiProdutoLocal && !formVenda.destino_id) {
+      setErro("Selecione a cidade de destino para vendas com produtos vinculados a cidade.");
+      showToast("Selecione a cidade de destino.", "error");
+      setWizardStep(0);
+      return false;
+    }
+
+    return true;
+  }
+
+  function goToWizardStep(nextStep: number) {
+    const bounded = Math.max(0, Math.min(2, nextStep));
+    if (bounded <= wizardStep) {
+      setWizardStep(bounded);
+      return;
+    }
+    if (bounded >= 1 && !validateDadosVendaStep()) return;
+    if (bounded >= 2 && !validateRecibosStep()) return;
+    setWizardStep(bounded);
+  }
+
   // =======================================================
   // SALVAR VENDA COMPLETA (VENDA + RECIBOS)
   // =======================================================
@@ -1126,50 +1269,10 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
       return;
     }
 
-    if (recibos.length === 0) {
-      setErro("Uma venda precisa ter ao menos 1 recibo.");
-      showToast("Inclua ao menos um recibo na venda.", "error");
-      return;
-    }
+    if (!validateDadosVendaStep()) return;
+    if (!validateRecibosStep()) return;
 
     const clienteId = formVenda.cliente_id.trim();
-    if (!clienteId) {
-      setErro("Selecione um cliente valido antes de salvar.");
-      showToast("Selecione um cliente valido antes de salvar.", "error");
-      return;
-    }
-
-    if (formVenda.data_embarque && formVenda.data_final && !isEndOnOrAfterStart(formVenda.data_embarque, formVenda.data_final)) {
-      setErro("A data final deve ser igual ou após a data de embarque.");
-      showToast("A data final deve ser igual ou após a data de embarque.", "error");
-      return;
-    }
-    if (!formVenda.data_venda) {
-      setErro("Informe a data da venda (Systur).");
-      showToast("Informe a data da venda (Systur).", "error");
-      return;
-    }
-    for (let i = 0; i < recibos.length; i += 1) {
-      const recibo = recibos[i];
-      if (!recibo.tipo_produto_id) {
-        const msg = `Recibo ${i + 1}: selecione o tipo de produto.`;
-        setErro(msg);
-        showToast(msg, "error");
-        return;
-      }
-      if (!normalizeText(recibo.tipo_pacote || "")) {
-        setTipoPacoteModal({
-          mensagem: "É obrigatório a escolha de um tipo de pacote.",
-        });
-        return;
-      }
-      if (recibo.data_inicio && recibo.data_fim && !isEndOnOrAfterStart(recibo.data_inicio, recibo.data_fim)) {
-        const msg = `Recibo ${i + 1}: a data fim deve ser igual ou após a data início.`;
-        setErro(msg);
-        showToast(msg, "error");
-        return;
-      }
-    }
 
     try {
       setSalvando(true);
@@ -1553,7 +1656,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
       }
 
       bumpVendasCacheVersion();
-      setTimeout(() => resetFormAndGoToConsulta(), 200);
+      setTimeout(() => openVendaView(vendaIdFinal), 200);
     } catch (e: any) {
       console.error(e);
       const detalhes = e?.message || e?.error?.message || "";
@@ -1624,6 +1727,26 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
         )}
 
         <form onSubmit={salvarVenda}>
+          <div className="vtur-sales-wizard">
+            <AppCard
+              tone="info"
+              className="vtur-sales-steps-card"
+              title="Fluxo da venda"
+              subtitle={wizardSubtitle}
+            >
+              <div className="vtur-sales-steps-wrap">
+                <Steps
+                  model={wizardItems}
+                  activeIndex={wizardStep}
+                  readOnly={false}
+                  onSelect={(event: any) => goToWizardStep(Number(event?.index ?? 0))}
+                  className="vtur-sales-steps"
+                />
+              </div>
+            </AppCard>
+
+            {wizardStep === 0 && (
+              <div className="vtur-sales-step-stack">
           <AppCard
             title="Dados da venda"
             subtitle="Informe cliente, destino e datas da operacao comercial."
@@ -1910,21 +2033,49 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
             </div>
           </AppCard>
 
+              <div className="vtur-sales-step-nav vtur-sales-step-nav--between">
+                <AppButton type="button" variant="secondary" onClick={cancelarCadastro}>
+                  Cancelar
+                </AppButton>
+                <AppButton
+                  type="button"
+                  variant="primary"
+                  icon="pi pi-arrow-right"
+                  iconPos="right"
+                  onClick={() => goToWizardStep(1)}
+                >
+                  Próxima etapa
+                </AppButton>
+              </div>
+            </div>
+            )}
+
+            {wizardStep === 1 && (
+              <div className="vtur-sales-step-stack">
           <AppCard
             title="Recibos da venda"
             subtitle="Monte os itens da venda, pagamentos e comprovantes dentro do fluxo principal do CRM."
             tone="info"
             className="mb-3"
             actions={
-              <AppButton
-                type="button"
-                variant="secondary"
-                className="vtur-calculator-trigger vtur-sales-recibos-calculator"
-                onClick={() => setShowCalculator(true)}
-                aria-label="Calculadora"
-                title="Calculadora"
-                icon="pi pi-calculator"
-              />
+              <div className="vtur-sales-step-actions">
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  onClick={addRecibo}
+                >
+                  Adicionar recibo
+                </AppButton>
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  className="vtur-calculator-trigger vtur-sales-recibos-calculator"
+                  onClick={() => setShowCalculator(true)}
+                  aria-label="Calculadora"
+                  title="Calculadora"
+                  icon="pi pi-calculator"
+                />
+              </div>
             }
           />
 
@@ -2231,6 +2382,35 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
             );
           })}
 
+              <div className="vtur-sales-step-nav vtur-sales-step-nav--between">
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  icon="pi pi-arrow-left"
+                  onClick={() => goToWizardStep(0)}
+                >
+                  Voltar
+                </AppButton>
+                <div className="vtur-sales-step-actions">
+                  <AppButton type="button" variant="secondary" onClick={addRecibo}>
+                    Adicionar recibo
+                  </AppButton>
+                  <AppButton
+                    type="button"
+                    variant="primary"
+                    icon="pi pi-arrow-right"
+                    iconPos="right"
+                    onClick={() => goToWizardStep(2)}
+                  >
+                    Próxima etapa
+                  </AppButton>
+                </div>
+              </div>
+            </div>
+            )}
+
+            {wizardStep === 2 && (
+              <div className="vtur-sales-step-stack">
           {/* PAGAMENTOS */}
           <div className="vtur-sales-section-heading">
             <h4>Formas de Pagamento</h4>
@@ -2440,19 +2620,31 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
             );
           })}
 
-          <div className="vtur-form-actions">
-            <AppButton type="button" variant="secondary" onClick={addPagamento}>
-              Adicionar pagamento
-            </AppButton>
-            <AppButton type="button" variant="secondary" onClick={addRecibo}>
-              Adicionar recibo
-            </AppButton>
-            <AppButton type="submit" variant="primary" disabled={salvando}>
-              {salvando ? "Salvando..." : "Salvar venda"}
-            </AppButton>
-            <AppButton type="button" variant="secondary" onClick={cancelarCadastro}>
-              Cancelar
-            </AppButton>
+              <div className="vtur-sales-step-nav vtur-sales-step-nav--between">
+                <div className="vtur-sales-step-actions">
+                  <AppButton
+                    type="button"
+                    variant="secondary"
+                    icon="pi pi-arrow-left"
+                    onClick={() => goToWizardStep(1)}
+                  >
+                    Voltar
+                  </AppButton>
+                  <AppButton type="button" variant="secondary" onClick={cancelarCadastro}>
+                    Cancelar
+                  </AppButton>
+                </div>
+                <div className="vtur-sales-step-actions">
+                  <AppButton type="button" variant="secondary" onClick={addPagamento}>
+                    Adicionar pagamento
+                  </AppButton>
+                  <AppButton type="submit" variant="primary" disabled={salvando}>
+                    {salvando ? "Salvando..." : "Salvar e visualizar venda"}
+                  </AppButton>
+                </div>
+              </div>
+            </div>
+            )}
           </div>
         </form>
       <AppNoticeDialog
