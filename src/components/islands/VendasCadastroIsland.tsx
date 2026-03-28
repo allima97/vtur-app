@@ -2130,6 +2130,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
             const produtosFiltrados = filtrarProdutos(buscaProduto, r.tipo_produto_id);
             const existeProdutoGlobal = existeProdutoGlobalParaTipo(r.tipo_produto_id);
             const reciboAberto = Boolean(recibosExpandidos[i]);
+            const showDuRav = shouldShowDuRavForTipoPacote(r.tipo_pacote);
             const produtoDesabilitado =
               !r.tipo_produto_id || (!formVenda.destino_id && !existeProdutoGlobal);
             const placeholderProduto = !r.tipo_produto_id
@@ -2305,6 +2306,16 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                     )}
                   </div>
 
+                </div>
+
+                <div
+                  className="vtur-sales-recibo-financial-row"
+                  style={{
+                    ["--vtur-sales-financial-columns" as any]: showDuRav
+                      ? "repeat(6, minmax(0, 1fr))"
+                      : "repeat(4, minmax(0, 1fr))",
+                  }}
+                >
                   <AppField
                     label="Data Início *"
                     type="date"
@@ -2336,65 +2347,54 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                     onBlur={() => updateRecibo(i, "valor_total", normalizeMoneyInput(r.valor_total))}
                     required
                   />
+
+                  <AppField
+                    label="Taxas"
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9,.]*"
+                    placeholder="0,00"
+                    value={r.valor_taxas}
+                    onFocus={selectAllInputOnFocus}
+                    onChange={(e) => updateReciboMonetario(i, "valor_taxas", e.target.value)}
+                    onBlur={() => updateRecibo(i, "valor_taxas", normalizeMoneyInput(r.valor_taxas))}
+                  />
+
+                  {showDuRav ? (
+                    <>
+                      <AppField
+                        label="DU"
+                        type="text"
+                        inputMode="decimal"
+                        pattern="[0-9,.]*"
+                        placeholder="0,00"
+                        value={r.valor_du}
+                        onFocus={selectAllInputOnFocus}
+                        onChange={(e) => updateReciboMonetario(i, "valor_du", e.target.value)}
+                        onBlur={() => updateRecibo(i, "valor_du", normalizeMoneyInput(r.valor_du))}
+                      />
+
+                      <AppField
+                        label="RAV"
+                        type="text"
+                        inputMode="decimal"
+                        pattern="[0-9,.]*"
+                        placeholder="0,00"
+                        value={r.valor_rav}
+                        onFocus={selectAllInputOnFocus}
+                        onChange={(e) => updateReciboMonetario(i, "valor_rav", e.target.value)}
+                        onBlur={() => updateRecibo(i, "valor_rav", normalizeMoneyInput(r.valor_rav))}
+                      />
+                    </>
+                  ) : null}
                 </div>
-
-	                <div className="vtur-sales-fees-row">
-	                  <div
-	                    className="vtur-sales-fees-grid"
-	                    style={{
-	                      gridTemplateColumns: shouldShowDuRavForTipoPacote(r.tipo_pacote)
-	                        ? "repeat(3, minmax(0, 1fr))"
-	                        : "minmax(0, 1fr)",
-	                    }}
-	                  >
-	                    <AppField
-	                      label="Taxas"
-	                      type="text"
-                      inputMode="decimal"
-                      pattern="[0-9,.]*"
-                      placeholder="0,00"
-                      value={r.valor_taxas}
-                      onFocus={selectAllInputOnFocus}
-                      onChange={(e) => updateReciboMonetario(i, "valor_taxas", e.target.value)}
-	                      onBlur={() => updateRecibo(i, "valor_taxas", normalizeMoneyInput(r.valor_taxas))}
-	                    />
-
-	                    {shouldShowDuRavForTipoPacote(r.tipo_pacote) ? (
-	                      <>
-	                        <AppField
-	                          label="DU"
-	                          type="text"
-	                          inputMode="decimal"
-	                          pattern="[0-9,.]*"
-	                          placeholder="0,00"
-	                          value={r.valor_du}
-	                          onFocus={selectAllInputOnFocus}
-	                          onChange={(e) => updateReciboMonetario(i, "valor_du", e.target.value)}
-	                          onBlur={() => updateRecibo(i, "valor_du", normalizeMoneyInput(r.valor_du))}
-	                        />
-
-	                        <AppField
-	                          label="RAV"
-	                          type="text"
-	                          inputMode="decimal"
-	                          pattern="[0-9,.]*"
-	                          placeholder="0,00"
-	                          value={r.valor_rav}
-	                          onFocus={selectAllInputOnFocus}
-	                          onChange={(e) => updateReciboMonetario(i, "valor_rav", e.target.value)}
-	                          onBlur={() => updateRecibo(i, "valor_rav", normalizeMoneyInput(r.valor_rav))}
-	                        />
-	                      </>
-	                    ) : null}
-	                  </div>
-	                  {shouldShowDuRavForTipoPacote(r.tipo_pacote) ? (
-	                    <div className="vtur-sales-note">
-	                      {hasRavValue(r.valor_rav)
-	                        ? "Total deve incluir o RAV. O sistema desconta o RAV no calculo de meta/comissao."
-	                        : "Se houver RAV, informe o valor total somado ao RAV."}
-	                    </div>
-	                  ) : null}
-	                </div>
+                {showDuRav ? (
+                  <div className="vtur-sales-note" style={{ marginTop: 10 }}>
+                    {hasRavValue(r.valor_rav)
+                      ? "Total deve incluir o RAV. O sistema desconta o RAV no calculo de meta/comissao."
+                      : "Se houver RAV, informe o valor total somado ao RAV."}
+                  </div>
+                ) : null}
 
                 <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 16 }}>
                   <FileUploadField
@@ -2462,10 +2462,11 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
             <p>Distribua valores, descontos e parcelas por meio de pagamento.</p>
           </div>
 
-          {pagamentos.map((p, idx) => {
-            const formaSelecionada = formasPagamento.find((f) => f.id === p.forma_id);
-            const pagamentoAberto = Boolean(pagamentosExpandidos[idx]);
-            return (
+	          {pagamentos.map((p, idx) => {
+	            const formaSelecionada = formasPagamento.find((f) => f.id === p.forma_id);
+	            const pagamentoAberto = Boolean(pagamentosExpandidos[idx]);
+	            const showFormaNomeManual = !p.forma_id;
+	            return (
               <AppCard
                 key={`pag-${idx}`}
                 title={`Pagamento ${idx + 1}`}
@@ -2496,11 +2497,18 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 }
               >
                 {pagamentoAberto ? (
-                <>
-                <div className="vtur-form-grid vtur-form-grid-4">
-                  <AppField
-                    as="select"
-                    label="Forma *"
+	                <>
+	                <div
+	                  className="vtur-sales-pagamento-row"
+	                  style={{
+	                    ["--vtur-sales-payment-columns" as any]: showFormaNomeManual
+	                      ? "repeat(6, minmax(0, 1fr))"
+	                      : "repeat(5, minmax(0, 1fr))",
+	                  }}
+	                >
+	                  <AppField
+	                    as="select"
+	                    label="Forma *"
                     value={p.forma_id}
                     onChange={(e) => {
                       const value = e.target.value;
@@ -2526,25 +2534,19 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                     ]}
                   />
 
-                  {!p.forma_id && (
-                    <AppField
-                      label="Nome da forma"
-                      value={p.forma_nome}
-                      onChange={(e) => updatePagamento(idx, "forma_nome", e.target.value)}
-                    />
-                  )}
+	                  {showFormaNomeManual && (
+	                    <AppField
+	                      label="Nome da forma"
+	                      value={p.forma_nome}
+	                      onChange={(e) => updatePagamento(idx, "forma_nome", e.target.value)}
+	                    />
+	                  )}
 
-                  <AppField
-                    label="Operacao"
-                    value={p.operacao}
-                    onChange={(e) => updatePagamento(idx, "operacao", e.target.value)}
-                  />
-
-                  <AppField
-                    label="Plano"
-                    value={p.plano}
-                    onChange={(e) => updatePagamento(idx, "plano", e.target.value)}
-                  />
+	                  <AppField
+	                    label="Operacao"
+	                    value={p.operacao}
+	                    onChange={(e) => updatePagamento(idx, "operacao", e.target.value)}
+	                  />
 
                   <AppField
                     label="Valor"

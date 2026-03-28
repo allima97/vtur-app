@@ -953,14 +953,44 @@ a.vtur-app-button:visited {
   line-height: 1.45;
 }
 
-.vtur-sales-fees-row {
+.vtur-sales-recibo-financial-row {
   margin-top: 16px;
+  display: grid;
+  grid-template-columns: var(--vtur-sales-financial-columns, repeat(6, minmax(0, 1fr)));
+  gap: 12px;
 }
 
-.vtur-sales-fees-grid {
+.vtur-sales-pagamento-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: var(--vtur-sales-payment-columns, repeat(5, minmax(0, 1fr)));
   gap: 12px;
+}
+
+@media (max-width: 1200px) {
+  .vtur-sales-recibo-financial-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  .vtur-sales-pagamento-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .vtur-sales-recibo-financial-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .vtur-sales-pagamento-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .vtur-sales-recibo-financial-row {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .vtur-sales-pagamento-row {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
 }
 
 .vtur-sales-contract-link {
