@@ -427,8 +427,9 @@ async function fetchMatchingBaseReceiptIds(params: {
       query = query.in("vendedor_id", vendedorIds);
     }
 
-    if (inicio) query = query.gte("data_venda", inicio);
-    if (fim) query = query.lte("data_venda", fim);
+    // Alinha com operacao/comissionamento: competência por data do recibo.
+    if (inicio) query = query.gte("vendas_recibos.data_venda", inicio);
+    if (fim) query = query.lte("vendas_recibos.data_venda", fim);
     if (status && status !== "todos") query = query.eq("status", status);
     if (clienteId) query = query.eq("cliente_id", clienteId);
     if (valorMin != null && Number.isFinite(valorMin)) query = query.gte("valor_total_bruto", valorMin);
@@ -491,6 +492,7 @@ function buildSyntheticRelatorioRows(params: {
       valor_total_pago: item.valor_bruto,
       desconto_comercial_valor: 0,
       valor_nao_comissionado: 0,
+      cancelada: false,
       status: "confirmado",
       cliente: { nome: null, cpf: null },
       destino_produto: item.produto
@@ -519,6 +521,8 @@ function buildSyntheticRelatorioRows(params: {
           valor_comissao_loja: item.valor_comissao_loja,
           percentual_comissao_loja: item.percentual_comissao_loja,
           faixa_comissao: item.faixa_comissao,
+          cancelado_por_conciliacao_em: null,
+          cancelado_por_conciliacao_observacao: null,
           produto_resolvido_id: item.produto_id,
           produto_resolvido: item.produto
             ? {
@@ -691,11 +695,12 @@ export async function GET({ request }: { request: Request }) {
         valor_total_pago,
         desconto_comercial_valor,
         valor_nao_comissionado,
+        cancelada,
         status,
         cliente:clientes!cliente_id (nome, cpf),
         destino_produto:produtos!destino_id (id, nome, tipo_produto, cidade_id),
         destino_cidade:cidades!destino_cidade_id (nome),
-        vendas_recibos (
+        vendas_recibos!inner (
           id,
           numero_recibo,
           data_venda,
@@ -705,6 +710,8 @@ export async function GET({ request }: { request: Request }) {
           valor_rav,
           produto_id,
           tipo_pacote,
+          cancelado_por_conciliacao_em,
+          cancelado_por_conciliacao_observacao,
           produto_resolvido_id,
           produto_resolvido:produtos!produto_resolvido_id (id, nome, tipo_produto, cidade_id),
           tipo_produtos (id, nome, tipo)
@@ -720,9 +727,9 @@ export async function GET({ request }: { request: Request }) {
       query = query.in("vendedor_id", vendedorIds);
     }
 
-    // Competência por data da venda (Systur): filtra por vendas.data_venda
-    if (inicio) query = query.gte("data_venda", inicio);
-    if (fim) query = query.lte("data_venda", fim);
+    // Alinha com operacao/comissionamento: competência por data do recibo.
+    if (inicio) query = query.gte("vendas_recibos.data_venda", inicio);
+    if (fim) query = query.lte("vendas_recibos.data_venda", fim);
     if (status && status !== "todos") query = query.eq("status", status);
     if (clienteId) query = query.eq("cliente_id", clienteId);
 

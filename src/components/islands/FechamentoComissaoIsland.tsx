@@ -12,13 +12,14 @@ import {
 } from "../../lib/comissao";
 import { buildMonthOptionsYYYYMM, formatCurrencyBRL, formatDateBR, formatMonthYearBR } from "../../lib/format";
 import {
+  calcularPctPorRegra as calcularPctPorRegraUtils,
   calcularDescontoAplicado,
   hasConciliacaoCommissionRule,
   resolveConciliacaoCommissionSelection,
   type ConciliacaoCommissionBandRule,
 } from "../../lib/comissaoUtils";
 import { carregarTermosNaoComissionaveis, calcularNaoComissionavelPorVenda } from "../../lib/pagamentoUtils";
-import { normalizeText } from "../../lib/normalizeText";
+import { normalizeTipoPacoteRuleKey } from "../../lib/tipoPacote";
 import { fetchGestorEquipeIdsComGestor } from "../../lib/gestorEquipe";
 import {
   buildConciliacaoSyntheticVendas,
@@ -228,23 +229,7 @@ export default function FechamentoComissaoIsland() {
   const [valorComissao, setValorComissao] = useState<number>(0);
 
   function calcularPctPorRegra(regra: RegraProduto, pctMeta: number): number {
-    if (regra.tipo === "GERAL") {
-      if (pctMeta < 100) return regra.meta_nao_atingida ?? 0;
-      if (pctMeta >= 100 && pctMeta < 120) {
-        return regra.meta_atingida ?? regra.meta_nao_atingida ?? 0;
-      }
-      return regra.super_meta ?? regra.meta_atingida ?? regra.meta_nao_atingida ?? 0;
-    }
-
-    // Escalonável: buscar faixa PRE ou POS com pctMeta
-    const faixa = pctMeta >= 0 ? (pctMeta < 100 ? "PRE" : "POS") : "PRE";
-    const tiers = (regra.commission_tier || []).filter((t) => t.faixa === faixa);
-    const tier = tiers.find((t) => pctMeta >= t.de_pct && pctMeta <= t.ate_pct);
-    if (tier) {
-      // inc_pct_meta representa base de meta (pode usar como base) e inc_pct_comissao a comissão
-      return tier.inc_pct_comissao ?? 0;
-    }
-    return regra.meta_atingida ?? regra.meta_nao_atingida ?? 0;
+    return calcularPctPorRegraUtils(regra as any, pctMeta);
   }
 
   function criarRegraFixa(
@@ -411,7 +396,7 @@ export default function FechamentoComissaoIsland() {
       const mapPacote: Record<string, Record<string, RegraProduto>> = {};
       (regrasPacoteData || []).forEach((r: any) => {
         if (!r.produto_id) return;
-        const key = normalizeText(r.tipo_pacote || "", { trim: true, collapseWhitespace: true });
+        const key = normalizeTipoPacoteRuleKey(r.tipo_pacote || "");
         if (!key) return;
         if (!mapPacote[r.produto_id]) mapPacote[r.produto_id] = {};
         if (r.commission_rule) {
@@ -842,7 +827,7 @@ export default function FechamentoComissaoIsland() {
 
           recibosVenda.forEach((r) => {
             const prodId = (r as any).produto_id;
-            const tipoPacoteKey = normalizeText(r.tipo_pacote || "", { trim: true, collapseWhitespace: true });
+            const tipoPacoteKey = normalizeTipoPacoteRuleKey(r.tipo_pacote || "");
             const regraPacote = prodId && tipoPacoteKey ? regrasProdutoPacote[prodId]?.[tipoPacoteKey] : null;
             const regra = regraPacote || (prodId ? regrasProduto[prodId] : null);
             const liquidoRecibo = saleHasOverride

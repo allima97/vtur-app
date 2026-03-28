@@ -9,13 +9,14 @@ import AlertMessage from "../ui/AlertMessage";
 import { formatCurrencyBRL, formatNumberBR } from "../../lib/format";
 import {
   calcularPctFixoProduto,
+  calcularPctPorRegra,
   hasConciliacaoCommissionRule,
   regraProdutoTemFixo,
   resolveConciliacaoCommissionSelection,
   type ConciliacaoCommissionBandRule,
 } from "../../lib/comissaoUtils";
 import { carregarTermosNaoComissionaveis, calcularNaoComissionavelPorVenda } from "../../lib/pagamentoUtils";
-import { normalizeText } from "../../lib/normalizeText";
+import { normalizeTipoPacoteRuleKey } from "../../lib/tipoPacote";
 import { fetchGestorEquipeIdsComGestor } from "../../lib/gestorEquipe";
 import {
   buildConciliacaoSyntheticVendas,
@@ -693,7 +694,7 @@ export default function ComissionamentoIsland() {
       const regProdPacoteMap: Record<string, Record<string, RegraProduto>> = {};
       (regrasProdPacoteData || []).forEach((rp: any) => {
         const produtoId = rp.produto_id;
-        const tipoPacoteKey = normalizeText(rp.tipo_pacote || "", { trim: true, collapseWhitespace: true });
+        const tipoPacoteKey = normalizeTipoPacoteRuleKey(rp.tipo_pacote || "");
         if (!produtoId || !tipoPacoteKey) return;
         if (!regProdPacoteMap[produtoId]) regProdPacoteMap[produtoId] = {};
         regProdPacoteMap[produtoId][tipoPacoteKey] = {
@@ -816,37 +817,6 @@ export default function ComissionamentoIsland() {
     }
   }
 
-  function calcularPctEscalonavel(regra: Regra, pctMeta: number) {
-    const faixa = pctMeta < 100 ? "PRE" : "POS";
-    const tiers = (regra.commission_tier || []).filter((t) => t.faixa === faixa);
-    const tier = tiers.find((t) => pctMeta >= Number(t.de_pct) && pctMeta <= Number(t.ate_pct));
-
-    const base =
-      faixa === "PRE"
-        ? regra.meta_nao_atingida ?? regra.meta_atingida ?? 0
-        : regra.meta_atingida ?? regra.meta_nao_atingida ?? 0;
-
-    if (!tier) {
-      // fallback para fora das faixas: usa base/super_meta
-      if (faixa === "POS" && pctMeta >= 120) {
-        return regra.super_meta ?? base;
-      }
-      return base;
-    }
-
-    const incMeta = Number(tier.inc_pct_meta || 0);
-    const incCom = Number(tier.inc_pct_comissao || 0); // em pontos percentuais
-
-    if (incMeta <= 0) {
-      // se não houver incremento definido, usa o inc_pct_comissao como valor absoluto
-      return incCom || base;
-    }
-
-    const steps = Math.max(0, Math.floor((pctMeta - Number(tier.de_pct)) / incMeta));
-    const pct = base + steps * (incCom / 100);
-    return pct;
-  }
-
   const resumo = useMemo(() => {
     if (!parametros) return null;
 
@@ -923,7 +893,7 @@ export default function ComissionamentoIsland() {
         const valParaMeta = getReciboMeta(r, parametros);
         // Para comissão (valor): sempre usa o líquido.
         const baseCom = liquido;
-        const tipoPacoteKey = normalizeText(r.tipo_pacote || "", { trim: true, collapseWhitespace: true });
+        const tipoPacoteKey = normalizeTipoPacoteRuleKey(r.tipo_pacote || "");
         const isConciliacao = hasConciliacaoOverride(r);
         const percentualComissaoLoja =
           r.percentual_comissao_loja != null ? Number(r.percentual_comissao_loja) : null;
@@ -1025,13 +995,8 @@ export default function ComissionamentoIsland() {
         const baseMetaProd = baseMetaPorProduto[prodId] || 0;
         const temMetaProd = metaProd > 0;
         const pctMetaProd = temMetaProd ? (baseMetaProd / metaProd) * 100 : 0;
-        const pctCom = temMetaProd
-          ? baseMetaProd < metaProd
-            ? 0
-            : pctMetaProd >= 120
-            ? regProd.fix_super_meta ?? regProd.fix_meta_atingida ?? regProd.fix_meta_nao_atingida ?? 0
-            : regProd.fix_meta_atingida ?? regProd.fix_meta_nao_atingida ?? 0
-          : regProd.fix_meta_nao_atingida ?? regProd.fix_meta_atingida ?? regProd.fix_super_meta ?? 0;
+        const pctReferencia = temMetaProd ? pctMetaProd : pctMetaGeral;
+        const pctCom = calcularPctFixoProduto(regProd, pctReferencia);
         const val = baseComBucket * (pctCom / 100);
         comissaoFixaProdutos += val;
         const jogaParaGeral = prod.soma_na_meta && !prod.usa_meta_produto;
@@ -1058,11 +1023,11 @@ export default function ComissionamentoIsland() {
       let pctCom = 0;
       let usouFixo = false;
 
-      if (regProdPacote && !regProdPacote.rule_id) {
-        if (regraProdutoTemFixo(regProdPacote)) {
-          pctCom = calcularPctFixoProduto(regProdPacote, pctMetaGeral);
+      if (regProd && !regProd.rule_id) {
+        if (regraProdutoTemFixo(regProd)) {
+          pctCom = calcularPctFixoProduto(regProd, pctMetaGeral);
           usouFixo = true;
-        } else {
+        } else if (regProdPacote && regProd === regProdPacote) {
           regProd = regProdBase;
         }
       }
@@ -1076,13 +1041,7 @@ export default function ComissionamentoIsland() {
         produtosMetaGeralSet.add(prodId);
       }
       if (!usouFixo && reg) {
-        if (reg.tipo === "ESCALONAVEL") {
-          pctCom = calcularPctEscalonavel(reg, pctMetaGeral);
-        } else {
-          if (pctMetaGeral < 100) pctCom = reg.meta_nao_atingida || 0;
-          else if (pctMetaGeral >= 120) pctCom = reg.super_meta ?? reg.meta_atingida ?? reg.meta_nao_atingida ?? 0;
-          else pctCom = reg.meta_atingida ?? reg.meta_nao_atingida ?? 0;
-        }
+        pctCom = calcularPctPorRegra(reg, pctMetaGeral);
       }
 
       let extraPct = 0;

@@ -6,6 +6,7 @@ import { exportTableToPDF } from "../../lib/pdf";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
 import { fetchCidadesByApiWithCache } from "../../lib/cidadesSearchApiCache";
 import { normalizeText } from "../../lib/normalizeText";
+import { cleanTipoPacoteForRule, normalizeTipoPacoteRuleKey } from "../../lib/tipoPacote";
 import { matchesCpfSearch } from "../../lib/searchNormalization";
 import { formatCurrencyBRL, formatDateBR, formatNumberBR } from "../../lib/format";
 import {
@@ -34,6 +35,7 @@ import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 import { getVendasCacheVersion } from "../../lib/vendasCacheVersion";
+import { filterRecibosCanceladosMesmoMes } from "../../lib/conciliacao/source";
 
 type Cliente = {
   id: string;
@@ -99,6 +101,7 @@ type Venda = {
   valor_total_pago?: number | null;
   desconto_comercial_valor?: number | null;
   valor_nao_comissionado?: number | null;
+  cancelada?: boolean | null;
   status: string | null;
   vendas_recibos?: {
     id?: string | null;
@@ -116,6 +119,8 @@ type Venda = {
     valor_comissao_loja?: number | null;
     percentual_comissao_loja?: number | null;
     faixa_comissao?: string | null;
+    cancelado_por_conciliacao_em?: string | null;
+    cancelado_por_conciliacao_observacao?: string | null;
     produto_resolvido_id?: string | null;
     tipo_produtos?: { id: string; nome: string | null; tipo: string | null } | null;
     produto_resolvido?: { id: string; nome: string | null; tipo: string | null } | null;
@@ -137,9 +142,12 @@ type ReciboEnriquecido = {
   produto_nome: string;
   produto_tipo: string;
   produto_tipo_id: string | null;
+  produto_comissao_id?: string | null;
   produto_id: string | null;
   cidade_nome: string;
   cidade_id: string | null;
+  data_venda_recibo?: string | null;
+  data_venda_venda?: string | null;
   data_venda: string;
   data_embarque: string | null;
   numero_recibo: string | null;
@@ -155,6 +163,7 @@ type ReciboEnriquecido = {
   percentual_comissao_loja?: number | null;
   faixa_comissao?: string | null;
   tipo_pacote?: string | null;
+  venda_cancelada?: boolean | null;
   status: string | null;
 };
 
@@ -184,10 +193,8 @@ function getBrutoSemRav(r: {
   valor_meta_override?: number | null;
   valor_liquido_override?: number | null;
 }) {
-  if (hasConciliacaoOverride(r)) {
-    return getBrutoRecibo(r);
-  }
-  return Math.max(0, getBrutoRecibo(r) - Math.max(0, Number(r.valor_rav ?? 0)));
+  // Espelha operacao/comissionamento: base sem RAV parte de valor_total original.
+  return Math.max(0, Number(r.valor_total || 0) - Number(r.valor_rav || 0));
 }
 
 function getTaxasEfetivas(r: {
@@ -239,8 +246,36 @@ function getMetaRecibo(
   return params.foco_valor === "liquido"
     ? liquido
     : params.usar_taxas_na_meta
-    ? getBrutoSemRav(r)
+    ? getBrutoRecibo(r)
     : liquido;
+}
+
+function isStatusCancelado(status?: string | null, vendaCancelada?: boolean | null) {
+  if (vendaCancelada === true) return true;
+  return String(status || "").trim().toLowerCase() === "cancelado";
+}
+
+function normalizarDataIso(value?: string | null) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const iso = raw.includes("T") ? raw.slice(0, 10) : raw;
+  return /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(iso) ? iso : "";
+}
+
+function reciboDentroDoPeriodo(
+  recibo: { data_venda_recibo?: string | null },
+  inicio?: string | null,
+  fim?: string | null
+) {
+  // Espelha operacao/comissionamento:
+  // o recorte usa data do recibo; sem data do recibo, não entra no período.
+  const data = normalizarDataIso(recibo.data_venda_recibo);
+  if (!data) return false;
+  const ini = normalizarDataIso(inicio);
+  const end = normalizarDataIso(fim);
+  if (ini && data < ini) return false;
+  if (end && data > end) return false;
+  return true;
 }
 
 type StatusFiltro = "todos" | "aberto" | "confirmado" | "cancelado";
@@ -306,7 +341,7 @@ async function fetchRelatorioBase() {
   }>({
     endpoint: "/api/v1/relatorios/base",
     cacheScope: "relatorios-base",
-    cacheKey: `v1:${cacheIdentity}`,
+    cacheKey: `v2:${cacheIdentity}`,
     persistentTtlMs: 6 * 60 * 60 * 1000,
     queryLiteTtlMs: 60_000,
   });
@@ -358,6 +393,17 @@ async function fetchRelatorioVendas(params: {
     total: number;
     pagamentosNaoComissionaveis?: Record<string, number> | null;
   };
+}
+
+function pagamentosMapFromPayload(payload?: Record<string, number> | null) {
+  const map = new Map<string, number>();
+  if (!payload) return map;
+  Object.entries(payload).forEach(([id, value]) => {
+    const parsed = Number(value || 0);
+    if (!Number.isFinite(parsed)) return;
+    map.set(id, parsed);
+  });
+  return map;
 }
 
 async function fetchCidadesSugestoes(params: {
@@ -434,6 +480,8 @@ function getPeriodosMeses(inicio: string, fim: string) {
 }
 
 export default function RelatorioVendasIsland() {
+  const mesAtualInicio = formatISO(startOfMonth(new Date()));
+  const mesAtualFim = formatISO(endOfMonth(new Date()));
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [tiposProdutos, setTiposProdutos] = useState<TipoProduto[]>([]);
@@ -453,9 +501,9 @@ export default function RelatorioVendasIsland() {
 
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null);
 
-  const [dataInicio, setDataInicio] = useState<string>("");
-  const [dataFim, setDataFim] = useState<string>("");
-  const [periodoPreset, setPeriodoPreset] = useState<PeriodoPreset>("");
+  const [dataInicio, setDataInicio] = useState<string>(mesAtualInicio);
+  const [dataFim, setDataFim] = useState<string>(mesAtualFim);
+  const [periodoPreset, setPeriodoPreset] = useState<PeriodoPreset>("mes_atual");
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("todos");
   const [valorMin, setValorMin] = useState<string>("");
   const [valorMax, setValorMax] = useState<string>("");
@@ -464,6 +512,13 @@ export default function RelatorioVendasIsland() {
 
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [pagamentosNaoComissionaveis, setPagamentosNaoComissionaveis] = useState<Map<string, number>>(new Map());
+  const [vendasResumoData, setVendasResumoData] = useState<Venda[]>([]);
+  const [pagamentosResumoData, setPagamentosResumoData] = useState<Map<string, number>>(new Map());
+  const [resumoDataKey, setResumoDataKey] = useState<string>("");
+  const [vendasBaseComissaoData, setVendasBaseComissaoData] = useState<Venda[]>([]);
+  const [pagamentosBaseComissaoData, setPagamentosBaseComissaoData] = useState<Map<string, number>>(new Map());
+  const [recibosBaseComissao, setRecibosBaseComissao] = useState<ReciboEnriquecido[]>([]);
+  const [recibosBaseComissaoKey, setRecibosBaseComissaoKey] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [userCtx, setUserCtx] = useState<UserCtx | null>(null);
@@ -723,6 +778,7 @@ export default function RelatorioVendasIsland() {
       let metasQuery = supabase
         .from("metas_vendedor")
         .select("id, meta_geral")
+        .eq("scope", "vendedor")
         .in("periodo", periodos);
       if (userCtx.papel !== "ADMIN" && vendedorIdsFiltro.length > 0) {
         metasQuery = metasQuery.in("vendedor_id", vendedorIdsFiltro);
@@ -742,7 +798,22 @@ export default function RelatorioVendasIsland() {
               .select("produto_id, valor")
               .in("meta_vendedor_id", metaIds)
           : Promise.resolve({ data: [], error: null as null });
-      const [metasProdRes, regrasRes, regrasProdRes, regrasProdPacoteRes] = await Promise.all([
+      const tiposBaseCols = "id, nome, tipo";
+      const tiposExtraCols =
+        ", regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral, exibe_kpi_comissao";
+
+      const tiposPromise = supabase
+        .from("tipo_produtos")
+        .select(`${tiposBaseCols}${tiposExtraCols}`)
+        .order("nome", { ascending: true });
+
+      const [
+        metasProdRes,
+        regrasRes,
+        regrasProdRes,
+        regrasProdPacoteRes,
+        tiposRes,
+      ] = await Promise.all([
         metasProdPromise,
         supabase
           .from("commission_rule")
@@ -755,11 +826,23 @@ export default function RelatorioVendasIsland() {
         supabase
           .from("product_commission_rule_pacote")
           .select("produto_id, tipo_pacote, rule_id, fix_meta_nao_atingida, fix_meta_atingida, fix_super_meta"),
+        tiposPromise,
       ]);
       if (metasProdRes.error) throw metasProdRes.error;
       if (regrasRes.error) throw regrasRes.error;
       if (regrasProdRes.error) throw regrasProdRes.error;
       if (regrasProdPacoteRes.error) throw regrasProdPacoteRes.error;
+      let tiposData = tiposRes.data;
+      if (tiposRes.error && tiposRes.error.code === "42703") {
+        const fallback = await supabase
+          .from("tipo_produtos")
+          .select(tiposBaseCols)
+          .order("nome", { ascending: true });
+        if (fallback.error) throw fallback.error;
+        tiposData = fallback.data;
+      } else if (tiposRes.error) {
+        throw tiposRes.error;
+      }
       const regrasMap: Record<string, Regra> = {};
       (regrasRes.data || []).forEach((rule: any) => {
         regrasMap[rule.id] = {
@@ -784,7 +867,7 @@ export default function RelatorioVendasIsland() {
       const regraProdPacoteMap: Record<string, Record<string, RegraProduto>> = {};
       (regrasProdPacoteRes.data || []).forEach((rule: any) => {
         const produtoId = rule.produto_id;
-        const tipoPacoteKey = normalizeText(rule.tipo_pacote || "", { trim: true, collapseWhitespace: true });
+        const tipoPacoteKey = normalizeTipoPacoteRuleKey(rule.tipo_pacote || "");
         if (!produtoId || !tipoPacoteKey) return;
         if (!regraProdPacoteMap[produtoId]) regraProdPacoteMap[produtoId] = {};
         regraProdPacoteMap[produtoId][tipoPacoteKey] = {
@@ -801,6 +884,9 @@ export default function RelatorioVendasIsland() {
         metaProdMap[entry.produto_id] =
           (metaProdMap[entry.produto_id] || 0) + Number(entry.valor || 0);
       });
+      if (Array.isArray(tiposData) && tiposData.length > 0) {
+        setTiposProdutos(tiposData as TipoProduto[]);
+      }
       setRegrasCommission(regrasMap);
       setRegraProdutoMap(regraProdMap);
       setRegraProdutoPacoteMap(regraProdPacoteMap);
@@ -890,6 +976,14 @@ export default function RelatorioVendasIsland() {
     return map;
   }, [tiposProdutos]);
 
+  const tipoProdutoIdSet = useMemo(() => {
+    const set = new Set<string>();
+    tiposProdutos.forEach((tipo) => {
+      if (tipo.id) set.add(tipo.id);
+    });
+    return set;
+  }, [tiposProdutos]);
+
   const cidadePorId = useMemo(() => {
     const map = new Map<string, string>();
     cidades.forEach((cidade) => {
@@ -910,7 +1004,7 @@ export default function RelatorioVendasIsland() {
         const clienteNome = c?.nome || "(sem cliente)";
         const clienteCpf = c?.cpf || "";
         const produtoDestino = v.destino_produto;
-        const recibos = v.vendas_recibos || [];
+        const recibos = filterRecibosCanceladosMesmoMes(v.vendas_recibos || []);
         const recibosBase = recibos.filter((recibo) => !hasConciliacaoOverride(recibo));
         const totalBrutoVendaBase = recibosBase.reduce((sum, r) => sum + getBrutoRecibo(r), 0);
         const naoComissionado = pagamentosMap?.get(v.id) ?? Number(v.valor_nao_comissionado || 0);
@@ -924,13 +1018,18 @@ export default function RelatorioVendasIsland() {
         return recibos.map((recibo, index) => {
         const produtoResolvido = recibo.produto_resolvido;
         const tipoRegistro = recibo.tipo_produtos;
-        const tipoId =
+        const reciboProdutoId = String(recibo.produto_id || "").trim();
+        const tipoIdDoRecibo =
           tipoRegistro?.id ||
+          (reciboProdutoId
+            ? tipoProdutoIdSet.has(reciboProdutoId)
+              ? reciboProdutoId
+              : prodMap.get(reciboProdutoId)?.tipo_produto || null
+            : null) ||
           produtoResolvido?.tipo_produto ||
           produtoDestino?.tipo_produto ||
-          (recibo.produto_id ?? null) ||
-          prodMap.get(recibo.produto_id || "")?.tipo_produto ||
           null;
+        const tipoId = tipoIdDoRecibo;
         const tipoLabel =
           tipoRegistro?.nome ||
           tipoRegistro?.tipo ||
@@ -990,9 +1089,12 @@ export default function RelatorioVendasIsland() {
 	          produto_nome: produtoNome,
 	          produto_tipo: tipoLabel,
 	          produto_tipo_id: tipoId,
+            produto_comissao_id: tipoIdDoRecibo,
 	          produto_id: produtoId,
 	          cidade_nome: cidadeNome,
 	          cidade_id: cidadeId,
+	          data_venda_recibo: recibo.data_venda || null,
+	          data_venda_venda: v.data_venda || null,
 	          data_venda: recibo.data_venda || v.data_venda,
 	          data_embarque: v.data_embarque,
 	          numero_recibo: recibo.numero_recibo,
@@ -1012,17 +1114,52 @@ export default function RelatorioVendasIsland() {
             percentual_comissao_loja: recibo.percentual_comissao_loja ?? null,
             faixa_comissao: recibo.faixa_comissao ?? null,
 	          tipo_pacote: recibo.tipo_pacote || null,
+            venda_cancelada: v.cancelada ?? null,
 	          status: v.status,
 	        };
         });
       });
     },
-    [clientes, produtos, tipoNomePorId, cidadePorId]
+    [clientes, produtos, tipoNomePorId, tipoProdutoIdSet, cidadePorId]
   );
 
   const recibosEnriquecidos: ReciboEnriquecido[] = useMemo(
     () => construirRecibosEnriquecidos(vendas, pagamentosNaoComissionaveis),
     [vendas, pagamentosNaoComissionaveis, construirRecibosEnriquecidos]
+  );
+
+  const recibosResumoBase = useMemo(
+    () => construirRecibosEnriquecidos(vendasResumoData, pagamentosResumoData),
+    [vendasResumoData, pagamentosResumoData, construirRecibosEnriquecidos]
+  );
+
+  useEffect(() => {
+    if (vendasBaseComissaoData.length === 0) {
+      setRecibosBaseComissao([]);
+      return;
+    }
+    setRecibosBaseComissao(
+      construirRecibosEnriquecidos(vendasBaseComissaoData, pagamentosBaseComissaoData)
+    );
+  }, [
+    vendasBaseComissaoData,
+    pagamentosBaseComissaoData,
+    construirRecibosEnriquecidos,
+  ]);
+
+  const recibosParaCalculoComissao = useMemo(() => {
+    if (recibosBaseComissao.length > 0) return recibosBaseComissao;
+    return recibosEnriquecidos;
+  }, [recibosBaseComissao, recibosEnriquecidos]);
+
+  const recibosElegiveisComissao = useMemo(
+    () =>
+      recibosParaCalculoComissao.filter(
+        (recibo) =>
+          !isStatusCancelado(recibo.status, recibo.venda_cancelada) &&
+          reciboDentroDoPeriodo(recibo, dataInicio, dataFim)
+      ),
+    [recibosParaCalculoComissao, dataInicio, dataFim]
   );
 
   const filtrosLocaisAtivos = Boolean(
@@ -1072,6 +1209,10 @@ export default function RelatorioVendasIsland() {
     () => filtrarRecibos(recibosEnriquecidos),
     [recibosEnriquecidos, filtrarRecibos]
   );
+  const recibosResumoFiltrados = useMemo(
+    () => filtrarRecibos(recibosResumoBase),
+    [recibosResumoBase, filtrarRecibos]
+  );
   const usaPaginacaoServidor = !filtrosLocaisAtivos && !carregouTodos;
   const totalItems = usaPaginacaoServidor ? totalVendasDb : recibosFiltrados.length;
   const totalPaginas = Math.max(1, Math.ceil(totalItems / Math.max(pageSize, 1)));
@@ -1088,15 +1229,15 @@ export default function RelatorioVendasIsland() {
     }
   }, [page, totalPaginas]);
 
-  const totalRecibos = recibosFiltrados.length;
-  const somaValores = recibosFiltrados.reduce((acc, v) => {
+  const totalRecibos = recibosResumoFiltrados.length;
+  const somaValores = recibosResumoFiltrados.reduce((acc, v) => {
     return acc + getBrutoRecibo(v);
   }, 0);
   const formatCurrency = (value: number) => formatCurrencyBRL(value);
-  const somaTaxas = recibosFiltrados.reduce((acc, v) => {
+  const somaTaxas = recibosResumoFiltrados.reduce((acc, v) => {
     return acc + getTaxasEfetivas(v);
   }, 0);
-  const somaLiquido = recibosFiltrados.reduce((acc, v) => {
+  const somaLiquido = recibosResumoFiltrados.reduce((acc, v) => {
     return acc + getLiquidoComissionavel(v);
   }, 0);
   const ticketMedio = totalRecibos > 0 ? somaValores / totalRecibos : 0;
@@ -1123,7 +1264,15 @@ export default function RelatorioVendasIsland() {
   );
 
   const getProdutoPorId = useCallback(
-    (prodId: string) => tipoProdutoMap.get(prodId) ?? produtosMap.get(prodId),
+    (prodId: string) => {
+      const tipoDireto = tipoProdutoMap.get(prodId);
+      if (tipoDireto) return tipoDireto;
+      const produto = produtosMap.get(prodId);
+      if (!produto) return undefined;
+      const tipoPorProduto =
+        produto.tipo_produto ? tipoProdutoMap.get(produto.tipo_produto) : undefined;
+      return tipoPorProduto || produto;
+    },
     [produtosMap, tipoProdutoMap]
   );
 
@@ -1144,7 +1293,7 @@ export default function RelatorioVendasIsland() {
 
   const getRegraProdutoPacote = useCallback(
     (prodId: string, tipoPacote?: string | null, produto?: Produto | TipoProduto) => {
-      const key = normalizeText(tipoPacote || "", { trim: true, collapseWhitespace: true });
+      const key = normalizeTipoPacoteRuleKey(tipoPacote || "");
       if (!key) return undefined;
       const direct = regraProdutoPacoteMap[prodId]?.[key];
       if (direct) return direct;
@@ -1159,6 +1308,28 @@ export default function RelatorioVendasIsland() {
     [regraProdutoPacoteMap, tipoIdFromProduto]
   );
 
+  const buildCommissionBucketKey = useCallback(
+    (prodId: string, recibo: ReciboEnriquecido) => {
+      const tipoPacoteKey = normalizeTipoPacoteRuleKey(recibo.tipo_pacote || "");
+      const isConciliacao = hasConciliacaoOverride(recibo);
+      const percentualComissaoLoja =
+        recibo.percentual_comissao_loja != null
+          ? Number(recibo.percentual_comissao_loja)
+          : null;
+      const faixaComissao = recibo.faixa_comissao || null;
+      return [
+        prodId,
+        tipoPacoteKey || "default",
+        isConciliacao ? "conciliacao" : "base",
+        isConciliacao ? faixaComissao || "sem-faixa" : "sem-faixa",
+        isConciliacao && percentualComissaoLoja != null
+          ? String(percentualComissaoLoja)
+          : "sem-pct-loja",
+      ].join("::");
+    },
+    []
+  );
+
   const commissionAggregates = useMemo(() => {
     if (!tipoProdutoMap.size) return null;
     const params = parametrosComissao || {
@@ -1170,9 +1341,23 @@ export default function RelatorioVendasIsland() {
     const liquidoPorProduto: Record<string, number> = {};
     const brutoPorProduto: Record<string, number> = {};
     const baseComPorProduto: Record<string, number> = {};
+    const bucketTotals: Record<
+      string,
+      {
+        prodId: string;
+        tipoPacote: string | null;
+        baseCom: number;
+        valorLiquido: number;
+        isConciliacao: boolean;
+        percentualComissaoLoja: number | null;
+        faixaComissao: string | null;
+        isSeguro: boolean;
+      }
+    > = {};
     let baseMetaTotal = 0;
-    recibosFiltrados.forEach((recibo) => {
-      const prodId = recibo.produto_tipo_id || recibo.produto_id || "";
+    recibosElegiveisComissao.forEach((recibo) => {
+      const prodId =
+        recibo.produto_comissao_id || recibo.produto_tipo_id || recibo.produto_id || "";
       if (!prodId) return;
       const produto = getProdutoPorId(prodId);
       if (!produto) return;
@@ -1185,12 +1370,118 @@ export default function RelatorioVendasIsland() {
       }
       liquidoPorProduto[prodId] = (liquidoPorProduto[prodId] || 0) + liquido;
       brutoPorProduto[prodId] = (brutoPorProduto[prodId] || 0) + brutoSemRav;
-      const baseCom =
-        params.foco_faturamento === "liquido" ? liquido : brutoSemRav;
+      // Espelha operacao/comissionamento: comissão em valor usa sempre base líquida.
+      const baseCom = liquido;
       baseComPorProduto[prodId] = (baseComPorProduto[prodId] || 0) + baseCom;
+
+      const bucketKey = buildCommissionBucketKey(prodId, recibo);
+      const bucket = bucketTotals[bucketKey] || {
+        prodId,
+        tipoPacote: recibo.tipo_pacote || null,
+        baseCom: 0,
+        valorLiquido: 0,
+        isConciliacao: hasConciliacaoOverride(recibo),
+        percentualComissaoLoja:
+          recibo.percentual_comissao_loja != null
+            ? Number(recibo.percentual_comissao_loja)
+            : null,
+        faixaComissao: recibo.faixa_comissao || null,
+        isSeguro: isSeguroRecibo(recibo),
+      };
+      bucket.baseCom += baseCom;
+      bucket.valorLiquido += liquido;
+      bucketTotals[bucketKey] = bucket;
     });
     const pctMetaGeral =
       metaPlanejada > 0 ? (baseMetaTotal / metaPlanejada) * 100 : 0;
+    const pctByBucket: Record<string, number> = {};
+
+    Object.entries(bucketTotals).forEach(([bucketKey, bucket]) => {
+      const produto = getProdutoPorId(bucket.prodId);
+      if (!produto || bucket.baseCom <= 0) return;
+
+      const baseMetaProduto = baseMetaPorProduto[bucket.prodId] || 0;
+      const regraPacote = getRegraProdutoPacote(bucket.prodId, bucket.tipoPacote, produto);
+      const regraProdBase = getRegraProduto(bucket.prodId, produto);
+      let regraProd = regraPacote || regraProdBase;
+
+      if (bucket.isConciliacao && hasConciliacaoCommissionRule(params)) {
+        const conciliacaoSelection = resolveConciliacaoCommissionSelection(params, {
+          faixa_comissao: bucket.faixaComissao,
+          percentual_comissao_loja: bucket.percentualComissaoLoja,
+          is_seguro_viagem: bucket.isSeguro,
+        });
+        if (conciliacaoSelection.kind === "CONCILIACAO" && conciliacaoSelection.rule) {
+          pctByBucket[bucketKey] = calcularPctPorRegra(
+            conciliacaoSelection.rule,
+            pctMetaGeral
+          );
+          return;
+        }
+      }
+
+      if (produto.regra_comissionamento === "diferenciado") {
+        if (!regraProd) return;
+        const produtoTipoId = tipoIdFromProduto(produto);
+        const metaProdValor =
+          metaProdutoMap[bucket.prodId] ||
+          (produtoTipoId ? metaProdutoMap[produtoTipoId] : 0) ||
+          0;
+        const temMetaProd = metaProdValor > 0;
+        const pctMetaProd = temMetaProd ? (baseMetaProduto / metaProdValor) * 100 : 0;
+        const pctReferencia = temMetaProd ? pctMetaProd : pctMetaGeral;
+        pctByBucket[bucketKey] = calcularPctFixoProduto(regraProd, pctReferencia);
+        return;
+      }
+
+      let pct = 0;
+      let usouFixo = false;
+
+      if (regraProd && !regraProd.rule_id) {
+        if (regraProdutoTemFixo(regraProd)) {
+          pct = calcularPctFixoProduto(regraProd, pctMetaGeral);
+          usouFixo = true;
+        } else if (regraPacote && regraProd === regraPacote) {
+          regraProd = regraProdBase;
+        }
+      }
+
+      if (!usouFixo) {
+        const regraId = regraProd?.rule_id;
+        const regra = regraId ? regrasCommission[regraId] : undefined;
+        if (!regra) return;
+        pct = calcularPctPorRegra(regra, pctMetaGeral);
+      }
+
+      if (
+        metaProdEnabled &&
+        produto.usa_meta_produto &&
+        produto.meta_produto_valor &&
+        produto.comissao_produto_meta_pct
+      ) {
+        const atingiuMetaProd =
+          produto.meta_produto_valor > 0 &&
+          baseMetaProduto >= produto.meta_produto_valor;
+        if (atingiuMetaProd) {
+          const baseComProduto = baseComPorProduto[bucket.prodId] || 0;
+          if (baseComProduto > 0) {
+            const valMetaProd =
+              baseComProduto * ((produto.comissao_produto_meta_pct || 0) / 100);
+            const valGeral = baseComProduto * (pct / 100);
+            const diffValor =
+              produto.descontar_meta_geral === false
+                ? valMetaProd
+                : Math.max(valMetaProd - valGeral, 0);
+            if (diffValor > 0) {
+              pct += (diffValor / baseComProduto) * 100;
+            }
+          }
+        }
+      }
+
+      pctByBucket[bucketKey] = pct;
+    });
+
     return {
       baseMetaPorProduto,
       liquidoPorProduto,
@@ -1198,11 +1489,25 @@ export default function RelatorioVendasIsland() {
       baseComPorProduto,
       baseMetaTotal,
       pctMetaGeral,
+      pctByBucket,
     };
-  }, [recibosFiltrados, parametrosComissao, tipoProdutoMap, metaPlanejada, getProdutoPorId]);
+  }, [
+    recibosElegiveisComissao,
+    parametrosComissao,
+    tipoProdutoMap,
+    metaPlanejada,
+    metaProdEnabled,
+    metaProdutoMap,
+    regrasCommission,
+    getProdutoPorId,
+    getRegraProduto,
+    getRegraProdutoPacote,
+    tipoIdFromProduto,
+    buildCommissionBucketKey,
+  ]);
 
   const calcularPctParaProduto = useCallback(
-    (prodId: string, isSeguro: boolean, tipoPacote?: string | null) => {
+    (prodId: string, tipoPacote?: string | null) => {
       const aggregates = commissionAggregates;
       if (!aggregates) return 0;
       const produto = getProdutoPorId(prodId);
@@ -1211,7 +1516,7 @@ export default function RelatorioVendasIsland() {
       const regraPacote = getRegraProdutoPacote(prodId, tipoPacote, produto);
       const regraProdBase = getRegraProduto(prodId, produto);
       let regraProd = regraPacote || regraProdBase;
-      if (produto.regra_comissionamento === "diferenciado" && !isSeguro) {
+      if (produto.regra_comissionamento === "diferenciado") {
         if (!regraProd) return 0;
         const produtoTipoId = tipoIdFromProduto(produto);
         const metaProdValor =
@@ -1222,39 +1527,17 @@ export default function RelatorioVendasIsland() {
         const pctMetaProd = temMetaProd
           ? (baseMetaPorProduto / metaProdValor) * 100
           : 0;
-        if (temMetaProd) {
-          if (baseMetaPorProduto < metaProdValor) {
-            return 0;
-          }
-          if (pctMetaProd >= 120) {
-            return (
-              regraProd.fix_super_meta ??
-              regraProd.fix_meta_atingida ??
-              regraProd.fix_meta_nao_atingida ??
-              0
-            );
-          }
-          return (
-            regraProd.fix_meta_atingida ??
-            regraProd.fix_meta_nao_atingida ??
-            0
-          );
-        }
-        return (
-          regraProd.fix_meta_nao_atingida ??
-          regraProd.fix_meta_atingida ??
-          regraProd.fix_super_meta ??
-          0
-        );
+        const pctReferencia = temMetaProd ? pctMetaProd : aggregates.pctMetaGeral;
+        return calcularPctFixoProduto(regraProd, pctReferencia);
       }
       let pct = 0;
       let usouFixo = false;
 
-      if (regraPacote && !regraPacote.rule_id) {
-        if (regraProdutoTemFixo(regraPacote)) {
-          pct = calcularPctFixoProduto(regraPacote, aggregates.pctMetaGeral);
+      if (regraProd && !regraProd.rule_id) {
+        if (regraProdutoTemFixo(regraProd)) {
+          pct = calcularPctFixoProduto(regraProd, aggregates.pctMetaGeral);
           usouFixo = true;
-        } else {
+        } else if (regraPacote && regraProd === regraPacote) {
           regraProd = regraProdBase;
         }
       }
@@ -1324,11 +1607,14 @@ export default function RelatorioVendasIsland() {
         conciliacao_tiers: [],
         conciliacao_faixas_loja: [],
       };
-      const prodId = recibo.produto_tipo_id || recibo.produto_id || "";
+      if (isStatusCancelado(recibo.status, recibo.venda_cancelada)) return 0;
+      if (!reciboDentroDoPeriodo(recibo, dataInicio, dataFim)) return 0;
+      const prodId =
+        recibo.produto_comissao_id || recibo.produto_tipo_id || recibo.produto_id || "";
       if (!prodId) return 0;
-      const brutoSemRav = getBrutoSemRav(recibo);
       const liquido = getLiquidoComissionavel(recibo);
-      const baseCom = params.foco_faturamento === "liquido" ? liquido : brutoSemRav;
+      // Espelha operacao/comissionamento: comissão em valor usa sempre base líquida.
+      const baseCom = liquido;
       if (baseCom <= 0) return 0;
       const conciliacaoSelection =
         hasConciliacaoOverride(recibo) && hasConciliacaoCommissionRule(params)
@@ -1344,10 +1630,19 @@ export default function RelatorioVendasIsland() {
       const pct =
         conciliacaoSelection?.kind === "CONCILIACAO"
           ? calcularPctPorRegra(conciliacaoSelection.rule, aggregates.pctMetaGeral)
-          : calcularPctParaProduto(prodId, isSeguroRecibo(recibo), recibo.tipo_pacote || null);
+          : commissionAggregates.pctByBucket[
+              buildCommissionBucketKey(prodId, recibo)
+            ] ?? calcularPctParaProduto(prodId, recibo.tipo_pacote || null);
       return baseCom * (pct / 100);
     },
-    [parametrosComissao, commissionAggregates, calcularPctParaProduto]
+    [
+      parametrosComissao,
+      commissionAggregates,
+      calcularPctParaProduto,
+      dataInicio,
+      dataFim,
+      buildCommissionBucketKey,
+    ]
   );
 
   const calcularPercentualComissaoRecibo = useCallback(
@@ -1366,11 +1661,14 @@ export default function RelatorioVendasIsland() {
         conciliacao_tiers: [],
         conciliacao_faixas_loja: [],
       };
-      const prodId = recibo.produto_tipo_id || recibo.produto_id || "";
+      if (isStatusCancelado(recibo.status, recibo.venda_cancelada)) return 0;
+      if (!reciboDentroDoPeriodo(recibo, dataInicio, dataFim)) return 0;
+      const prodId =
+        recibo.produto_comissao_id || recibo.produto_tipo_id || recibo.produto_id || "";
       if (!prodId) return 0;
-      const brutoSemRav = getBrutoSemRav(recibo);
       const liquido = getLiquidoComissionavel(recibo);
-      const baseCom = params.foco_faturamento === "liquido" ? liquido : brutoSemRav;
+      // Espelha operacao/comissionamento: comissão em valor usa sempre base líquida.
+      const baseCom = liquido;
       if (baseCom <= 0) return 0;
       const conciliacaoSelection =
         hasConciliacaoOverride(recibo) && hasConciliacaoCommissionRule(params)
@@ -1386,10 +1684,19 @@ export default function RelatorioVendasIsland() {
       const pct =
         conciliacaoSelection?.kind === "CONCILIACAO"
           ? calcularPctPorRegra(conciliacaoSelection.rule, aggregates.pctMetaGeral)
-          : calcularPctParaProduto(prodId, isSeguroRecibo(recibo), recibo.tipo_pacote || null);
+          : commissionAggregates.pctByBucket[
+              buildCommissionBucketKey(prodId, recibo)
+            ] ?? calcularPctParaProduto(prodId, recibo.tipo_pacote || null);
       return Number.isFinite(pct) ? pct : 0;
     },
-    [parametrosComissao, commissionAggregates, calcularPctParaProduto]
+    [
+      parametrosComissao,
+      commissionAggregates,
+      calcularPctParaProduto,
+      dataInicio,
+      dataFim,
+      buildCommissionBucketKey,
+    ]
   );
 
   const percentualComissaoPorRecibo = useMemo(() => {
@@ -1410,8 +1717,11 @@ export default function RelatorioVendasIsland() {
 
   const somaComissao = useMemo(
     () =>
-      Array.from(comissaoPorRecibo.values()).reduce((acc, val) => acc + val, 0),
-    [comissaoPorRecibo]
+      recibosResumoFiltrados.reduce(
+        (acc, recibo) => acc + calcularComissaoRecibo(recibo),
+        0
+      ),
+    [recibosResumoFiltrados, calcularComissaoRecibo]
   );
 
   async function carregarVendas(pageOverride?: number) {
@@ -1433,6 +1743,12 @@ export default function RelatorioVendasIsland() {
 
       if (userCtx.papel !== "ADMIN" && (!vendedorIdsFiltro || vendedorIdsFiltro.length === 0)) {
         setVendas([]);
+        setVendasResumoData([]);
+        setPagamentosResumoData(new Map());
+        setResumoDataKey("");
+        setVendasBaseComissaoData([]);
+        setPagamentosBaseComissaoData(new Map());
+        setRecibosBaseComissaoKey("");
         setTotalVendasDb(0);
         setCarregouTodos(false);
         return;
@@ -1455,14 +1771,13 @@ export default function RelatorioVendasIsland() {
 
       const vendasData = items as Venda[];
       const vendaIds = vendasData.map((v) => v.id).filter(Boolean);
+      const pagamentosMapFromApi = pagamentosMapFromPayload(pagamentosNaoComissionaveis);
+      const pagamentosMap = pagamentosMapFromApi.size
+        ? pagamentosMapFromApi
+        : await carregarPagamentosNaoComissionaveis(vendaIds, supabase);
       if (pagamentosNaoComissionaveis && Object.keys(pagamentosNaoComissionaveis).length > 0) {
-        const map = new Map<string, number>();
-        Object.entries(pagamentosNaoComissionaveis).forEach(([id, value]) => {
-          map.set(id, Number(value || 0));
-        });
-        setPagamentosNaoComissionaveis(map);
+        setPagamentosNaoComissionaveis(pagamentosMap);
       } else {
-        const pagamentosMap = await carregarPagamentosNaoComissionaveis(vendaIds, supabase);
         setPagamentosNaoComissionaveis(pagamentosMap);
       }
       setVendas(vendasData);
@@ -1472,6 +1787,80 @@ export default function RelatorioVendasIsland() {
       } else {
         setCarregouTodos(false);
         setTotalVendasDb(total || vendasData.length);
+      }
+
+      const vendedorIdsKey = (vendedorIdsFiltro || []).join(",");
+      const resumoKey = [
+        dataInicio || "",
+        dataFim || "",
+        statusFiltro || "todos",
+        clienteSelecionado?.id || "",
+        valorMin || "",
+        valorMax || "",
+        vendedorIdsKey,
+      ].join("|");
+      const baseComissaoKey = [
+        dataInicio || "",
+        dataFim || "",
+        vendedorIdsKey,
+      ].join("|");
+
+      if (resumoKey !== resumoDataKey) {
+        if (filtrosLocaisAtivos) {
+          setVendasResumoData(vendasData);
+          setPagamentosResumoData(new Map(pagamentosMap));
+        } else {
+          const resumoFull = await fetchRelatorioVendas({
+            dataInicio: dataInicio || "",
+            dataFim: dataFim || "",
+            status: statusFiltro,
+            clienteId: clienteSelecionado?.id || null,
+            valorMin,
+            valorMax,
+            vendedorIds: vendedorIdsFiltro && vendedorIdsFiltro.length > 0 ? vendedorIdsFiltro : null,
+            page: 1,
+            pageSize: 1000,
+            all: true,
+            includePagamentos: true,
+            cacheRevision: getVendasCacheVersion(),
+          });
+          const vendasResumo = resumoFull.items as Venda[];
+          const resumoVendaIds = vendasResumo.map((v) => v.id).filter(Boolean);
+          const pagamentosResumoFromApi = pagamentosMapFromPayload(
+            resumoFull.pagamentosNaoComissionaveis
+          );
+          const pagamentosResumo = pagamentosResumoFromApi.size
+            ? pagamentosResumoFromApi
+            : await carregarPagamentosNaoComissionaveis(resumoVendaIds, supabase);
+          setVendasResumoData(vendasResumo);
+          setPagamentosResumoData(new Map(pagamentosResumo));
+        }
+        setResumoDataKey(resumoKey);
+      }
+
+      // A coluna % da comissão deve respeitar o contexto completo do período/filtros,
+      // não apenas os itens exibidos/filtrados na tela atual.
+      if (baseComissaoKey !== recibosBaseComissaoKey) {
+        const full = await fetchRelatorioVendas({
+          dataInicio: dataInicio || "",
+          dataFim: dataFim || "",
+          vendedorIds: vendedorIdsFiltro && vendedorIdsFiltro.length > 0 ? vendedorIdsFiltro : null,
+          page: 1,
+          pageSize: 1000,
+          all: true,
+          includePagamentos: true,
+          cacheRevision: getVendasCacheVersion(),
+        });
+        const vendasComissao = full.items as Venda[];
+        const fullVendaIds = vendasComissao.map((v) => v.id).filter(Boolean);
+        const pagamentosFullFromApi = pagamentosMapFromPayload(full.pagamentosNaoComissionaveis);
+        const pagamentosComissao = pagamentosFullFromApi.size
+          ? pagamentosFullFromApi
+          : await carregarPagamentosNaoComissionaveis(fullVendaIds, supabase);
+
+        setVendasBaseComissaoData(vendasComissao);
+        setPagamentosBaseComissaoData(new Map(pagamentosComissao));
+        setRecibosBaseComissaoKey(baseComissaoKey);
       }
     } catch (e: any) {
       console.error(e);
@@ -1632,7 +2021,7 @@ export default function RelatorioVendasIsland() {
 	      "numero_recibo",
 	      "cliente",
 	      "cpf",
-	      "tipo_produto",
+	      "tipo_pacote",
 	      "cidade",
 	      "produto",
 	      "data_venda",
@@ -1647,7 +2036,7 @@ export default function RelatorioVendasIsland() {
       r.numero_recibo || "",
       r.cliente_nome,
       r.cliente_cpf || "",
-	      r.produto_tipo,
+	      cleanTipoPacoteForRule(r.tipo_pacote) || r.tipo_pacote || "",
 	      r.cidade_nome,
 	      r.produto_nome,
 	      r.data_venda || "",
@@ -1700,7 +2089,7 @@ export default function RelatorioVendasIsland() {
 	        "Número recibo": r.numero_recibo || "",
 	        Cliente: r.cliente_nome,
 	        CPF: r.cliente_cpf,
-	        "Tipo produto": r.produto_tipo,
+	        "Tipo de pacote": cleanTipoPacoteForRule(r.tipo_pacote) || r.tipo_pacote || "",
 	        Cidade: r.cidade_nome,
 	        Produto: r.produto_nome,
 	        "Data venda": r.data_venda?.slice(0, 10) || "",
@@ -1739,7 +2128,7 @@ export default function RelatorioVendasIsland() {
 	      "Nº Recibo",
 	      "Cliente",
 	      "CPF",
-	      "Tipo produto",
+	      "Tipo de pacote",
       "Cidade",
       "Produto",
       "Data embarque",
@@ -1761,7 +2150,7 @@ export default function RelatorioVendasIsland() {
 	        r.numero_recibo || "",
 	        r.cliente_nome,
 	        r.cliente_cpf,
-        r.produto_tipo,
+        cleanTipoPacoteForRule(r.tipo_pacote) || r.tipo_pacote || "",
         r.cidade_nome,
         r.produto_nome,
         r.data_embarque?.slice(0, 10) || "",
@@ -2242,7 +2631,7 @@ export default function RelatorioVendasIsland() {
         <AppCard
           className="mb-3"
           title="Resumo do relatório"
-          subtitle="Volume de recibos e base financeira do recorte atual, usando a mesma lógica de comissão do relatório."
+          subtitle="Volume total de recibos e base financeira do período selecionado, independente da pagina atual."
         >
           <div className="vtur-quote-summary-grid">
             <div className="vtur-quote-summary-item">
@@ -2272,12 +2661,6 @@ export default function RelatorioVendasIsland() {
           </div>
         </AppCard>
 
-        {usaPaginacaoServidor ? (
-          <AlertMessage variant="warning" className="mb-3 vtur-alert-inline">
-            Totais e tabela refletem a pagina atual. Use filtros de texto para carregar todos os recibos.
-          </AlertMessage>
-        ) : null}
-
         <AppCard
           title="Recibos encontrados"
           subtitle="Listagem consolidada com produto, cidade, embarque, valores, taxas e comissão por recibo."
@@ -2302,7 +2685,7 @@ export default function RelatorioVendasIsland() {
                 <th>Nº Recibo</th>
                 <th>Cliente</th>
                 <th>CPF</th>
-                <th>Tipo produto</th>
+                <th>Tipo de pacote</th>
                 <th>Cidade</th>
                 <th>Produto</th>
                 <th>Data embarque</th>
@@ -2334,7 +2717,9 @@ export default function RelatorioVendasIsland() {
                   <td data-label="Nº Recibo">{recibo.numero_recibo || "-"}</td>
                   <td data-label="Cliente">{recibo.cliente_nome}</td>
                   <td data-label="CPF">{recibo.cliente_cpf}</td>
-                  <td data-label="Tipo produto">{recibo.produto_tipo}</td>
+                  <td data-label="Tipo de pacote">
+                    {cleanTipoPacoteForRule(recibo.tipo_pacote) || recibo.tipo_pacote || "-"}
+                  </td>
                   <td data-label="Cidade">{recibo.cidade_nome || "-"}</td>
                   <td data-label="Produto">{recibo.produto_nome}</td>
                   <td data-label="Data embarque">

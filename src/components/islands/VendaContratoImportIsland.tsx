@@ -14,6 +14,7 @@ import {
 } from "../../lib/cidadesSearchApiCache";
 import { supabase } from "../../lib/supabase";
 import { normalizeText } from "../../lib/normalizeText";
+import { normalizeTipoPacoteRuleKey } from "../../lib/tipoPacote";
 import { formatNumberBR } from "../../lib/format";
 import { guessTimeZoneFromCity, setAppTimeZone, toISODateLocal } from "../../lib/dateTime";
 import { usePermissoesStore } from "../../lib/permissoesStore";
@@ -426,11 +427,17 @@ export default function VendaContratoImportIsland() {
   const tiposPacoteMap = useMemo(() => {
     const map = new Map<string, string>();
     tiposPacote.forEach((tipo) => {
-      const key = normalizeText(tipo.nome || "", { trim: true, collapseWhitespace: true });
+      const key = normalizeTipoPacoteRuleKey(tipo.nome || "");
       if (key) map.set(key, tipo.nome);
     });
     return map;
   }, [tiposPacote]);
+
+  const resolveTipoPacoteSelectValue = (value?: string | null) => {
+    const key = normalizeTipoPacoteRuleKey(value || "");
+    if (!key) return value || "";
+    return tiposPacoteMap.get(key) || value || "";
+  };
 
   useEffect(() => {
     if (tipoImportacao === "roteiro") {
@@ -775,7 +782,7 @@ export default function VendaContratoImportIsland() {
       }
       if (tiposPacoteMap.size > 0) {
         novosContratos = novosContratos.map((contrato) => {
-          const key = normalizeText(contrato.tipo_pacote || "", { trim: true, collapseWhitespace: true });
+          const key = normalizeTipoPacoteRuleKey(contrato.tipo_pacote || "");
           const match = key ? tiposPacoteMap.get(key) : null;
           if (!match) return contrato;
           return { ...contrato, tipo_pacote: match };
@@ -1278,8 +1285,8 @@ export default function VendaContratoImportIsland() {
                     c.tipo_pacote &&
                     !tiposPacote.some(
                       (tipo) =>
-                        normalizeText(tipo.nome) ===
-                        normalizeText(c.tipo_pacote || "", { trim: true, collapseWhitespace: true })
+                        normalizeTipoPacoteRuleKey(tipo.nome) ===
+                        normalizeTipoPacoteRuleKey(c.tipo_pacote || "")
                     )
                   ) {
                     tipoPacoteOptions.push({
@@ -1393,7 +1400,7 @@ export default function VendaContratoImportIsland() {
                           <AppField
                             as="select"
                             label="Tipo de pacote"
-                            value={c.tipo_pacote || ""}
+                            value={resolveTipoPacoteSelectValue(c.tipo_pacote)}
                             onChange={(e) => updateContratoField(idx, { tipo_pacote: e.target.value })}
                             disabled={isRoteiro || tiposPacote.length === 0}
                             options={tipoPacoteOptions}

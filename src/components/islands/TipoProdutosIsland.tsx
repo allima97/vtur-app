@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { normalizeText } from "../../lib/normalizeText";
+import { normalizeTipoPacoteRuleKey } from "../../lib/tipoPacote";
 import { useCrudResource } from "../../lib/useCrudResource";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import DataTable from "../ui/DataTable";
@@ -194,8 +195,8 @@ export default function TipoProdutosIsland() {
         if (!item.produto_id) return;
         const tipoPacoteId = tiposPacoteLista.find(
           (tipo) =>
-            normalizeText(tipo.nome || "") ===
-            normalizeText(item.tipo_pacote || "", { trim: true, collapseWhitespace: true })
+            normalizeTipoPacoteRuleKey(tipo.nome || "") ===
+            normalizeTipoPacoteRuleKey(item.tipo_pacote || "")
         )?.id;
         const entry: ComissaoPacote = {
           tipo_pacote: item.tipo_pacote || "",
@@ -311,8 +312,8 @@ export default function TipoProdutosIsland() {
         if (!item.tipo_pacote) return null;
         const encontrado = tiposPacote.find(
           (tipo) =>
-            normalizeText(tipo.nome || "") ===
-            normalizeText(item.tipo_pacote || "", { trim: true, collapseWhitespace: true })
+            normalizeTipoPacoteRuleKey(tipo.nome || "") ===
+            normalizeTipoPacoteRuleKey(item.tipo_pacote || "")
         );
         return encontrado?.id || null;
       })

@@ -5,6 +5,7 @@ import { fetchCidadesByApiWithCache } from "../../lib/cidadesSearchApiCache";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { registrarLog } from "../../lib/logs";
 import { normalizeText } from "../../lib/normalizeText";
+import { normalizeTipoPacoteRuleKey } from "../../lib/tipoPacote";
 import { formatNumberBR } from "../../lib/format";
 import { guessTimeZoneFromCity, setAppTimeZone, toISODateLocal } from "../../lib/dateTime";
 import { normalizeMoneyInput, sanitizeMoneyInput, selectAllInputOnFocus } from "../../lib/inputNormalization";
@@ -332,6 +333,14 @@ export default function VendasCadastroIsland() {
   const [tipoPacoteModal, setTipoPacoteModal] = useState<{ mensagem: string } | null>(null);
   const isReguaTipoPacote = (valor?: string | null) =>
     normalizeText(valor || "", { trim: true, collapseWhitespace: true }).includes("regua abaixo de 10");
+  const resolveTipoPacoteSelectValue = (valor?: string | null) => {
+    const key = normalizeTipoPacoteRuleKey(valor || "");
+    if (!key) return valor || "";
+    const match = tiposPacote.find(
+      (tipo) => normalizeTipoPacoteRuleKey(tipo.nome) === key
+    );
+    return match?.nome || valor || "";
+  };
 
   // =======================================================
   // CARREGAR DADOS INICIAIS
@@ -2043,7 +2052,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                     <label className="form-label">Tipo de Pacote</label>
                     <select
                       className="form-select"
-                      value={r.tipo_pacote || ""}
+                      value={resolveTipoPacoteSelectValue(r.tipo_pacote)}
                       onChange={(e) => updateRecibo(i, "tipo_pacote", e.target.value)}
                       disabled={tiposPacote.length === 0}
                       style={
@@ -2068,7 +2077,9 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                       })}
                       {r.tipo_pacote &&
                         !tiposPacote.some(
-                          (tipo) => normalizeText(tipo.nome) === normalizeText(r.tipo_pacote || "")
+                          (tipo) =>
+                            normalizeTipoPacoteRuleKey(tipo.nome) ===
+                            normalizeTipoPacoteRuleKey(r.tipo_pacote || "")
                         ) && (
                           <option value={r.tipo_pacote}>{`${r.tipo_pacote} (nao cadastrado)`}</option>
                         )}
