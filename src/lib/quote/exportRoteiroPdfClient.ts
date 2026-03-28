@@ -1,9 +1,14 @@
 import { supabaseBrowser } from "../supabase-browser";
 import { exportRoteiroPdf } from "./roteiroPdf";
+import { buildRoteiroPreviewHtml } from "./roteiroPdfModern";
 
 type ExportRoteiroByIdArgs = {
   roteiroId: string;
   action?: "download" | "preview" | "blob-url";
+};
+
+type PreviewRoteiroByIdArgs = {
+  roteiroId: string;
 };
 
 function isMissingPercursoColumn(error: any) {
@@ -82,4 +87,72 @@ export async function exportRoteiroPdfById(args: ExportRoteiroByIdArgs): Promise
 
   const roteiro = await fetchRoteiroForPdf(roteiroId);
   return await exportRoteiroPdf(roteiro, { action });
+}
+
+function textValue(value?: string | null) {
+  return String(value || "").trim();
+}
+
+function escapeHtml(value?: string | null) {
+  return textValue(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function buildFallbackRoteiroPreviewHtml(roteiro: any) {
+  const rows = [
+    ...(Array.isArray(roteiro.hoteis) ? roteiro.hoteis.map((item: any) => `Hotel: ${item.hotel || "-"} | ${item.cidade || "-"}`) : []),
+    ...(Array.isArray(roteiro.passeios) ? roteiro.passeios.map((item: any) => `Passeio: ${item.passeio || "-"} | ${item.cidade || "-"}`) : []),
+    ...(Array.isArray(roteiro.transportes) ? roteiro.transportes.map((item: any) => `Transporte: ${item.trecho || item.cia_aerea || "-"}`) : []),
+  ];
+
+  return `<div style="font-family:Arial,sans-serif;color:#0f172a;">
+    <div style="border:1px solid #dbeafe;border-radius:12px;padding:16px;margin-bottom:14px;">
+      <div style="font-size:22px;color:#1d4ed8;font-weight:700;">Roteiro Personalizado</div>
+      <div style="font-size:15px;color:#0f172a;margin-top:6px;"><b>${escapeHtml(roteiro.nome || "Roteiro")}</b></div>
+    </div>
+    <div style="border:1px solid #dbeafe;border-radius:12px;padding:16px;">
+      ${rows.length ? rows.map((row) => `<div style="margin:0 0 8px 0;color:#475569;">${escapeHtml(row)}</div>`).join("") : "<div>Sem conteúdo para visualização.</div>"}
+    </div>
+  </div>`;
+}
+
+export async function loadRoteiroPreviewHtmlById(args: PreviewRoteiroByIdArgs): Promise<string> {
+  const roteiroId = String(args?.roteiroId || "").trim();
+  if (!roteiroId) throw new Error("Roteiro inválido.");
+
+  const {
+    data: { user },
+  } = await supabaseBrowser.auth.getUser();
+  const userId = user?.id || null;
+  if (!userId) {
+    throw new Error("Usuário não autenticado.");
+  }
+
+  const roteiro = await fetchRoteiroForPdf(roteiroId);
+
+  const { data: settings, error: settingsErr } = await supabaseBrowser
+    .from("quote_print_settings")
+    .select(
+      "logo_url, logo_path, consultor_nome, filial_nome, endereco_linha1, endereco_linha2, endereco_linha3, telefone, whatsapp, whatsapp_codigo_pais, email, rodape_texto, imagem_complementar_url, imagem_complementar_path"
+    )
+    .eq("owner_user_id", userId)
+    .maybeSingle();
+  if (settingsErr) throw settingsErr;
+  if (!settings) {
+    throw new Error("Configure os parametros do PDF em Parametros > Orcamentos.");
+  }
+
+  try {
+    return await buildRoteiroPreviewHtml({
+      roteiro,
+      settings: settings as any,
+    });
+  } catch (err) {
+    console.error("[RoteiroPreview] Falha ao montar visualizacao HTML 1:1. Aplicando fallback.", err);
+    return buildFallbackRoteiroPreviewHtml(roteiro);
+  }
 }

@@ -188,6 +188,15 @@ function formatCurrency(value?: number | string | null) {
   return `R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+function escapeHtml(value?: string | null) {
+  return textValue(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function formatDate(value?: string | null) {
   if (!value) return "";
   const date = new Date(`${value}T12:00:00`);
@@ -1123,6 +1132,318 @@ function buildRoteiroPdfContent(
   }
 
   return content;
+}
+
+type RoteiroPreviewParams = {
+  roteiro: RoteiroParaPdf;
+  settings: QuotePdfSettings;
+};
+
+function buildRoteiroHtml(params: {
+  roteiro: RoteiroParaPdf;
+  settings: QuotePdfSettings;
+  logoDataUrl: string | null;
+  qrDataUrl: string | null;
+  airlineLookup: AirlineIataLookupEntry[];
+  airportCodeCityLookup: AirportCodeCityLookup;
+}) {
+  const { roteiro, settings, logoDataUrl, qrDataUrl, airlineLookup, airportCodeCityLookup } = params;
+  const dias = normalizeDiasForPdf(roteiro.dias || []);
+  const hoteis = (roteiro.hoteis || []).filter((item) => Boolean(textValue(item.cidade) || textValue(item.hotel)));
+  const passeios = (roteiro.passeios || []).filter((item) => Boolean(textValue(item.passeio) || textValue(item.cidade)));
+  const transportes = (roteiro.transportes || []).filter((item) => Boolean(textValue(item.cia_aerea) || textValue(item.trecho)));
+  const investimentos = (roteiro.investimentos || []).filter((item) =>
+    Boolean(textValue(item.tipo) || Number(item.valor_por_pessoa || 0) > 0 || Number(item.valor_por_apto || 0) > 0 || Number(item.qtd_apto || 0) > 0)
+  );
+  const pagamentos = (roteiro.pagamentos || []).filter((item) =>
+    Boolean(textValue(item.servico) || textValue(item.forma_pagamento) || Number(item.valor_total_com_taxas || 0) > 0 || Number(item.taxas || 0) > 0)
+  );
+  const groupedHoteis = groupHoteisByCidade(hoteis);
+  const groupedPasseios = groupPasseiosByCidade(passeios);
+  const cities = collectCities(roteiro);
+  const citiesLine = cities.join(" - ");
+  const periodText = buildPeriodText(roteiro);
+  const investimentoTotalApto = investimentos.reduce((sum, item) => sum + resolveInvestimentoValorTotalApto(item as any), 0);
+  const pagamentoGroups = groupPagamentosByForma(pagamentos);
+  const includeItems = [
+    ...parseLineItems(String(roteiro.inclui_texto || "")),
+    ...extractSeguroViagemIncludeLinesFromPasseios(roteiro.passeios || []),
+  ];
+  const noIncludeItems = parseLineItems(String(roteiro.nao_inclui_texto || ""));
+  const infoItems = parseLineItems(String(roteiro.informacoes_importantes || ""));
+
+  const rightLines = [
+    settings.consultor_nome ? `Consultor: ${settings.consultor_nome}` : "",
+    settings.telefone ? `Telefone: ${settings.telefone}` : "",
+    settings.whatsapp ? `WhatsApp: ${settings.whatsapp}` : "",
+    settings.email ? `E-mail: ${settings.email}` : "",
+  ].filter(Boolean);
+
+  const buildSection = (title: string, body: string) => {
+    if (!body.trim()) return "";
+    return `<section style="border:1px solid #d1d5db;border-radius:12px;padding:14px 16px;margin:0 0 14px 0;">
+      <div style="font-size:16px;font-weight:700;color:#1a2cc8;margin:0 0 10px 0;">${escapeHtml(title)}</div>
+      ${body}
+    </section>`;
+  };
+
+  const buildTable = (headers: string[], rows: string[][]) => {
+    if (!rows.length) return "";
+    return `<table style="width:100%;border-collapse:collapse;font-size:10px;">
+      <thead>
+        <tr>${headers
+          .map(
+            (header) =>
+              `<th style="text-align:left;padding:8px;border-bottom:1px solid #cbd5e1;background:#eef2ff;color:#1e3a8a;">${escapeHtml(header)}</th>`
+          )
+          .join("")}</tr>
+      </thead>
+      <tbody>
+        ${rows
+          .map(
+            (row) =>
+              `<tr>${row
+                .map(
+                  (cell) =>
+                    `<td style="padding:8px;border-bottom:1px solid #e2e8f0;color:#475569;vertical-align:top;">${escapeHtml(cell || "-")}</td>`
+                )
+                .join("")}</tr>`
+          )
+          .join("")}
+      </tbody>
+    </table>`;
+  };
+
+  const buildList = (items: string[]) => {
+    if (!items.length) return "";
+    return `<ul style="margin:0;padding-left:18px;color:#475569;font-size:11px;">
+      ${items.map((item) => `<li style="margin:0 0 6px 0;">${escapeHtml(item)}</li>`).join("")}
+    </ul>`;
+  };
+
+  const itinerarioHtml = dias
+    .map((dia, index) => {
+      const place = formatBudgetItemText(dia.percurso) || formatBudgetItemText(dia.cidade);
+      const header = `${formatDate(dia.data)} - Dia ${index + 1}${place ? `: ${place}` : ""}`;
+      const descricao = formatBudgetItemText(dia.descricao) || "-";
+      return `<div style="margin:0 0 10px 0;">
+        <div style="font-size:11px;font-weight:700;color:#0f172a;">${escapeHtml(header)}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px;">${escapeHtml(descricao)}</div>
+      </div>`;
+    })
+    .join("");
+
+  const hoteisHtml = groupedHoteis
+    .map((group) => {
+      const rows = group.items.map((hotel) => [
+        formatBudgetItemText(hotel.hotel) || "-",
+        formatDate(hotel.data_inicio) || "-",
+        formatDate(hotel.data_fim) || "-",
+        Number(hotel.noites || 0) > 0 ? String(Number(hotel.noites || 0)) : "-",
+        formatBudgetItemText(hotel.apto) || "-",
+        formatBudgetItemText(hotel.regime) || "-",
+      ]);
+      return `<div style="margin:0 0 12px 0;">
+        <div style="font-size:12px;font-weight:700;color:#334155;margin:0 0 8px 0;">${escapeHtml(group.cidade)}</div>
+        ${buildTable(["Nome hotel", "Início", "Fim", "Noites", "Acomodação", "Regime"], rows)}
+      </div>`;
+    })
+    .join("");
+
+  const passeiosHtml = groupedPasseios
+    .map((group) => {
+      const rows = group.items.map((item) => {
+        const dataInicio = formatDate(item.data_inicio);
+        const dataFim = formatDate(item.data_fim);
+        const data = dataInicio && dataFim && dataInicio !== dataFim
+          ? `${dataInicio} a ${dataFim}`
+          : dataInicio || dataFim || "-";
+        return [data, formatBudgetItemText(item.passeio) || "-", formatBudgetItemText(item.ingressos) || "-"];
+      });
+      const displayCidade = formatBudgetItemText(group.cidade) || "Serviços";
+      return `<div style="margin:0 0 12px 0;">
+        <div style="font-size:12px;font-weight:700;color:#334155;margin:0 0 8px 0;">${escapeHtml(displayCidade)}</div>
+        ${buildTable(["Data", "Descrição", "Ingressos"], rows)}
+      </div>`;
+    })
+    .join("");
+
+  const transportesHtml = transportes.length
+    ? buildTable(
+        ["Cia", "Origem", "Saída", "Destino", "Chegada", "Horários", "Detalhes"],
+        transportes.map((item) => {
+          const trecho = splitTrechoCities(item.trecho);
+          const dataOrigem = formatDate(item.data_voo || item.data_inicio) || "-";
+          const dataDestino = formatDate(item.data_fim || item.data_voo || item.data_inicio) || "-";
+          const horarios =
+            textValue(item.hora_saida) && textValue(item.hora_chegada)
+              ? `${textValue(item.hora_saida)} / ${textValue(item.hora_chegada)}`
+              : textValue(item.hora_saida) || textValue(item.hora_chegada) || "-";
+          const iataCode = resolveAirlineIata(item.cia_aerea, airlineLookup) || formatBudgetItemText(item.cia_aerea) || "-";
+          const origemDisplay = formatFlightPlace(trecho.origem, item.aeroporto_saida, airportCodeCityLookup) || "-";
+          const destinoDisplay = formatFlightPlace(trecho.destino, item.aeroporto_chegada, airportCodeCityLookup) || "-";
+          const detailParts = [
+            item.classe_reserva ? `Classe: ${formatBudgetItemText(item.classe_reserva)}` : "",
+            item.tipo_voo ? `Tipo: ${formatBudgetItemText(item.tipo_voo)}` : "",
+            item.duracao_voo ? `Duração: ${textValue(item.duracao_voo)}` : "",
+            item.tarifa_nome ? `Tarifa: ${formatBudgetItemText(item.tarifa_nome)}` : "",
+            item.reembolso_tipo ? `Reembolso: ${formatBudgetItemText(item.reembolso_tipo)}` : "",
+          ].filter(Boolean);
+          return [iataCode, origemDisplay, dataOrigem, destinoDisplay, dataDestino, horarios, detailParts.join(" | ") || "-"];
+        })
+      )
+    : "";
+
+  const investimentoRows = investimentos.map((item) => {
+    const valorApto = resolveInvestimentoValorTotalApto(item as any);
+    return [
+      formatBudgetItemText(item.tipo) || "-",
+      Number(item.valor_por_pessoa || 0) > 0 ? formatCurrency(item.valor_por_pessoa) : "-",
+      Number(item.qtd_apto || 0) > 0 ? String(Number(item.qtd_apto)) : "-",
+      valorApto > 0 ? formatCurrency(valorApto) : "-",
+    ];
+  });
+  if (investimentoRows.length > 0) {
+    investimentoRows.push(["Total geral (aptos)", "-", "-", formatCurrency(investimentoTotalApto)]);
+  }
+
+  const pagamentosHtml = pagamentoGroups
+    .map((group) => {
+      const serviceTitle = group.servicos.join(" / ");
+      const isAereoGroup = group.servicos.some((servico) => normalizeLookup(servico).startsWith("passagem aerea"));
+      const hasPacoteCompleto = group.servicos.some((servico) => normalizeLookup(servico) === "pacote completo");
+      let displaySubtotal = group.subtotal;
+      let displayTaxes = group.taxesTotal;
+      let displayTotal = group.total;
+      if (hasPacoteCompleto && displayTotal <= 0 && investimentoTotalApto > 0) {
+        displaySubtotal = investimentoTotalApto;
+        displayTaxes = 0;
+        displayTotal = investimentoTotalApto;
+      }
+      const resumo = isAereoGroup
+        ? `Valor sem taxas: ${formatCurrency(displaySubtotal)} | Taxas: ${formatCurrency(displayTaxes)} | Total: ${formatCurrency(displayTotal)}`
+        : `Valor total: ${formatCurrency(displayTotal)}`;
+      return `<div style="margin:0 0 12px 0;">
+        ${serviceTitle ? `<div style="font-size:11px;font-weight:700;color:#0f172a;">${escapeHtml(serviceTitle)}</div>` : ""}
+        <div style="font-size:10px;color:#64748b;margin:2px 0 4px 0;">${escapeHtml(resumo)}</div>
+        ${
+          group.formas.length
+            ? `<div style="font-size:10px;color:#475569;">${group.formas
+                .map((forma) => escapeHtml(forma))
+                .join("<br/>")}</div>`
+            : ""
+        }
+      </div>`;
+    })
+    .join("");
+
+  const footerLines = parseLineItems(String(settings.rodape_texto || ""));
+
+  return `
+  <div style="color:#0f172a;">
+    <table style="width:100%;border-collapse:separate;border-spacing:0;margin:0 0 10px 0;">
+      <tbody>
+        <tr>
+          <td style="width:52%;vertical-align:top;">
+            ${logoDataUrl ? `<img src="${logoDataUrl}" style="max-width:120px;max-height:56px;width:auto;height:auto;object-fit:contain;" />` : ""}
+            <div style="font-size:11px;color:#0f172a;margin:8px 0 0 0;">
+              ${settings.filial_nome ? `<div>${escapeHtml(`Filial: ${settings.filial_nome}`)}</div>` : ""}
+              ${settings.endereco_linha1 ? `<div>${escapeHtml(settings.endereco_linha1)}</div>` : ""}
+              ${settings.endereco_linha2 ? `<div>${escapeHtml(settings.endereco_linha2)}</div>` : ""}
+              ${settings.endereco_linha3 ? `<div>${escapeHtml(settings.endereco_linha3)}</div>` : ""}
+            </div>
+          </td>
+          <td style="width:48%;vertical-align:top;">
+            <table style="width:100%;border-collapse:separate;border-spacing:0;">
+              <tbody>
+                <tr>
+                  <td style="width:${qrDataUrl ? "72%" : "100%"};vertical-align:top;font-size:11px;color:#334155;">
+                    ${qrDataUrl ? `<div style="font-size:9px;color:#475569;margin:0 0 5px 0;">Aponte para o QR Code abaixo e chame o consultor:</div>` : ""}
+                    ${rightLines.map((line) => `<div>${escapeHtml(line)}</div>`).join("")}
+                  </td>
+                  ${qrDataUrl ? `<td style="width:28%;vertical-align:top;text-align:right;"><img src="${qrDataUrl}" style="width:66px;height:66px;" /></td>` : ""}
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="height:1px;background:#dbe3f0;margin:0 0 12px 0;"></div>
+
+    <section style="border:1px solid #d1d5db;border-radius:12px;padding:14px 16px;margin:0 0 14px 0;">
+      <div style="font-size:18px;font-weight:700;color:#1a2cc8;">Roteiro Personalizado</div>
+      <div style="font-size:15px;font-weight:700;color:#0f172a;margin:6px 0 0 0;">${escapeHtml(textValue(roteiro.nome || "Roteiro"))}</div>
+      ${citiesLine ? `<div style="font-size:12px;color:#334155;margin:8px 0 0 0;"><b>Cidades:</b> ${escapeHtml(citiesLine)}</div>` : ""}
+      ${periodText ? `<div style="font-size:12px;color:#334155;margin:4px 0 0 0;"><b>Período:</b> ${escapeHtml(periodText)}</div>` : ""}
+    </section>
+
+    ${buildSection("Itinerário Detalhado", itinerarioHtml)}
+    ${buildSection("Hotéis Sugeridos", hoteisHtml)}
+    ${buildSection("Passeios e Serviços", passeiosHtml)}
+    ${buildSection("Passagem Aérea", transportesHtml)}
+    ${buildSection("Investimento", investimentoRows.length ? buildTable(["Tipo", "Valor por Pessoa", "Qte Paxs", "Valor total por Apto"], investimentoRows) : "")}
+    ${buildSection("Pagamento", pagamentosHtml)}
+    ${buildSection("O que está incluído", buildList(includeItems))}
+    ${buildSection("O que não está incluído", buildList(noIncludeItems))}
+    ${buildSection("Informações Importantes", buildList(infoItems))}
+    ${
+      footerLines.length
+        ? `<section style="border:1px solid #d1d5db;border-radius:12px;padding:12px 14px;margin:0 0 12px 0;">
+            <div style="font-size:10px;color:#64748b;">${footerLines.map((line) => escapeHtml(line)).join("<br/>")}</div>
+          </section>`
+        : ""
+    }
+  </div>`;
+}
+
+export async function buildRoteiroPreviewHtml(params: RoteiroPreviewParams): Promise<string> {
+  if (typeof window === "undefined") {
+    throw new Error("Visualizacao HTML disponivel apenas no navegador.");
+  }
+  const { roteiro, settings } = params;
+  const whatsappLink = construirLinkWhatsApp(settings.whatsapp, settings.whatsapp_codigo_pais);
+  const logoUrl = await resolveStorageUrl((settings as any).logo_url, (settings as any).logo_path).catch(() => null);
+  const [logoDataUrl, qrDataUrl, airlineLookup, airportCodeCityLookup] = await Promise.all([
+    logoUrl ? fetchImageDataUrl(logoUrl).catch(() => null) : Promise.resolve(null),
+    whatsappLink
+      ? fetchImageDataUrl(`https://quickchart.io/qr?size=200&margin=1&text=${encodeURIComponent(whatsappLink)}`).catch(() => null)
+      : Promise.resolve(null),
+    (async () => {
+      try {
+        const [{ data: codes }, { data: aliases }] = await Promise.all([
+          supabaseBrowser.from("airline_iata_codes").select("id, iata_code, airline_name").eq("active", true).limit(2000),
+          supabaseBrowser.from("airline_iata_aliases").select("airline_code_id, alias").limit(5000),
+        ]);
+        const aliasByCodeId = new Map<string, string[]>();
+        (aliases || []).forEach((row: any) => {
+          const codeId = String(row?.airline_code_id || "").trim();
+          const alias = String(row?.alias || "").trim();
+          if (!codeId || !alias) return;
+          const current = aliasByCodeId.get(codeId) || [];
+          current.push(alias);
+          aliasByCodeId.set(codeId, current);
+        });
+        return (codes || []).map((row: any) => ({
+          iata: String(row?.iata_code || "").trim().toUpperCase(),
+          name: String(row?.airline_name || "").trim(),
+          aliases: aliasByCodeId.get(String(row?.id || "").trim()) || [],
+        }));
+      } catch {
+        return [];
+      }
+    })(),
+    loadAirportCodeCityLookup().catch(() => ({})),
+  ]);
+
+  return buildRoteiroHtml({
+    roteiro,
+    settings,
+    logoDataUrl,
+    qrDataUrl,
+    airlineLookup,
+    airportCodeCityLookup,
+  });
 }
 
 function buildFileName(roteiro: RoteiroParaPdf) {
