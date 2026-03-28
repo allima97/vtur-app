@@ -1151,6 +1151,11 @@ async function getBlobFromPdf(pdfDoc: { getBlob: (...args: any[]) => any }): Pro
   throw new Error("Renderer PDF nao retornou blob.");
 }
 
+function ensurePdfBlob(blob: Blob) {
+  if (blob.type === "application/pdf") return blob;
+  return new Blob([blob], { type: "application/pdf" });
+}
+
 export async function exportRoteiroPdf(
   roteiro: RoteiroParaPdf,
   options: ExportRoteiroPdfOptions = {}
@@ -1312,12 +1317,12 @@ export async function exportRoteiroPdf(
     }
 
     if (action === "blob-url") {
-      const blob = await getBlobFromPdf(pdfDoc);
+      const blob = ensurePdfBlob(await getBlobFromPdf(pdfDoc));
       return URL.createObjectURL(blob);
     }
 
     if (action === "preview") {
-      const blob = await getBlobFromPdf(pdfDoc);
+      const blob = ensurePdfBlob(await getBlobFromPdf(pdfDoc));
       const url = URL.createObjectURL(blob);
       const previewWindow = window.open(url, "_blank", "noopener,noreferrer");
       setTimeout(() => URL.revokeObjectURL(url), 60_000);

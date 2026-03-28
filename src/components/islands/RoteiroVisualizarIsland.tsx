@@ -13,6 +13,7 @@ type Props = {
 
 export default function RoteiroVisualizarIsland({ roteiroId, roteiroNome }: Props) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewKey, setPreviewKey] = useState(0);
   const [loadingPreview, setLoadingPreview] = useState(true);
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -59,6 +60,7 @@ export default function RoteiroVisualizarIsland({ roteiroId, roteiroNome }: Prop
           }
           return blobUrl;
         });
+        setPreviewKey((value) => value + 1);
       } catch (err: any) {
         if (canceled) return;
         console.error("[RoteiroVisualizar] Erro ao gerar previa:", err);
@@ -167,12 +169,20 @@ export default function RoteiroVisualizarIsland({ roteiroId, roteiroNome }: Prop
             <div className="orcamento-preview-shell">
               <div className="orcamento-preview-frame-wrap">
                 <div className="orcamento-preview-frame">
-                  <iframe
-                    src={`${previewUrl}#toolbar=1&navpanes=0&scrollbar=1`}
-                    className="orcamento-preview-iframe"
+                  <object
+                    key={`${roteiroId}-${previewKey}`}
+                    data={previewUrl}
+                    type="application/pdf"
+                    className="orcamento-preview-object"
                     aria-label={`preview-roteiro-${roteiroId}`}
-                    title={`preview-roteiro-${roteiroId}`}
-                  />
+                  >
+                    <iframe
+                      src={previewUrl}
+                      className="orcamento-preview-iframe"
+                      aria-label={`preview-roteiro-${roteiroId}`}
+                      title={`preview-roteiro-${roteiroId}`}
+                    />
+                  </object>
                 </div>
               </div>
             </div>

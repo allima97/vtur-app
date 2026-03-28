@@ -117,6 +117,11 @@ export type ExportRoteiroPdfOptions = {
   action?: "download" | "preview" | "blob-url";
 };
 
+function ensurePdfBlob(blob: Blob) {
+  if (blob.type === "application/pdf") return blob;
+  return new Blob([blob], { type: "application/pdf" });
+}
+
 function parseParagraphItems(text: string) {
   const normalized = String(text || "").replace(/\r/g, "\n");
   return normalized
@@ -2637,12 +2642,12 @@ export async function exportRoteiroPdf(
   }
 
   if (action === "blob-url" && typeof window !== "undefined") {
-    const blob = doc.output("blob");
+    const blob = ensurePdfBlob(doc.output("blob"));
     return URL.createObjectURL(blob);
   }
 
   if (action === "preview" && typeof window !== "undefined") {
-    const blob = doc.output("blob");
+    const blob = ensurePdfBlob(doc.output("blob"));
     const url = URL.createObjectURL(blob);
     const win = window.open(url, "_blank", "noopener,noreferrer");
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
