@@ -922,6 +922,13 @@ a.vtur-app-button:visited {
   margin-top: 8px;
 }
 
+.vtur-sales-recibo-title {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
 .vtur-sales-principal-label {
   display: inline-flex;
   align-items: center;
@@ -932,10 +939,28 @@ a.vtur-app-button:visited {
   cursor: pointer;
 }
 
+.vtur-sales-principal-label-inline {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(239, 246, 255, 0.92);
+  border: 1px solid rgba(96, 165, 250, 0.28);
+  font-size: 0.81rem;
+}
+
 .vtur-sales-note {
   color: var(--vtur-primer-muted);
   font-size: 0.82rem;
   line-height: 1.45;
+}
+
+.vtur-sales-fees-row {
+  margin-top: 16px;
+}
+
+.vtur-sales-fees-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .vtur-sales-contract-link {

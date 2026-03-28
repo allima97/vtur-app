@@ -333,6 +333,16 @@ export default function VendasCadastroIsland() {
   const [tipoPacoteModal, setTipoPacoteModal] = useState<{ mensagem: string } | null>(null);
   const isReguaTipoPacote = (valor?: string | null) =>
     normalizeText(valor || "", { trim: true, collapseWhitespace: true }).includes("regua abaixo de 10");
+  const normalizeTipoPacoteVisibilityKey = (valor?: string | null) =>
+    normalizeTipoPacoteRuleKey(valor || "")
+      .replace(/\+/g, " ")
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  const shouldShowDuRavForTipoPacote = (valor?: string | null) => {
+    const key = normalizeTipoPacoteVisibilityKey(valor);
+    return key === "passagem aerea" || key === "passagem facil" || key === "aereo hotel";
+  };
   const resolveTipoPacoteSelectValue = (valor?: string | null) => {
     const key = normalizeTipoPacoteRuleKey(valor || "");
     if (!key) return valor || "";
@@ -1406,19 +1416,20 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
         }
         const valTotalNum = moedaParaNumero(recibo.valor_total);
         const valTaxasNum = moedaParaNumero(recibo.valor_taxas);
-        const valDuNum = moedaParaNumero(recibo.valor_du);
+        const showDuRav = shouldShowDuRavForTipoPacote(recibo.tipo_pacote);
+        const valDuNum = showDuRav ? moedaParaNumero(recibo.valor_du) : 0;
         const ravRaw = recibo.valor_rav || "";
-        const valRavNum = ravRaw ? moedaParaNumero(ravRaw) : 0;
+        const valRavNum = showDuRav && ravRaw ? moedaParaNumero(ravRaw) : 0;
         if (Number.isNaN(valTotalNum)) {
           throw new Error("Valor total inválido. Digite um valor monetário.");
         }
         if (Number.isNaN(valTaxasNum)) {
           throw new Error("Valor de taxas inválido. Digite um valor monetário.");
         }
-        if (Number.isNaN(valDuNum)) {
+        if (showDuRav && Number.isNaN(valDuNum)) {
           throw new Error("Valor de DU inválido. Digite um valor monetário.");
         }
-        if (ravRaw && Number.isNaN(valRavNum)) {
+        if (showDuRav && ravRaw && Number.isNaN(valRavNum)) {
           throw new Error("Valor de RAV inválido. Digite um valor monetário.");
         }
         let contratoPath = recibo.contrato_path || null;
@@ -1933,7 +1944,21 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
             return (
               <AppCard
                 key={i}
-                title={`Recibo ${i + 1}`}
+                title={
+                  <div className="vtur-sales-recibo-title">
+                    <span>{`Recibo ${i + 1}`}</span>
+                    <label className="vtur-sales-principal-label vtur-sales-principal-label-inline">
+                      <input
+                        type="radio"
+                        name="recibo-principal"
+                        checked={r.principal}
+                        onChange={() => marcarReciboPrincipal(i)}
+                        className="form-radio h-4 w-4 text-sky-600"
+                      />
+                      <span>Produto principal</span>
+                    </label>
+                  </div>
+                }
                 subtitle={
                   r.principal
                     ? "Este recibo define o produto principal usado nos relatorios."
@@ -2022,21 +2047,6 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                         <option key={p.id} value={p.nome} />
                       ))}
                     </datalist>
-                    <div className="vtur-sales-principal-toggle">
-                      <label className="vtur-sales-principal-label">
-                        <input
-                          type="radio"
-                          name="recibo-principal"
-                          checked={r.principal}
-                          onChange={() => marcarReciboPrincipal(i)}
-                          className="form-radio h-4 w-4 text-sky-600"
-                        />
-                        <span>Produto principal</span>
-                      </label>
-                      <span className="vtur-sales-note">
-                        Define o produto principal usado nos relatorios.
-                      </span>
-                    </div>
                   </div>
 
                   <AppField
@@ -2130,48 +2140,65 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                     onBlur={() => updateRecibo(i, "valor_total", normalizeMoneyInput(r.valor_total))}
                     required
                   />
-
-                  <AppField
-                    label="Taxas"
-                    type="text"
-                    inputMode="decimal"
-                    pattern="[0-9,.]*"
-                    placeholder="0,00"
-                    value={r.valor_taxas}
-                    onFocus={selectAllInputOnFocus}
-                    onChange={(e) => updateReciboMonetario(i, "valor_taxas", e.target.value)}
-                    onBlur={() => updateRecibo(i, "valor_taxas", normalizeMoneyInput(r.valor_taxas))}
-                  />
-
-                  <AppField
-                    label="DU"
-                    type="text"
-                    inputMode="decimal"
-                    pattern="[0-9,.]*"
-                    placeholder="0,00"
-                    value={r.valor_du}
-                    onFocus={selectAllInputOnFocus}
-                    onChange={(e) => updateReciboMonetario(i, "valor_du", e.target.value)}
-                    onBlur={() => updateRecibo(i, "valor_du", normalizeMoneyInput(r.valor_du))}
-                  />
-
-                  <AppField
-                    label="RAV"
-                    type="text"
-                    inputMode="decimal"
-                    pattern="[0-9,.]*"
-                    placeholder="0,00"
-                    value={r.valor_rav}
-                    caption={
-                      hasRavValue(r.valor_rav)
-                        ? "Total deve incluir o RAV. O sistema desconta o RAV no calculo de meta/comissao."
-                        : "Se houver RAV, informe o valor total somado ao RAV."
-                    }
-                    onFocus={selectAllInputOnFocus}
-                    onChange={(e) => updateReciboMonetario(i, "valor_rav", e.target.value)}
-                    onBlur={() => updateRecibo(i, "valor_rav", normalizeMoneyInput(r.valor_rav))}
-                  />
                 </div>
+
+	                <div className="vtur-sales-fees-row">
+	                  <div
+	                    className="vtur-sales-fees-grid"
+	                    style={{
+	                      gridTemplateColumns: shouldShowDuRavForTipoPacote(r.tipo_pacote)
+	                        ? "repeat(3, minmax(0, 1fr))"
+	                        : "minmax(0, 1fr)",
+	                    }}
+	                  >
+	                    <AppField
+	                      label="Taxas"
+	                      type="text"
+                      inputMode="decimal"
+                      pattern="[0-9,.]*"
+                      placeholder="0,00"
+                      value={r.valor_taxas}
+                      onFocus={selectAllInputOnFocus}
+                      onChange={(e) => updateReciboMonetario(i, "valor_taxas", e.target.value)}
+	                      onBlur={() => updateRecibo(i, "valor_taxas", normalizeMoneyInput(r.valor_taxas))}
+	                    />
+
+	                    {shouldShowDuRavForTipoPacote(r.tipo_pacote) ? (
+	                      <>
+	                        <AppField
+	                          label="DU"
+	                          type="text"
+	                          inputMode="decimal"
+	                          pattern="[0-9,.]*"
+	                          placeholder="0,00"
+	                          value={r.valor_du}
+	                          onFocus={selectAllInputOnFocus}
+	                          onChange={(e) => updateReciboMonetario(i, "valor_du", e.target.value)}
+	                          onBlur={() => updateRecibo(i, "valor_du", normalizeMoneyInput(r.valor_du))}
+	                        />
+
+	                        <AppField
+	                          label="RAV"
+	                          type="text"
+	                          inputMode="decimal"
+	                          pattern="[0-9,.]*"
+	                          placeholder="0,00"
+	                          value={r.valor_rav}
+	                          onFocus={selectAllInputOnFocus}
+	                          onChange={(e) => updateReciboMonetario(i, "valor_rav", e.target.value)}
+	                          onBlur={() => updateRecibo(i, "valor_rav", normalizeMoneyInput(r.valor_rav))}
+	                        />
+	                      </>
+	                    ) : null}
+	                  </div>
+	                  {shouldShowDuRavForTipoPacote(r.tipo_pacote) ? (
+	                    <div className="vtur-sales-note">
+	                      {hasRavValue(r.valor_rav)
+	                        ? "Total deve incluir o RAV. O sistema desconta o RAV no calculo de meta/comissao."
+	                        : "Se houver RAV, informe o valor total somado ao RAV."}
+	                    </div>
+	                  ) : null}
+	                </div>
 
                 <div className="vtur-form-grid vtur-form-grid-2" style={{ marginTop: 16 }}>
                   <FileUploadField
