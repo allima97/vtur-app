@@ -88,6 +88,43 @@ function toISODateLocal(date: Date) {
   ).padStart(2, "0")}`;
 }
 
+function parseIsoDate(value?: string | null) {
+  const iso = String(value || "").trim();
+  if (!iso) return null;
+  const date = new Date(`${iso}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+}
+
+function maxIsoDate(a?: string | null, b?: string | null) {
+  const aIso = String(a || "").trim();
+  const bIso = String(b || "").trim();
+  if (!aIso) return b || null;
+  if (!bIso) return a || null;
+  return aIso >= bIso ? a || null : b || null;
+}
+
+const SAME_TRIP_MAX_GAP_DAYS = 10;
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+function isSamePassengerTrip(base: any, candidate: any) {
+  const baseStart = parseIsoDate(base?.data_inicio);
+  const candidateStart = parseIsoDate(candidate?.data_inicio);
+  if (!baseStart || !candidateStart) return false;
+
+  const baseEnd = parseIsoDate(base?.data_fim) || baseStart;
+  const candidateEnd = parseIsoDate(candidate?.data_fim) || candidateStart;
+
+  const baseMin = Math.min(baseStart.getTime(), baseEnd.getTime());
+  const baseMax = Math.max(baseStart.getTime(), baseEnd.getTime());
+  const candidateMin = Math.min(candidateStart.getTime(), candidateEnd.getTime());
+  const candidateMax = Math.max(candidateStart.getTime(), candidateEnd.getTime());
+  const gapMs = SAME_TRIP_MAX_GAP_DAYS * ONE_DAY_MS;
+
+  // Mesmo passageiro + períodos sobrepostos (ou muito próximos) = mesma viagem mesclada.
+  return candidateMin <= baseMax + gapMs && candidateMax >= baseMin - gapMs;
+}
+
 function isUuid(value?: string | null) {
   return Boolean(
     value &&
@@ -290,24 +327,31 @@ export async function GET({ request }: { request: Request }) {
     // Depois de mesclar por venda, faz dedupe por passageiro para evitar poluição no card
     // de próximas viagens quando há múltiplos recibos da mesma viagem/passageiro.
     function agruparPorPassageiroPrimeiraSaida(rawData: any[]): any[] {
-      const grupos = new Map<string, any>();
-      for (const v of rawData) {
-        const clienteId = String(v?.clientes?.id || "").trim();
-        const key = clienteId || String(v?.venda_id || v?.recibo?.venda_id || v?.id || "").trim();
-        if (!key) continue;
+      const porPassageiro = new Map<string, any[]>();
+      const ordered = [...rawData].sort((a, b) =>
+        String(a?.data_inicio || "").localeCompare(String(b?.data_inicio || ""))
+      );
 
-        const produtos = Array.isArray(v?.produtos_tipos)
-          ? v.produtos_tipos.filter(Boolean)
-          : [];
-        const existente = grupos.get(key);
-        if (!existente) {
-          grupos.set(key, {
+      for (const v of ordered) {
+        const clienteId = String(v?.clientes?.id || "").trim();
+        const fallbackKey = String(v?.venda_id || v?.recibo?.venda_id || v?.id || "").trim();
+        const passageiroKey = clienteId || fallbackKey;
+        if (!passageiroKey) continue;
+
+        const produtos = Array.isArray(v?.produtos_tipos) ? v.produtos_tipos.filter(Boolean) : [];
+        const grupos = porPassageiro.get(passageiroKey) || [];
+        let groupIndex = grupos.findIndex((group) => isSamePassengerTrip(group, v));
+
+        if (groupIndex < 0) {
+          grupos.push({
             ...v,
             produtos_tipos: Array.from(new Set(produtos)),
           });
+          porPassageiro.set(passageiroKey, grupos);
           continue;
         }
 
+        const existente = grupos[groupIndex];
         const produtosSet = new Set<string>([
           ...((existente.produtos_tipos as string[]) || []),
           ...produtos,
@@ -318,33 +362,26 @@ export async function GET({ request }: { request: Request }) {
           Boolean(inicioAtual) && (!inicioExistente || inicioAtual < inicioExistente);
 
         if (deveTrocarRepresentante) {
-          const fimExistente = String(existente?.data_fim || "");
-          const fimAtual = String(v?.data_fim || "");
-          grupos.set(key, {
+          grupos[groupIndex] = {
             ...existente,
             ...v,
-            // Sempre preserva a primeira saída do passageiro
+            // Sempre preserva a primeira saída do cluster da viagem.
             id: v.id,
             data_inicio: v.data_inicio,
-            data_fim:
-              fimExistente && (!fimAtual || fimExistente > fimAtual)
-                ? existente.data_fim
-                : v.data_fim,
+            data_fim: maxIsoDate(existente?.data_fim, v?.data_fim),
             produtos_tipos: Array.from(produtosSet),
-          });
-          continue;
+          };
+        } else {
+          existente.produtos_tipos = Array.from(produtosSet);
+          existente.data_fim = maxIsoDate(existente?.data_fim, v?.data_fim);
+          existente.destino = existente.destino || v.destino || null;
+          existente.origem = existente.origem || v.origem || null;
+          existente.status = existente.status || v.status || null;
+          if (!existente.clientes && v.clientes) existente.clientes = v.clientes;
         }
-
-        existente.produtos_tipos = Array.from(produtosSet);
-        if (v.data_fim && (!existente.data_fim || v.data_fim > existente.data_fim)) {
-          existente.data_fim = v.data_fim;
-        }
-        existente.destino = existente.destino || v.destino || null;
-        existente.origem = existente.origem || v.origem || null;
-        existente.status = existente.status || v.status || null;
-        if (!existente.clientes && v.clientes) existente.clientes = v.clientes;
       }
-      return Array.from(grupos.values());
+
+      return Array.from(porPassageiro.values()).flat();
     }
 
     function filtrarProximasViagens(grupos: any[]) {

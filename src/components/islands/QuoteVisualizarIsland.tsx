@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AlertMessage from "../ui/AlertMessage";
 import EmptyState from "../ui/EmptyState";
 import AppButton from "../ui/primer/AppButton";
@@ -16,7 +16,7 @@ export default function QuoteVisualizarIsland({ quoteId }: Props) {
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const previewScrollRef = useRef<HTMLDivElement | null>(null);
+  const previewSrcDoc = useMemo(() => buildPreviewSrcDoc(previewHtml), [previewHtml]);
 
   useEffect(() => {
     let canceled = false;
@@ -33,9 +33,6 @@ export default function QuoteVisualizarIsland({ quoteId }: Props) {
 
         if (canceled) return;
         setPreviewHtml(html);
-        if (previewScrollRef.current) {
-          previewScrollRef.current.scrollTop = 0;
-        }
       } catch (err: any) {
         if (canceled) return;
         console.error("[QuoteVisualizar] Erro ao gerar previa:", err);
@@ -131,16 +128,14 @@ export default function QuoteVisualizarIsland({ quoteId }: Props) {
             <div className="orcamento-preview-shell">
               <div className="orcamento-preview-frame-wrap">
                 <div className="orcamento-preview-frame">
-                  <div
-                    ref={previewScrollRef}
-                    className="orcamento-html-preview-wrap"
+                  <iframe
+                    key={`${quoteId}-${refreshNonce}`}
+                    className="orcamento-preview-iframe"
                     aria-label={`preview-orcamento-${quoteId}`}
-                  >
-                    <div
-                      className="orcamento-html-preview"
-                      dangerouslySetInnerHTML={{ __html: previewHtml }}
-                    />
-                  </div>
+                    title={`preview-orcamento-${quoteId}`}
+                    srcDoc={previewSrcDoc}
+                    sandbox=""
+                  />
                 </div>
               </div>
             </div>
@@ -160,4 +155,47 @@ export default function QuoteVisualizarIsland({ quoteId }: Props) {
       </div>
     </AppPrimerProvider>
   );
+}
+
+function buildPreviewSrcDoc(previewHtml: string) {
+  const body = previewHtml || "<div></div>";
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #f3f6fb;
+      font-family: Nunito, Arial, sans-serif;
+      color: #0f172a;
+    }
+    .preview-page {
+      width: min(100%, 900px);
+      margin: 14px auto;
+      background: #ffffff;
+      border: 1px solid #d7deea;
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .preview-page img {
+      max-width: 100%;
+      width: auto !important;
+      height: auto !important;
+      object-fit: contain;
+    }
+    .preview-page table {
+      max-width: 100%;
+      border-collapse: separate;
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-page">${body}</div>
+</body>
+</html>`;
 }

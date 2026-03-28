@@ -1059,7 +1059,8 @@ function DashboardGestorIslandInner() {
     [...viagens]
       .filter((v) => (v.status || "").toLowerCase() !== "cancelada")
       .forEach((v) => {
-        const key = v.clientes?.id || v.venda_id || v.id;
+        const baseKey = v.clientes?.id || v.venda_id || v.id;
+        const key = [baseKey, v.data_inicio || "", v.data_fim || "", v.destino || ""].join("__");
         const existing = seen.get(key);
         if (!existing) {
           seen.set(key, { ...v });

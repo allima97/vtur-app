@@ -770,15 +770,12 @@ function tableHeaderLabel(text: string, align: "left" | "center" = "left") {
   )}</span>`;
 }
 
-function sectionTitleCard(icon: string, title: string) {
-  const iconLabel = textValue(icon);
+function sectionTitleCard(title: string) {
   return `<table width="100%" data-pdfmake='{"unbreakable":true,"widths":["*"],"layout":"noBorders"}' style="width:100%; margin:0 0 10px 0; border:1px solid #d1d5db; border-radius:11px; border-collapse:separate;">
     <tbody>
       <tr>
         <td style="border:none; padding:12px 16px;">
-          <div style="font-size:17px; color:#1534c2; font-weight:700;">${
-            iconLabel ? `${escapeHtml(iconLabel)}&nbsp;&nbsp;` : ""
-          }${escapeHtml(title)}</div>
+          <div style="font-size:17px; color:#1534c2; font-weight:700;">${escapeHtml(title)}</div>
         </td>
       </tr>
     </tbody>
@@ -786,9 +783,7 @@ function sectionTitleCard(icon: string, title: string) {
 }
 
 function sectionCityTitle(cidade: string) {
-  return `<div style="font-size:13px; color:#334155; font-weight:700; margin:0 0 8px 0;">📍&nbsp;&nbsp;${escapeHtml(
-    cidade
-  )}</div>`;
+  return `<div style="font-size:13px; color:#334155; font-weight:700; margin:0 0 8px 0;">${escapeHtml(cidade)}</div>`;
 }
 
 function dayDiffBetweenIso(start?: string | null, end?: string | null) {
@@ -881,7 +876,7 @@ function buildItemsHtml(
 
   const hotelsHtml =
     groupedHotels.length > 0
-      ? `${sectionTitleCard("🏨", "Hotéis Sugeridos")}
+      ? `${sectionTitleCard("Hotéis sugeridos")}
          ${groupedHotels
            .map((group) => {
              const rows = group.rows
@@ -952,7 +947,7 @@ function buildItemsHtml(
 
   const passeiosHtml =
     groupedPasseios.length > 0
-      ? `${sectionTitleCard("🧭", "Passeios e Serviços")}
+      ? `${sectionTitleCard("Passeios e serviços")}
          ${groupedPasseios
            .map((group) => {
              const onlySeguro = group.rows.every((row) => row.isSeguro);
@@ -1013,7 +1008,7 @@ function buildItemsHtml(
 
   const flightsHtml =
     flight.rows.length > 0
-      ? `${sectionTitleCard("✈", "Passagem Aérea")}
+      ? `${sectionTitleCard("Passagem aérea")}
          <table width="100%" data-pdfmake='{"unbreakable":true,"widths":["*"],"layout":"noBorders"}' style="width:100%; margin:0 0 12px 0; border:1px solid #d1d5db; border-radius:11px; border-collapse:separate;">
            <tbody>
              <tr>
@@ -1096,7 +1091,7 @@ function buildItemsHtml(
 
   const fallbackHtml =
     fallbackItems.length > 0
-      ? `${sectionTitleCard("➜", "Outros Serviços")}
+      ? `${sectionTitleCard("Outros serviços")}
          ${buildFallbackItemsHtml(fallbackItems, showItemValues)}`
       : "";
 
@@ -1227,7 +1222,11 @@ function buildQuoteHtml(params: {
     <tbody>
       <tr>
         <td style="width:52%; vertical-align:top; border:none;">
-          ${logoDataUrl ? `<img src="${logoDataUrl}" style="width:120px; height:56px;" />` : ""}
+          ${
+            logoDataUrl
+              ? `<img src="${logoDataUrl}" style="max-width:120px; max-height:56px; width:auto; height:auto; object-fit:contain;" />`
+              : ""
+          }
           <div style="font-size:11px; color:#0f172a; margin:8px 0 0 0;">
             ${settings.filial_nome ? `<div>${escapeHtml(`Filial: ${settings.filial_nome}`)}</div>` : ""}
             ${settings.endereco_linha1 ? `<div>${escapeHtml(settings.endereco_linha1)}</div>` : ""}

@@ -1364,7 +1364,7 @@ function toLineChartConfig(
     return sorted.slice(0, 10);
   }, [orcamentos]);
 
-  // A API já entrega agrupado por passageiro (primeira saída) e venda.
+  // A API já entrega agrupado por passageiro + janela da viagem (primeira saída do cluster).
   const proximasViagensAgrupadas = useMemo(() => {
     const grupos = new Map<string, {
       key: string;
@@ -1382,7 +1382,8 @@ function toLineChartConfig(
     viagens
       .filter((v) => (v.status || "").toLowerCase() !== "cancelada")
       .forEach((v) => {
-        const key = v.clientes?.id || v.venda_id || v.id;
+        const baseKey = v.clientes?.id || v.venda_id || v.id;
+        const key = [baseKey, v.data_inicio || "", v.data_fim || "", v.destino || ""].join("__");
         const produtos = v.produtos_tipos?.length
           ? v.produtos_tipos
           : v.recibo?.tipo_produtos?.nome

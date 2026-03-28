@@ -167,11 +167,11 @@ export default function RoteiroVisualizarIsland({ roteiroId, roteiroNome }: Prop
             <div className="orcamento-preview-shell">
               <div className="orcamento-preview-frame-wrap">
                 <div className="orcamento-preview-frame">
-                  <object
-                    data={previewUrl}
-                    type="application/pdf"
-                    className="orcamento-preview-object"
+                  <iframe
+                    src={`${previewUrl}#toolbar=1&navpanes=0&scrollbar=1`}
+                    className="orcamento-preview-iframe"
                     aria-label={`preview-roteiro-${roteiroId}`}
+                    title={`preview-roteiro-${roteiroId}`}
                   />
                 </div>
               </div>
