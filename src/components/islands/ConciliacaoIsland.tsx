@@ -21,6 +21,7 @@ import {
   normalizeConciliacaoDescricaoKey,
   resolveConciliacaoStatus,
 } from "../../lib/conciliacao/business";
+import { bumpVendasCacheVersion } from "../../lib/vendasCacheVersion";
 
 type Papel = "ADMIN" | "MASTER" | "GESTOR" | "VENDEDOR" | "OUTRO";
 
@@ -1516,6 +1517,7 @@ export default function ConciliacaoIsland() {
           [row.id]: formatMoney(valorComissaoLoja),
         }));
       }
+      bumpVendasCacheVersion();
       showToast("Atribuição atualizada para o ranking.", "success");
     } catch (e: any) {
       console.error(e);
@@ -1648,6 +1650,7 @@ export default function ConciliacaoIsland() {
 
       await carregarResumo();
       await carregarAlteracoes();
+      bumpVendasCacheVersion();
       showToast("Recibo excluido da conciliacao.", "success");
     } catch (e: any) {
       console.error(e);
@@ -1919,6 +1922,7 @@ export default function ConciliacaoIsland() {
       await carregarAlteracoes();
 
       if (runReconcile) {
+        bumpVendasCacheVersion();
         showToast(
           `Salvo e conciliado. Importados: ${json?.imported || 0}. Conciliados: ${json?.reconciled || 0}.`,
           "success"
@@ -1957,6 +1961,7 @@ export default function ConciliacaoIsland() {
       });
       if (!resp.ok) throw new Error(await resp.text());
       const json = (await resp.json()) as any;
+      bumpVendasCacheVersion();
       showToast(
         `Conciliado. Checados: ${json?.checked || 0}. Conciliados: ${json?.reconciled || 0}.`,
         "success"
@@ -1990,6 +1995,7 @@ export default function ConciliacaoIsland() {
       if (!resp.ok) throw new Error(await resp.text());
       const json = (await resp.json()) as any;
       const erros = Number(json?.updateErrors || 0);
+      bumpVendasCacheVersion();
       showToast(
         erros > 0
           ? `Conciliados: ${json?.reconciled || 0}. Taxas atualizadas: ${json?.updatedTaxes || 0}. Falhas ao salvar: ${erros} — verifique os logs do servidor.`
@@ -2197,6 +2203,7 @@ export default function ConciliacaoIsland() {
       });
       if (!resp.ok) throw new Error(await resp.text());
       const json = (await resp.json()) as any;
+      bumpVendasCacheVersion();
       showToast(`Revertidos: ${json?.reverted || 0}. Erros: ${json?.errored || 0}.`, "success");
       await carregarAlteracoes();
       await carregarLista();
@@ -2224,6 +2231,7 @@ export default function ConciliacaoIsland() {
       });
       if (!resp.ok) throw new Error(await resp.text());
       const json = (await resp.json()) as any;
+      bumpVendasCacheVersion();
       showToast(`Revertidos: ${json?.reverted || 0}. Erros: ${json?.errored || 0}.`, "success");
       await carregarAlteracoes();
       await carregarLista();

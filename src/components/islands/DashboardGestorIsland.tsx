@@ -629,6 +629,7 @@ function DashboardGestorIslandInner() {
         if (cacheRevision && cacheRevision !== "0") {
           params.set("rev", cacheRevision);
         }
+        params.set("no_cache", "1");
         params.set("include_clientes", "0");
         const storedVisibility = readGestorWidgetVisibility(
           "dashboard_gestor_widgets",
@@ -653,6 +654,7 @@ function DashboardGestorIslandInner() {
           async () => {
             const resp = await fetch(`/api/v1/dashboard/summary?${params.toString()}`, {
               credentials: "same-origin",
+              cache: "no-store",
             });
             if (!resp.ok) {
               const msg = await resp.text().catch(() => "");
@@ -660,7 +662,7 @@ function DashboardGestorIslandInner() {
             }
             return resp.json();
           },
-          { ttlMs: 20_000 }
+          { ttlMs: 0 }
         );
 
         setVendas((payload?.vendas || []) as Venda[]);

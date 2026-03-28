@@ -257,6 +257,7 @@ export async function GET({ request }: { request: Request }) {
     const pageSize = parseIntSafe(url.searchParams.get("pageSize"), 10);
     const all = String(url.searchParams.get("all") || "").trim() === "1";
     const openId = String(url.searchParams.get("id") || "").trim();
+    const responseCacheControl = noCache ? "no-store" : "private, max-age=10";
 
     if ((inicio || fim) && (!isIsoDate(inicio) || !isIsoDate(fim))) {
       return new Response("inicio e fim devem estar no formato YYYY-MM-DD.", { status: 400 });
@@ -322,7 +323,7 @@ export async function GET({ request }: { request: Request }) {
         status: 200,
         headers: {
           "Content-Type": "application/json",
-          "Cache-Control": "private, max-age=10",
+          "Cache-Control": responseCacheControl,
           Vary: "Cookie",
         },
       });
@@ -352,7 +353,7 @@ export async function GET({ request }: { request: Request }) {
           status: 200,
           headers: {
             "Content-Type": "application/json",
-            "Cache-Control": "private, max-age=10",
+            "Cache-Control": responseCacheControl,
             Vary: "Cookie",
           },
         });
@@ -365,7 +366,7 @@ export async function GET({ request }: { request: Request }) {
           status: 200,
           headers: {
             "Content-Type": "application/json",
-            "Cache-Control": "private, max-age=10",
+            "Cache-Control": responseCacheControl,
             Vary: "Cookie",
           },
         });

@@ -1,7 +1,7 @@
 const VENDAS_CACHE_VERSION_KEY = "vtur_vendas_cache_version";
 
 function safeNowVersion() {
-  return String(Date.now());
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 export function getVendasCacheVersion() {
@@ -26,4 +26,3 @@ export function bumpVendasCacheVersion() {
   }
   return version;
 }
-

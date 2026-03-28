@@ -239,6 +239,7 @@ export default function VendasConsultaIsland() {
   const isMaster = /MASTER/i.test(String(userType || ""));
   const masterScope = useMasterScope(Boolean(isMaster && ready));
   const [loadingUser, setLoadingUser] = useState(true);
+  const [vendasCacheRevision, setVendasCacheRevision] = useState("0");
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [recibos, setRecibos] = useState<Recibo[]>([]);
   const [recibosComplementares, setRecibosComplementares] = useState<ReciboComplementar[]>([]);
@@ -337,6 +338,26 @@ export default function VendasConsultaIsland() {
     if (periodoFiltro.kind === "all") return "all";
     return `range:${periodoFiltro.inicio}:${periodoFiltro.fim}`;
   }, [periodoFiltro]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sync = () => setVendasCacheRevision(getVendasCacheVersion());
+    const onBust = (event: Event) => {
+      const detail = (event as CustomEvent<{ version?: string }>).detail;
+      setVendasCacheRevision(String(detail?.version || getVendasCacheVersion() || "0"));
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== "vtur_vendas_cache_version") return;
+      setVendasCacheRevision(String(event.newValue || "0"));
+    };
+    sync();
+    window.addEventListener("vtur:vendas-cache-bust", onBust as EventListener);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("vtur:vendas-cache-bust", onBust as EventListener);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
 
   // ================================
   // CONTEXTO DE USUÁRIO (papel/vendedorIds)
@@ -517,12 +538,11 @@ export default function VendasConsultaIsland() {
   // ================================
   // CARREGAR LISTA
   // ================================
-  async function carregar(options?: { forceFresh?: boolean }) {
+  async function carregar(_options?: { forceFresh?: boolean }) {
     if (!podeVer || !userCtx) return;
 
     try {
       setLoading(true);
-      const forceFresh = options?.forceFresh === true;
       const buscaAtiva = busca.trim();
       const paginaAtual = Math.max(1, page);
       const tamanhoPagina = Math.max(1, pageSize);
@@ -587,18 +607,17 @@ export default function VendasConsultaIsland() {
         }
       }
 
-      if (forceFresh) {
-        params.set("no_cache", "1");
-        kpisParams.set("no_cache", "1");
-      }
+      params.set("no_cache", "1");
+      kpisParams.set("no_cache", "1");
 
-      const shouldCacheList = !forceFresh && !openId && !fetchAll;
+      const shouldCacheList = false;
       const listCacheKey = buildQueryLiteKey(["vendasList", userCtx.usuarioId, params.toString()]);
       const payload = await queryLite(
         listCacheKey,
         async () => {
           const resp = await fetch(`/api/v1/vendas/list?${params.toString()}`, {
             credentials: "same-origin",
+            cache: "no-store",
           });
           if (!resp.ok) {
             const msg = await resp.text().catch(() => "");
@@ -687,13 +706,14 @@ export default function VendasConsultaIsland() {
         } else if (userCtx.papel !== "ADMIN" && scopedVendedorIds.length === 0) {
           setKpiMesAtual({ totalVendas: 0, totalTaxas: 0, totalLiquido: 0, totalSeguro: 0 });
         } else {
-          const shouldCacheKpis = !forceFresh;
+          const shouldCacheKpis = false;
           const kpisCacheKey = buildQueryLiteKey(["vendasKpis", userCtx.usuarioId, kpisParams.toString()]);
           const kpisData = await queryLite(
             kpisCacheKey,
             async () => {
               const kpisResp = await fetch(`/api/v1/vendas/kpis?${kpisParams.toString()}`, {
                 credentials: "same-origin",
+                cache: "no-store",
               });
               if (!kpisResp.ok) throw new Error("kpis");
               return kpisResp.json();
@@ -741,7 +761,7 @@ export default function VendasConsultaIsland() {
       return;
     }
     carregar();
-  }, [loadPerm, podeVer, userCtx, page, pageSize, busca, periodoFiltroKey, scopedVendedorIds.join(",")]);
+  }, [loadPerm, podeVer, userCtx, page, pageSize, busca, periodoFiltroKey, scopedVendedorIds.join(","), vendasCacheRevision]);
 
   useEffect(() => {
     setBuscaReciboComplementar("");
@@ -1140,6 +1160,8 @@ export default function VendasConsultaIsland() {
             }
           : prev
       );
+      invalidateVendasCaches();
+      await carregar({ forceFresh: true });
       showToast("Recibo principal atualizado.", "success");
     } catch (error) {
       console.error(error);

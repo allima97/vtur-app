@@ -293,6 +293,7 @@ export async function GET({ request }: { request: Request }) {
       String(url.searchParams.get("include_followups") || "1").trim() === "1";
     const cacheRevision = String(url.searchParams.get("rev") || "").trim() || "0";
     const noCache = String(url.searchParams.get("no_cache") || "").trim() === "1";
+    const responseCacheControl = noCache ? "no-store" : "private, max-age=20";
 
     const requestedVendedorIds = requestedVendedorIdsRaw
       ? Array.from(
@@ -397,7 +398,7 @@ export async function GET({ request }: { request: Request }) {
           status: 200,
           headers: {
             "Content-Type": "application/json",
-            "Cache-Control": "private, max-age=20",
+            "Cache-Control": responseCacheControl,
             Vary: "Cookie",
           },
         });
@@ -409,7 +410,7 @@ export async function GET({ request }: { request: Request }) {
           status: 200,
           headers: {
             "Content-Type": "application/json",
-            "Cache-Control": "private, max-age=20",
+            "Cache-Control": responseCacheControl,
             Vary: "Cookie",
           },
         });

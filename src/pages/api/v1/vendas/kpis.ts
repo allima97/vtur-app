@@ -112,6 +112,7 @@ export async function GET({ request }: { request: Request }) {
     const vendedorIdsRaw = String(url.searchParams.get("vendedor_ids") || "").trim();
     const cacheRevision = String(url.searchParams.get("rev") || "").trim() || "0";
     const noCache = String(url.searchParams.get("no_cache") || "").trim() === "1";
+    const responseCacheControl = noCache ? "no-store" : "private, max-age=15";
 
     const hasDates = Boolean(inicio || fim);
     if (hasDates) {
@@ -189,7 +190,7 @@ export async function GET({ request }: { request: Request }) {
         status: 200,
         headers: {
           "Content-Type": "application/json",
-          "Cache-Control": "private, max-age=15",
+          "Cache-Control": responseCacheControl,
           Vary: "Cookie",
         },
       });
@@ -213,7 +214,7 @@ export async function GET({ request }: { request: Request }) {
           status: 200,
           headers: {
             "Content-Type": "application/json",
-            "Cache-Control": "private, max-age=15",
+            "Cache-Control": responseCacheControl,
             Vary: "Cookie",
           },
         });
@@ -225,7 +226,7 @@ export async function GET({ request }: { request: Request }) {
           status: 200,
           headers: {
             "Content-Type": "application/json",
-            "Cache-Control": "private, max-age=15",
+            "Cache-Control": responseCacheControl,
             Vary: "Cookie",
           },
         });
