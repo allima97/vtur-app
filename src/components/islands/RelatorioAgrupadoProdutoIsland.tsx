@@ -18,6 +18,7 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import PaginationControls from "../ui/PaginationControls";
 import { fetchGestorEquipeIdsComGestor } from "../../lib/gestorEquipe";
+import { getVendasCacheVersion } from "../../lib/vendasCacheVersion";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
@@ -114,6 +115,7 @@ async function fetchRelatorioProdutos(params: {
   page: number;
   pageSize: number;
   noCache?: boolean;
+  cacheRevision?: string;
 }) {
   const qs = new URLSearchParams();
   if (params.dataInicio) qs.set("inicio", params.dataInicio);
@@ -130,6 +132,7 @@ async function fetchRelatorioProdutos(params: {
   qs.set("page", String(params.page));
   qs.set("pageSize", String(params.pageSize));
   if (params.noCache) qs.set("no_cache", "1");
+  if (params.cacheRevision && params.cacheRevision !== "0") qs.set("rev", params.cacheRevision);
 
   const cacheKey = buildQueryLiteKey(["relatorioProdutos", qs.toString()]);
   const payload = await queryLite(
@@ -154,6 +157,7 @@ async function fetchRelatorioProdutosRecibos(params: {
   companyId?: string;
   vendedorIds?: string[] | null;
   noCache?: boolean;
+  cacheRevision?: string;
 }) {
   const qs = new URLSearchParams();
   if (params.dataInicio) qs.set("inicio", params.dataInicio);
@@ -164,6 +168,7 @@ async function fetchRelatorioProdutosRecibos(params: {
     qs.set("vendedor_ids", params.vendedorIds.join(","));
   }
   if (params.noCache) qs.set("no_cache", "1");
+  if (params.cacheRevision && params.cacheRevision !== "0") qs.set("rev", params.cacheRevision);
 
   const cacheKey = buildQueryLiteKey(["relatorioProdutosRecibos", qs.toString()]);
   const payload = await queryLite(
@@ -694,6 +699,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
         ordemDesc,
         page: paginaAtual,
         pageSize,
+        cacheRevision: getVendasCacheVersion(),
       })) as any[];
       const mapped = rows.map((row) => ({
         produto_id: row.produto_id,
@@ -759,6 +765,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
         page: pagina,
         pageSize: pageSizeExport,
         noCache: true,
+        cacheRevision: getVendasCacheVersion(),
       })) as any[];
       const mapped = rows.map((row) => ({
         produto_id: row.produto_id,
@@ -803,6 +810,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
           userCtx.papel === "MASTER" ? masterScope.empresaSelecionada : undefined,
         vendedorIds: vendedorIdsFiltro && vendedorIdsFiltro.length > 0 ? vendedorIdsFiltro : null,
         noCache: opts?.noCache,
+        cacheRevision: getVendasCacheVersion(),
       })) as any[];
       setVendas((rows || []) as Venda[]);
       return rows as Venda[];

@@ -15,6 +15,7 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { ToastStack, useToastQueue } from "../ui/Toast";
 import PaginationControls from "../ui/PaginationControls";
 import { fetchGestorEquipeIdsComGestor } from "../../lib/gestorEquipe";
+import { getVendasCacheVersion } from "../../lib/vendasCacheVersion";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
@@ -89,6 +90,7 @@ async function fetchRelatorioClientes(params: {
   page: number;
   pageSize: number;
   noCache?: boolean;
+  cacheRevision?: string;
 }) {
   const qs = new URLSearchParams();
   if (params.dataInicio) qs.set("inicio", params.dataInicio);
@@ -104,6 +106,7 @@ async function fetchRelatorioClientes(params: {
   qs.set("page", String(params.page));
   qs.set("pageSize", String(params.pageSize));
   if (params.noCache) qs.set("no_cache", "1");
+  if (params.cacheRevision && params.cacheRevision !== "0") qs.set("rev", params.cacheRevision);
 
   const cacheKey = buildQueryLiteKey(["relatorioClientes", qs.toString()]);
   const payload = await queryLite(
@@ -394,6 +397,7 @@ export default function RelatorioAgrupadoClienteIsland() {
         ordemDesc,
         page: paginaAtual,
         pageSize,
+        cacheRevision: getVendasCacheVersion(),
       })) as any[];
       const mapped = rows.map((row) => ({
         cliente_id: row.cliente_id,
@@ -459,6 +463,7 @@ export default function RelatorioAgrupadoClienteIsland() {
         page: pagina,
         pageSize: pageSizeExport,
         noCache: true,
+        cacheRevision: getVendasCacheVersion(),
       })) as any[];
       const mapped = rows.map((row) => ({
         cliente_id: row.cliente_id,

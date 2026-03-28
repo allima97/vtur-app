@@ -233,6 +233,7 @@ export async function GET({ request }: { request: Request }) {
     const vendedorIdsRaw = String(url.searchParams.get("vendedor_ids") || "").trim();
     const ordem = String(url.searchParams.get("ordem") || "total").trim();
     const ordemDescRaw = String(url.searchParams.get("ordem_desc") || "").trim();
+    const cacheRevision = String(url.searchParams.get("rev") || "").trim() || "0";
     const noCache = String(url.searchParams.get("no_cache") || "").trim() === "1";
 
     const page = parseIntSafe(url.searchParams.get("page"), 1);
@@ -321,6 +322,7 @@ export async function GET({ request }: { request: Request }) {
       companyId || "-",
       String(page),
       String(pageSize),
+      `rev:${cacheRevision}`,
     ].join("|");
 
     if (!noCache) {
