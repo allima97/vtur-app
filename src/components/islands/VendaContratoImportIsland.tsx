@@ -17,6 +17,7 @@ import { normalizeText } from "../../lib/normalizeText";
 import { formatNumberBR } from "../../lib/format";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { selectAllInputOnFocus } from "../../lib/inputNormalization";
+import { bumpVendasCacheVersion } from "../../lib/vendasCacheVersion";
 import AlertMessage from "../ui/AlertMessage";
 import EmptyState from "../ui/EmptyState";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
@@ -913,6 +914,7 @@ export default function VendaContratoImportIsland() {
         clienteWhatsapp: contatos?.whatsapp || null,
         clienteEmail: contatos?.email || null,
       });
+      bumpVendasCacheVersion();
       showToast("Venda criada com sucesso.", "success");
       if (typeof window !== "undefined") {
         window.location.href = `/vendas/consulta?id=${result.venda_id}`;
