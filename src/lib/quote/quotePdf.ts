@@ -197,6 +197,32 @@ function resolveImageFormat(mime: string) {
   return "PNG";
 }
 
+function inferImageMimeFromUrl(url: string) {
+  const clean = String(url || "").split("#")[0].split("?")[0].toLowerCase();
+  if (clean.endsWith(".svg")) return "image/svg+xml";
+  if (clean.endsWith(".png")) return "image/png";
+  if (clean.endsWith(".jpg") || clean.endsWith(".jpeg")) return "image/jpeg";
+  if (clean.endsWith(".webp")) return "image/webp";
+  if (clean.endsWith(".gif")) return "image/gif";
+  return "";
+}
+
+function normalizeImageMimeType(mime: string, url: string) {
+  const raw = String(mime || "").trim().toLowerCase();
+  if (
+    raw &&
+    ![
+      "application/octet-stream",
+      "binary/octet-stream",
+      "application/binary",
+      "application/x-download",
+    ].includes(raw)
+  ) {
+    return raw;
+  }
+  return inferImageMimeFromUrl(url) || raw || "image/png";
+}
+
 function decodeDataUrl(dataUrl: string) {
   const parts = dataUrl.split(",");
   if (parts.length < 2) return "";
@@ -268,14 +294,29 @@ async function fetchImageData(url: string) {
   const res = await fetch(url);
   if (!res.ok) throw new Error("Falha ao carregar imagem.");
   const blob = await res.blob();
+  const normalizedType = normalizeImageMimeType(blob.type || "", url);
+  const blobForReader =
+    normalizedType && normalizedType !== blob.type
+      ? new Blob([await blob.arrayBuffer()], { type: normalizedType })
+      : blob;
   const dataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
     reader.onerror = () => reject(new Error("Falha ao ler imagem."));
-    reader.readAsDataURL(blob);
+    reader.readAsDataURL(blobForReader);
   });
-  const type = blob.type || "";
+  const type = normalizedType;
   if (type.includes("svg")) {
+    const pngDataUrl = await svgToPngDataUrl(dataUrl);
+    const image = await loadImage(pngDataUrl);
+    return {
+      dataUrl: pngDataUrl,
+      format: "PNG",
+      width: image.naturalWidth || image.width || 0,
+      height: image.naturalHeight || image.height || 0,
+    };
+  }
+  if (!type.includes("png") && !type.includes("jpg") && !type.includes("jpeg")) {
     const pngDataUrl = await svgToPngDataUrl(dataUrl);
     const image = await loadImage(pngDataUrl);
     return {

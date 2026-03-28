@@ -545,16 +545,128 @@ async function resolveStorageUrl(url?: string | null, path?: string | null) {
   return url || null;
 }
 
+function inferImageMimeFromUrl(url: string) {
+  const clean = String(url || "").split("#")[0].split("?")[0].toLowerCase();
+  if (clean.endsWith(".svg")) return "image/svg+xml";
+  if (clean.endsWith(".png")) return "image/png";
+  if (clean.endsWith(".jpg") || clean.endsWith(".jpeg")) return "image/jpeg";
+  if (clean.endsWith(".webp")) return "image/webp";
+  if (clean.endsWith(".gif")) return "image/gif";
+  return "";
+}
+
+function normalizeImageMimeType(mime: string, url: string) {
+  const raw = String(mime || "").trim().toLowerCase();
+  if (
+    raw &&
+    ![
+      "application/octet-stream",
+      "binary/octet-stream",
+      "application/binary",
+      "application/x-download",
+    ].includes(raw)
+  ) {
+    return raw;
+  }
+  return inferImageMimeFromUrl(url) || raw || "image/png";
+}
+
+function decodeDataUrl(dataUrl: string) {
+  const parts = dataUrl.split(",");
+  if (parts.length < 2) return "";
+  const meta = parts[0] || "";
+  const data = parts.slice(1).join(",");
+  if (meta.includes("base64")) {
+    try {
+      return atob(data);
+    } catch {
+      return "";
+    }
+  }
+  try {
+    return decodeURIComponent(data);
+  } catch {
+    return "";
+  }
+}
+
+function parseSvgNumber(value?: string | null) {
+  if (!value) return null;
+  const match = value.match(/[\d.]+/);
+  if (!match) return null;
+  const parsed = Number(match[0]);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseSvgSize(svgText: string) {
+  if (!svgText) return {};
+  const doc = new DOMParser().parseFromString(svgText, "image/svg+xml");
+  const svg = doc.documentElement;
+  const width = parseSvgNumber(svg.getAttribute("width"));
+  const height = parseSvgNumber(svg.getAttribute("height"));
+  if (width && height) return { width, height };
+  const viewBox = svg.getAttribute("viewBox");
+  if (!viewBox) return {};
+  const parts = viewBox.split(/[\s,]+/).map((part) => Number(part));
+  if (parts.length === 4 && Number.isFinite(parts[2]) && Number.isFinite(parts[3])) {
+    return { width: parts[2], height: parts[3] };
+  }
+  return {};
+}
+
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Falha ao carregar imagem."));
+    img.src = src;
+  });
+}
+
+async function rasterizeToPngDataUrl(sourceDataUrl: string, sourceMime: string) {
+  const img = await loadImage(sourceDataUrl);
+  let width = img.naturalWidth || img.width || 320;
+  let height = img.naturalHeight || img.height || 120;
+  if (sourceMime.includes("svg")) {
+    const svgText = decodeDataUrl(sourceDataUrl);
+    const svgSize = parseSvgSize(svgText);
+    width = svgSize.width || width;
+    height = svgSize.height || height;
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Falha ao converter imagem.");
+  ctx.drawImage(img, 0, 0, width, height);
+  return canvas.toDataURL("image/png");
+}
+
 async function fetchImageDataUrl(url: string) {
   const response = await fetch(url);
   if (!response.ok) return null;
   const blob = await response.blob();
-  return await new Promise<string | null>((resolve) => {
+  const normalizedType = normalizeImageMimeType(blob.type || "", url);
+  const blobForReader =
+    normalizedType && normalizedType !== blob.type
+      ? new Blob([await blob.arrayBuffer()], { type: normalizedType })
+      : blob;
+  const dataUrl = await new Promise<string | null>((resolve) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || ""));
     reader.onerror = () => resolve(null);
-    reader.readAsDataURL(blob);
+    reader.readAsDataURL(blobForReader);
   });
+  if (!dataUrl) return null;
+  if (
+    normalizedType.includes("svg") ||
+    (!normalizedType.includes("png") &&
+      !normalizedType.includes("jpg") &&
+      !normalizedType.includes("jpeg"))
+  ) {
+    return await rasterizeToPngDataUrl(dataUrl, normalizedType).catch(() => null);
+  }
+  return dataUrl;
 }
 
 // ── Native pdfmake content builder (no html-to-pdfmake) ─────────────────────
