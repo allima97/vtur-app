@@ -10,6 +10,7 @@ import { formatCurrencyBRL, formatNumberBR } from "../../lib/format";
 import {
   calcularPctFixoProduto,
   calcularPctPorRegra,
+  calcularDescontoAplicado,
   hasConciliacaoCommissionRule,
   regraProdutoTemFixo,
   resolveConciliacaoCommissionSelection,
@@ -967,14 +968,33 @@ export default function ComissionamentoIsland() {
     // 1) Agrega totais por produto e base de meta
     vendas.forEach((v) => {
       const recibosVenda = v.vendas_recibos || [];
+      const saleHasOverride = recibosVenda.some((recibo) => hasConciliacaoOverride(recibo));
+      let fatorComissionavel = 1;
+      if (!saleHasOverride) {
+        const totalBrutoVenda = recibosVenda.reduce((acc, r) => acc + getReciboBrutoTotal(r), 0);
+        const naoComissionado =
+          pagamentosNaoComissionaveis.get(v.id) ?? Number(v.valor_nao_comissionado || 0);
+        const descontoAplicado = calcularDescontoAplicado(
+          totalBrutoVenda,
+          v.valor_total_bruto,
+          v.valor_total_pago
+        );
+        const baseComissionavel = Math.max(0, totalBrutoVenda - descontoAplicado - naoComissionado);
+        fatorComissionavel =
+          totalBrutoVenda > 0 ? Math.max(0, Math.min(1, baseComissionavel / totalBrutoVenda)) : 1;
+      }
       recibosVenda.forEach((r) => {
         const prodId = r.tipo_produtos?.id || r.produto_id || "";
         const prod = produtos[prodId];
         if (!prod) return;
-        const brutoTotal = getReciboBrutoTotal(r);
-        const taxasEfetivas = getReciboTaxasEfetivas(r);
-        const liquido = getReciboLiquido(r);
-        const valParaMeta = getReciboMeta(r, parametros);
+        const brutoTotalBase = getReciboBrutoTotal(r);
+        const taxasEfetivasBase = getReciboTaxasEfetivas(r);
+        const liquidoBase = getReciboLiquido(r);
+        const valParaMetaBase = getReciboMeta(r, parametros);
+        const brutoTotal = saleHasOverride ? brutoTotalBase : brutoTotalBase * fatorComissionavel;
+        const taxasEfetivas = saleHasOverride ? taxasEfetivasBase : taxasEfetivasBase * fatorComissionavel;
+        const liquido = saleHasOverride ? liquidoBase : liquidoBase * fatorComissionavel;
+        const valParaMeta = saleHasOverride ? valParaMetaBase : valParaMetaBase * fatorComissionavel;
         // Para comissão (valor): sempre usa o líquido.
         const baseCom = liquido;
         const tipoPacoteKey = normalizeTipoPacoteRuleKey(r.tipo_pacote || "");
