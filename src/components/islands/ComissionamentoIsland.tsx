@@ -1028,9 +1028,9 @@ export default function ComissionamentoIsland() {
           } else {
             comissaoGeral += val;
           }
-          if (isSeguro) {
-            comissaoSeguroViagem += val;
-          }
+          // Em conciliação, o seguro segue a mesma régua operacional do bucket.
+          // O KPI "Seguro Viagem" deve receber apenas o complemento de meta-produto
+          // (calculado abaixo no fluxo padrão), nunca o valor integral deste bucket.
           return;
         }
       }
