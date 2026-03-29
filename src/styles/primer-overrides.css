@@ -2487,6 +2487,130 @@ a.vtur-app-button:visited {
   align-items: end;
 }
 
+.vtur-multi-select {
+  position: relative;
+  display: block;
+}
+
+.vtur-multi-select-summary {
+  min-height: 46px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.vtur-multi-select-summary::-webkit-details-marker {
+  display: none;
+}
+
+.vtur-multi-select-summary::after {
+  content: "▾";
+  color: var(--vtur-primer-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.vtur-multi-select[open] .vtur-multi-select-summary::after {
+  content: "▴";
+}
+
+.vtur-multi-select-summary-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vtur-multi-select-summary-text.is-placeholder {
+  color: var(--vtur-primer-muted);
+}
+
+.vtur-multi-select-summary-meta {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--vtur-primer-primary);
+}
+
+.vtur-multi-select-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: #fff;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.16);
+}
+
+.vtur-multi-select-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.vtur-multi-select-actions button {
+  border: none;
+  background: transparent;
+  color: var(--vtur-primer-primary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.vtur-multi-select-options {
+  display: grid;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.vtur-multi-select-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(248, 250, 252, 0.88);
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.vtur-multi-select-option.is-selected {
+  border-color: rgba(37, 99, 235, 0.35);
+  background: rgba(219, 234, 254, 0.7);
+}
+
+.vtur-multi-select-option.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.vtur-multi-select-option input {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.vtur-multi-select-empty {
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.88);
+  color: var(--vtur-primer-muted);
+  font-size: 0.9rem;
+}
+
 .vtur-conciliacao-filters-grid {
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   align-items: stretch;

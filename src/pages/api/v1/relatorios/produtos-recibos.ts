@@ -169,6 +169,7 @@ export async function GET({ request }: { request: Request }) {
     const inicio = String(url.searchParams.get("inicio") || "").trim();
     const fim = String(url.searchParams.get("fim") || "").trim();
     const status = String(url.searchParams.get("status") || "").trim();
+    const tipoProdutoIdsRaw = String(url.searchParams.get("tipo_produto_ids") || "").trim();
     const requestedCompanyId = String(url.searchParams.get("company_id") || "").trim();
     const vendedorIdsRaw = String(url.searchParams.get("vendedor_ids") || "").trim();
     const cacheRevision = String(url.searchParams.get("rev") || "").trim() || "0";
@@ -180,6 +181,13 @@ export async function GET({ request }: { request: Request }) {
 
     const vendorIdsParam = vendedorIdsRaw
       ? vendedorIdsRaw
+          .split(",")
+          .map((v) => v.trim())
+          .filter((v) => isUuid(v))
+          .slice(0, 300)
+      : [];
+    const tipoProdutoIdsParam = tipoProdutoIdsRaw
+      ? tipoProdutoIdsRaw
           .split(",")
           .map((v) => v.trim())
           .filter((v) => isUuid(v))
@@ -247,6 +255,7 @@ export async function GET({ request }: { request: Request }) {
       inicio || "-",
       fim || "-",
       statusParam || "-",
+      tipoProdutoIdsParam.length > 0 ? tipoProdutoIdsParam.join(";") : "-",
       vendorParam ? vendorParam.join(";") : "-",
       companyId || "-",
       `rev:${cacheRevision}`,
@@ -347,10 +356,33 @@ export async function GET({ request }: { request: Request }) {
           }))
         : [],
     }));
-    writeCache(cacheKey, normalizedRows);
-    await kvCache.set(cacheKey, normalizedRows, 15);
+    const tipoProdutoIdSet = new Set(tipoProdutoIdsParam);
+    const filteredRows =
+      tipoProdutoIdSet.size === 0
+        ? normalizedRows
+        : normalizedRows
+            .map((sale: any) => {
+              const recibos = Array.isArray(sale?.vendas_recibos) ? sale.vendas_recibos : [];
+              if (recibos.length > 0) {
+                return {
+                  ...sale,
+                  vendas_recibos: recibos.filter((recibo: any) =>
+                    tipoProdutoIdSet.has(String(recibo?.produto_id || ""))
+                  ),
+                };
+              }
+              return sale;
+            })
+            .filter((sale: any) => {
+              const recibos = Array.isArray(sale?.vendas_recibos) ? sale.vendas_recibos : [];
+              if (recibos.length > 0) return true;
+              return tipoProdutoIdSet.has(String(sale?.produto_id || ""));
+            });
 
-    return new Response(JSON.stringify(normalizedRows), {
+    writeCache(cacheKey, filteredRows);
+    await kvCache.set(cacheKey, filteredRows, 15);
+
+    return new Response(JSON.stringify(filteredRows), {
       status: 200,
       headers: {
         "Content-Type": "application/json",

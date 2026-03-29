@@ -226,6 +226,7 @@ export async function GET({ request }: { request: Request }) {
     const status = String(url.searchParams.get("status") || "").trim();
     const busca = String(url.searchParams.get("busca") || "").trim();
     const cidadeId = String(url.searchParams.get("cidade_id") || "").trim();
+    const tipoProdutoIdsRaw = String(url.searchParams.get("tipo_produto_ids") || "").trim();
     const requestedCompanyId = String(url.searchParams.get("company_id") || "").trim();
     const vendedorIdsRaw = String(url.searchParams.get("vendedor_ids") || "").trim();
     const ordem = String(url.searchParams.get("ordem") || "total").trim();
@@ -242,6 +243,13 @@ export async function GET({ request }: { request: Request }) {
 
     const vendorIdsParam = vendedorIdsRaw
       ? vendedorIdsRaw
+          .split(",")
+          .map((v) => v.trim())
+          .filter((v) => isUuid(v))
+          .slice(0, 300)
+      : [];
+    const tipoProdutoIdsParam = tipoProdutoIdsRaw
+      ? tipoProdutoIdsRaw
           .split(",")
           .map((v) => v.trim())
           .filter((v) => isUuid(v))
@@ -314,6 +322,7 @@ export async function GET({ request }: { request: Request }) {
       statusParam || "-",
       buscaParam || "-",
       cidadeParam || "-",
+      tipoProdutoIdsParam.length > 0 ? tipoProdutoIdsParam.join(";") : "-",
       ordem || "total",
       ordemDesc ? "1" : "0",
       vendorParam ? vendorParam.join(";") : "-",
@@ -350,6 +359,7 @@ export async function GET({ request }: { request: Request }) {
     }
 
     const usarConciliacao = await fetchConciliacaoOverrideFlag(client, companyId);
+    const tipoProdutoIdSet = new Set(tipoProdutoIdsParam);
 
     let rows: any[] = [];
     if (usarConciliacao && inicio && fim) {
@@ -403,6 +413,9 @@ export async function GET({ request }: { request: Request }) {
           recibos.forEach((recibo: any) => {
             const produtoId = recibo?.produto_id || null;
             if (cidadeParam && cidadeAtual !== cidadeParam) return;
+            if (tipoProdutoIdSet.size > 0 && !tipoProdutoIdSet.has(String(produtoId || ""))) {
+              return;
+            }
             const produtoNome =
               String(recibo?.produtos?.nome || sale?.tipo_produto?.nome || sale?.tipo_produto?.tipo || "(sem produto)");
             if (
@@ -428,6 +441,7 @@ export async function GET({ request }: { request: Request }) {
 
         if (cidadeParam && cidadeAtual !== cidadeParam) return;
         const produtoId = sale?.produto_id || null;
+        if (tipoProdutoIdSet.size > 0 && !tipoProdutoIdSet.has(String(produtoId || ""))) return;
         const produtoNome = String(sale?.tipo_produto?.nome || sale?.tipo_produto?.tipo || "(sem produto)");
         if (
           termo &&
@@ -454,18 +468,20 @@ export async function GET({ request }: { request: Request }) {
       }));
       rows = paginateGroupedRows(sortGroupedRows(normalized, ordem || "total", ordemDesc), page, pageSize);
     } else {
+      const filtrarTiposNoBackend = tipoProdutoIdsParam.length > 1;
+      const tipoProdutoIdParam = tipoProdutoIdsParam.length === 1 ? tipoProdutoIdsParam[0] : null;
       const { data, error } = await client.rpc("relatorio_vendas_por_produto", {
         p_data_inicio: inicio || null,
         p_data_fim: fim || null,
         p_status: statusParam,
         p_busca: buscaParam,
-        p_tipo_produto_id: null,
+        p_tipo_produto_id: tipoProdutoIdParam,
         p_cidade_id: cidadeParam,
         p_vendedor_ids: vendorParam,
         p_ordem: ordem || "total",
         p_ordem_desc: ordemDesc,
-        p_page: page,
-        p_page_size: pageSize,
+        p_page: filtrarTiposNoBackend ? 1 : page,
+        p_page_size: filtrarTiposNoBackend ? SEARCH_FALLBACK_PAGE_SIZE : pageSize,
       });
       if (error) throw error;
 
@@ -478,7 +494,7 @@ export async function GET({ request }: { request: Request }) {
             p_data_fim: fim || null,
             p_status: statusParam,
             p_busca: null,
-            p_tipo_produto_id: null,
+            p_tipo_produto_id: tipoProdutoIdParam,
             p_cidade_id: cidadeParam,
             p_vendedor_ids: vendorParam,
             p_ordem: ordem || "total",
@@ -495,6 +511,17 @@ export async function GET({ request }: { request: Request }) {
           });
           rows = paginateAccentInsensitiveRows(filteredRows, page, pageSize);
         }
+      }
+
+      if (filtrarTiposNoBackend) {
+        const filteredRows = (rows || []).filter((row: any) =>
+          tipoProdutoIdSet.has(String(row?.produto_id || ""))
+        );
+        rows = paginateGroupedRows(
+          sortGroupedRows(filteredRows, ordem || "total", ordemDesc),
+          page,
+          pageSize
+        );
       }
     }
 

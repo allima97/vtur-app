@@ -33,6 +33,7 @@ import { selectAllInputOnFocus } from "../../lib/inputNormalization";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
+import AppMultiSelectField from "../ui/primer/AppMultiSelectField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 import { getVendasCacheVersion } from "../../lib/vendasCacheVersion";
 import { filterRecibosCanceladosMesmoMes } from "../../lib/conciliacao/source";
@@ -497,7 +498,7 @@ export default function RelatorioVendasIsland() {
   const [buscandoCidade, setBuscandoCidade] = useState(false);
   const [erroCidade, setErroCidade] = useState<string | null>(null);
 
-  const [tipoSelecionadoId, setTipoSelecionadoId] = useState("");
+  const [tiposSelecionadosIds, setTiposSelecionadosIds] = useState<string[]>([]);
 
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null);
 
@@ -984,6 +985,11 @@ export default function RelatorioVendasIsland() {
     return set;
   }, [tiposProdutos]);
 
+  const tiposSelecionadosSet = useMemo(
+    () => new Set(tiposSelecionadosIds),
+    [tiposSelecionadosIds]
+  );
+
   const cidadePorId = useMemo(() => {
     const map = new Map<string, string>();
     cidades.forEach((cidade) => {
@@ -1166,7 +1172,7 @@ export default function RelatorioVendasIsland() {
     destinoBusca.trim() ||
       cidadeNomeInput.trim() ||
       clienteBusca.trim() ||
-      tipoSelecionadoId
+      tiposSelecionadosIds.length > 0
   );
 
   const filtrarRecibos = useCallback(
@@ -1177,7 +1183,8 @@ export default function RelatorioVendasIsland() {
       const termCliente = normalizeText(termClienteRaw);
       return recibos.filter((recibo) => {
         const matchTipo =
-          !tipoSelecionadoId || recibo.produto_tipo_id === tipoSelecionadoId;
+          tiposSelecionadosSet.size === 0 ||
+          tiposSelecionadosSet.has(String(recibo.produto_tipo_id || ""));
         const matchCidade =
           !cidadeFiltro && !termCidade
             ? true
@@ -1197,7 +1204,7 @@ export default function RelatorioVendasIsland() {
     },
     [
       destinoBusca,
-      tipoSelecionadoId,
+      tiposSelecionadosSet,
       cidadeFiltro,
       cidadeNomeInput,
       clienteBusca,
@@ -2473,18 +2480,15 @@ export default function RelatorioVendasIsland() {
         />
         {renderClienteField()}
         {renderCidadeField()}
-        <AppField
-          as="select"
-          label="Tipo produto"
-          value={tipoSelecionadoId}
-          onChange={(e) => setTipoSelecionadoId(e.target.value)}
-          options={[
-            { label: "Todos os tipos", value: "" },
-            ...tiposProdutos.map((tipo) => ({
-              label: tipo.nome || tipo.tipo || `(ID: ${tipo.id})`,
-              value: tipo.id,
-            })),
-          ]}
+        <AppMultiSelectField
+          label="Tipos de produto"
+          values={tiposSelecionadosIds}
+          onChange={setTiposSelecionadosIds}
+          placeholder="Todos os tipos"
+          options={tiposProdutos.map((tipo) => ({
+            label: tipo.nome || tipo.tipo || `(ID: ${tipo.id})`,
+            value: tipo.id,
+          }))}
         />
         <AppField
           label="Produto"

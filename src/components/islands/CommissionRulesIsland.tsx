@@ -50,6 +50,25 @@ function parseNumberOrZero(value: string) {
   return value === "" ? 0 : Number(value);
 }
 
+async function requestCommissionRulesApi<T = any>(
+  method: "GET" | "POST" | "PATCH" | "DELETE",
+  body?: Record<string, any>
+) {
+  const response = await fetch("/api/v1/parametros/commission-rules", {
+    method,
+    headers: method === "GET" ? undefined : { "Content-Type": "application/json" },
+    body: method === "GET" ? undefined : JSON.stringify(body || {}),
+  });
+
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+
+  const text = await response.text();
+  if (!text) return null as T;
+  return JSON.parse(text) as T;
+}
+
 export default function CommissionRulesIsland() {
   const { can, loading: loadingPerms, ready } = usePermissoesStore();
   const loadingPerm = loadingPerms || !ready;
@@ -75,11 +94,7 @@ export default function CommissionRulesIsland() {
     try {
       setLoading(true);
       setErro(null);
-      const { data, error } = await supabase
-        .from("commission_rule")
-        .select("*, commission_tier(*)")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
+      const data = await requestCommissionRulesApi<Rule[]>("GET");
       setRules((data || []) as any);
     } catch (e) {
       console.error(e);
@@ -158,6 +173,7 @@ export default function CommissionRulesIsland() {
       setSalvando(true);
       setErro(null);
       const payload = {
+        id: editId || undefined,
         nome: form.nome.trim(),
         descricao: form.descricao || null,
         tipo: form.tipo,
@@ -165,42 +181,14 @@ export default function CommissionRulesIsland() {
         meta_atingida: form.meta_atingida ?? 0,
         super_meta: form.super_meta ?? 0,
         ativo: form.ativo,
+        tiers: form.tiers || [],
       };
 
-      let regraId = editId;
-      if (editId) {
-        const { error } = await supabase
-          .from("commission_rule")
-          .update(payload)
-          .eq("id", editId);
-        if (error) throw error;
-        regraId = editId;
-      } else {
-        const { data, error } = await supabase
-          .from("commission_rule")
-          .insert(payload)
-          .select("id")
-          .single();
-        if (error) throw error;
-        regraId = data?.id;
-      }
-
-      if (regraId) {
-        await supabase.from("commission_tier").delete().eq("rule_id", regraId);
-        if (form.tiers && form.tiers.length > 0) {
-          const tiers = form.tiers.map((t) => ({
-            rule_id: regraId,
-            faixa: t.faixa,
-            de_pct: Number(t.de_pct) || 0,
-            ate_pct: Number(t.ate_pct) || 0,
-            inc_pct_meta: Number(t.inc_pct_meta) || 0,
-            inc_pct_comissao: Number(t.inc_pct_comissao) || 0,
-            ativo: true,
-          }));
-          const { error: tierErr } = await supabase.from("commission_tier").insert(tiers);
-          if (tierErr) throw tierErr;
-        }
-      }
+      const saveResult = await requestCommissionRulesApi<{ ok: boolean; id: string }>(
+        "POST",
+        payload
+      );
+      const regraId = saveResult?.id || editId;
 
       await registrarLog({
         user_id: (await supabase.auth.getUser()).data.user?.id || null,
@@ -238,22 +226,21 @@ export default function CommissionRulesIsland() {
 
   async function inativar(id: string) {
     if (!podeEditar) return;
-    const { error } = await supabase
-      .from("commission_rule")
-      .update({ ativo: false })
-      .eq("id", id);
-    if (!error) carregar();
+    try {
+      await requestCommissionRulesApi("PATCH", { id, ativo: false });
+      carregar();
+    } catch (e) {
+      console.error(e);
+      setErro("Erro ao inativar regra.");
+    }
   }
 
   async function excluirRegra(id: string) {
     if (!podeEditar) return;
-    const { error: tierErr } = await supabase.from("commission_tier").delete().eq("rule_id", id);
-    if (tierErr) {
-      setErro("Erro ao excluir faixas da regra.");
-      return;
-    }
-    const { error } = await supabase.from("commission_rule").delete().eq("id", id);
-    if (error) {
+    try {
+      await requestCommissionRulesApi("DELETE", { id });
+    } catch (e) {
+      console.error(e);
       setErro("Erro ao excluir regra.");
       return;
     }

@@ -126,6 +126,7 @@ type Tier = {
 type Venda = {
   id: string;
   data_venda: string;
+  vendedor_id?: string | null;
   cancelada: boolean | null;
   valor_nao_comissionado?: number | null;
   valor_total_bruto?: number | null;
@@ -278,6 +279,50 @@ function buildKpiLabel(base: string, values: number[]) {
 function buildKpiLabelFromList(base: string, values: string[]) {
   const list = values.filter(Boolean).join(", ");
   return list ? `${base} (${list})` : base;
+}
+
+function isIsoDateInRange(value: string | null | undefined, inicio: string, fim: string) {
+  const date = String(value || "").trim().slice(0, 10);
+  if (!date) return false;
+  return date >= inicio && date <= fim;
+}
+
+function normalizarVendasPeriodo(
+  vendasInput: Venda[],
+  periodoAtual: { inicio: string; fim: string },
+  vendedorIds?: string[] | null
+) {
+  const allowedVendedores =
+    vendedorIds && vendedorIds.length > 0
+      ? new Set(vendedorIds.map((id) => String(id || "").trim()).filter(Boolean))
+      : null;
+  const recibosSeen = new Set<string>();
+
+  return vendasInput
+    .filter((sale) => {
+      if (!allowedVendedores) return true;
+      const vendedorId = String(sale.vendedor_id || "").trim();
+      return Boolean(vendedorId && allowedVendedores.has(vendedorId));
+    })
+    .map((sale) => {
+      const recibos = filterRecibosCanceladosMesmoMes(
+        Array.isArray(sale.vendas_recibos) ? sale.vendas_recibos : []
+      )
+        .filter((recibo) => isIsoDateInRange(recibo.data_venda, periodoAtual.inicio, periodoAtual.fim))
+        .filter((recibo) => {
+          const reciboId = String(recibo.id || "").trim();
+          if (!reciboId) return true;
+          if (recibosSeen.has(reciboId)) return false;
+          recibosSeen.add(reciboId);
+          return true;
+        });
+
+      return {
+        ...sale,
+        vendas_recibos: recibos,
+      };
+    })
+    .filter((sale) => Array.isArray(sale.vendas_recibos) && sale.vendas_recibos.length > 0);
 }
 
 export default function ComissionamentoIsland() {
@@ -571,6 +616,7 @@ export default function ComissionamentoIsland() {
 	          `
 	          id,
 	          data_venda,
+            vendedor_id,
 	          cancelada,
 	          valor_nao_comissionado,
 	          valor_total_bruto,
@@ -607,6 +653,7 @@ export default function ComissionamentoIsland() {
 	          `
 	          id,
 	          data_venda,
+            vendedor_id,
 	          cancelada,
 	          valor_nao_comissionado,
 	          valor_total_bruto,
@@ -770,14 +817,11 @@ export default function ComissionamentoIsland() {
       setRegraProdutoMap(regProdMap);
       setRegraProdutoPacoteMap(regProdPacoteMap);
       setProdutos(prodMap);
-      const vendasList = ((vendasData || []) as Venda[])
-        .map((sale) => ({
-          ...sale,
-          vendas_recibos: filterRecibosCanceladosMesmoMes(
-            Array.isArray(sale.vendas_recibos) ? sale.vendas_recibos : []
-          ),
-        }))
-        .filter((sale) => Array.isArray(sale.vendas_recibos) && sale.vendas_recibos.length > 0);
+      const vendasList = normalizarVendasPeriodo(
+        (vendasData || []) as Venda[],
+        periodoAtual,
+        vendedorFiltro
+      );
       const pagamentosMap = await carregarPagamentosNaoComissionaveis(
         vendasList.map((v) => v.id)
       );
@@ -803,7 +847,11 @@ export default function ComissionamentoIsland() {
             if (recibos.length === 0) return [];
             return [{ ...sale, vendas_recibos: recibos }];
           });
-          vendasFinal = [...baseSales, ...(syntheticSales as unknown as Venda[])].sort((a, b) =>
+          vendasFinal = normalizarVendasPeriodo(
+            [...baseSales, ...(syntheticSales as unknown as Venda[])],
+            periodoAtual,
+            vendedorFiltro
+          ).sort((a, b) =>
             String(b.data_venda || "").localeCompare(String(a.data_venda || ""))
           );
         }
@@ -823,7 +871,7 @@ export default function ComissionamentoIsland() {
     // Map meta por produto para cálculo de diferenciados
     const metasProdutoMap: Record<string, number> = {};
     metasProduto.forEach((m) => {
-      metasProdutoMap[m.produto_id] = m.valor;
+      metasProdutoMap[m.produto_id] = (metasProdutoMap[m.produto_id] || 0) + Number(m.valor || 0);
     });
 
     // Agregadores por produto
@@ -1082,26 +1130,35 @@ export default function ComissionamentoIsland() {
       }
 
       const pctComFinal = pctCom + extraPct;
-      const valGeral = baseComBucket * (pctComFinal / 100);
-      if (pctComFinal > 0) {
-        if (isPassagemFacial) {
-          pctPassagemFacialSet.add(pctComFinal);
-        } else {
-          pctComissaoGeralSet.add(pctComFinal);
-        }
-      }
+      const valCategoriaFinal = baseComBucket * (pctComFinal / 100);
+
+      // Seguro com meta de produto entra dividido:
+      // - a parte da meta geral continua na comissão geral
+      // - apenas o complemento fica no KPI de seguro
+      const pctComissaoGeralAplicado = isSeguro && extraPct > 0 ? pctCom : pctComFinal;
+      const valComissaoGeralAplicado = baseComBucket * (pctComissaoGeralAplicado / 100);
+
       if (isPassagemFacial) {
-        comissaoPassagemFacial += valGeral;
+        if (pctComFinal > 0) {
+          pctPassagemFacialSet.add(pctComFinal);
+        }
+        comissaoPassagemFacial += valCategoriaFinal;
       } else {
-        comissaoGeral += valGeral;
+        if (pctComissaoGeralAplicado > 0) {
+          pctComissaoGeralSet.add(pctComissaoGeralAplicado);
+        }
+        comissaoGeral += valComissaoGeralAplicado;
       }
     });
 
-    const totalComissao = metaProdEnabled
-      ? comissaoGeral + comissaoDif + comissaoMetaProd + comissaoPassagemFacial
-      : comissaoGeral + comissaoDif + comissaoPassagemFacial;
-    const totalComissaoKpi = comissaoGeral + comissaoFixaProdutos;
+    // Os KPIs finais seguem esta leitura:
+    // - Comissão: comissão geral já consolidada, incluindo extras não-seguro
+    // - Passagem Facial: sempre separada
+    // - Comissão total: geral + especiais fora do geral, sem o complemento do seguro
+    // - Comissão + seguro: total final previsto somando o complemento do seguro
+    const totalComissaoKpi = comissaoGeral + comissaoDif + comissaoPassagemFacial;
     const totalComissaoKpiSeguro = totalComissaoKpi + comissaoSeguroViagem;
+    const totalComissao = totalComissaoKpiSeguro;
 
     // Verifica se deve exibir KPIs baseado na flag exibe_kpi_comissao
     const deveExibirDiferenciadas = suportaExibeKpi

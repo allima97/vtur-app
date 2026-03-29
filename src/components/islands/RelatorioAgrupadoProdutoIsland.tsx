@@ -22,6 +22,7 @@ import { getVendasCacheVersion } from "../../lib/vendasCacheVersion";
 import AppButton from "../ui/primer/AppButton";
 import AppCard from "../ui/primer/AppCard";
 import AppField from "../ui/primer/AppField";
+import AppMultiSelectField from "../ui/primer/AppMultiSelectField";
 import AppPrimerProvider from "../ui/primer/AppPrimerProvider";
 
 type Produto = {
@@ -113,6 +114,7 @@ async function fetchRelatorioProdutos(params: {
   status?: string;
   busca?: string;
   cidadeId?: string;
+  tipoProdutoIds?: string[];
   companyId?: string;
   vendedorIds?: string[] | null;
   ordem: string;
@@ -128,6 +130,9 @@ async function fetchRelatorioProdutos(params: {
   if (params.status && params.status !== "todos") qs.set("status", params.status);
   if (params.busca) qs.set("busca", params.busca);
   if (params.cidadeId) qs.set("cidade_id", params.cidadeId);
+  if (params.tipoProdutoIds && params.tipoProdutoIds.length > 0) {
+    qs.set("tipo_produto_ids", params.tipoProdutoIds.join(","));
+  }
   if (params.companyId) qs.set("company_id", params.companyId);
   if (params.vendedorIds && params.vendedorIds.length > 0) {
     qs.set("vendedor_ids", params.vendedorIds.join(","));
@@ -159,6 +164,7 @@ async function fetchRelatorioProdutosRecibos(params: {
   dataInicio?: string;
   dataFim?: string;
   status?: string;
+  tipoProdutoIds?: string[];
   companyId?: string;
   vendedorIds?: string[] | null;
   noCache?: boolean;
@@ -168,6 +174,9 @@ async function fetchRelatorioProdutosRecibos(params: {
   if (params.dataInicio) qs.set("inicio", params.dataInicio);
   if (params.dataFim) qs.set("fim", params.dataFim);
   if (params.status && params.status !== "todos") qs.set("status", params.status);
+  if (params.tipoProdutoIds && params.tipoProdutoIds.length > 0) {
+    qs.set("tipo_produto_ids", params.tipoProdutoIds.join(","));
+  }
   if (params.companyId) qs.set("company_id", params.companyId);
   if (params.vendedorIds && params.vendedorIds.length > 0) {
     qs.set("vendedor_ids", params.vendedorIds.join(","));
@@ -312,7 +321,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
   const [periodoPreset, setPeriodoPreset] = useState<PeriodoPreset>("");
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("todos");
   const [buscaProduto, setBuscaProduto] = useState("");
-  const [tipoReciboSelecionado, setTipoReciboSelecionado] = useState("");
+  const [tiposReciboSelecionados, setTiposReciboSelecionados] = useState<string[]>([]);
   const [cidadeFiltro, setCidadeFiltro] = useState("");
   const [cidadeNomeInput, setCidadeNomeInput] = useState("");
   const [mostrarSugestoesCidadeFiltro, setMostrarSugestoesCidadeFiltro] = useState(false);
@@ -587,6 +596,11 @@ export default function RelatorioAgrupadoProdutoIsland() {
     [produtos]
   );
 
+  const tiposReciboSelecionadosSet = useMemo(
+    () => new Set(tiposReciboSelecionados),
+    [tiposReciboSelecionados]
+  );
+
   const linhasExibidas = linhas;
   const totalPaginas = Math.max(1, Math.ceil(totalLinhas / Math.max(pageSize, 1)));
   const paginaAtual = Math.min(page, totalPaginas);
@@ -608,7 +622,10 @@ export default function RelatorioAgrupadoProdutoIsland() {
       if (cidadeFiltro && recibo.cidadeId !== cidadeFiltro) {
         return false;
       }
-      if (tipoReciboSelecionado && recibo.tipoId !== tipoReciboSelecionado) {
+      if (
+        tiposReciboSelecionadosSet.size > 0 &&
+        !tiposReciboSelecionadosSet.has(String(recibo.tipoId || ""))
+      ) {
         return false;
       }
       if (!hasTerm) return true;
@@ -616,7 +633,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
       const produto = normalizeText(recibo.produtoNome || "");
       return destino.includes(term) || produto.includes(term);
     });
-  }, [recibosDetalhados, buscaProduto, tipoReciboSelecionado, cidadeFiltro]);
+  }, [recibosDetalhados, buscaProduto, tiposReciboSelecionadosSet, cidadeFiltro]);
   const recibosExibidos = useMemo(() => {
     return recibosFiltrados;
   }, [recibosFiltrados]);
@@ -698,6 +715,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
         status: statusFiltro,
         busca: buscaProduto,
         cidadeId: cidadeFiltro || "",
+        tipoProdutoIds: tiposReciboSelecionados,
         companyId: companyIdFiltro,
         vendedorIds: vendedorIdsFiltro && vendedorIdsFiltro.length > 0 ? vendedorIdsFiltro : null,
         ordem: ordenacao,
@@ -763,6 +781,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
         status: statusFiltro,
         busca: buscaProduto,
         cidadeId: cidadeFiltro || "",
+        tipoProdutoIds: tiposReciboSelecionados,
         companyId: companyIdFiltro,
         vendedorIds: vendedorIdsFiltro && vendedorIdsFiltro.length > 0 ? vendedorIdsFiltro : null,
         ordem: ordenacao,
@@ -811,6 +830,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
         dataInicio: dataInicio || "",
         dataFim: dataFim || "",
         status: statusFiltro,
+        tipoProdutoIds: tiposReciboSelecionados,
         companyId:
           userCtx.papel === "MASTER" ? masterScope.empresaSelecionada : undefined,
         vendedorIds: vendedorIdsFiltro && vendedorIdsFiltro.length > 0 ? vendedorIdsFiltro : null,
@@ -859,6 +879,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
     masterScope.empresaSelecionada,
     masterScope.gestorSelecionado,
     masterScope.vendedorIds,
+    tiposReciboSelecionados,
   ]);
 
   useEffect(() => {
@@ -876,6 +897,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
     masterScope.empresaSelecionada,
     masterScope.gestorSelecionado,
     masterScope.vendedorIds,
+    tiposReciboSelecionados,
   ]);
 
   useEffect(() => {
@@ -896,6 +918,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
     masterScope.empresaSelecionada,
     masterScope.gestorSelecionado,
     masterScope.vendedorIds,
+    tiposReciboSelecionados,
   ]);
 
   useEffect(() => {
@@ -940,7 +963,10 @@ export default function RelatorioAgrupadoProdutoIsland() {
           if (cidadeFiltro && recibo.cidadeId !== cidadeFiltro) {
             return false;
           }
-          if (tipoReciboSelecionado && recibo.tipoId !== tipoReciboSelecionado) {
+          if (
+            tiposReciboSelecionadosSet.size > 0 &&
+            !tiposReciboSelecionadosSet.has(String(recibo.tipoId || ""))
+          ) {
             return false;
           }
           if (!hasTerm) return true;
@@ -1040,7 +1066,10 @@ export default function RelatorioAgrupadoProdutoIsland() {
         if (cidadeFiltro && recibo.cidadeId !== cidadeFiltro) {
           return false;
         }
-        if (tipoReciboSelecionado && recibo.tipoId !== tipoReciboSelecionado) {
+        if (
+          tiposReciboSelecionadosSet.size > 0 &&
+          !tiposReciboSelecionadosSet.has(String(recibo.tipoId || ""))
+        ) {
           return false;
         }
         if (!hasTerm) return true;
@@ -1398,21 +1427,16 @@ export default function RelatorioAgrupadoProdutoIsland() {
           />
         ) : null}
         {renderCidadeField()}
-        {activeTab === "recibos" ? (
-          <AppField
-            as="select"
-            label="Tipo de produto"
-            value={tipoReciboSelecionado}
-            onChange={(e) => setTipoReciboSelecionado(e.target.value)}
-            options={[
-              { label: "Todos os tipos", value: "" },
-              ...produtos.map((produto) => ({
-                label: produto.nome || produto.tipo || produto.id,
-                value: produto.id,
-              })),
-            ]}
-          />
-        ) : null}
+        <AppMultiSelectField
+          label="Tipos de produto"
+          values={tiposReciboSelecionados}
+          onChange={setTiposReciboSelecionados}
+          placeholder="Todos os tipos"
+          options={produtos.map((produto) => ({
+            label: produto.nome || produto.tipo || produto.id,
+            value: produto.id,
+          }))}
+        />
         <AppField
           label="Buscar produto"
           placeholder={activeTab === "recibos" ? "Produto ou destino" : "Nome do produto"}
