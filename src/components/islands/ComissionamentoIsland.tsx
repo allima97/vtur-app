@@ -96,6 +96,7 @@ type Produto = {
 
 type Recibo = {
   id?: string | null;
+  numero_recibo?: string | null;
   data_venda?: string | null;
   valor_total: number | null;
   valor_taxas: number | null;
@@ -287,6 +288,16 @@ function isIsoDateInRange(value: string | null | undefined, inicio: string, fim:
   return date >= inicio && date <= fim;
 }
 
+function buildReciboBusinessKey(recibo: Recibo) {
+  const numeroRecibo = String(recibo.numero_recibo || "").trim().toLowerCase();
+  const produtoId = String(recibo.tipo_produtos?.id || recibo.produto_id || "")
+    .trim()
+    .toLowerCase();
+  const dataVenda = String(recibo.data_venda || "").trim().slice(0, 10);
+  if (!numeroRecibo || !produtoId || !dataVenda) return "";
+  return `${numeroRecibo}::${produtoId}::${dataVenda}`;
+}
+
 function normalizarVendasPeriodo(
   vendasInput: Venda[],
   periodoAtual: { inicio: string; fim: string },
@@ -297,6 +308,7 @@ function normalizarVendasPeriodo(
       ? new Set(vendedorIds.map((id) => String(id || "").trim()).filter(Boolean))
       : null;
   const recibosSeen = new Set<string>();
+  const recibosBusinessSeen = new Set<string>();
 
   return vendasInput
     .filter((sale) => {
@@ -311,9 +323,15 @@ function normalizarVendasPeriodo(
         .filter((recibo) => isIsoDateInRange(recibo.data_venda, periodoAtual.inicio, periodoAtual.fim))
         .filter((recibo) => {
           const reciboId = String(recibo.id || "").trim();
-          if (!reciboId) return true;
-          if (recibosSeen.has(reciboId)) return false;
-          recibosSeen.add(reciboId);
+          const businessKey = buildReciboBusinessKey(recibo);
+          if (reciboId) {
+            if (recibosSeen.has(reciboId)) return false;
+            recibosSeen.add(reciboId);
+          }
+          if (businessKey) {
+            if (recibosBusinessSeen.has(businessKey)) return false;
+            recibosBusinessSeen.add(businessKey);
+          }
           return true;
         });
 
@@ -623,6 +641,7 @@ export default function ComissionamentoIsland() {
 	          valor_total_pago,
             vendas_recibos!inner (
               id,
+              numero_recibo,
               data_venda,
 	            valor_total,
 	            valor_taxas,
@@ -660,6 +679,7 @@ export default function ComissionamentoIsland() {
 	          valor_total_pago,
             vendas_recibos!inner (
               id,
+              numero_recibo,
               data_venda,
 	            valor_total,
 	            valor_taxas,
@@ -836,13 +856,29 @@ export default function ComissionamentoIsland() {
           vendedorIds: vendedorFiltro,
         });
         if (concReceipts.length > 0) {
-          const syntheticSales = buildConciliacaoSyntheticVendas(concReceipts);
+          const baseSaleIds = new Set(vendasList.map((sale) => String(sale.id || "").trim()).filter(Boolean));
+          const eligibleConcReceipts = concReceipts.filter((item) => {
+            const linkedReciboId = String(item.linked_recibo_id || "").trim();
+            if (linkedReciboId) return true;
+            const linkedVendaId = String(item.linked_venda_id || "").trim();
+            if (!linkedVendaId) return true;
+            return !baseSaleIds.has(linkedVendaId);
+          });
+          const syntheticSales = buildConciliacaoSyntheticVendas(eligibleConcReceipts);
           const overriddenReceiptIds = new Set(
             syntheticSales.map((sale) => sale.linked_recibo_id).filter(Boolean)
           );
+          const syntheticBusinessKeys = new Set(
+            syntheticSales
+              .flatMap((sale) => sale.vendas_recibos || [])
+              .map((recibo) => buildReciboBusinessKey(recibo as Recibo))
+              .filter(Boolean)
+          );
           const baseSales = vendasList.flatMap((sale) => {
             const recibos = (sale.vendas_recibos || []).filter(
-              (recibo) => !overriddenReceiptIds.has(String(recibo.id || "").trim())
+              (recibo) =>
+                !overriddenReceiptIds.has(String(recibo.id || "").trim()) &&
+                !syntheticBusinessKeys.has(buildReciboBusinessKey(recibo))
             );
             if (recibos.length === 0) return [];
             return [{ ...sale, vendas_recibos: recibos }];
