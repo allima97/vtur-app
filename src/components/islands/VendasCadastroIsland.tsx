@@ -190,6 +190,17 @@ const initialRecibo: FormRecibo = {
   contrato_path: null,
 };
 
+function createInitialRecibo(principal = false): FormRecibo {
+  return {
+    ...initialRecibo,
+    principal,
+  };
+}
+
+function createExpandedReciboState(length: number): Record<number, boolean> {
+  return length > 0 ? { 0: true } : {};
+}
+
 const initialPagamento: PagamentoVenda = {
   forma_id: "",
   forma_nome: "",
@@ -303,9 +314,11 @@ export default function VendasCadastroIsland() {
   const [usoIndividual, setUsoIndividual] = useState<boolean>(false);
 
   const [formVenda, setFormVenda] = useState<FormVenda>(initialVenda);
-  const [recibos, setRecibos] = useState<FormRecibo[]>([]);
+  const [recibos, setRecibos] = useState<FormRecibo[]>(() => [createInitialRecibo(true)]);
   const [reciboEmEdicao, setReciboEmEdicao] = useState<number | null>(null);
-  const [recibosExpandidos, setRecibosExpandidos] = useState<Record<number, boolean>>({});
+  const [recibosExpandidos, setRecibosExpandidos] = useState<Record<number, boolean>>(
+    createExpandedReciboState(1)
+  );
   const [pagamentos, setPagamentos] = useState<PagamentoVenda[]>([]);
   const [pagamentosExpandidos, setPagamentosExpandidos] = useState<Record<number, boolean>>({});
 
@@ -343,7 +356,19 @@ export default function VendasCadastroIsland() {
       .trim();
   const shouldShowDuRavForTipoPacote = (valor?: string | null) => {
     const key = normalizeTipoPacoteVisibilityKey(valor);
-    return key === "passagem aerea" || key === "passagem facil" || key === "aereo hotel";
+    return (
+      key === "passagem aerea" ||
+      key === "passagem facial" ||
+      key === "passagem facil" ||
+      key === "aereo hotel" ||
+      key === "aereo e hotel"
+    );
+  };
+  const shouldShowDuRavForRecibo = (recibo: Pick<FormRecibo, "tipo_pacote" | "tipo_produto_id">) => {
+    if (shouldShowDuRavForTipoPacote(recibo.tipo_pacote)) return true;
+    const tipoProduto = tipos.find((tipo) => tipo.id === recibo.tipo_produto_id);
+    const tipoNome = tipoProduto?.nome || tipoProduto?.tipo || "";
+    return shouldShowDuRavForTipoPacote(tipoNome);
   };
   const resolveTipoPacoteSelectValue = (valor?: string | null) => {
     const key = normalizeTipoPacoteRuleKey(valor || "");
@@ -529,8 +554,9 @@ export default function VendasCadastroIsland() {
           contrato_file: null,
         };
       });
-      setRecibos(garantirReciboPrincipal(recibosComPrincipal));
-      setRecibosExpandidos({});
+      const recibosNormalizados = garantirReciboPrincipal(recibosComPrincipal);
+      setRecibos(recibosNormalizados);
+      setRecibosExpandidos(createExpandedReciboState(recibosNormalizados.length));
 
       const { data: pagamentosData } = await supabase
         .from("vendas_pagamentos")
@@ -705,9 +731,14 @@ export default function VendasCadastroIsland() {
       });
 
       if (recibosGerados.length) {
-        setRecibos(garantirReciboPrincipal(recibosGerados));
+        const recibosNormalizados = garantirReciboPrincipal(recibosGerados);
+        setRecibos(recibosNormalizados);
+        setRecibosExpandidos(createExpandedReciboState(recibosNormalizados.length));
       }
-      setRecibosExpandidos({});
+      else {
+        setRecibos([createInitialRecibo(true)]);
+        setRecibosExpandidos(createExpandedReciboState(1));
+      }
       setPagamentos([]);
       setPagamentosExpandidos({});
       if (produtosAtualizados.length !== produtosLista.length) {
@@ -895,9 +926,13 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
 // =======================================================
   function addRecibo() {
     setRecibos((prev) => {
-      const novo = [...prev, { ...initialRecibo }];
+      const novo = [...prev, createInitialRecibo(false)];
       return garantirReciboPrincipal(novo);
     });
+    setRecibosExpandidos((prev) => ({
+      ...prev,
+      [recibos.length]: true,
+    }));
   }
 
   function toggleRecibo(index: number) {
@@ -1562,7 +1597,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
         }
         const valTotalNum = moedaParaNumero(recibo.valor_total);
         const valTaxasNum = moedaParaNumero(recibo.valor_taxas);
-        const showDuRav = shouldShowDuRavForTipoPacote(recibo.tipo_pacote);
+        const showDuRav = shouldShowDuRavForRecibo(recibo);
         const valDuNum = showDuRav ? moedaParaNumero(recibo.valor_du) : 0;
         const ravRaw = recibo.valor_rav || "";
         const valRavNum = showDuRav && ravRaw ? moedaParaNumero(ravRaw) : 0;
@@ -2130,7 +2165,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
             const produtosFiltrados = filtrarProdutos(buscaProduto, r.tipo_produto_id);
             const existeProdutoGlobal = existeProdutoGlobalParaTipo(r.tipo_produto_id);
             const reciboAberto = Boolean(recibosExpandidos[i]);
-            const showDuRav = shouldShowDuRavForTipoPacote(r.tipo_pacote);
+            const showDuRav = shouldShowDuRavForRecibo(r);
             const produtoDesabilitado =
               !r.tipo_produto_id || (!formVenda.destino_id && !existeProdutoGlobal);
             const placeholderProduto = !r.tipo_produto_id
@@ -2502,8 +2537,8 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
 	                  className="vtur-sales-pagamento-row"
 	                  style={{
 	                    ["--vtur-sales-payment-columns" as any]: showFormaNomeManual
-	                      ? "repeat(6, minmax(0, 1fr))"
-	                      : "repeat(5, minmax(0, 1fr))",
+	                      ? "repeat(5, minmax(0, 1fr))"
+	                      : "repeat(4, minmax(0, 1fr))",
 	                  }}
 	                >
 	                  <AppField
@@ -2543,14 +2578,8 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
 	                  )}
 
 	                  <AppField
-	                    label="Operacao"
-	                    value={p.operacao}
-	                    onChange={(e) => updatePagamento(idx, "operacao", e.target.value)}
-	                  />
-
-                  <AppField
-                    label="Valor"
-                    type="text"
+	                    label="Valor"
+	                    type="text"
                     inputMode="decimal"
                     placeholder="0,00"
                     value={p.valor_bruto}
